@@ -1,6 +1,8 @@
 pub mod app;
 pub mod error_template;
 pub mod state;
+pub mod page;
+pub mod component;
 
 #[cfg(feature = "ssr")]
 pub mod fallback;
