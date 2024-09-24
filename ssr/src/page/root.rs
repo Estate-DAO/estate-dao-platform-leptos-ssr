@@ -7,6 +7,6 @@ use leptos::*;
 pub fn RootPage() -> impl IntoView {
 
     view! {
-     "Let's begin here." 
+     <div class="bg-red-400">"Let's begin here." </div>
     }
 }

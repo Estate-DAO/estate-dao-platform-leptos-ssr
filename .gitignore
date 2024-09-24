@@ -16,5 +16,5 @@ playwright/.cache/
 plan.md 
 
 .*
-
+bun.lockb
 !.gitignore
