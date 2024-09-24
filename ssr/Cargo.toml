@@ -7,7 +7,10 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { version = "0.7", optional = true }
+cfg-if = "1.0.0"
+console_log = "1"
+log = "0.4"
+axum = { version = "0.7", optional = true, features = ["macros"]}
 console_error_panic_hook = "0.1"
 leptos = { version = "0.6", features = ["nightly"] }
 leptos_axum = { version = "0.6", optional = true }
@@ -20,6 +23,11 @@ wasm-bindgen = "=0.2.93"
 thiserror = "1"
 tracing = { version = "0.1", optional = true }
 http = "1"
+axum-extra = { version = "0.9.3", optional = true, features = [
+    "cookie",
+    "cookie-signed",
+    "cookie-private",
+] }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
