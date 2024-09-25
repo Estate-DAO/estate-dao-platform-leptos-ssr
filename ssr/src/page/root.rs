@@ -3,16 +3,17 @@ use leptos::*;
 
 // use crate::component::FullScreenSpinner;
 
+// use crate::page::location_search::SearchLocation;
+use leptos_icons::*;
+
+use crate::component::HSettingIcon;
+
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
-        <main class="  py-4 ">
-            <div class="">
-
-                <Navbar />
-
+        <main>
+            <div>
                 <HeroSection />
-
                 <MostPopular />
             </div>
         </main>
@@ -22,16 +23,24 @@ pub fn RootPage() -> impl IntoView {
 #[component]
 pub fn HeroSection() -> impl IntoView {
     view! {
-        <section class="bg-cover bg-center h-screen  bg-[url('/img/home.webp')]">
-            <div class="flex flex-col items-center justify-center h-full text-center">
-                <h1 class="text-4xl font-bold text-black mb-8">Hey! Where are you off to?</h1>
-                <div class="flex space-x-4 mb-8">
-
-                    <InputGroup />
-                </div>
-                <div class="flex space-x-4">
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded">Filter</button>
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded">Sort By</button>
+        <section class="relative bg-cover bg-center h-screen  bg-[url('/img/home.webp')]">
+            <Navbar />
+            <div class="mt-40">
+                <div class="flex flex-col items-center justify-center h-full">
+                    <h1 class="text-4xl font-bold text-black mb-8">Hey! Where are you off to?</h1>
+                    <div class="flex space-x-4 mb-8">
+                        <InputGroup />
+                    </div>
+                    <div class="flex space-x-4">
+                        <button class="bg-white text-black px-4 py-2 rounded-lg flex items-center ">
+                        <Icon class="w-5 h-5 mr-2" icon=HSettingIcon/> 
+                            Filter
+                        </button>
+                        <button class="bg-white text-black px-4 py-2 rounded-lg flex items-start">
+                        Sort By
+                        <Icon icon=icondata::BiChevronDownRegular class="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -43,7 +52,7 @@ pub fn Navbar() -> impl IntoView {
     view! {
         <nav class="flex justify-between items-center py-4 px-8">
             <div class="flex items-center">
-                <img src="/img/estate_dao_logo.webp" alt="Icon" class="h-8 w-full" />
+                <img src="/img/estate_dao_logo_transparent.webp" alt="Icon" class="h-8 w-full" />
             </div>
             <div class="flex space-x-4">
                 <a href="#" class="text-gray-700 hover:text-gray-900">
@@ -60,76 +69,55 @@ pub fn Navbar() -> impl IntoView {
 #[component]
 pub fn InputGroup() -> impl IntoView {
     view! {
-        <div class="bg-white bg-opacity-80 rounded-full flex items-center p-1 shadow-lg max-w-4xl w-full">
+        <div class="bg-white bg-opacity-[50%] backdrop-blur rounded-full flex items-center p-4 shadow-lg max-w-4xl w-full">
+            // <SearchLocation />
             // <!-- Destination input -->
-            <div class="relative flex-1">
-                <select class="w-full py-2 pl-10 pr-4 text-gray-700 bg-transparent border-none rounded-full focus:outline-none">
-                    <option value="" disabled selected>
-                        Destination
-                    </option>
-                    <option value="paris">Paris</option>
-                    <option value="london">London</option>
-                    <option value="new-york">New York</option>
-                </select>
-                <div class="absolute inset-y-0 left-3 flex items-center">
-                    <svg
-                        class="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        ></path>
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                    </svg>
-                </div>
-            </div>
 
-            // <!-- Date range picker -->
-            <div class="flex-1 border-l border-r border-gray-300">
+            <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-2 text-xl flex items-center">
+                    <Icon icon=icondata::BsMap class="text-black" />
+                </div>
+
                 <input
                     type="text"
-                    placeholder="Check in — Check out"
-                    class="w-full py-2 px-4 text-gray-700 bg-transparent border-none focus:outline-none"
-                    onfocus="(this.type='date')"
-                    onblur="(this.type='text')"
+                    placeholder="Destination"
+                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
                 />
             </div>
 
+            // <!-- Date range picker -->
+            <div class="relative flex-1 border-l border-r border-white">
+                <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
+                    <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
+                </div>
+
+                <input
+                    type="text"
+                    placeholder="Check in — Check out"
+                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
+                    onfocus="(this.type='date')"
+                    onblur="(this.type='text')"
+                />
+
+            </div>
+
             // <!-- Guests dropdown -->
-            <div class="relative flex-1">
+            <div class="relative flex-1 flex items-center">
+                <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
+                    <Icon icon=icondata::BsPerson class="text-black font-light" />
+                </div>
+
                 <button
                     id="guestsDropdown"
-                    class="w-full py-2 pl-4 pr-10 text-left text-gray-700 bg-transparent rounded-full focus:outline-none"
+                    class="w-full flex-0 py-2 pl-10 text-left text-gray-700 text-sm font-light bg-transparent rounded-full focus:outline-none"
                 >
                     "0 adult • 0 children"
                 </button>
-                <div class="absolute inset-y-0 right-3 flex items-center">
-                    <svg
-                        class="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                        ></path>
-                    </svg>
+
+                <div class="absolute inset-y-2 text-xl right-3 flex items-center">
+                    <Icon icon=icondata::BiChevronDownRegular class="text-black" />
                 </div>
+
                 <div
                     id="guestsDropdownContent"
                     class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg"
@@ -164,21 +152,10 @@ pub fn InputGroup() -> impl IntoView {
             </div>
 
             // <!-- Search button -->
-            <button class="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <svg
-                    class="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    ></path>
-                </svg>
+            <button class=" text-2xl bg-white text-white p-2 rounded-full hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <div>
+                    <Icon icon=icondata::AiSearchOutlined class="text-blue-800 hover:text-white" />
+                </div>
             </button>
         </div>
     }
