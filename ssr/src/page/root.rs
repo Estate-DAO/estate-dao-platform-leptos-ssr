@@ -33,12 +33,11 @@ pub fn HeroSection() -> impl IntoView {
                     </div>
                     <div class="flex space-x-4">
                         <button class="bg-white text-black px-4 py-2 rounded-lg flex items-center ">
-                        <Icon class="w-5 h-5 mr-2" icon=HSettingIcon/> 
+                            <Icon class="w-5 h-5 mr-2" icon=HSettingIcon />
                             Filter
                         </button>
                         <button class="bg-white text-black px-4 py-2 rounded-lg flex items-start">
-                        Sort By
-                        <Icon icon=icondata::BiChevronDownRegular class="w-5 h-5" />
+                            Sort By <Icon icon=icondata::BiChevronDownRegular class="w-5 h-5" />
                         </button>
                     </div>
                 </div>
