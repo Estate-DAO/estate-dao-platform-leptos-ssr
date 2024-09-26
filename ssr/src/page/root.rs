@@ -106,7 +106,7 @@ pub fn InputGroup() -> impl IntoView {
                 <input
                     type="text"
                     placeholder="Check in — Check out"
-                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
+                    class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
                     onfocus="(this.type='date')"
                     onblur="(this.type='text')"
                 />
@@ -177,14 +177,13 @@ pub fn InputGroup() -> impl IntoView {
 fn MostPopular() -> impl IntoView {
     view! {
         <div class="bg-white rounded-[45px] p-4 w-full -mt-8">
-            <h3 class="text-2xl font-bold text-center mb-8">Most Popular Destinations</h3>
-            <div class="grid grid-cols-3 gap-4">
-                <Card />
-                <Card />
-                <Card />
-                <Card />
-                <Card />
-                <Card />
+            <div class="py-16 px-20">
+                <div class="text-2xl font-semibold text-left mb-6">Most popular destinations</div>
+                <div class="grid grid-cols-3 gap-4">
+                    <Card />
+                    <Card />
+                    <Card />
+                </div>
             </div>
         </div>
     }
@@ -193,8 +192,8 @@ fn MostPopular() -> impl IntoView {
 #[component]
 fn Card() -> impl IntoView {
     view! {
-        <div class="rounded-lg overflow-hidden border border-gray-300">
-            <img src="/img/home.webp" alt="Destination" class="w-full aspect-[4/3] object-cover" />
+        <div class="rounded-lg overflow-hidden border border-gray-300 max-h-96">
+            <img src="/img/home.webp" alt="Destination" class="w-full aspect-[4/3] object-cover max-h-72" />
             <div class="p-4 bg-white">
                 <p class="text-lg font-semibold">Mehico</p>
             </div>
