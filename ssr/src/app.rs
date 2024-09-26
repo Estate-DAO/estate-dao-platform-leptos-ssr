@@ -26,11 +26,14 @@ pub fn App() -> impl IntoView {
 
         // sets the document title
         <Title text="Estate DAO" />
-        
+
         // import Figtree font
-        <Link rel="preconnect" href="https://fonts.googleapis.com"/>
-        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true"/>
-        <Link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet"/>
+        <Link rel="preconnect" href="https://fonts.googleapis.com" />
+        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
+        <Link
+            href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
+            rel="stylesheet"
+        />
 
         // content for this welcome page
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
