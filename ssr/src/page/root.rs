@@ -82,7 +82,7 @@ pub fn Footer() -> impl IntoView {
     view! {
         <div class="py-16 px-20 flex items-center justify-between">
             <div class="flex items-center space-x-6">
-                <div class="text-xl">
+                <div class="font-semibold text-xl">
                     hello@estatedao.com
                 </div>
                 <div class="text-xl">
