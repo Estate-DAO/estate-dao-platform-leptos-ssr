@@ -49,7 +49,7 @@ pub fn HeroSection() -> impl IntoView {
 #[component]
 pub fn Navbar() -> impl IntoView {
     view! {
-        <nav class="flex justify-between items-center py-4 px-8">
+        <nav class="flex justify-between items-center py-10 px-8">
             <div class="flex items-center">
                 <img src="/img/estate_dao_logo_transparent.webp" alt="Icon" class="h-8 w-full" />
             </div>
