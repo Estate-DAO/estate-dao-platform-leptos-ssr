@@ -44,7 +44,7 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <br />
                     <button class="px-2 py-4 bg-white rounded-md w-1/3">
-                        We 're the first decentralized booking platform powered by ICP.
+                        "We're the first decentralized booking platform powered by ICP."
                         <a href="#" class="underline">
                             Learn More ->
                         </a>
@@ -175,7 +175,7 @@ pub fn InputGroup() -> impl IntoView {
 #[component]
 fn MostPopular() -> impl IntoView {
     view! {
-        <div class="bg-white rounded-lg p-4 mx-auto max-w-7xl">
+        <div class="bg-white rounded-[45px] p-4 w-full -mt-8">
             <h3 class="text-2xl font-bold text-center mb-8">Most Popular Destinations</h3>
             <div class="grid grid-cols-3 gap-4">
                 <Card />
