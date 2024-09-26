@@ -16,6 +16,7 @@ pub fn RootPage() -> impl IntoView {
                 <HeroSection />
                 <MostPopular />
             </div>
+            <Footer />
         </main>
     }
 }
@@ -45,10 +46,8 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <div class="flex items-end px-6 py-3 bg-white rounded-xl max-w-fit w-full ">
                         "We're the first decentralized booking platform powered by ICP."
-                        // <div class="inline-block flex space-x-1 items-center ">
                         <span class="font-semibold text-blue-500 ml-4 inline"> "Learn more" </span>
                         <Icon class="w-6 h-6 font-semibold inline ml-2 text-blue-500" icon=icondata::CgArrowRight />
-                        // </div>
                     </div>
                     <br />
                     <br />
@@ -75,6 +74,29 @@ pub fn Navbar() -> impl IntoView {
                 </a>
             </div>
         </nav>
+    }
+}
+
+#[component]
+pub fn Footer() -> impl IntoView {
+    view! {
+        <div class="py-16 px-20 flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <div class="text-xl">
+                    hello@estatedao.com
+                </div>
+                <div class="text-xl">
+                    <Icon icon=icondata::IoLogoInstagram />
+                </div>
+                <div class="text-xl">
+                    <Icon icon=icondata::BiLinkedin />
+                </div>
+
+            </div>
+            <div class="text-gray-400 font-semibold">
+            "Copyright © 2024 EstateDao. All Rights Reserved."
+            </div>
+        </div>
     }
 }
 
