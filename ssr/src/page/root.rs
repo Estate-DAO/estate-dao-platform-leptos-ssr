@@ -23,7 +23,7 @@ pub fn RootPage() -> impl IntoView {
 #[component]
 pub fn HeroSection() -> impl IntoView {
     view! {
-        <section class="relative bg-cover bg-center h-screen  bg-[url('/img/home.webp')]">
+        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')]">
             <Navbar />
             <div class="mt-40">
                 <div class="flex flex-col items-center justify-center h-full">
@@ -39,8 +39,19 @@ pub fn HeroSection() -> impl IntoView {
                             Sort By <Icon icon=icondata::BiChevronDownRegular class="w-5 h-5" />
                         </button>
                     </div>
-                </div>
-                <div class="bg-white rounded-full">
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <button class="px-2 py-4 bg-white rounded-md w-1/3">
+                        We 're the first decentralized booking platform powered by ICP.
+                        <a href="#" class="underline">
+                            Learn More ->
+                        </a>
+                    </button>
+                    <br />
+                    <br />
+                    <br />
                 </div>
             </div>
         </section>
@@ -164,7 +175,7 @@ pub fn InputGroup() -> impl IntoView {
 #[component]
 fn MostPopular() -> impl IntoView {
     view! {
-        <div class="bg-white rounded-lg shadow-lg p-8">
+        <div class="bg-white rounded-lg p-4 mx-auto max-w-7xl">
             <h3 class="text-2xl font-bold text-center mb-8">Most Popular Destinations</h3>
             <div class="grid grid-cols-3 gap-4">
                 <Card />
@@ -181,12 +192,8 @@ fn MostPopular() -> impl IntoView {
 #[component]
 fn Card() -> impl IntoView {
     view! {
-        <div class="rounded-lg overflow-hidden shadow-md">
-            <img
-                src="/img/home.webp"
-                alt="Destination"
-                class="w-full h-48 object-cover"
-            />
+        <div class="rounded-lg overflow-hidden border border-gray-300">
+            <img src="/img/home.webp" alt="Destination" class="w-full aspect-[4/3] object-cover" />
             <div class="p-4 bg-white">
                 <p class="text-lg font-semibold">Mehico</p>
             </div>
