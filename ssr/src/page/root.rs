@@ -27,28 +27,29 @@ pub fn HeroSection() -> impl IntoView {
             <Navbar />
             <div class="mt-40">
                 <div class="flex flex-col items-center justify-center h-full">
-                    <h1 class="text-4xl font-bold text-black mb-8">Hey! Where are you off to?</h1>
+                    <h1 class="text-5xl font-semibold text-black mb-8">Hey! Where are you off to?</h1>
                     <InputGroup />
                     <br />
                     <div class="flex space-x-4">
                         <button class="bg-white text-black px-4 py-2 rounded-lg flex items-center ">
                             <Icon class="w-5 h-5 mr-2" icon=HSettingIcon />
-                            Filter
+                            Filters
                         </button>
                         <button class="bg-white text-black px-4 py-2 rounded-lg flex items-start">
-                            Sort By <Icon icon=icondata::BiChevronDownRegular class="w-5 h-5" />
+                            Sort by <Icon icon=icondata::BiChevronDownRegular class="w-6 h-6 ml-2" />
                         </button>
                     </div>
                     <br />
                     <br />
                     <br />
                     <br />
-                    <button class="px-2 py-4 bg-white rounded-md w-1/3">
+                    <div class="flex items-end px-6 py-3 bg-white rounded-xl max-w-fit w-full ">
                         "We're the first decentralized booking platform powered by ICP."
-                        <a href="#" class="underline">
-                            Learn More ->
-                        </a>
-                    </button>
+                        // <div class="inline-block flex space-x-1 items-center ">
+                        <span class="font-semibold text-blue-500 ml-4 inline"> "Learn more" </span>
+                        <Icon class="w-6 h-6 font-semibold inline ml-2 text-blue-500" icon=icondata::CgArrowRight />
+                        // </div>
+                    </div>
                     <br />
                     <br />
                     <br />
@@ -65,12 +66,12 @@ pub fn Navbar() -> impl IntoView {
             <div class="flex items-center">
                 <img src="/img/estate_dao_logo_transparent.webp" alt="Icon" class="h-8 w-full" />
             </div>
-            <div class="flex space-x-4">
+            <div class="flex space-x-8">
                 <a href="#" class="text-gray-700 hover:text-gray-900">
                     Whitepaper
                 </a>
                 <a href="#" class="text-gray-700 hover:text-gray-900">
-                    About Us
+                    About us
                 </a>
             </div>
         </nav>
@@ -80,7 +81,7 @@ pub fn Navbar() -> impl IntoView {
 #[component]
 pub fn InputGroup() -> impl IntoView {
     view! {
-        <div class="bg-white bg-opacity-[50%] backdrop-blur rounded-full flex items-center p-2 shadow-lg max-w-4xl w-full">
+        <div class="bg-white bg-opacity-[40%] backdrop-blur rounded-full flex items-center p-2 shadow-lg max-w-4xl w-full">
             // <SearchLocation />
             // <!-- Destination input -->
 
