@@ -1,8 +1,8 @@
 macro_rules! icon_gen {
-    ($name:ident, view_box=$view_box:expr, $path:expr) => {
+    ($name:ident, view_box=$view_box:expr, style=$style:expr, $path:expr) => {
         #[allow(non_upper_case_globals)]
         pub static $name: icondata::Icon = &icondata_core::IconData {
-            style: None,
+            style: $style,
             x: None,
             y: None,
             width: None,
