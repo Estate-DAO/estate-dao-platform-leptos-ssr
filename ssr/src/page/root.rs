@@ -1,8 +1,6 @@
 use leptos::*;
 // use leptos_router::*;
 
-// use crate::component::FullScreenSpinner;
-
 // use crate::page::location_search::SearchLocation;
 use leptos_icons::*;
 
@@ -94,9 +92,32 @@ pub fn Footer() -> impl IntoView {
 }
 
 #[component]
-pub fn InputGroup() -> impl IntoView {
+pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl IntoView {
+    // -------------------------------------
+    // BACKGROUND CLASSES FOR DISABLED STATE
+    // -------------------------------------
+
+    let bg_class = if disabled.get() {
+        "bg-gray-300 bg-opacity-[40%]"
+    } else {
+        "bg-white bg-opacity-[40%]"
+    };
+
+    let bg_search_class = if disabled.get() {
+        "bg-gray-300"
+    } else {
+        "bg-white text-white hover:bg-blue-200"
+    };
+
+    let bg_search_icon_class = if disabled.get() {
+        "text-gray-400"
+    } else {
+        "text-blue-600 "
+    };
+    // -------------------------------------
+
     view! {
-        <div class="bg-white bg-opacity-[40%] backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-gray-300 max-w-4xl w-full">
+        <div class=format!(" {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full", bg_class)>
             // <!-- Destination input -->
 
             <div class="relative flex-1">
@@ -178,9 +199,9 @@ pub fn InputGroup() -> impl IntoView {
             </div>
 
             // <!-- Search button -->
-            <button class=" text-2xl bg-white text-white p-2 rounded-full hover:bg-blue-200 focus:outline-none">
+            <button class=format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class)>
                 <div>
-                    <Icon icon=icondata::AiSearchOutlined class="text-blue-600 p-[1px]" />
+                    <Icon icon=icondata::AiSearchOutlined class=format!("{} p-[1px]", bg_search_icon_class) />
                 </div>
             </button>
         </div>

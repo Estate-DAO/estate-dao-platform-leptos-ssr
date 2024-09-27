@@ -5,6 +5,7 @@ use leptos_router::*;
 
 use crate::page::RootPage;
 use crate::page::HotelDetailsPage;
+use crate::page::HotelListPage;
 
 #[component]
 fn NotFound() -> impl IntoView {
@@ -40,6 +41,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes>
                     <Route path="" view=RootPage />
+                    <Route path="/hotel-list" view=HotelListPage />
                     <Route path="/hotel-details" view=HotelDetailsPage />
                 </Routes>
             </main>
