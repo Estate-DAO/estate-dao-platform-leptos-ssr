@@ -1,4 +1,3 @@
-
 // export spinner as flattened
 mod spinner;
 pub use spinner::*;
@@ -14,6 +13,13 @@ pub use filter_and_sort_by::*;
 
 mod filter;
 pub use filter::*;
+
+mod star_rating;
+pub use star_rating::*;
+
+mod price_display;
+pub use price_display::*; 
+
 
 mod sort_by;
 pub use sort_by::*;

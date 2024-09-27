@@ -1,8 +1,7 @@
 use leptos::*;
-use leptos_icons::Icon;
 
 use crate::{
-    component::{FilterAndSortBy, HSettingIcon},
+    component::{FilterAndSortBy, PriceComponent, StarRating},
     page::{InputGroup, Navbar},
 };
 
@@ -51,54 +50,10 @@ pub fn HotelCard() -> impl IntoView {
 }
 
 #[component]
-pub fn PriceComponent(
-    #[prop(into)] price: Signal<u32>,
-    #[prop(default = "₹".to_string())] currency: String,
-) -> impl IntoView {
-    let formatted_price = move || {
-        price()
-            .to_string()
-            .as_bytes()
-            .rchunks(3)
-            .rev()
-            .map(std::str::from_utf8)
-            .collect::<Result<Vec<&str>, _>>()
-            .unwrap()
-            .join(",")
-    };
-
-    view! {
-        <div class="flex items-center space-x-1">
-            <span class="font-semibold">{currency}{"\u{00A0}"}{formatted_price}</span>
-            <span class="font-light text-sm">" /night"</span>
-        </div>
-    }
-}
-
-#[component]
 pub fn ViewDetails() -> impl IntoView {
     view! {
         <span class="font-semibold underline underline-offset-2	 decoration-solid text-xs">
             "View details"
         </span>
-    }
-}
-
-#[component]
-pub fn StarRating(#[prop(into)] rating: Signal<u8>) -> impl IntoView {
-    view! {
-        <div class="flex items-center space-x-2">
-            <div class="flex items-center space-x-0.5 ">
-                {(0..5)
-                    .map(|i| {
-                        let icon = move || {
-                            if i < rating() { icondata::BiStarSolid } else { icondata::BiStarRegular }
-                        };
-                        view! { <Icon class="w-3 h-3 text-blue-500" icon=icon() /> }
-                    })
-                    .collect::<Vec<_>>()}
-            </div>
-            <div class="text-xs text-blue-500">{rating}.0</div>
-        </div>
     }
 }
