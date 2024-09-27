@@ -96,20 +96,20 @@ pub fn ViewDetails() -> impl IntoView{
 }
 
 #[component]
-pub fn StarRating(
-    #[prop(into)]
-    rating: Signal<u8>,
-) -> impl IntoView {
+pub fn StarRating(#[prop(into)] rating: Signal<u8>) -> impl IntoView {
     view! {
-        <div class="flex items-center space-x-1">
-            {(0..5)
-                .map(|i| {
-                    let icon = move || {
-                        if i < rating() { icondata::BiStarSolid } else { icondata::BiStarRegular }
-                    };
-                    view! { <Icon class="w-3 h-3 text-blue-500" icon=icon() /> }
-                })
-                .collect::<Vec<_>>()} <span class="text-xs text-blue-500 ml-1">{rating}.0</span>
+        <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-0.5 ">
+                {(0..5)
+                    .map(|i| {
+                        let icon = move || {
+                            if i < rating() { icondata::BiStarSolid } else { icondata::BiStarRegular }
+                        };
+                        view! { <Icon class="w-3 h-3 text-blue-500" icon=icon() /> }
+                    })
+                    .collect::<Vec<_>>()}
+            </div>
+            <div class="text-xs text-blue-500">{rating}.0</div>
         </div>
     }
 }
