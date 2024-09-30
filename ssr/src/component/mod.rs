@@ -21,5 +21,8 @@ mod price_display;
 pub use price_display::*; 
 
 
+mod divider;
+pub use divider::*;
+
 mod sort_by;
 pub use sort_by::*;
