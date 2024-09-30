@@ -76,10 +76,25 @@ pub fn HotelDetailsPage() -> impl IntoView {
                     <div class="text-3xl font-semibold">Riva Beach Resort</div>
                 </div>
 
-                // image gallery component
-
-                <div class="py-64 border border-dotted border-green-500 ">
-                    IMAGE GALLERY COMPONENT
+                <br />
+                <div class="space-y-3">
+                    <div class="flex space-x-3 h-1/2 w-full">
+                        <img src="/img/home.webp" alt="Destination" class="w-3/5 h-[397px] rounded-xl" />
+                        <div class="space-y-3 w-2/5">
+                            <img src="/img/home.webp" alt="Destination" class="object-fill h-[193px] w-full rounded-xl" />
+                            <img src="/img/home.webp" alt="Destination" class="object-fill h-[193px] w-full rounded-xl" />
+                        </div>
+                    </div>
+                    <div class="flex space-x-3">
+                        <img src="/img/home.webp" alt="Destination" class="w-[290px] h-1/3 rounded-xl" />
+                        <img src="/img/home.webp" alt="Destination" class="w-[290px] h-1/3 rounded-xl" />
+                        <div class="relative w-[290px] h-1/3 rounded-xl">
+                            <img src="/img/home.webp" alt="Destination" class="object-cover h-full w-full rounded-xl" />
+                            <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
+                                <span class="text-white text-lg font-semibold p-16">See all photos</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 // bottom half
@@ -145,7 +160,7 @@ pub fn PricingBookNow () -> impl IntoView{
             </div>
 
             <div class="flex items-center space-x-2">
-                <Icon icon=icondata::BsPerson class="text-black text-xl  " />
+                <Icon icon=icondata::BsPerson class="text-black text-xl" />
                 <div>"4 adults"</div>
             </div>
 
@@ -183,7 +198,7 @@ pub fn PricingBreakdown(
 
     let per_night_calc = create_memo(move |_| price_per_night.get() * number_of_nights.get());
     let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get());
-    let row_format_class = "flex justify-between text-sm";
+    let row_format_class = "flex justify-between";
     view! {
         <div class="flex flex-col space-y-2 mt-4">
             <div class=row_format_class>
