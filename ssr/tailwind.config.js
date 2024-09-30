@@ -3,6 +3,9 @@ module.exports = {
     content: ["./ssr/*.html", "./ssr/src/**/*.rs"],
     theme: {
       extend: {
+        fontFamily: {
+          sans: ["Figtree", "sans-serif"],
+        },
         colors: {
           primary: {
             50: 'rgb(var(--color-primary-50))',
@@ -20,7 +23,9 @@ module.exports = {
         }
       },
     },
-    plugins: [],
+    plugins: [
+      require('@tailwindcss/typography'),
+    ],
   }
   
   

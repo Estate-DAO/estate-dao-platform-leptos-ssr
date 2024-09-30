@@ -3,6 +3,7 @@ pub mod error_template;
 pub mod state;
 pub mod page;
 pub mod component;
+pub mod utils;
 
 #[cfg(feature = "ssr")]
 pub mod fallback;
