@@ -26,7 +26,9 @@ pub fn HeroSection() -> impl IntoView {
             <Navbar />
             <div class="mt-40">
                 <div class="flex flex-col items-center justify-center h-full">
-                    <h1 class="text-5xl font-semibold text-black mb-8">Hey! Where are you off to?</h1>
+                    <h1 class="text-5xl font-semibold text-black mb-8">
+                        Hey! Where are you off to?
+                    </h1>
                     <InputGroup />
                     <br />
                     <FilterAndSortBy />
@@ -36,8 +38,11 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <div class="flex items-end px-6 py-3 bg-white rounded-xl max-w-fit w-full ">
                         "We're the first decentralized booking platform powered by ICP."
-                        <span class="font-semibold text-blue-500 ml-4 inline"> "Learn more" </span>
-                        <Icon class="w-6 h-6 font-semibold inline ml-2 text-blue-500" icon=icondata::CgArrowRight />
+                        <span class="font-semibold text-blue-500 ml-4 inline">"Learn more"</span>
+                        <Icon
+                            class="w-6 h-6 font-semibold inline ml-2 text-blue-500"
+                            icon=icondata::CgArrowRight
+                        />
                     </div>
                     <br />
                     <br />
@@ -73,9 +78,7 @@ pub fn Footer() -> impl IntoView {
     view! {
         <div class="py-16 px-20 flex items-center justify-between">
             <div class="flex items-center space-x-6">
-                <div class="font-semibold text-xl">
-                    hello@estatedao.com
-                </div>
+                <div class="font-semibold text-xl">hello@estatedao.com</div>
                 <div class="text-xl">
                     <Icon icon=icondata::IoLogoInstagram />
                 </div>
@@ -85,7 +88,7 @@ pub fn Footer() -> impl IntoView {
 
             </div>
             <div class="text-gray-400 font-semibold">
-            "Copyright © 2024 EstateDao. All Rights Reserved."
+                "Copyright © 2024 EstateDao. All Rights Reserved."
             </div>
         </div>
     }
@@ -117,7 +120,10 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
     // -------------------------------------
 
     view! {
-        <div class=format!(" {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full", bg_class)>
+        <div class=format!(
+            " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full",
+            bg_class,
+        )>
             // <!-- Destination input -->
 
             <div class="relative flex-1">
@@ -199,9 +205,15 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             </div>
 
             // <!-- Search button -->
-            <button class=format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class)>
+            <button class=format!(
+                " {}  text-2xl p-2 rounded-full  focus:outline-none",
+                bg_search_class,
+            )>
                 <div>
-                    <Icon icon=icondata::AiSearchOutlined class=format!("{} p-[1px]", bg_search_icon_class) />
+                    <Icon
+                        icon=icondata::AiSearchOutlined
+                        class=format!("{} p-[1px]", bg_search_icon_class)
+                    />
                 </div>
             </button>
         </div>

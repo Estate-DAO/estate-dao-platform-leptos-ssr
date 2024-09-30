@@ -1,7 +1,7 @@
 use leptos::*;
 
 use crate::{
-    component::{FilterAndSortBy, PriceComponent, StarRating},
+    component::{FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
 };
 
@@ -41,7 +41,7 @@ pub fn HotelCard() -> impl IntoView {
                 </div>
 
                 <div class="flex items-center justify-between px-6 pt-2">
-                    <PriceComponent price=price />
+                    <PriceDisplay price=price />
                     <ViewDetails />
                 </div>
             </div>

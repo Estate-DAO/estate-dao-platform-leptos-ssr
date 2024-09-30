@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_icons::Icon;
 
 use crate::{
-    component::{FilterAndSortBy, PriceComponent, StarRating},
+    component::{FilterAndSortBy, PriceDisplay, StarRating, Divider},
     page::{InputGroup, Navbar},
 };
 
@@ -25,7 +25,6 @@ struct Amenity {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
-    let price = create_rw_signal(40500);
 
     let rating = create_rw_signal(4);
 
@@ -71,7 +70,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 <FilterAndSortBy />
             </div>
 
-            <div class="max-w-4xl mx-auto py-8 border border-red-400">
+            <div class="max-w-4xl mx-auto py-8">
                 <div class="flex flex-col">
                     <StarRating rating=rating />
                     <div class="text-3xl font-semibold">Riva Beach Resort</div>
@@ -85,10 +84,10 @@ pub fn HotelDetailsPage() -> impl IntoView {
 
                 // bottom half
 
-                <div class="flex">
+                <div class="flex mt-8 space-x-2">
 
                     // left side div
-                    <div class="basis-4/6">
+                    <div class="basis-3/5">
                         // About component
                         <div class="flex flex-col space-y-4">
                             <div class="text-xl">About</div>
@@ -97,37 +96,175 @@ pub fn HotelDetailsPage() -> impl IntoView {
                             </div>
                         </div>
                         <hr class="mt-14 mb-10 border-t border-gray-300" />
-                        
+
                         // amenities component
                         <div class=" flex flex-col space-y-8 mt-8">
-                        <div class="text-xl">Amenities</div>
-                        <div class="grid grid-cols-3 gap-4">
-                            <For
-                                each=move || amenities.clone()
-                                key=|amenity| amenity.text
-                                let:amenity
-                            >
-                                <AmenitiesIconText icon=amenity.icon text=amenity.text />
-                            </For>
-                        </div>
+                            <div class="text-xl">Amenities</div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <For
+                                    each=move || amenities.clone()
+                                    key=|amenity| amenity.text
+                                    let:amenity
+                                >
+                                    <AmenitiesIconText icon=amenity.icon text=amenity.text />
+                                </For>
+                            </div>
                         </div>
                     </div>
 
                     // right side div
-                    <div class="basis-2/6">
+                    <div class="basis-2/5">
                         // pricing component
-                            // card component
-                            <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-lg">
-                                <div>
-                                    <PriceComponent price=price  price_class="text-2xl font-semibold".into() />
-                                </div>
-                            
-                            </div>
+                        // card component
+                        <PricingBookNow />
 
                     </div>
                 </div>
             </div>
         </section>
+    }
+}
+
+
+#[component]
+pub fn PricingBookNow () -> impl IntoView{
+    let price = create_rw_signal(40500);
+    let deluxe_counter = create_rw_signal(3);
+    let luxury_counter = create_rw_signal(0);
+
+    let num_nights = create_rw_signal(3);
+    let taxes_fees = create_rw_signal(1000);
+
+    view! {
+        <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
+            <PriceDisplay price=price price_class="text-2xl font-semibold" />
+
+            <div class="flex items-center  space-x-2">
+                <Icon icon=icondata::AiCalendarOutlined class="text-black  text-xl  " />
+                <div>"Thu, Aug 22 -- Mon, Aug 27"</div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <Icon icon=icondata::BsPerson class="text-black text-xl  " />
+                <div>"4 adults"</div>
+            </div>
+
+            <div class="flex items-center  space-x-2">
+                <Icon icon=icondata::LuSofa class="text-black text-xl " />
+                <div>"2 rooms"</div>
+            </div>
+
+            <div class="flex flex-col space-y-2">
+                <div class="font-semibold">Select room type:</div>
+                <NumberCounter label="Deluxe Double Suite" counter=deluxe_counter class="mt-4" />
+                <Divider />
+                <NumberCounter label="Luxury Double Room" counter=luxury_counter />
+                <Divider />
+                <div>
+                    <PricingBreakdown price_per_night=price number_of_nights=num_nights taxes_fees />
+                </div>
+            </div>
+
+        </div>
+    }
+}
+
+
+#[component]
+pub fn PricingBreakdown(
+    #[prop(into)] price_per_night: Signal<u32>,
+    #[prop(into)] number_of_nights: Signal<u32>,
+    #[prop(into)] taxes_fees: Signal<u32>,
+) -> impl IntoView{
+
+    let per_night_calc = create_memo(move |_| price_per_night.get() * number_of_nights.get());
+    let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get());
+    let row_format_class = "flex justify-between text-sm";
+    view! {
+        <div class="flex flex-col space-y-2 mt-4">
+            <div class=row_format_class>
+
+                <PriceDisplay
+                    price=price_per_night
+                    appended_text=Some(format!(" x {} nights", number_of_nights.get()))
+                    price_class=""
+                    base_class="inline"
+                    subtext_class="font-normal"
+                />
+                <div class="">
+                    <PriceDisplay
+                        price=per_night_calc
+                        price_class=""
+                        appended_text=Some("".into())
+                    />
+                </div>
+            </div>
+
+            // taxes / fees
+            <div class=row_format_class>
+                <div>Taxes and fees</div>
+                <div class="flex-none">
+
+                    <PriceDisplay price=taxes_fees price_class="" appended_text=Some("".into()) />
+                </div>
+            </div>
+            // Total
+            <div class=row_format_class>
+                <div class="font-semibold">Total</div>
+                <div class="flex-none">
+
+                    <PriceDisplay price=total_calc appended_text=Some("".into()) />
+                </div>
+            </div>
+
+            <div class="flex flex-col space-y-8">
+                <div class="text-sm text-right font-semibold">
+                    Cryptocurrency payments accepted!
+                </div>
+                <button class="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-800">
+                    Book Now
+                </button>
+            </div>
+            </div>
+        
+    }
+}
+
+
+#[component]
+pub fn NumberCounter(
+    #[prop(into)] label: String,
+    #[prop(default = "".into() , into)] class: String,
+    counter: RwSignal<i32>,
+) -> impl IntoView {
+
+    let merged_class = format!("flex items-center justify-between {}",   class);
+
+    view! {
+        <div class=merged_class>
+            <p>{label}</p>
+            <button
+                class="px-2 py-1 text-2xl"
+                on:click=move |_| counter.update(|n| *n = (*n - 1).max(0))
+            >
+                "-"
+            </button>
+            <input
+                type="number"
+                prop:value=move || counter.get().to_string()
+                on:input=move |ev| {
+                    let value = event_target_value(&ev).parse().unwrap_or(0);
+                    counter.set(value.max(0));
+                }
+                class=format!(
+                    "{} text-center w-6",
+                    "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
+                )
+            />
+            <button class="px-2 py-1 text-2xl " on:click=move |_| counter.update(|n| *n += 1)>
+                "+"
+            </button>
+        </div>
     }
 }
 
