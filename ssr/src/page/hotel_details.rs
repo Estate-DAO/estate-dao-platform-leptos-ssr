@@ -161,7 +161,11 @@ pub fn PricingBookNow () -> impl IntoView{
                 <NumberCounter label="Luxury Double Room" counter=luxury_counter />
                 <Divider />
                 <div>
-                    <PricingBreakdown price_per_night=price number_of_nights=num_nights taxes_fees />
+                    <PricingBreakdown
+                        price_per_night=price
+                        number_of_nights=num_nights
+                        taxes_fees
+                    />
                 </div>
             </div>
 
@@ -225,8 +229,7 @@ pub fn PricingBreakdown(
                     Book Now
                 </button>
             </div>
-            </div>
-        
+        </div>
     }
 }
 
@@ -243,27 +246,29 @@ pub fn NumberCounter(
     view! {
         <div class=merged_class>
             <p>{label}</p>
-            <button
-                class="px-2 py-1 text-2xl"
-                on:click=move |_| counter.update(|n| *n = (*n - 1).max(0))
-            >
-                "-"
-            </button>
-            <input
-                type="number"
-                prop:value=move || counter.get().to_string()
-                on:input=move |ev| {
-                    let value = event_target_value(&ev).parse().unwrap_or(0);
-                    counter.set(value.max(0));
-                }
-                class=format!(
-                    "{} text-center w-6",
-                    "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
-                )
-            />
-            <button class="px-2 py-1 text-2xl " on:click=move |_| counter.update(|n| *n += 1)>
-                "+"
-            </button>
+            <div class="flex items-center space-x-1">
+                <button
+                    class="px-2 py-1 text-2xl"
+                    on:click=move |_| counter.update(|n| *n = (*n - 1).max(0))
+                >
+                    "-"
+                </button>
+                <input
+                    type="number"
+                    prop:value=move || counter.get().to_string()
+                    on:input=move |ev| {
+                        let value = event_target_value(&ev).parse().unwrap_or(0);
+                        counter.set(value.max(0));
+                    }
+                    class=format!(
+                        "{} text-center w-6",
+                        "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
+                    )
+                />
+                <button class="px-2 py-1 text-2xl " on:click=move |_| counter.update(|n| *n += 1)>
+                    "+"
+                </button>
+            </div>
         </div>
     }
 }
