@@ -4,7 +4,7 @@ use leptos::*;
 // use crate::page::location_search::SearchLocation;
 use leptos_icons::*;
 
-use crate::component::{EstateDaoIcon, FilterAndSortBy, HSettingIcon};
+use crate::component::{Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon};
 
 #[component]
 pub fn RootPage() -> impl IntoView {
@@ -127,15 +127,7 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // <!-- Destination input -->
 
             <div class="relative flex-1">
-                <div class="absolute inset-y-0 left-2 text-xl flex items-center">
-                    <Icon icon=icondata::BsMap class="text-black" />
-                </div>
-
-                <input
-                    type="text"
-                    placeholder="Destination"
-                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
-                />
+                <Destination />
             </div>
 
             // <!-- Date range picker -->
@@ -156,53 +148,9 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
 
             // <!-- Guests dropdown -->
             <div class="relative flex-1 flex items-center">
-                <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
-                    <Icon icon=icondata::BsPerson class="text-black font-light" />
-                </div>
-
-                <button
-                    id="guestsDropdown"
-                    class="w-full flex-0 py-2 pl-10 text-left text-gray-700 text-sm font-light bg-transparent rounded-full focus:outline-none"
-                >
-                    "0 adult • 0 children"
-                </button>
-
-                <div class="absolute inset-y-2 text-xl right-3 flex items-center">
-                    <Icon icon=icondata::BiChevronDownRegular class="text-black" />
-                </div>
-
-                <div
-                    id="guestsDropdownContent"
-                    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg"
-                >
-                    <div class="p-4">
-                        <div class="mb-4">
-                            <label for="adults" class="block text-sm font-medium text-gray-700">
-                                Adults
-                            </label>
-                            <input
-                                type="number"
-                                id="adults"
-                                min="0"
-                                value="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                        <div>
-                            <label for="children" class="block text-sm font-medium text-gray-700">
-                                Children
-                            </label>
-                            <input
-                                type="number"
-                                id="children"
-                                min="0"
-                                value="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <GuestQuantity />
             </div>
+
 
             // <!-- Search button -->
             <button class=format!(
