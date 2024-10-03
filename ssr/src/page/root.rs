@@ -1,11 +1,11 @@
+
 use leptos::*;
-// use leptos_router::*;
-
-// use crate::page::location_search::SearchLocation;
 use leptos_icons::*;
-
-use crate::component::{Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon};
-
+use leptos_router::use_navigate;
+use leptos::logging::log;
+ 
+ use crate::{app::AppRoutes, component::{Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon}};
+ 
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
@@ -117,6 +117,16 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
     } else {
         "text-blue-600 "
     };
+
+     let navigate = use_navigate();
+     let search_action = create_action( move |_| {
+         let nav = navigate.clone();
+         async move {
+             log!("Search button clicked");
+             nav(AppRoutes::HotelList.to_string(), Default::default());
+         }
+     });
+
     // -------------------------------------
 
     view! {
@@ -153,7 +163,9 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
 
 
             // <!-- Search button -->
-            <button class=format!(
+            <button
+            on:click=move |_| search_action.dispatch(())
+            class=format!(
                 " {}  text-2xl p-2 rounded-full  focus:outline-none",
                 bg_search_class,
             )>

@@ -1,9 +1,9 @@
 use leptos::*;
 
+
 use crate::{
-    component::{FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
-};
+     app::AppRoutes, component::{FilterAndSortBy, PriceDisplay, StarRating}, page::{InputGroup, Navbar}
+     };
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
@@ -31,6 +31,7 @@ pub fn HotelCard() -> impl IntoView {
     let rating = create_rw_signal(4);
     let price = create_rw_signal(40500);
     view! {
+                <a href=AppRoutes::HotelDetails.to_string()>
         <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
             <img class="w-full h-64 object-cover" src="/img/home.webp" alt="Hotel Casa De Patio" />
 
@@ -46,6 +47,7 @@ pub fn HotelCard() -> impl IntoView {
                 </div>
             </div>
         </div>
+        </a>
     }
 }
 
