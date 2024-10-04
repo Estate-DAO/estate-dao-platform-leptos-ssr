@@ -4,7 +4,7 @@ use leptos_icons::*;
 use leptos_router::use_navigate;
 use leptos::logging::log;
  
- use crate::{app::AppRoutes, component::{Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon}};
+ use crate::{app::AppRoutes, component::{Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon, DateTimeRangePicker}};
  
 #[component]
 pub fn RootPage() -> impl IntoView {
@@ -142,19 +142,21 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
 
             // <!-- Date range picker -->
             <div class="relative flex-1 border-l border-r border-white">
-                <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
-                    <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
-                </div>
+                // <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
+                //     <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
+                // </div>
 
-                <input
-                    type="text"
-                    placeholder="Check in — Check out"
-                    class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
-                    onfocus="(this.type='date')"
-                    onblur="(this.type='text')"
-                />
+                // <input
+                //     type="text"
+                //     placeholder="Check in — Check out"
+                //     class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
+                //     onfocus="(this.type='date')"
+                //     onblur="(this.type='text')"
+                // />
+                <DateTimeRangePicker />
 
             </div>
+
 
             // <!-- Guests dropdown -->
             <div class="relative flex-1 flex items-center">

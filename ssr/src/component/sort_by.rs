@@ -2,6 +2,7 @@ use crate::component::Divider;
 // use leptos::logging::log;
 use leptos::*;
 use leptos_icons::*;
+use web_sys::*;
  
 #[component]
 pub fn SortBy() -> impl IntoView {
@@ -18,7 +19,7 @@ pub fn SortBy() -> impl IntoView {
         <div class="relative">
             <button
                 class="bg-white text-black px-4 py-2 rounded-lg flex items-center border border-gray-300"
-                on:blur=move |_| set_is_open.set(false)
+                // on:blur=move |_| set_is_open.set(false)
                 on:click=move |_| set_is_open.update(|open| *open = !*open)
             >
             "Sort by" <Icon icon=icon
@@ -39,6 +40,15 @@ pub fn SortBy() -> impl IntoView {
 fn SortOptions() -> impl IntoView {
     let selected = create_rw_signal("Name");
 
+    let apply_selection = move |_| {
+        log::info!("Sort By: {}", selected());
+        web_sys::console::log_1(&format!(
+            "Sort By: {}",
+            selected()
+        )
+        .into());
+    };
+
     view! {
         <form class="p-4">
             <div class="space-y-4">
@@ -50,7 +60,7 @@ fn SortOptions() -> impl IntoView {
 
                 <SortOption name="sort" value="Rating high to low" selected=selected/>
             </div>
-            <button type="button" class="w-full mt-4 bg-white border border-black-2 text-black px-4 py-2 rounded-full">
+            <button type="button" class="w-full mt-4 bg-white border border-black-2 text-black px-4 py-2 rounded-full" on:click=apply_selection>
                 "Apply"
             </button>
         </form>

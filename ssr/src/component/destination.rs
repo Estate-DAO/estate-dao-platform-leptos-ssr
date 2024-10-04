@@ -22,7 +22,7 @@ pub fn Destination() -> impl IntoView {
         />
 
         <Show when=move || is_open()>
-            <div class="absolute mt-6 w-52 bg-white borderSortOptions border border-gray-200 rounded-xl shadow-lg">
+            <div class="absolute mt-6 w-80 bg-white borderSortOptions border border-gray-200 rounded-xl shadow-lg">
                 <SortOptions/>
             </div>
         </Show>
@@ -36,16 +36,24 @@ fn SortOptions() -> impl IntoView {
     view! {
         <form class="p-4">
             <div class="space-y-4">
-                <SortOption name="sort" value="Italy" selected=selected/>
-        <Divider />
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <span on:click=move |_| selected.set("Italy")>"Italy"</span>
+                </label>
+            <Divider />
 
-                <SortOption name="sort" value="Spain" selected=selected/>
-        <Divider />
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <span on:click=move |_| selected.set("Spain")>"Spain"</span>
+                </label>
+            <Divider />
 
-                <SortOption name="sort" value="France" selected=selected/>
-        <Divider />
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <span on:click=move |_| selected.set("France")>"France"</span>
+                </label>
+            <Divider />
 
-                <SortOption name="sort" value="Athens" selected=selected/>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <span on:click=move |_| selected.set("Athens")>"Athens"</span>
+                </label>
             </div>
         </form>
     }
