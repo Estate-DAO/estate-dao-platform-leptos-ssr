@@ -7,7 +7,7 @@ pub fn DateTimeRangePicker() -> impl IntoView {
     let selected_range = create_rw_signal("Exact dates");
 
     view! {
-        <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
+        <div class="absolute inset-y-0 left-2 flex items-center text-2xl z-[15]">
             <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
         </div>
 
@@ -19,8 +19,8 @@ pub fn DateTimeRangePicker() -> impl IntoView {
         </button>
 
         <Show when=move || is_open()>
-            <div class="absolute mt-6 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-4">
-                <div class="grid grid-cols-7 gap-2">
+            <div class="absolute mt-6 w-full  bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[15]">
+                <div class="grid grid-cols-7 gap-2 justify-items-center">
                     // Placeholder for date cells
                     { (1..=30).map(|day| view! {
                         <div class="border p-2 cursor-pointer hover:bg-gray-100">
