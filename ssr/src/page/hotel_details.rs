@@ -170,11 +170,11 @@ pub fn HotelDetailsPage() -> impl IntoView {
 #[component]
 pub fn PricingBookNow () -> impl IntoView{
     let price = create_rw_signal(40500);
-    let deluxe_counter = create_rw_signal(3);
-    let luxury_counter = create_rw_signal(0);
+    let deluxe_counter = create_rw_signal(3_u32);
+    let luxury_counter = create_rw_signal(0_u32);
 
-    let num_nights = create_rw_signal(3);
-    let taxes_fees = create_rw_signal(1000);
+    let num_nights = create_rw_signal(3_u32);
+    let taxes_fees = create_rw_signal(1000_u32);
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
@@ -279,7 +279,7 @@ pub fn PricingBreakdown(
 pub fn NumberCounter(
     #[prop(into)] label: String,
     #[prop(default = "".into() , into)] class: String,
-    counter: RwSignal<i32>,
+    counter: RwSignal<u32>,
 ) -> impl IntoView {
 
     let merged_class = format!("flex items-center justify-between {}",   class);
