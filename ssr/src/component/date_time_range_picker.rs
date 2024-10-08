@@ -3,15 +3,12 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_timestamp;
 
-use chrono::*;
 use leptos::logging::log;
-
 
 
 /// year,  month, day
 #[derive(Clone, Debug)]
 struct SelectedDateRange {
-    
     start: (u32, u32, u32),
     end: (u32, u32, u32),
 }
@@ -91,12 +88,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 fn DateCells(month: u32, year: u32, selected_range: RwSignal<SelectedDateRange>) -> impl IntoView {
     let timestamp = use_timestamp();
     
-    // 0 => no day is selected
-    // when the given day is selected, then the corresponding day number will be set to this signal
-    // let (day_selected, set_day_selected) = create_signal(0_u32);
-    
-    // let (is_selected, set_is_selected) = create_signal(false);
-    let (in_range, set_in_range) = create_signal(false);
+    // let (in_range, set_in_range) = create_signal(false);
 
     let start_weekday = {
         let timestamp = timestamp.get_untracked();
@@ -137,18 +129,6 @@ fn DateCells(month: u32, year: u32, selected_range: RwSignal<SelectedDateRange>)
         "December",
     ];
 
-    // let class_signal = move || with!(|day_selected, in_range| 
-    //     { 
-    //     format!(
-    //         "border p-2 cursor-pointer hover:bg-gray-100 hover:text-black w-10 rounded-md {} {}",
-    //         if *is_selected { "bg-blue-500 text-white" } else { "" },
-    //         if *in_range { "bg-gray-200" } else { "" },
-    //     )});
-
-
-    // let (start, end) = selected_range.get();
-
-
     view! {
         <div class="relative z-50">
             <div class="text-center font-bold mb-2">
@@ -165,7 +145,7 @@ fn DateCells(month: u32, year: u32, selected_range: RwSignal<SelectedDateRange>)
                         let on_click = move |_val| {
                             let date_str = (year, month, day_num);
                             let range = selected_range.get();
-                            log!("Before update: start={:?}, end={:?}", range.start, range.end);
+                            // log!("Before update: start={:?}, end={:?}", range.start, range.end);
                             let new_range = if range.start == date_str {
                                 SelectedDateRange {
                                     start: (0, 0, 0),
@@ -201,42 +181,17 @@ fn DateCells(month: u32, year: u32, selected_range: RwSignal<SelectedDateRange>)
                             };
                             selected_range.set(new_range);
                             let updated_range = selected_range.get();
-                            log!(
-                                "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
-                            );
-                            // set_in_range(
-                            //     is_date_in_range(
-                            //         &format!(
-                            //             "{:04}-{:02}-{:02}",
-                            //             updated_range.start.0,
-                            //             updated_range.start.1,
-                            //             updated_range.start.2,
-                            //         ),
-                            //         &format!(
-                            //             "{:04}-{:02}-{:02}",
-                            //             updated_range.end.0,
-                            //             updated_range.end.1,
-                            //             updated_range.end.2,
-                            //         ),
-                            //         year,
-                            //         month,
-                            //         day_num,
-                            //     ),
+                            // log!(
+                            //     "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
                             // );
                         };
                         view! {
-                            // onclick start
-
-                            // set the css if the button is in range of start - end dates
-                            // onclick end
-
                             <button
                             class=move || class_signal(
                                 selected_range.into(),
                                 day_num,
                                 year,
-                                month,
-                                in_range.into(),
+                                month
                             )
                             on:click=on_click
                         >
@@ -251,23 +206,8 @@ fn DateCells(month: u32, year: u32, selected_range: RwSignal<SelectedDateRange>)
 }
 
  
- 
 
-fn is_date_in_range(start: &str, end: &str, year: u32, month: u32, day_num: u32) -> bool {
-    if start.is_empty() || end.is_empty() {
-        log!("FALSE- in_range -  {:?}", format!("{:04}-{:02}-{:02}", year, month, day_num));
-        false
-    } else {
-        let start_date = chrono::NaiveDate::parse_from_str(start, "%Y-%m-%d").unwrap();
-        let end_date = chrono::NaiveDate::parse_from_str(end, "%Y-%m-%d").unwrap();
-        let current_date = chrono::NaiveDate::from_ymd_opt(year as i32, month, day_num).unwrap();
-        log!("ELSE - in_range -  {:?}. Result: {:?}", format!("{:04}-{:02}-{:02}", year, month, day_num), current_date > start_date && current_date < end_date);
-        current_date > start_date && current_date < end_date
-    }
-}
-
-
-fn class_signal(selected_range: Signal<SelectedDateRange>, day_num: u32, year: u32, month: u32, in_range: Signal<bool>) -> String {
+fn class_signal(selected_range: Signal<SelectedDateRange>, day_num: u32, year: u32, month: u32) -> String {
     let range = selected_range.get();
     format!(
         "border p-2 cursor-pointer w-10 rounded-md {} {}",
@@ -276,10 +216,22 @@ fn class_signal(selected_range: Signal<SelectedDateRange>, day_num: u32, year: u
         } else {
             " hover:bg-gray-100"
         },
-        if in_range.get() { "bg-gray-200" } else { "" },
+        if is_date_in_range(range.start, range.end, year, month, day_num) { 
+            "bg-gray-200" 
+        } else { 
+            "" 
+        },
     )
 }
 
+fn is_date_in_range(start: (u32, u32, u32), end: (u32, u32, u32), year: u32, month: u32, day_num: u32) -> bool {
+    if start == (0, 0, 0) || end == (0, 0, 0) {
+        false
+    } else {
+        let current_date = (year, month, day_num);
+        current_date > start && current_date < end
+    }
+}
 
 
 fn is_leap_year(year: u32) -> bool {
