@@ -1,13 +1,10 @@
-use console_log::log;
+// use console_log::log;
 use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_timestamp;
 
 use chrono::*;
 use leptos::logging::log;
-use wasm_bindgen::JsValue;
-use web_sys::console;
-use web_sys::console::info;
 
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
@@ -26,7 +23,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
         }
     });
     view! {
-        <div class="relative">
+        <div class="">
             <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
                 <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
             </div>
@@ -103,8 +100,6 @@ fn DateCells(month: u32, year: u32, selected_range: RwSignal<(String, String)>) 
 
     let class_signal = move || with!(|is_selected, in_range| 
         { 
-        // log!(" class_signal is_selected: {}", *is_selected);
-        // log!(" class_signal in_range: {}", *in_range);
         format!(
             "border p-2 cursor-pointer hover:bg-gray-100 {} {}",
             if *is_selected { "bg-blue-500 text-white" } else { "" },
@@ -167,17 +162,9 @@ fn DateCells(month: u32, year: u32, selected_range: RwSignal<(String, String)>) 
                                 selected_range.set((date_str.clone(), String::new()));
                             }
                             let (new_start, new_end) = selected_range.get();
-                            console::log_1(
-                                &JsValue::from_str(
-                                    &format!("After update: start={}, end={}", new_start, new_end),
-                                ),
-                            );
+                            log!("After update: start={}, end={}", new_start, new_end);
                         };
                         view! {
-                            // let current_date = chrono::NaiveDate::from_ymd_opt(year as i32, month, day_num).unwrap();
-                            // let current_date = chrono::NaiveDate::from_ymd_opt(year as i32, month, day_num)
-                            // .unwrap_or_else(|| chrono::NaiveDate::from_ymd(2024, 1, 1));
-
                             <button class=class_signal on:click=on_click>
                                 {day_num}
                             </button>

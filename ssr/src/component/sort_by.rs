@@ -16,7 +16,7 @@ pub fn SortBy() -> impl IntoView {
     });
 
     view! {
-        <div class="relative">
+        <div class="">
             <button
                 class="bg-white text-black px-4 py-2 rounded-lg flex items-center border border-gray-300"
                 // on:blur=move |_| set_is_open.set(false)

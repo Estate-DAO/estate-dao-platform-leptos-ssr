@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos::logging::log;
 
 use crate::component::{Divider, HSettingIcon};
 use leptos_icons::*;
@@ -11,7 +12,7 @@ pub fn Filter() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
 
     view! {
-        <div class="relative z-50">
+        <div class="">
             <button
                 class="bg-white text-black px-4 py-2 rounded-lg flex items-center border border-gray-300"
                 on:click=move |_| set_is_open.update(|open| *open = !*open)
@@ -42,7 +43,7 @@ fn FilterOptions() -> impl IntoView {
         <Show when=move || is_open()>
             <div class="fixed inset-0 flex">
                 <div class="flex-1 bg-black opacity-80"></div>
-                <div class="w-1/3 bg-white shadow-lg flex flex-col">
+                <div class="w-1/2 bg-white shadow-lg flex flex-col">
                     <div class="p-8 border-b bg bg-gray-100 px-2">
                         <h2 class="text-4xl font-semibold">Filters</h2>
                     </div>
@@ -93,14 +94,20 @@ fn FilterOptions() -> impl IntoView {
                     </div>
                     <div class="p-12 flex justify-start space-x-4">
                         <button
-                            class="border border-blue-500 text-black px-4 py-2 rounded-full text-blue-500"
-                            on:click=move |_| set_is_open.set(false)
+                            type="button"
+                            class=" cursor-pointer border border-blue-500 text-black px-4 py-2 rounded-full text-blue-500"
+                            on:click={move |_|{
+                                log::info!("clear all button");
+                                set_is_open.set(false)}}
                         >
                             Clear All
                         </button>
                         <button
-                            class="bg-blue-600 text-white px-4 py-2 rounded-full"
-                            on:click=move |_| set_is_open.set(false)
+                            type="button"
+                            class="bg-blue-600 cursor-pointer text-white px-4 py-2 rounded-full"
+                            on:click={move |_|{
+                                log::info!("apply filter button");
+                                set_is_open.set(false)}}
                         >
                             Apply Filters
                         </button>
