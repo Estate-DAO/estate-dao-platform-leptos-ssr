@@ -79,19 +79,45 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 <br />
                 <div class="space-y-3">
                     <div class="flex space-x-3 h-1/2 w-full">
-                        <img src="/img/home.webp" alt="Destination" class="w-3/5 h-[397px] rounded-xl" />
+                        <img
+                            src="/img/home.webp"
+                            alt="Destination"
+                            class="w-3/5 h-[397px] rounded-xl"
+                        />
                         <div class="space-y-3 w-2/5">
-                            <img src="/img/home.webp" alt="Destination" class="object-fill h-[193px] w-full rounded-xl" />
-                            <img src="/img/home.webp" alt="Destination" class="object-fill h-[193px] w-full rounded-xl" />
+                            <img
+                                src="/img/home.webp"
+                                alt="Destination"
+                                class="object-fill h-[193px] w-full rounded-xl"
+                            />
+                            <img
+                                src="/img/home.webp"
+                                alt="Destination"
+                                class="object-fill h-[193px] w-full rounded-xl"
+                            />
                         </div>
                     </div>
                     <div class="flex space-x-3">
-                        <img src="/img/home.webp" alt="Destination" class="w-[290px] h-1/3 rounded-xl" />
-                        <img src="/img/home.webp" alt="Destination" class="w-[290px] h-1/3 rounded-xl" />
+                        <img
+                            src="/img/home.webp"
+                            alt="Destination"
+                            class="w-[290px] h-1/3 rounded-xl"
+                        />
+                        <img
+                            src="/img/home.webp"
+                            alt="Destination"
+                            class="w-[290px] h-1/3 rounded-xl"
+                        />
                         <div class="relative w-[290px] h-1/3 rounded-xl">
-                            <img src="/img/home.webp" alt="Destination" class="object-cover h-full w-full rounded-xl" />
+                            <img
+                                src="/img/home.webp"
+                                alt="Destination"
+                                class="object-cover h-full w-full rounded-xl"
+                            />
                             <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
-                                <span class="text-white text-lg font-semibold p-16">See all photos</span>
+                                <span class="text-white text-lg font-semibold p-16">
+                                    See all photos
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -263,10 +289,10 @@ pub fn NumberCounter(
             <p>{label}</p>
             <div class="flex items-center space-x-1">
                 <button
-                    class="px-2 py-1 text-2xl"
+                    class="ps-2 py-1 text-2xl"
                     on:click=move |_| counter.update(|n| *n = (*n - 1).max(0))
                 >
-                    "-"
+                    {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
                 </button>
                 <input
                     type="number"
@@ -280,7 +306,7 @@ pub fn NumberCounter(
                         "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
                     )
                 />
-                <button class="px-2 py-1 text-2xl " on:click=move |_| counter.update(|n| *n += 1)>
+                <button class="py-1 text-2xl " on:click=move |_| counter.update(|n| *n += 1)>
                     "+"
                 </button>
             </div>

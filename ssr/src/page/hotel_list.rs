@@ -31,22 +31,26 @@ pub fn HotelCard() -> impl IntoView {
     let rating = create_rw_signal(4);
     let price = create_rw_signal(40500);
     view! {
-                <a href=AppRoutes::HotelDetails.to_string()>
-        <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
-            <img class="w-full h-64 object-cover" src="/img/home.webp" alt="Hotel Casa De Patio" />
+        <a href=AppRoutes::HotelDetails.to_string()>
+            <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
+                <img
+                    class="w-full h-64 object-cover"
+                    src="/img/home.webp"
+                    alt="Hotel Casa De Patio"
+                />
 
-            <div class="h-24">
-                <div class="flex items-center justify-between px-6 pt-4">
-                    <p>Hotel Casa De Papel</p>
-                    <StarRating rating=rating />
-                </div>
+                <div class="h-24">
+                    <div class="flex items-center justify-between px-6 pt-4">
+                        <p>Hotel Casa De Papel</p>
+                        <StarRating rating=rating />
+                    </div>
 
-                <div class="flex items-center justify-between px-6 pt-2">
-                    <PriceDisplay price=price />
-                    <ViewDetails />
+                    <div class="flex items-center justify-between px-6 pt-2">
+                        <PriceDisplay price=price />
+                        <ViewDetails />
+                    </div>
                 </div>
             </div>
-        </div>
         </a>
     }
 }

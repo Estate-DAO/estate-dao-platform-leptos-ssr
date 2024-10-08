@@ -29,13 +29,13 @@ pub fn GuestQuantity() -> impl IntoView {
         </div>
 
         <Show when=move || is_open()>
-            <SortOptions/>
+            <SortOptions set_is_open=set_is_open.into() />
         </Show>
     }
 }
 
 #[component]
-fn SortOptions() -> impl IntoView {
+fn SortOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
     let selected_adults: RwSignal<i32> = create_rw_signal(0);
     let selected_children: RwSignal<i32> = create_rw_signal(0);
 
@@ -47,6 +47,7 @@ fn SortOptions() -> impl IntoView {
             selected_children()
         )
         .into());
+        set_is_open.set(false);
     };
 
     view! {
@@ -55,13 +56,9 @@ fn SortOptions() -> impl IntoView {
                 id="guestsDropdownContent"
                 class="absolute right-0 bg-white rounded-md shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border border-gray-200 px-4"
             >
-                <div class="flex flex-col">
-                    <NumberCounter label="Adults" counter=selected_adults class="mt-2" />
-                </div>
+                <NumberCounter label="Adults" counter=selected_adults class="mt-2" />
                 <Divider />
-                <div class="flex flex-col">
-                    <NumberCounter label="Children" counter=selected_children class="mt-2" />
-                </div>
+                <NumberCounter label="Children" counter=selected_children class="mt-2" />
                 <br />
                 <button
                     type="button"

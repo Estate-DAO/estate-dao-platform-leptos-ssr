@@ -22,14 +22,13 @@ pub fn SortBy() -> impl IntoView {
                 // on:blur=move |_| set_is_open.set(false)
                 on:click=move |_| set_is_open.update(|open| *open = !*open)
             >
-            "Sort by" <Icon icon=icon
-            class="w-6 h-6 ml-2"
-            />
+                "Sort by"
+                <Icon icon=icon class="w-6 h-6 ml-2" />
             </button>
 
             <Show when=move || is_open()>
                 <div class="absolute mt-2 w-52 bg-white borderSortOptions border-gray-300 rounded-xl shadow-lg">
-                    <SortOptions/>
+                    <SortOptions set_is_open=set_is_open.into() />
                 </div>
             </Show>
         </div>
@@ -37,7 +36,7 @@ pub fn SortBy() -> impl IntoView {
 }
 
 #[component]
-fn SortOptions() -> impl IntoView {
+fn SortOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
     let selected = create_rw_signal("Name");
 
     let apply_selection = move |_| {
@@ -47,20 +46,25 @@ fn SortOptions() -> impl IntoView {
             selected()
         )
         .into());
+        set_is_open.set(false);
     };
 
     view! {
         <form class="p-4">
             <div class="space-y-4">
-                <SortOption name="sort" value="Prices high to low" selected=selected/>
-        <Divider />
+                <SortOption name="sort" value="Prices high to low" selected=selected />
+                <Divider />
 
-                <SortOption name="sort" value="Prices low to high" selected=selected/>
-        <Divider />
+                <SortOption name="sort" value="Prices low to high" selected=selected />
+                <Divider />
 
-                <SortOption name="sort" value="Rating high to low" selected=selected/>
+                <SortOption name="sort" value="Rating high to low" selected=selected />
             </div>
-            <button type="button" class="w-full mt-4 bg-white border border-black-2 text-black px-4 py-2 rounded-full" on:click=apply_selection>
+            <button
+                type="button"
+                class="w-full mt-4 bg-white border border-black-2 text-black px-4 py-2 rounded-full"
+                on:click=apply_selection
+            >
                 "Apply"
             </button>
         </form>

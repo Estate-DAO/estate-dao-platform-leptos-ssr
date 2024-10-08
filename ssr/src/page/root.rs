@@ -4,7 +4,7 @@ use leptos_icons::*;
 use leptos_router::use_navigate;
 use leptos::logging::log;
  
- use crate::{app::AppRoutes, component::{Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon, DateTimeRangePicker}};
+ use crate::{app::AppRoutes, component::{DateTimeRangePickerCustom, Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon}};
  
 #[component]
 pub fn RootPage() -> impl IntoView {
@@ -143,34 +143,31 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // <!-- Date range picker -->
             <div class="relative flex-1 border-l border-r border-white">
                 // <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
-                //     <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
+                // <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
                 // </div>
 
                 // <input
-                //     type="text"
-                //     placeholder="Check in — Check out"
-                //     class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
-                //     onfocus="(this.type='date')"
-                //     onblur="(this.type='text')"
+                // type="text"
+                // placeholder="Check in — Check out"
+                // class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
+                // onfocus="(this.type='date')"
+                // onblur="(this.type='text')"
                 // />
-                <DateTimeRangePicker />
+                // <DateTimeRangePickerElements />
+                <DateTimeRangePickerCustom />
 
             </div>
-
 
             // <!-- Guests dropdown -->
             <div class="relative flex-1 flex items-center">
                 <GuestQuantity />
             </div>
 
-
             // <!-- Search button -->
             <button
-            on:click=move |_| search_action.dispatch(())
-            class=format!(
-                " {}  text-2xl p-2 rounded-full  focus:outline-none",
-                bg_search_class,
-            )>
+                on:click=move |_| search_action.dispatch(())
+                class=format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class)
+            >
                 <div>
                     <Icon
                         icon=icondata::AiSearchOutlined

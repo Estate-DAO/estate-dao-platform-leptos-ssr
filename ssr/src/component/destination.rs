@@ -23,7 +23,7 @@ pub fn Destination() -> impl IntoView {
 
         <Show when=move || is_open()>
             <div class="absolute mt-6 w-80 bg-white borderSortOptions border border-gray-200 rounded-xl shadow-lg">
-                <SortOptions/>
+                <SortOptions />
             </div>
         </Show>
     }
@@ -39,17 +39,17 @@ fn SortOptions() -> impl IntoView {
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <span on:click=move |_| selected.set("Italy")>"Italy"</span>
                 </label>
-            <Divider />
+                <Divider />
 
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <span on:click=move |_| selected.set("Spain")>"Spain"</span>
                 </label>
-            <Divider />
+                <Divider />
 
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <span on:click=move |_| selected.set("France")>"France"</span>
                 </label>
-            <Divider />
+                <Divider />
 
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <span on:click=move |_| selected.set("Athens")>"Athens"</span>
