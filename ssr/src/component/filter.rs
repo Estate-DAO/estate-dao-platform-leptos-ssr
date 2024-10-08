@@ -22,7 +22,7 @@ pub fn Filter() -> impl IntoView {
             </button>
 
             <Show when=move || is_open()>
-                <div class="absolute mt-2 w-52 bg-white borderSortOptions border-gray-300 rounded-xl shadow-lg">
+                <div class="absolute mt-2 w-52 bg-white borderSortOptions border-gray-300 rounded-xl shadow-lg z-[80]">
                     <FilterOptions />
                 </div>
             </Show>
@@ -41,7 +41,7 @@ fn FilterOptions() -> impl IntoView {
 
     view! {
         <Show when=move || is_open()>
-            <div class="fixed inset-0 flex">
+            <div class="fixed inset-0 flex ">
                 <div class="flex-1 bg-black opacity-80"></div>
                 <div class="w-1/2 bg-white shadow-lg flex flex-col">
                     <div class="p-8 border-b bg bg-gray-100 px-2">
@@ -120,7 +120,7 @@ fn FilterOptions() -> impl IntoView {
 
 #[component]
 fn PriceRange() -> impl IntoView {
-    let (min_value, set_min_value) = create_signal(480);
+    let (min_value, set_min_value) = create_signal(10);
     let (max_value, set_max_value) = create_signal(20000);
     let (dragging, set_dragging) = create_signal(None);
 
@@ -158,7 +158,6 @@ fn PriceRange() -> impl IntoView {
                 on:mouseleave=on_mouse_up
                 ref=slider_ref
             >
-                5
                 <div class="absolute w-full top-1/2 h-1 bg-gray-300 rounded"></div>
                 <div
                     class="absolute top-1/2 h-1 bg-blue-500 rounded"
