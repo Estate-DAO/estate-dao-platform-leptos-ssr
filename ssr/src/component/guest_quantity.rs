@@ -10,6 +10,14 @@ use web_sys::*;
 pub fn GuestQuantity() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
 
+    let icon = create_memo(move |_| {
+        if is_open() {
+            icondata::BiChevronUpRegular
+        } else {
+            icondata::BiChevronDownRegular
+        }
+    });
+
     view! {
         <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
             <Icon icon=icondata::BsPerson class="text-black font-light" />
@@ -25,7 +33,7 @@ pub fn GuestQuantity() -> impl IntoView {
         </button>
 
         <div class="absolute inset-y-2 text-xl right-3 flex items-center">
-            <Icon icon=icondata::BiChevronDownRegular class="text-black" />
+            <Icon icon=icon class="text-black" />
         </div>
 
         <Show when=move || is_open()>
