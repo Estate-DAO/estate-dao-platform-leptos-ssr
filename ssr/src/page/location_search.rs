@@ -12,7 +12,7 @@ pub struct SearchCtx {
 pub struct SearchBarForm {
     location: Option<String>,
     check_in: Option<String>,
-    people: PeopleForBooking,
+    // people: PeopleForBooking,
 }
 
 // #[derive(Clone, Default)]
@@ -40,39 +40,10 @@ pub struct SearchBarForm {
 // }
 
 
-
-#[derive(Clone, Default)]
-pub struct PeopleForBooking {
-    adult: u32,
-    children: u32 ,
-    children_age:  Vec<u32>,
-}
-
-impl PeopleForBooking {
-    // pub fn set_adult(&self, count: u32) {
-    //     self.adult.set(count);
-    // }
-
-    // pub fn set_children(&self, count: u32) {
-    //     self.children.set(count);
-    // }
-
-    pub fn update_children_ages(&mut self, ages: Vec<u32>) {
-        if self.children >= 1 && ages.len() <= self.children as usize {
-            self.children_age.extend(ages);
-        }
-    }
-}
-
-
-fn non_empty_string_validator(s: String) -> Option<String> {
-    (!s.is_empty()).then_some(s)
-}
-
 macro_rules! input_component {
     ($name:ident, $input_element:ident, $input_type:ident, $attrs:expr) => {
         #[component]
-        fn $name<T: 'static, U: Fn(T) + 'static + Copy, V: Fn(String) -> Option<T> + 'static + Copy>(
+        pub fn $name<T: 'static, U: Fn(T) + 'static + Copy, V: Fn(String) -> Option<T> + 'static + Copy>(
             // #[prop(into)] heading: String,
             #[prop(into)] placeholder: String,
             #[prop(optional)] initial_value: Option<String>,
@@ -153,6 +124,9 @@ macro_rules! input_component {
 }
 
 
+fn non_empty_string_validator(s: String) -> Option<String> {
+    (!s.is_empty()).then_some(s)
+}
 
 input_component!(InputBox, input, Input, {});
 

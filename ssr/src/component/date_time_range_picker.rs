@@ -176,7 +176,7 @@ fn DateCells(
                         let on_click = move |_val| {
                             let date_tuple = (year_signal(), month_signal(), day_num);
                             let range = selected_range.get();
-                            log!("Before update: start={:?}, end={:?}", range.start, range.end);
+                            // log!("Before update: start={:?}, end={:?}", range.start, range.end);
                             let new_range = if range.start == date_tuple {
                                 SelectedDateRange {
                                     start: (0, 0, 0),
@@ -212,9 +212,9 @@ fn DateCells(
                             };
                             selected_range.set(new_range);
                             let updated_range = selected_range.get();
-                            log!(
-                                "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
-                            );
+                            // log!(
+                            //     "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
+                            // );
                         };
                         view! {
                             <button
