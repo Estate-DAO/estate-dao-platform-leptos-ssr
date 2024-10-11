@@ -130,7 +130,7 @@ pub struct Search {
 
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct SearchRequest {
+pub struct HotelSearchRequest {
     #[serde(rename = "CheckInDate")]
     check_in_date: String,
     #[serde(rename = "NoOfNights")]
@@ -150,7 +150,7 @@ pub struct SearchRequest {
 
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct SearchResponse {
+pub struct HotelSearchResponse {
     #[serde(rename = "Status")]
     status: i32,
     #[serde(rename = "Message")]
@@ -161,13 +161,13 @@ pub struct SearchResponse {
 
 
 
-impl ProvabReq for SearchRequest {
+impl ProvabReq for HotelSearchRequest {
     fn path_suffix() -> &'static str {
         "Search"
     }
 }
 
-impl ProvabReqMeta for SearchRequest { 
+impl ProvabReqMeta for HotelSearchRequest { 
     const METHOD: Method = Method::POST;
-    type Response = SearchResponse;
+    type Response = HotelSearchResponse;
 }

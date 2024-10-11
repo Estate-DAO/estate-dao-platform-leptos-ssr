@@ -41,7 +41,17 @@ chrono = "0.4.38"
 anyhow = "1.0.89"
 derive_more = {version = "1.0.0", features = ["display"]}
 error-stack = "0.5.0"
-reqwest = {version = "0.12.8", features = ["gzip", "json"]}
+
+reqwest = { version = "0.12.8", features = ["json"] }
+# reqwest = { version = "0.12.8", default-features = false, features = ["json",  "http2"] }
+
+
+# reqwest = { version = "0.12.8", default-features = false, features = ["json", "gzip", "deflate", "http2"] }
+# reqwest = { version = "0.12.8", default-features = false, features = ["json", "gzip", "deflate"] }
+# async-compression = { version = "0.4.14", features = ["gzip"] }
+
+
+# reqwest = { version = "0.11.22", features = [ "json", "gzip", "deflate"]}
 # chrono = { version = "0.4.38"}
 # leptos_element_plus = { git = "https://github.com/TwistingTwists/leptos_elements_plus", rev = "b32873e6b1454d50bc79521293880edae0f20671" }
 
@@ -52,7 +62,11 @@ reqwest = {version = "0.12.8", features = ["gzip", "json"]}
 # proc-macro2 = "1.0"
 
 [features]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+hydrate = [
+    "leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"
+    , "reqwest/native-tls"
+    # , "reqwest/gzip"
+    ]
 ssr = [
     "dep:axum",
     "dep:tokio",
@@ -63,6 +77,9 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:tracing",
+    "reqwest/rustls-tls",
+    # "reqwest/gzip"
+
 ]
 
 # # Defines a size-optimized profile for the WASM bundle in release mode

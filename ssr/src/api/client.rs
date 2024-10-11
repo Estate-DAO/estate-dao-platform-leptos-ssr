@@ -1,15 +1,12 @@
 use std::sync::Arc;
 
-use super::consts::{get_headers_from_env, get_provab_base_url_from_env};
-use anyhow::Result;
+use super::{consts::{get_headers_from_env, get_provab_base_url_from_env}, ApiClientResult, ApiError};
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use serde::{de::DeserializeOwned, Serialize};
 
 use error_stack::{report, Report, ResultExt};
 
-use crate::api::http_methods::{ApiClientResult, ApiError};
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use std::collections::HashMap;
+use reqwest::header::HeaderMap;
 
 pub trait ProvabReqMeta: Sized + Send {
     const METHOD: Method;
@@ -54,7 +51,9 @@ pub struct Provab {
 impl Default for Provab {
     fn default() -> Self {
         Self {
-            client: reqwest::Client::builder().gzip(true).build().unwrap(),
+            client: reqwest::Client::builder()
+            // .gzip(true)
+            .build().unwrap(),
             base_url: Arc::new(get_provab_base_url_from_env().parse().unwrap()),
         }
     }
