@@ -9,6 +9,9 @@ pub enum ApiError {
     #[error("Provab response error")]
     ResponseError,  
 
+    #[error("Decompression failed")]
+    DecompressionFailed,
+
     #[error("HTTP request failed")]
     RequestFailed(#[from] reqwest::Error),
     #[error("JSON parsing failed")]

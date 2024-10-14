@@ -5,19 +5,31 @@ use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use serde::{de::DeserializeOwned, Serialize};
 
 use error_stack::{report, Report, ResultExt};
+use std::io::Read;
 
 use reqwest::header::HeaderMap;
 
 pub trait ProvabReqMeta: Sized + Send {
     const METHOD: Method;
+    const GZIP: bool = true;
     type Response: DeserializeOwned;
 
     /// Deserialize the response from the API
     /// The default implementation that assumes the response is JSON encoded [crate::CfSuccessRes]
     /// and extracts the `result` field
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
+        let decompressed_body = if Self::GZIP {
+            use flate2::read::GzDecoder;
+            let mut d = GzDecoder::new(body.as_bytes());
+            let mut s = String::new();
+            d.read_to_string(&mut s).map_err(|_e| report!(ApiError::DecompressionFailed))?;
+            s
+        } else {
+            body
+        };
+
         let res: Self::Response =
-            serde_json::from_str(&body).map_err(|e| report!(ApiError::JsonParseFailed(e)))?;
+            serde_json::from_str(&decompressed_body).map_err(|e| report!(ApiError::JsonParseFailed(e)))?;
         Ok(res)
     }
 }
@@ -121,6 +133,26 @@ impl Provab {
             reqb.json(&req)
         };
         let reqb = reqb.headers(Req::custom_headers());
+
+        let reqb = set_gzip_accept_encoding(reqb);
         self.send_inner::<Req>(reqb).await
     }
 }
+fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
+    // let headers = reqb.headers_ref().unwrap();
+    // if !headers.contains_key("Accept-Encoding") && !headers.contains_key("Range") {
+        reqb.header("Accept-Encoding", "gzip")
+    // } else {
+    //     reqb
+    // }
+}
+
+// fn handle_gzip_response(mut response: reqwest::Response) -> reqwest::Response {
+//     if response.headers().get("Content-Encoding") == Some(&"gzip".parse().unwrap()) {
+//         response.headers_mut().remove("Content-Encoding");
+//         response.headers_mut().remove("Content-Length");
+//         // Assume response body is automatically decompressed by reqwest
+//     }
+//     response
+// }
+
