@@ -225,14 +225,14 @@ impl From<SearchCtx> for HotelSearchRequest {
 pub async fn search_hotel(
     request: HotelSearchRequest,
 ) -> Result<HotelSearchResponse, ServerFnError> {
-    log!("SEARCH_HOTEL_API: {request:?}");
+    // log!("SEARCH_HOTEL_API: {request:?}");
     let provab = Provab::default();
 
-    log!("provab_default: {provab:?}");
+    // log!("provab_default: {provab:?}");
     match provab.send(request).await {
         Ok(response) => Ok(response),
         Err(e) => {
-            log!("server_fn_error: {}", e.to_string());
+            // log!("server_fn_error: {}", e.to_string());
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }

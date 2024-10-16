@@ -3,6 +3,15 @@
 version = 3
 
 [[package]]
+name = "accounting"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d1c1ee38294fb8811aa880433a5557bbddbaa35ffbc456531f6325c687f50f"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -787,6 +796,7 @@ dependencies = [
 name = "estate-fe"
 version = "0.1.0"
 dependencies = [
+ "accounting",
  "anyhow",
  "axum",
  "axum-extra",

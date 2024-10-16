@@ -33,7 +33,7 @@ pub fn HotelListPage() -> impl IntoView {
                          .iter()
                          .map(|hotel_result|
                                 view!
-                                { <HotelCard rating=hotel_result.star_rating price=hotel_result.price.room_price hotel_code=hotel_result.hotel_code.clone() /> }
+                                { <HotelCard img=hotel_result.hotel_picture.clone() rating=hotel_result.star_rating hotel_name=hotel_result.hotel_name.clone() price=hotel_result.price.room_price hotel_code=hotel_result.hotel_code.clone() /> }
                         ).collect::<Vec<_>>()
                     }}
 
@@ -45,8 +45,13 @@ pub fn HotelListPage() -> impl IntoView {
 }
 
 #[component]
-pub fn HotelCard(rating: u8, price: f64, hotel_code: String) -> impl IntoView {
-    // let rating = create_rw_signal(rating);
+pub fn HotelCard(
+    img: String,
+    rating: u8,
+    price: f64,
+    hotel_code: String,
+    hotel_name: String,
+) -> impl IntoView {
     let price = create_rw_signal(price);
     view! {
         <a href=AppRoutes::HotelDetails.to_string() on:click=move |ev| {
@@ -57,14 +62,14 @@ pub fn HotelCard(rating: u8, price: f64, hotel_code: String) -> impl IntoView {
         }>
             <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
                 <img
-                    class="w-full h-64 object-cover"
-                    src="/img/home.webp"
-                    alt="Hotel Casa De Patio"
+                    class="w-80 h-64 object-cover"
+                    src={img}
+                    alt={hotel_name.clone()}
                 />
 
                 <div class="h-24">
                     <div class="flex items-center justify-between px-6 pt-4">
-                        <p>Hotel Casa De Papel</p>
+                    <p>{if hotel_name.len() > 10 { format!("{}...", &hotel_name[..10]) } else { hotel_name.clone() }}</p>
                         <StarRating rating=rating />
                     </div>
 

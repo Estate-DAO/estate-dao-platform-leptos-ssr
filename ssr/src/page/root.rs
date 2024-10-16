@@ -147,7 +147,7 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // call server function inside action
             spawn_local(async move {
                 let result = search_hotel(search_ctx.into()).await.ok();
-                log!("SEARCH_HOTEL_API: {result:?}");
+                // log!("SEARCH_HOTEL_API: {result:?}");
                 SearchListPage::set_search_results(result);
             });
         }
