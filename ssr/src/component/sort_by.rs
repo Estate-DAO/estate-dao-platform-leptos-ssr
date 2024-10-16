@@ -3,7 +3,7 @@ use crate::component::Divider;
 use leptos::*;
 use leptos_icons::*;
 use web_sys::*;
- 
+
 #[component]
 pub fn SortBy() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
@@ -41,11 +41,7 @@ fn SortOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
 
     let apply_selection = move |_| {
         log::info!("Sort By: {}", selected());
-        web_sys::console::log_1(&format!(
-            "Sort By: {}",
-            selected()
-        )
-        .into());
+        web_sys::console::log_1(&format!("Sort By: {}", selected()).into());
         set_is_open.set(false);
     };
 

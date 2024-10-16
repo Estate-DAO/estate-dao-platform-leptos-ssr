@@ -6,6 +6,7 @@ use super::{ProvabReq, ProvabReqMeta};
 use crate::api::Provab;
 use crate::{component::SelectedDateRange, state::search_state::SearchCtx};
 use leptos::logging::log;
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoomGuest {
@@ -28,7 +29,7 @@ pub struct Price {
     // #[serde(rename = "OfferedPriceRoundedOff")]
     // offered_price_rounded_off: u64,
     #[serde(rename = "RoomPrice")]
-    room_price: f64,
+    pub room_price: f64,
     // #[serde(rename = "Tax")]
     // tax: f64,
     // #[serde(rename = "ExtraGuestCharge")]
@@ -60,13 +61,13 @@ pub struct HotelResult {
     // #[serde(rename = "ResultIndex")]
     // result_index: i32,
     #[serde(rename = "HotelCode")]
-    hotel_code: String,
+    pub hotel_code: String,
     #[serde(rename = "HotelName")]
-    hotel_name: String,
+    pub hotel_name: String,
     #[serde(rename = "HotelCategory")]
-    hotel_category: String,
+    pub hotel_category: String,
     #[serde(rename = "StarRating")]
-    star_rating: u32,
+    pub star_rating: u8,
     // #[serde(rename = "HotelDescription")]
     // hotel_description: String,
     // #[serde(rename = "HotelPolicy")]
@@ -76,9 +77,9 @@ pub struct HotelResult {
     // #[serde(rename = "HotelPromotion")]
     // hotel_promotion: i32,
     #[serde(rename = "Price")]
-    price: Price,
+    pub price: Price,
     #[serde(rename = "HotelPicture")]
-    hotel_picture: String,
+    pub hotel_picture: String,
     // #[serde(rename = "ImageOrder")]
     // image_order: i32,
     // #[serde(rename = "HotelAddress")]
@@ -98,7 +99,7 @@ pub struct HotelResult {
     // #[serde(rename = "RoomDetails")]
     // room_details: Vec<String>,
     #[serde(rename = "ResultToken")]
-    result_token: String,
+    pub result_token: String,
     // #[serde(rename = "HotelAmenities")]
     // hotel_amenities: Vec<String>,
     // #[serde(rename = "Free_cancel_date")]
@@ -173,7 +174,27 @@ pub struct HotelSearchResponse {
     #[serde(rename = "Message")]
     message: String,
     #[serde(rename = "Search")]
-    search: Option<Search>,
+    pub search: Option<Search>,
+}
+
+impl HotelSearchResponse {
+    pub fn get_results_token_map(&self) -> HashMap<String, String> {
+        let mut hotel_map = HashMap::new();
+
+        if let Some(search) = self.search.clone() {
+            for hotel in search.hotel_search_result.hotel_results {
+                hotel_map.insert(hotel.hotel_code, hotel.result_token);
+            }
+        }
+
+        hotel_map
+    }
+
+    pub fn hotel_results(&self) -> Vec<HotelResult> {
+        self.search
+            .clone()
+            .map_or_else(Vec::new, |search| search.hotel_search_result.hotel_results)
+    }
 }
 
 impl ProvabReq for HotelSearchRequest {
@@ -189,7 +210,7 @@ impl ProvabReqMeta for HotelSearchRequest {
 }
 
 impl From<SearchCtx> for HotelSearchRequest {
-fn from(ctx: SearchCtx) -> Self {
+    fn from(ctx: SearchCtx) -> Self {
         // let check_in_date = SelectedDateRange::format_date(ctx.date_range.get().start);
         // let no_of_nights = ctx.date_range.get().no_of_nights();
         HotelSearchRequest {
@@ -210,10 +231,60 @@ pub async fn search_hotel(
     log!("provab_default: {provab:?}");
     match provab.send(request).await {
         Ok(response) => Ok(response),
-        Err(e) => 
-        {
+        Err(e) => {
             log!("server_fn_error: {}", e.to_string());
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+
+//     #[test]
+//     fn test_create_hotel_map() {
+//         let hotel_results = vec![
+//             HotelResult {
+//                 hotel_code: "123".to_string(),
+//                 hotel_name: "Hotel A".to_string(),
+//                 hotel_category: "Luxury".to_string(),
+//                 star_rating: 5,
+//                 price: Price {
+//                     room_price: 200.0,
+//                     currency_code: "USD".to_string(),
+//                 },
+//                 hotel_picture: "url_a".to_string(),
+//                 result_token: "token_a".to_string(),
+//             },
+//             HotelResult {
+//                 hotel_code: "456".to_string(),
+//                 hotel_name: "Hotel B".to_string(),
+//                 hotel_category: "Budget".to_string(),
+//                 star_rating: 3,
+//                 price: Price {
+//                     room_price: 100.0,
+//                     currency_code: "USD".to_string(),
+//                 },
+//                 hotel_picture: "url_b".to_string(),
+//                 result_token: "token_b".to_string(),
+//             },
+//         ];
+
+//         let search = Search {
+//             hotel_search_result: HotelSearchResult { hotel_results },
+//         };
+
+//         let response = HotelSearchResponse {
+//             status: 1,
+//             message: "Success".to_string(),
+//             search: Some(search),
+//         };
+
+//         let hotel_map = response.get_results_token();
+
+//         assert_eq!(hotel_map.get("123"), Some(&"token_a".to_string()));
+//         assert_eq!(hotel_map.get("456"), Some(&"token_b".to_string()));
+//         assert_eq!(hotel_map.len(), 2);
+//     }
+// }

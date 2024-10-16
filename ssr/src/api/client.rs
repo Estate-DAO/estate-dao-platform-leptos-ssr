@@ -9,12 +9,12 @@ use leptos::logging::log;
 use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use serde::{de::DeserializeOwned, Serialize};
+use std::fmt::Debug;
 use std::io::Read;
-
 pub trait ProvabReqMeta: Sized + Send {
     const METHOD: Method;
     const GZIP: bool = true;
-    type Response: DeserializeOwned;
+    type Response: DeserializeOwned + Debug;
 
     /// Deserialize the response from the API
     /// The default implementation that assumes the response is JSON encoded [crate::CfSuccessRes]
@@ -22,21 +22,26 @@ pub trait ProvabReqMeta: Sized + Send {
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
         use flate2::read::GzDecoder;
 
-        log!("deserialize_response- body:String : {body:?}");
+        log!("deserialize_response- body:String : {body:?}\n\n\n");
         let decompressed_body = if Self::GZIP {
             let mut d = GzDecoder::new(body.as_bytes());
             let mut s = String::new();
-            d.read_to_string(&mut s)
-                .map_err(|_e| report!(ApiError::DecompressionFailed))?;
+            d.read_to_string(&mut s).map_err(|e| {
+                log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
+                report!(ApiError::DecompressionFailed(e.to_string()))
+            })?;
             s
         } else {
             body
         };
 
         let res: Self::Response = serde_json::from_str(&decompressed_body).map_err(|e| {
-            log!("deserialize_response- JsonParseFailed: {e:?}");
+            // log!("deserialize_response- JsonParseFailed: {e:?}");
             report!(ApiError::JsonParseFailed(e))
         })?;
+
+        // log!("\n\ndeserialize_response- Ok : {res:?}\n\n\n");
+
         Ok(res)
     }
 }

@@ -8,10 +8,10 @@ pub enum ApiError {
     #[error("Provab response error")]
     ResponseError,
 
-    #[error("Decompression failed")]
-    DecompressionFailed,
+    #[error("Decompression failed - {0}")]
+    DecompressionFailed(String),
 
-    #[error("HTTP request failed")]
+    #[error("HTTP request failed - {0}")]
     RequestFailed(#[from] reqwest::Error),
     #[error("JSON parsing failed `{0}`")]
     JsonParseFailed(#[from] serde_json::Error),

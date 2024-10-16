@@ -4,7 +4,7 @@ use crate::{
 };
 use leptos::RwSignal;
 use leptos::*;
-// use serde::{Serialize,Deserialize};
+use std::collections::HashMap;
 
 #[derive(Clone, Default, Debug)]
 pub struct SearchCtx {
@@ -54,5 +54,31 @@ impl SearchCtx {
                     .update(|existing_ages| existing_ages.extend(ages))
             });
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SearchListPage {
+    pub search_result: RwSignal<Option<HotelSearchResponse>>,
+}
+
+impl SearchListPage {
+    fn from_leptos_context() -> Self {
+        expect_context()
+    }
+    pub fn reset() {
+        Self::from_leptos_context().search_result.set(None);
+    }
+
+    pub fn set_search_results(hotel_search_response: Option<HotelSearchResponse>) {
+        Self::from_leptos_context()
+            .search_result
+            .set(hotel_search_response);
+    }
+    pub fn get_hotel_code_results_token_map(&self) -> HashMap<String, String> {
+        self.search_result
+            .get_untracked()
+            .as_ref()
+            .map_or_else(HashMap::new, |response| response.get_results_token_map())
     }
 }

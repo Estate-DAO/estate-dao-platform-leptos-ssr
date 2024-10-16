@@ -24,7 +24,7 @@ struct Amenity {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
-    let rating = create_rw_signal(4);
+    let rating = (4);
 
     let amenities = vec![
         Amenity {
@@ -166,12 +166,12 @@ pub fn HotelDetailsPage() -> impl IntoView {
 
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
-    let price = create_rw_signal(40500);
+    let price = create_rw_signal(40500.9);
     let deluxe_counter = create_rw_signal(3_u32);
     let luxury_counter = create_rw_signal(0_u32);
 
     let num_nights = create_rw_signal(3_u32);
-    let taxes_fees = create_rw_signal(1000_u32);
+    let taxes_fees = create_rw_signal(1000_f64);
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
@@ -213,12 +213,13 @@ pub fn PricingBookNow() -> impl IntoView {
 
 #[component]
 pub fn PricingBreakdown(
-    #[prop(into)] price_per_night: Signal<u32>,
+    #[prop(into)] price_per_night: Signal<f64>,
     #[prop(into)] number_of_nights: Signal<u32>,
-    #[prop(into)] taxes_fees: Signal<u32>,
+    #[prop(into)] taxes_fees: Signal<f64>,
 ) -> impl IntoView {
-    let per_night_calc = create_memo(move |_| price_per_night.get() * number_of_nights.get());
-    let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get());
+    let per_night_calc =
+        create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
+    let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get() as f64);
     let row_format_class = "flex justify-between";
     view! {
         <div class="flex flex-col space-y-2 mt-4">

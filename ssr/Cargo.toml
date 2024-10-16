@@ -41,7 +41,7 @@ chrono = "0.4.38"
 anyhow = "1.0.89"
 derive_more = {version = "1.0.0", features = ["display"]}
 error-stack = "0.5.0"
-
+accounting = "0.2.0"
 # reqwest = { version = "0.12.8", default-features = false, features = ["json", "gzip", "deflate", "http2"] }
 reqwest = { version = "0.12.8", default-features = false, features = ["json", "http2"] }
 flate2 = "1.0.34"

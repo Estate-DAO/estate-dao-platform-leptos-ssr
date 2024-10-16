@@ -77,7 +77,7 @@ cfg_if! {
 
     #[tokio::main]
     async fn main() {
-        
+
         // Setting get_configuration(None) means we'll be using cargo-leptos's env values
         // For deployment these variables are:
         // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>

@@ -1,6 +1,9 @@
 use crate::{
     error_template::{AppError, ErrorTemplate},
-    state::search_state::SearchCtx,
+    state::{
+        search_state::{SearchCtx, SearchListPage},
+        view_state::HotelViewInfoCtx,
+    },
 };
 use leptos::*;
 use leptos_meta::*;
@@ -44,6 +47,8 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     provide_context(SearchCtx::default());
+    provide_context(SearchListPage::default());
+    provide_context(HotelViewInfoCtx::default());
 
     view! {
         <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
