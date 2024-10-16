@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use super::{consts::{get_headers_from_env, get_provab_base_url_from_env}, ApiClientResult, ApiError};
+use super::{
+    consts::{get_headers_from_env, get_provab_base_url_from_env},
+    ApiClientResult, ApiError,
+};
+use error_stack::{report, Report, ResultExt};
+use leptos::logging::log;
+use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use serde::{de::DeserializeOwned, Serialize};
-
-use error_stack::{report, Report, ResultExt};
 use std::io::Read;
-
-use reqwest::header::HeaderMap;
 
 pub trait ProvabReqMeta: Sized + Send {
     const METHOD: Method;
@@ -18,18 +20,23 @@ pub trait ProvabReqMeta: Sized + Send {
     /// The default implementation that assumes the response is JSON encoded [crate::CfSuccessRes]
     /// and extracts the `result` field
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
+        use flate2::read::GzDecoder;
+
+        log!("deserialize_response- body:String : {body:?}");
         let decompressed_body = if Self::GZIP {
-            use flate2::read::GzDecoder;
             let mut d = GzDecoder::new(body.as_bytes());
             let mut s = String::new();
-            d.read_to_string(&mut s).map_err(|_e| report!(ApiError::DecompressionFailed))?;
+            d.read_to_string(&mut s)
+                .map_err(|_e| report!(ApiError::DecompressionFailed))?;
             s
         } else {
             body
         };
 
-        let res: Self::Response =
-            serde_json::from_str(&decompressed_body).map_err(|e| report!(ApiError::JsonParseFailed(e)))?;
+        let res: Self::Response = serde_json::from_str(&decompressed_body).map_err(|e| {
+            log!("deserialize_response- JsonParseFailed: {e:?}");
+            report!(ApiError::JsonParseFailed(e))
+        })?;
         Ok(res)
     }
 }
@@ -64,8 +71,9 @@ impl Default for Provab {
     fn default() -> Self {
         Self {
             client: reqwest::Client::builder()
-            // .gzip(true)
-            .build().unwrap(),
+                // .gzip(true)
+                .build()
+                .unwrap(),
             base_url: Arc::new(get_provab_base_url_from_env().parse().unwrap()),
         }
     }
@@ -134,14 +142,30 @@ impl Provab {
         };
         let reqb = reqb.headers(Req::custom_headers());
 
-        let reqb = set_gzip_accept_encoding(reqb);
+        let reqb = if Req::GZIP {
+            set_gzip_accept_encoding(reqb)
+        } else {
+            reqb
+        };
+
+        // log!(" reqb - send_json: {reqb:?}");
+
         self.send_inner::<Req>(reqb).await
+    }
+
+    pub async fn send<Req: ProvabReq + ProvabReqMeta + Serialize>(
+        &self,
+        req: Req,
+    ) -> ApiClientResult<Req::Response> {
+        let reqb = self.req_builder(Req::METHOD, Req::path());
+        // log!("reqb - send: {reqb:?}");
+        self.send_json(req, reqb).await
     }
 }
 fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
     // let headers = reqb.headers_ref().unwrap();
     // if !headers.contains_key("Accept-Encoding") && !headers.contains_key("Range") {
-        reqb.header("Accept-Encoding", "gzip")
+    reqb.header("Accept-Encoding", "gzip")
     // } else {
     //     reqb
     // }
@@ -155,4 +179,3 @@ fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
 //     }
 //     response
 // }
-
