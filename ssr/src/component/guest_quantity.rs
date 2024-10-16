@@ -1,41 +1,19 @@
 use leptos::*;
 use leptos::logging::log;
-use crate::component::{Divider, HSettingIcon};
+use crate::{component::{Divider, HSettingIcon}, state::search_state::SearchCtx};
 use leptos_icons::*;
 use crate::page::NumberCounter;
-use web_sys::*;
+// use web_sys::*;
 
 // use crate::page::location_search::InputBox;
 
-
-#[derive(Debug, Clone)]
-struct GuestSelection {
-    adults: RwSignal<u32>,
-    children: RwSignal<u32>,
-    children_ages:  RwSignal<Vec<u32>>,
+#[derive(Debug, Clone, Default)]
+pub struct GuestSelection {
+    pub adults: RwSignal<u32>,
+    pub children: RwSignal<u32>,
+    pub children_ages:  RwSignal<Vec<u32>>,
 }
-
-impl Default for GuestSelection {
-    fn default() -> Self {
-        GuestSelection {
-            adults: create_rw_signal(0),
-            children: create_rw_signal(0),
-            children_ages: create_rw_signal(vec![]),
-        }
-    }
-}
-
-impl GuestSelection {
-    pub fn update_children_ages(&mut self, ages: Vec<u32>) {
-        if self.children.get() >= 1 && ages.len() <= self.children.get() as usize {
-            self.children_ages.update(|ages_vec| ages_vec.extend(ages));
-        }
-    }
-
-
-}
-
-
+ 
 /// Guest quantity component (button)
 #[component]
 pub fn GuestQuantity() -> impl IntoView {
@@ -49,17 +27,16 @@ pub fn GuestQuantity() -> impl IntoView {
         }
     });
 
-    let guest_selection = GuestSelection::default();
+    let search_ctx: SearchCtx = expect_context();
+    let guest_selection = search_ctx.guests;
 
     let guest_selection_clone = guest_selection.clone();
-
-    provide_context(guest_selection);
 
     let guest_count_display = create_memo(move |_prev| {
         format!(
             "{} • {}",
-            pluralize(guest_selection_clone.adults.get(), "adult", "adults"),
-            pluralize(guest_selection_clone.children.get(), "child", "children")
+            pluralize(guest_selection_clone.get().adults.get(), "adult", "adults"),
+            pluralize(guest_selection_clone.get().children.get(), "child", "children")
         )
     });
 
@@ -91,18 +68,20 @@ pub fn GuestQuantity() -> impl IntoView {
 #[component]
 fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
 
-    let guest_selection = use_context::<GuestSelection>().unwrap();
+    let search_ctx: SearchCtx = expect_context();
 
-    let apply_selection = move |_| {
-        log::info!("Adults: {}, Children: {}", guest_selection.adults.get(), guest_selection.children.get());
-        web_sys::console::log_1(&format!(
-            "Adults: {}, Children: {}",
-            guest_selection.adults.get(),
-            guest_selection.children.get()
-        )
-        .into());
+    let guest_selection = search_ctx.guests; 
+    let apply_selection = move |ev| {
+        log::info!("Apply selection- {ev:?}");
+        log::info!("Adults: {}, Children: {}, Ages: {:?}", guest_selection.get().adults.get_untracked(), guest_selection.get().children.get_untracked(), guest_selection.get().children_ages.get_untracked());
+       
+        // apply the changes to guest_selection_orig
+        SearchCtx::set_adults(guest_selection.get().adults.get());
+        SearchCtx::set_children(guest_selection.get().children.get());
+        SearchCtx::set_children_ages(guest_selection.get().children_ages.get());
         set_is_open.set(false);
     };
+
 
     view! {
         <div class="p-4">
@@ -110,32 +89,34 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                 id="guestsDropdownContent"
                 class="absolute right-0 bg-white rounded-md shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border border-gray-200 px-4"
             >
-                <NumberCounter label="Adults" counter=guest_selection.adults class="mt-2" />
+                <NumberCounter label="Adults" counter=guest_selection.get().adults class="mt-2" />
                 <Divider />
-                <NumberCounter label="Children" counter=guest_selection.children class="mt-2" />
+                <NumberCounter
+                    label="Children"
+                    counter=guest_selection.get().children
+                    class="mt-2"
+                />
                 <div class="flex flex-wrap">
-                // Add number input fields for children ages
-                {move || (0..guest_selection.children.get()).map(|i| view! {
-                    <input
-                        type="number"
-                        class="mt-2 ml-3 p-2 border border-gray-300 w-16"
-                        name={format!("child_age[{}]",i)}
-                        placeholder=format!("Child {} Age", i + 1)
-                        on:input=move |e| {
-                            let age = event_target_value(&e);
-                            log!("{}",age);
-                            // guest_children.update_children_ages()
-                        }
-                    />
-
-                    // <InputBox
-                    // // heading=""
-                    // placeholder="Where to?"
-                    // updater=set_location
-                    // validator=non_empty_string_validator
-                    // initial_value=ctx.form_state.with_untracked(|f| f.location.clone()).unwrap_or_default()
-                    // />
-                }).collect::<Vec<_>>() }
+                    // Add number input fields for children ages
+                    {move || {
+                        (0..guest_selection.get().children.get())
+                            .map(|i| {
+                                view! {
+                                    <input
+                                        type="number"
+                                        class="mt-2 ml-3 p-2 border border-gray-300 w-16"
+                                        name=format!("child_age[{}]", i)
+                                        placeholder="Age"
+                                        on:input=move |e| {
+                                            let age = event_target_value(&e);
+                                            log!("{}",age);
+                                        }
+                                    />
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .into_view()
+                    }}
                 </div>
                 <br />
                 <button

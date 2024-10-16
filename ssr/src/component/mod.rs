@@ -31,6 +31,8 @@ pub use divider::*;
 mod sort_by;
 pub use sort_by::*;
 
+pub mod input_component;
+
 mod guest_quantity;
 pub use guest_quantity::*;
 

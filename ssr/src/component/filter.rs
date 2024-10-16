@@ -96,18 +96,20 @@ fn FilterOptions() -> impl IntoView {
                         <button
                             type="button"
                             class=" cursor-pointer border border-blue-500 text-black px-4 py-2 rounded-full text-blue-500"
-                            on:click={move |_|{
+                            on:click=move |_| {
                                 log::info!("clear all button");
-                                set_is_open.set(false)}}
+                                set_is_open.set(false)
+                            }
                         >
                             Clear All
                         </button>
                         <button
                             type="button"
                             class="bg-blue-600 cursor-pointer text-white px-4 py-2 rounded-full"
-                            on:click={move |_|{
+                            on:click=move |_| {
                                 log::info!("apply filter button");
-                                set_is_open.set(false)}}
+                                set_is_open.set(false)
+                            }
                         >
                             Apply Filters
                         </button>

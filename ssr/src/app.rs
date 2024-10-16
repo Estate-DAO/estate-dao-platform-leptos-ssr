@@ -1,6 +1,6 @@
 use crate::{
     error_template::{AppError, ErrorTemplate},
-    page::location_search::SearchCtx,
+    state::search_state::SearchCtx,
 };
 use leptos::*;
 use leptos_meta::*;
@@ -63,10 +63,9 @@ pub fn App() -> impl IntoView {
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
             <main>
                 <Routes>
-                                    <Route path=AppRoutes::Root.to_string() view=RootPage />
-                                    <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
-                                    <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
-
+                    <Route path=AppRoutes::Root.to_string() view=RootPage />
+                    <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
+                    <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
                 </Routes>
             </main>
         </Router>

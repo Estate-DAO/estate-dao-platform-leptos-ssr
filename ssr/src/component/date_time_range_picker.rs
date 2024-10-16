@@ -4,16 +4,19 @@ use leptos_icons::*;
 // use leptos_use::use_timestamp;
 use leptos::logging::log;
 
+use crate::state::search_state::SearchCtx;
+
 /// year,  month, day
-#[derive(Clone, Debug)]
-struct SelectedDateRange {
+/// Struct is stored in the global search state - SearchCtx and accessed from there
+#[derive(Clone, Debug, Default)]
+pub struct SelectedDateRange {
     start: (u32, u32, u32),
     // start: RwSignal<(u32, u32, u32)>,
     end: (u32, u32, u32),
 }
 
 impl SelectedDateRange {
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         let start_str = format!(
             "{:04}-{:02}-{:02}",
             self.start.0, self.start.1, self.start.2
@@ -21,15 +24,36 @@ impl SelectedDateRange {
         let end_str = format!("{:04}-{:02}-{:02}", self.end.0, self.end.1, self.end.2);
         format!("{} - {}", start_str, end_str)
     }
+
+    pub fn no_of_nights(&self) -> u32 {
+        let (start_year, start_month, start_day) = self.start;
+        let (end_year, end_month, end_day) = self.end;
+
+        if self.start == (0, 0, 0) || self.end == (0, 0, 0) {
+            return 0;
+        }
+
+        let start_date = chrono::NaiveDate::from_ymd_opt(start_year as i32, start_month, start_day);
+        let end_date = chrono::NaiveDate::from_ymd_opt(end_year as i32, end_month, end_day);
+
+        if let (Some(start), Some(end)) = (start_date, end_date) {
+            if end > start {
+                return (end - start).num_days() as u32;
+            }
+        }
+        0
+    }
 }
+
 
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
-    let selected_range: RwSignal<SelectedDateRange> = create_rw_signal(SelectedDateRange {
-        start: (0, 0, 0),
-        end: (0, 0, 0),
-    });
+    
+    let search_ctx: SearchCtx = expect_context();
+
+    let selected_range = search_ctx.date_range;
+    
     let (initial_date, set_initial_date) = create_signal((2024_u32, 1_u32));
 
     let next_month_date = Signal::derive(move || {
@@ -61,27 +85,30 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
             <Show when=move || is_open()>
                 <div class="absolute mt-6  min-w-[40rem] bg-white border border-gray-200 rounded-xl shadow-lg p-4  z-50">
-                   <div id="date-prev-next" class="flex justify-between">
+                    <div id="date-prev-next" class="flex justify-between">
 
-                <button on:click={move |_| {
-                    let (current_year, current_month) = initial_date.get_untracked();
-                    set_initial_date(prev_date(current_year, current_month))
-                }} class="hover:bg-gray-200 p-2 rounded-md">
-                    <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
-                </button>
+                        <button
+                            on:click=move |_| {
+                                let (current_year, current_month) = initial_date.get_untracked();
+                                set_initial_date(prev_date(current_year, current_month))
+                            }
+                            class="hover:bg-gray-200 p-2 rounded-md"
+                        >
+                            <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
+                        </button>
 
-                    <button on:click={move |_| {
-                        let (current_year, current_month) = initial_date.get_untracked();
-                        set_initial_date(next_date(current_year, current_month))
-                    }} class="hover:bg-gray-200 p-2 rounded-md">
-                        <Icon icon=icondata::BiChevronRightRegular class="text-black" />
-                    </button>
-                </div>
+                        <button
+                            on:click=move |_| {
+                                let (current_year, current_month) = initial_date.get_untracked();
+                                set_initial_date(next_date(current_year, current_month))
+                            }
+                            class="hover:bg-gray-200 p-2 rounded-md"
+                        >
+                            <Icon icon=icondata::BiChevronRightRegular class="text-black" />
+                        </button>
+                    </div>
                     <div class="flex space-x-8">
-                        <DateCells
-                            year_month=initial_date.into()
-                            selected_range=selected_range
-                        />
+                        <DateCells year_month=initial_date.into() selected_range=selected_range />
                         <DateCells
                             year_month=next_month_date.into()
                             selected_range=selected_range
@@ -159,78 +186,83 @@ fn DateCells(
     view! {
         <div class="relative z-50">
             <div class="text-center font-bold mb-2">
-                {move || format!("{} {}", month_names[(month_signal() - 1) as usize], year_signal())}
+                {move || {
+                    format!("{} {}", month_names[(month_signal() - 1) as usize], year_signal())
+                }}
             </div>
             <div class="grid grid-cols-7 gap-x-2 gap-y-2.5 justify-items-center">
-                
+
                 {weekdays
                     .iter()
                     .map(|&day| view! { <div class="font-bold">{day}</div> })
                     .collect::<Vec<_>>()}
-
-                {move || (0..calculate_starting_day_of_month(year_month, start_month_day)).map(|_| view! { <div></div> }).collect::<Vec<_>>()}
-
-                
-                {move || (1..=days_in_month)
-                    .map(|day_num| {
-                        let on_click = move |_val| {
-                            let date_tuple = (year_signal(), month_signal(), day_num);
-                            let range = selected_range.get();
-                            // log!("Before update: start={:?}, end={:?}", range.start, range.end);
-                            let new_range = if range.start == date_tuple {
-                                SelectedDateRange {
-                                    start: (0, 0, 0),
-                                    end: range.end,
-                                }
-                            } else if range.end == date_tuple {
-                                SelectedDateRange {
-                                    start: range.start,
-                                    end: (0, 0, 0),
-                                }
-                            } else if range.start == (0, 0, 0) {
-                                SelectedDateRange {
-                                    start:  date_tuple,
-                                    end: range.end,
-                                }
-                            } else if range.end == (0, 0, 0) {
-                                if (year_signal(), month_signal(), day_num) > range.start {
+                {move || {
+                    (0..calculate_starting_day_of_month(year_month, start_month_day))
+                        .map(|_| view! { <div></div> })
+                        .collect::<Vec<_>>()
+                }}
+                {move || {
+                    (1..=days_in_month)
+                        .map(|day_num| {
+                            let on_click = move |_val| {
+                                let date_tuple = (year_signal(), month_signal(), day_num);
+                                let range = selected_range.get();
+                                let new_range = if range.start == date_tuple {
+                                    SelectedDateRange {
+                                        start: (0, 0, 0),
+                                        end: range.end,
+                                    }
+                                } else if range.end == date_tuple {
                                     SelectedDateRange {
                                         start: range.start,
-                                        end: date_tuple,
+                                        end: (0, 0, 0),
+                                    }
+                                } else if range.start == (0, 0, 0) {
+                                    SelectedDateRange {
+                                        start: date_tuple,
+                                        end: range.end,
+                                    }
+                                } else if range.end == (0, 0, 0) {
+                                    if (year_signal(), month_signal(), day_num) > range.start {
+                                        SelectedDateRange {
+                                            start: range.start,
+                                            end: date_tuple,
+                                        }
+                                    } else {
+                                        SelectedDateRange {
+                                            start: date_tuple,
+                                            end: range.start,
+                                        }
                                     }
                                 } else {
                                     SelectedDateRange {
                                         start: date_tuple,
-                                        end: range.start,
+                                        end: (0, 0, 0),
                                     }
-                                }
-                            } else {
-                                SelectedDateRange {
-                                    start: date_tuple,
-                                    end: (0, 0, 0),
-                                }
+                                };
+                                selected_range.set(new_range);
+                                let updated_range = selected_range.get();
                             };
-                            selected_range.set(new_range);
-                            let updated_range = selected_range.get();
-                            // log!(
-                            //     "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
-                            // );
-                        };
-                        view! {
-                            <button
-                            class=move || class_signal(
-                                selected_range.into(),
-                                day_num,
-                                year_signal(),
-                                month_signal()
-                            )
-                            on:click=on_click
-                        >
-                            {day_num}
-                        </button>
-                        }
-                    })
-                    .collect::<Vec<_>>()}
+                            view! {
+                                // log!("Before update: start={:?}, end={:?}", range.start, range.end);
+                                // log!(
+                                // "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
+                                // );
+                                <button
+                                    class=move || class_signal(
+                                        selected_range.into(),
+                                        day_num,
+                                        year_signal(),
+                                        month_signal(),
+                                    )
+                                    on:click=on_click
+                                >
+                                    {day_num}
+                                </button>
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                }}
             </div>
         </div>
     }
@@ -292,6 +324,39 @@ fn calculate_starting_day_of_month(year_month: Signal<(u32, u32)>, result: RwSig
     ans
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_no_of_nights() {
+        let date_range = SelectedDateRange {
+            start: (2023, 10, 1),
+            end: (2023, 10, 5),
+        };
+        assert_eq!(date_range.no_of_nights(), 4);
+
+        let date_range_same_day = SelectedDateRange {
+            start: (2023, 10, 1),
+            end: (2023, 10, 1),
+        };
+        assert_eq!(date_range_same_day.no_of_nights(), 0);
+
+        let date_range_invalid = SelectedDateRange {
+            start: (0, 0, 0),
+            end: (2023, 10, 5),
+        };
+        assert_eq!(date_range_invalid.no_of_nights(), 0);
+
+        let date_range_end_before_start = SelectedDateRange {
+            start: (2023, 10, 5),
+            end: (2023, 10, 1),
+        };
+        assert_eq!(date_range_end_before_start.no_of_nights(), 0);
+    }
+}
+
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
@@ -315,3 +380,4 @@ fn calculate_starting_day_of_month(year_month: Signal<(u32, u32)>, result: RwSig
 //         }
 //     }
 // }
+

@@ -290,7 +290,7 @@ pub fn NumberCounter(
             <div class="flex items-center space-x-1">
                 <button
                     class="ps-2 py-1 text-2xl"
-                    on:click=move |_| counter.update(|n| *n = (*n - 1).max(0))
+                    on:click=move |_| counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 })
                 >
                     {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
                 </button>

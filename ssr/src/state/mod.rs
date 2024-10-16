@@ -1,4 +1,4 @@
-// pub mod history;
+pub mod search_state;
 
 use cfg_if::cfg_if;
 
