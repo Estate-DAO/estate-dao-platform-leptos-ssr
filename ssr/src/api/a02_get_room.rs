@@ -1,9 +1,9 @@
-
-use serde::{Deserialize, Serialize};
+use super::{
+    consts::{get_headers_from_env, get_provab_base_url_from_env},
+    ProvabReq, ProvabReqMeta,
+};
 use reqwest::Method;
-use super::{consts::{get_headers_from_env, get_provab_base_url_from_env}, ProvabReq, ProvabReqMeta};
-
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HotelRoomRequest {
@@ -145,14 +145,13 @@ pub struct HotelRoomResponse {
     room_list: Option<RoomList>,
 }
 
-
 impl ProvabReq for HotelRoomRequest {
     fn path_suffix() -> &'static str {
         "RoomList"
     }
 }
 
-impl ProvabReqMeta for HotelRoomRequest { 
+impl ProvabReqMeta for HotelRoomRequest {
     const METHOD: Method = Method::POST;
     type Response = HotelRoomResponse;
 }

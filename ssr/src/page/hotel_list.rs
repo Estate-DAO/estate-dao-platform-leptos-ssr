@@ -1,9 +1,10 @@
 use leptos::*;
 
-
 use crate::{
-     app::AppRoutes, component::{FilterAndSortBy, PriceDisplay, StarRating}, page::{InputGroup, Navbar}
-     };
+    app::AppRoutes,
+    component::{FilterAndSortBy, PriceDisplay, StarRating},
+    page::{InputGroup, Navbar},
+};
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {

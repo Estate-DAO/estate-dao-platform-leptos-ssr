@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_icons::Icon;
 
 use crate::{
-    component::{FilterAndSortBy, PriceDisplay, StarRating, Divider},
+    component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
 };
 
@@ -22,10 +22,8 @@ struct Amenity {
 //     ("Family Rooms", icondata::RiHomeSmile2BuildingsLine),
 // ]);
 
-
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
-
     let rating = create_rw_signal(4);
 
     let amenities = vec![
@@ -166,9 +164,8 @@ pub fn HotelDetailsPage() -> impl IntoView {
     }
 }
 
-
 #[component]
-pub fn PricingBookNow () -> impl IntoView{
+pub fn PricingBookNow() -> impl IntoView {
     let price = create_rw_signal(40500);
     let deluxe_counter = create_rw_signal(3_u32);
     let luxury_counter = create_rw_signal(0_u32);
@@ -214,14 +211,12 @@ pub fn PricingBookNow () -> impl IntoView{
     }
 }
 
-
 #[component]
 pub fn PricingBreakdown(
     #[prop(into)] price_per_night: Signal<u32>,
     #[prop(into)] number_of_nights: Signal<u32>,
     #[prop(into)] taxes_fees: Signal<u32>,
-) -> impl IntoView{
-
+) -> impl IntoView {
     let per_night_calc = create_memo(move |_| price_per_night.get() * number_of_nights.get());
     let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get());
     let row_format_class = "flex justify-between";
@@ -274,15 +269,13 @@ pub fn PricingBreakdown(
     }
 }
 
-
 #[component]
 pub fn NumberCounter(
     #[prop(into)] label: String,
     #[prop(default = "".into() , into)] class: String,
     counter: RwSignal<u32>,
 ) -> impl IntoView {
-
-    let merged_class = format!("flex items-center justify-between {}",   class);
+    let merged_class = format!("flex items-center justify-between {}", class);
 
     view! {
         <div class=merged_class>

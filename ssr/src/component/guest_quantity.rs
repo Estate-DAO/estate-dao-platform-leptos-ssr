@@ -1,8 +1,11 @@
-use leptos::*;
-use leptos::logging::log;
-use crate::{component::{Divider, HSettingIcon}, state::search_state::SearchCtx};
-use leptos_icons::*;
 use crate::page::NumberCounter;
+use crate::{
+    component::{Divider, HSettingIcon},
+    state::search_state::SearchCtx,
+};
+use leptos::logging::log;
+use leptos::*;
+use leptos_icons::*;
 // use web_sys::*;
 
 // use crate::page::location_search::InputBox;
@@ -11,9 +14,9 @@ use crate::page::NumberCounter;
 pub struct GuestSelection {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
-    pub children_ages:  RwSignal<Vec<u32>>,
+    pub children_ages: RwSignal<Vec<u32>>,
 }
- 
+
 /// Guest quantity component (button)
 #[component]
 pub fn GuestQuantity() -> impl IntoView {
@@ -36,7 +39,11 @@ pub fn GuestQuantity() -> impl IntoView {
         format!(
             "{} • {}",
             pluralize(guest_selection_clone.get().adults.get(), "adult", "adults"),
-            pluralize(guest_selection_clone.get().children.get(), "child", "children")
+            pluralize(
+                guest_selection_clone.get().children.get(),
+                "child",
+                "children"
+            )
         )
     });
 
@@ -64,24 +71,26 @@ pub fn GuestQuantity() -> impl IntoView {
     }
 }
 
-
 #[component]
 fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
-
     let search_ctx: SearchCtx = expect_context();
 
-    let guest_selection = search_ctx.guests; 
+    let guest_selection = search_ctx.guests;
     let apply_selection = move |ev| {
         log::info!("Apply selection- {ev:?}");
-        log::info!("Adults: {}, Children: {}, Ages: {:?}", guest_selection.get().adults.get_untracked(), guest_selection.get().children.get_untracked(), guest_selection.get().children_ages.get_untracked());
-       
+        log::info!(
+            "Adults: {}, Children: {}, Ages: {:?}",
+            guest_selection.get().adults.get_untracked(),
+            guest_selection.get().children.get_untracked(),
+            guest_selection.get().children_ages.get_untracked()
+        );
+
         // apply the changes to guest_selection_orig
         SearchCtx::set_adults(guest_selection.get().adults.get());
         SearchCtx::set_children(guest_selection.get().children.get());
         SearchCtx::set_children_ages(guest_selection.get().children_ages.get());
         set_is_open.set(false);
     };
-
 
     view! {
         <div class="p-4">

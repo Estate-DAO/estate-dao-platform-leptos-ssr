@@ -18,12 +18,10 @@ mod star_rating;
 pub use star_rating::*;
 
 mod price_display;
-pub use price_display::*; 
-
+pub use price_display::*;
 
 mod divider;
 pub use divider::*;
-
 
 // mod dropdown;
 // pub use dropdown::*;

@@ -1,10 +1,7 @@
-
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use reqwest::Method;
-
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use super::{ProvabReq, ProvabReqMeta};
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HotelDetailsLevel2 {
@@ -127,14 +124,11 @@ pub struct HotelInfoResult {
     hotel_details: HotelDetailsLevel2,
 }
 
-
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HotelInfoRequest {
     #[serde(rename = "ResultToken")]
     token: String,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 // #[display("Status: {}, Message: {}", status, message)]
@@ -153,7 +147,7 @@ impl ProvabReq for HotelInfoRequest {
     }
 }
 
-impl ProvabReqMeta for HotelInfoRequest { 
+impl ProvabReqMeta for HotelInfoRequest {
     const METHOD: Method = Method::POST;
     type Response = HotelInfoResponse;
 }

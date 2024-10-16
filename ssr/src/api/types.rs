@@ -1,20 +1,19 @@
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("Response Status not 200")]
     ResponseNotOK(String),
-    
+
     #[error("Provab response error")]
-    ResponseError,  
+    ResponseError,
 
     #[error("Decompression failed")]
     DecompressionFailed,
 
     #[error("HTTP request failed")]
     RequestFailed(#[from] reqwest::Error),
-    #[error("JSON parsing failed")]
+    #[error("JSON parsing failed `{0}`")]
     JsonParseFailed(#[from] serde_json::Error),
     #[error("Invalid header Value")]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),

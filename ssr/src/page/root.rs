@@ -1,11 +1,18 @@
-
+use leptos::logging::log;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;
-use leptos::logging::log;
- 
- use crate::{app::AppRoutes, component::{DateTimeRangePickerCustom, Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity, HSettingIcon}};
- 
+
+use crate::{
+    api::search_hotel,
+    app::AppRoutes,
+    component::{
+        DateTimeRangePickerCustom, Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity,
+        HSettingIcon,
+    },
+    state::search_state::SearchCtx,
+};
+
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
@@ -59,7 +66,13 @@ pub fn Navbar() -> impl IntoView {
         <nav class="flex justify-between items-center py-10 px-8">
             <div class="flex items-center text-xl">
                 // <Icon icon=EstateDaoIcon />
-                <a href="/"> <img src="/img/estate_dao_logo_transparent.webp" alt="Icon" class="h-8 w-full" /> </a>
+                <a href="/">
+                    <img
+                        src="/img/estate_dao_logo_transparent.webp"
+                        alt="Icon"
+                        class="h-8 w-full"
+                    />
+                </a>
             </div>
             <div class="flex space-x-8">
                 <a href="#" class="text-gray-700 hover:text-gray-900">
@@ -118,14 +131,25 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
         "text-blue-600 "
     };
 
-     let navigate = use_navigate();
-     let search_action = create_action( move |_| {
-         let nav = navigate.clone();
-         async move {
-             log!("Search button clicked");
-             nav(AppRoutes::HotelList.to_string(), Default::default());
-         }
-     });
+    let search_ctx: SearchCtx = expect_context();
+
+    let navigate = use_navigate();
+    let search_action = create_action(move |_| {
+        let nav = navigate.clone();
+        let search_ctx = search_ctx.clone();
+        async move {
+            log!("Search button clicked");
+            //  move to the hotel listing page
+            nav(AppRoutes::HotelList.to_string(), Default::default());
+
+            // call server function inside action
+            spawn_local(async move {
+                let result = search_hotel(search_ctx.into()).await;
+
+                log!("SEARCH_HOTEL_API: {result:?}");
+            });
+        }
+    });
 
     // -------------------------------------
 

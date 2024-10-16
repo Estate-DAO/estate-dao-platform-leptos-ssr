@@ -1,10 +1,10 @@
+pub mod api;
 pub mod app;
 pub mod component;
 pub mod error_template;
 pub mod page;
 pub mod state;
 pub mod utils;
-pub mod api;
 
 #[cfg(feature = "ssr")]
 pub mod fallback;

@@ -10,9 +10,9 @@ use crate::state::search_state::SearchCtx;
 /// Struct is stored in the global search state - SearchCtx and accessed from there
 #[derive(Clone, Debug, Default)]
 pub struct SelectedDateRange {
-    start: (u32, u32, u32),
+    pub start: (u32, u32, u32),
     // start: RwSignal<(u32, u32, u32)>,
-    end: (u32, u32, u32),
+    pub end: (u32, u32, u32),
 }
 
 impl SelectedDateRange {
@@ -43,17 +43,20 @@ impl SelectedDateRange {
         }
         0
     }
-}
 
+    pub fn format_date(date: (u32, u32, u32)) -> String {
+        format!("{:02}-{:02}-{:04}", date.2, date.1, date.0)
+    }
+}
 
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
-    
+
     let search_ctx: SearchCtx = expect_context();
 
     let selected_range = search_ctx.date_range;
-    
+
     let (initial_date, set_initial_date) = create_signal((2024_u32, 1_u32));
 
     let next_month_date = Signal::derive(move || {
@@ -143,27 +146,23 @@ fn DateCells(
     year_month: Signal<(u32, u32)>,
     selected_range: RwSignal<SelectedDateRange>,
 ) -> impl IntoView {
-    let year_signal: Signal<u32> =  Signal::derive(move || {
-        year_month.get().0
-    });
+    let year_signal: Signal<u32> = Signal::derive(move || year_month.get().0);
 
-    let month_signal: Signal<u32> =  Signal::derive( move || {
-        year_month.get().1 
-    });
-    
+    let month_signal: Signal<u32> = Signal::derive(move || year_month.get().1);
+
     let start_month_day = create_rw_signal(0_u32);
 
-    let days_in_month =  match month_signal() {
-            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-            4 | 6 | 9 | 11 => 30,
-            2 => {
-                if is_leap_year(year_signal()) {
-                    29
-                } else {
-                    28
-                }
+    let days_in_month = match month_signal() {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 => {
+            if is_leap_year(year_signal()) {
+                29
+            } else {
+                28
             }
-            _ => 0,
+        }
+        _ => 0,
     };
 
     let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -310,7 +309,7 @@ fn is_leap_year(year: u32) -> bool {
 }
 
 fn calculate_starting_day_of_month(year_month: Signal<(u32, u32)>, result: RwSignal<u32>) -> u32 {
-    let day = 1; 
+    let day = 1;
     let (year, month) = year_month.get();
     // log!("year: {}, month: {}, day: {}",year, month, day);
     let y = if month <= 2 { year - 1 } else { year };
@@ -318,12 +317,11 @@ fn calculate_starting_day_of_month(year_month: Signal<(u32, u32)>, result: RwSig
     let k = y % 100;
     let j = y / 100;
     let h = (day + 13 * (m + 1) / 5 + k + k / 4 + j / 4 + 5 * j) % 7;
-    let ans  = (h + 6) % 7;
+    let ans = (h + 6) % 7;
 
     result.set(ans);
     ans
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -380,4 +378,3 @@ mod tests {
 //         }
 //     }
 // }
-
