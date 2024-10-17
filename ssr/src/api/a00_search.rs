@@ -212,8 +212,8 @@ impl ProvabReqMeta for HotelSearchRequest {
 
 impl From<SearchCtx> for HotelSearchRequest {
     fn from(ctx: SearchCtx) -> Self {
-        let check_in_date = SelectedDateRange::format_date(ctx.date_range.get().start);
-        let no_of_nights = ctx.date_range.get().no_of_nights();
+        let check_in_date = SelectedDateRange::format_date(ctx.date_range.get_untracked().start);
+        let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
         let request = HotelSearchRequest {
             // check_in_date: "31-10-2024".into(),
             check_in_date,

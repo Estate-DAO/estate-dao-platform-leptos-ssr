@@ -113,19 +113,19 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
     // BACKGROUND CLASSES FOR DISABLED STATE
     // -------------------------------------
 
-    let bg_class = if disabled.get() {
+    let bg_class = move || if disabled.get() {
         "bg-gray-300 bg-opacity-[40%]"
     } else {
         "bg-white bg-opacity-[40%]"
     };
 
-    let bg_search_class = if disabled.get() {
+    let bg_search_class = move || if disabled.get() {
         "bg-gray-300"
     } else {
         "bg-white text-white hover:bg-blue-200"
     };
 
-    let bg_search_icon_class = if disabled.get() {
+    let bg_search_icon_class = move ||  if disabled.get() {
         "text-gray-400"
     } else {
         "text-blue-600 "
@@ -158,7 +158,7 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
     view! {
         <div class=format!(
             " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
-            bg_class,
+            bg_class(),
         )>
             // <!-- Destination input -->
 
@@ -192,12 +192,12 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // <!-- Search button -->
             <button
                 on:click=move |_| search_action.dispatch(())
-                class=format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class)
+                class=format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
             >
                 <div>
                     <Icon
                         icon=icondata::AiSearchOutlined
-                        class=format!("{} p-[1px]", bg_search_icon_class)
+                        class=format!("{} p-[1px]", bg_search_icon_class())
                     />
                 </div>
             </button>
