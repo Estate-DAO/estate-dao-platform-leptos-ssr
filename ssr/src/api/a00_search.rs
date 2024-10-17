@@ -4,6 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use super::{ProvabReq, ProvabReqMeta};
 use crate::api::Provab;
+use crate::component::GuestSelection;
 use crate::{component::SelectedDateRange, state::search_state::SearchCtx};
 use leptos::logging::log;
 use std::collections::HashMap;
@@ -11,11 +12,11 @@ use std::collections::HashMap;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoomGuest {
     #[serde(rename = "NoOfAdults")]
-    no_of_adults: u32,
+    pub no_of_adults: u32,
     #[serde(rename = "NoOfChild")]
-    no_of_child: u32,
+    pub no_of_child: u32,
     #[serde(rename = "ChildAge", skip_serializing_if = "Option::is_none")]
-    child_age: Option<Vec<String>>,
+    pub child_age: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -211,13 +212,19 @@ impl ProvabReqMeta for HotelSearchRequest {
 
 impl From<SearchCtx> for HotelSearchRequest {
     fn from(ctx: SearchCtx) -> Self {
-        // let check_in_date = SelectedDateRange::format_date(ctx.date_range.get().start);
-        // let no_of_nights = ctx.date_range.get().no_of_nights();
-        HotelSearchRequest {
-            check_in_date: "31-10-2024".into(),
-            no_of_nights: 1,
+        let check_in_date = SelectedDateRange::format_date(ctx.date_range.get().start);
+        let no_of_nights = ctx.date_range.get().no_of_nights();
+        let request = HotelSearchRequest {
+            // check_in_date: "31-10-2024".into(),
+            check_in_date,
+            no_of_nights,
+            room_guests: GuestSelection::get_room_guests(ctx),
             ..Default::default()
-        }
+        };
+
+        log!("HotelSearchRequest: {request:?}");
+        
+        request
     }
 }
 

@@ -17,6 +17,33 @@ pub struct GuestSelection {
     pub children_ages: RwSignal<Vec<u32>>,
 }
 
+use crate::api::RoomGuest;
+
+impl GuestSelection {
+    pub fn get_room_guests(search_ctx: SearchCtx) -> Vec<RoomGuest> {
+        // let search_ctx: SearchCtx = expect_context();
+        let guest_selection = search_ctx.guests;
+
+        let no_of_adults = guest_selection.get_untracked().adults.get_untracked();
+        let no_of_child = guest_selection.get_untracked().children.get_untracked();
+        let children_ages: Vec<String> = guest_selection
+            .get_untracked()
+            .children_ages
+            .get_untracked()
+            .iter()
+            .map(|age| age.to_string())
+            .collect();
+        
+        let child_age = if no_of_child > 0 { Some(children_ages) } else { None };
+
+        vec![RoomGuest {
+            no_of_adults,
+            no_of_child,
+            child_age,
+        }]
+    }
+}
+
 /// Guest quantity component (button)
 #[component]
 pub fn GuestQuantity() -> impl IntoView {
