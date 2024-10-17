@@ -84,7 +84,6 @@ macro_rules! input_component {
     }
 }
 
-
 input_component!(InputBox, input, Input, {});
 
 pub fn non_empty_string_validator(s: String) -> Option<String> {

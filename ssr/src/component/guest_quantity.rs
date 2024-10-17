@@ -162,7 +162,7 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
 
         let push_signal = num_children < guest_selection.get().children.get();
         let should_not_act = num_children == guest_selection.get().children.get();
-        
+
         if should_not_act {
             return;
         } else {

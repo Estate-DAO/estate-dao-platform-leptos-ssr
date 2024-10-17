@@ -5,7 +5,7 @@ use leptos::*;
 pub struct SearchCtx {
     form_state: RwSignal<SearchBarForm>,
     invalid_cnt: RwSignal<u32>,
-    on_form_reset: Trigger
+    on_form_reset: Trigger,
 }
 
 #[derive(Clone, Default)]
@@ -38,7 +38,6 @@ pub struct SearchBarForm {
 //         }
 //     }
 // }
-
 
 macro_rules! input_component {
     ($name:ident, $input_element:ident, $input_type:ident, $attrs:expr) => {
@@ -123,7 +122,6 @@ macro_rules! input_component {
     }
 }
 
-
 fn non_empty_string_validator(s: String) -> Option<String> {
     (!s.is_empty()).then_some(s)
 }
@@ -132,7 +130,6 @@ input_component!(InputBox, input, Input, {});
 
 #[component]
 pub fn SearchLocation() -> impl IntoView {
-
     let ctx: SearchCtx = expect_context();
 
     let set_location = move |search_input: String| {

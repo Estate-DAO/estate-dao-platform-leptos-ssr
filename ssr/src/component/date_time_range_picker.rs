@@ -50,10 +50,9 @@ impl SelectedDateRange {
         format!("{:02}-{:02}-{:04}", date.2, date.1, date.0)
     }
 }
- 
 
-fn get_year_month(timestamp: f64) -> (u32, u32){
-    let secs  = (timestamp / 1000_f64 ).floor() as i64 ;
+fn get_year_month(timestamp: f64) -> (u32, u32) {
+    let secs = (timestamp / 1000_f64).floor() as i64;
     let naive = chrono::NaiveDateTime::from_timestamp_opt(secs, 0).unwrap();
     let datetime: chrono::DateTime<chrono::Utc> = chrono::DateTime::from_utc(naive, chrono::Utc);
     (datetime.year() as u32, datetime.month())
@@ -84,21 +83,20 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     });
 
     // todo: find a way to not set signal from effect
-    create_effect(move |_|{
+    create_effect(move |_| {
         let UseTimestampReturn {
             timestamp,
             is_active,
             pause,
             resume,
         } = use_timestamp_with_controls();
-    
+
         // pause.pause();
         log!("timestamp: {:?}", timestamp.get_untracked());
 
         let (year, month) = get_year_month(timestamp.get_untracked());
         set_initial_date((year, month));
     });
-
 
     view! {
         <div class="">

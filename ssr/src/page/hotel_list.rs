@@ -24,8 +24,7 @@ pub fn HotelListPage() -> impl IntoView {
         val
     });
 
-    let fallback = move || {
-        (1..10).map(|_| view! { <SkeletonCards /> }).collect_view()};
+    let fallback = move || (1..10).map(|_| view! { <SkeletonCards /> }).collect_view();
 
     view! {
         <section class="relative h-screen">
@@ -38,7 +37,10 @@ pub fn HotelListPage() -> impl IntoView {
             <div class="mx-auto">
                 <div class="px-20 grid justify-items-center grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-                    <Show when=move || search_list_page.search_result.get().is_some() fallback=fallback>
+                    <Show
+                        when=move || search_list_page.search_result.get().is_some()
+                        fallback=fallback
+                    >
                         <Transition fallback=fallback>
                             {move || {
                                 search_list_page
