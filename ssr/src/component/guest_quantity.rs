@@ -3,25 +3,49 @@ use crate::{
     component::{Divider, HSettingIcon},
     state::search_state::SearchCtx,
 };
+use ev::{InputEvent, MouseEvent};
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::*;
-// use web_sys::*;
-
-// use crate::page::location_search::InputBox;
 
 #[derive(Debug, Clone, Default)]
 pub struct GuestSelection {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
-    pub children_ages: RwSignal<Vec<u32>>,
+    pub children_ages: ChildrenAges,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ChildrenAges(RwSignal<Vec<u32>>);
+
+impl ChildrenAges {
+    pub fn get_untracked(&self) -> Vec<u32> {
+        self.0.get_untracked().iter().map(|age| *age).collect()
+    }
+
+    pub fn get_value_at(&self, index: u32) -> u32 {
+        *self.0.get_untracked().get(index as usize).unwrap_or(&5)
+    }
+
+    pub fn update_children_ages(&self, index: u32, age: u32) {
+        self.0.update(|f| f[index as usize] = age);
+    }
+
+    pub fn push_children_ages(&self) {
+        self.0.update(|f| f.push(10));
+    }
+
+    pub fn pop_children_ages(&self) {
+        self.0.update(|f| {
+            let _a = f.pop();
+        });
+    }
 }
 
 use crate::api::RoomGuest;
 
 impl GuestSelection {
     pub fn get_room_guests(search_ctx: SearchCtx) -> Vec<RoomGuest> {
-        // let search_ctx: SearchCtx = expect_context();
         let guest_selection = search_ctx.guests;
 
         let no_of_adults = guest_selection.get_untracked().adults.get_untracked();
@@ -33,8 +57,12 @@ impl GuestSelection {
             .iter()
             .map(|age| age.to_string())
             .collect();
-        
-        let child_age = if no_of_child > 0 { Some(children_ages) } else { None };
+
+        let child_age = if no_of_child > 0 {
+            Some(children_ages)
+        } else {
+            None
+        };
 
         vec![RoomGuest {
             no_of_adults,
@@ -42,6 +70,15 @@ impl GuestSelection {
             child_age,
         }]
     }
+
+    // pub fn reactive_length(&self) {
+    //     let no_of_child = self.children.get_untracked();
+    //     if no_of_child > 0 {
+    //         self.children_ages.push_children_ages();
+    //     } else {
+    //         self.children_ages.pop_children_ages();
+    //     }
+    // }
 }
 
 /// Guest quantity component (button)
@@ -103,8 +140,10 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
     let search_ctx: SearchCtx = expect_context();
 
     let guest_selection = search_ctx.guests;
-    let apply_selection = move |ev| {
-        log::info!("Apply selection- {ev:?}");
+    let apply_selection = move |ev: MouseEvent| {
+        // log::info!("Apply selection- {ev:?}");
+        ev.prevent_default();
+
         log::info!(
             "Adults: {}, Children: {}, Ages: {:?}",
             guest_selection.get().adults.get_untracked(),
@@ -112,12 +151,31 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
             guest_selection.get().children_ages.get_untracked()
         );
 
-        // apply the changes to guest_selection_orig
-        SearchCtx::set_adults(guest_selection.get().adults.get());
-        SearchCtx::set_children(guest_selection.get().children.get());
-        SearchCtx::set_children_ages(guest_selection.get().children_ages.get());
+        SearchCtx::log_state();
         set_is_open.set(false);
     };
+
+    create_effect(move |_| {
+        let children_ages = guest_selection.get().children_ages;
+
+        let num_children = children_ages.0.get().len() as u32;
+
+        let push_signal = num_children < guest_selection.get().children.get();
+        let should_not_act = num_children == guest_selection.get().children.get();
+        
+        if should_not_act {
+            return;
+        } else {
+            if push_signal {
+                children_ages.push_children_ages();
+            } else {
+                children_ages.pop_children_ages();
+            }
+        }
+        // log::info!("Push signal: {:?}", push_signal);
+        // log::info!("Children ages: {:?}", children_ages.0.get());
+        // log::info!("Children: {:?}", guest_selection.get().children.get());
+    });
 
     view! {
         <div class="p-4">
@@ -140,12 +198,16 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                                 view! {
                                     <input
                                         type="number"
+                                        min={1}
+                                        max={18}
                                         class="mt-2 ml-3 p-2 border border-gray-300 w-16"
                                         name=format!("child_age[{}]", i)
+                                        value={move || guest_selection.get().children_ages.get_value_at(i)}
                                         placeholder="Age"
                                         on:input=move |e| {
                                             let age = event_target_value(&e);
                                             log!("{}",age);
+                                            guest_selection.get().children_ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
                                         }
                                     />
                                 }

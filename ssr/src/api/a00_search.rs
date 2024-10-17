@@ -223,7 +223,7 @@ impl From<SearchCtx> for HotelSearchRequest {
         };
 
         log!("HotelSearchRequest: {request:?}");
-        
+
         request
     }
 }
