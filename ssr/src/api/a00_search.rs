@@ -155,8 +155,8 @@ impl Default for HotelSearchRequest {
         Self {
             check_in_date: String::new(),
             no_of_nights: 1,
-            country_code: "AE".into(),
-            city_id: 804,
+            country_code: "IN".into(),
+            city_id: 1254,
             guest_nationality: "IN".into(),
             no_of_rooms: 1,
             room_guests: vec![RoomGuest {
