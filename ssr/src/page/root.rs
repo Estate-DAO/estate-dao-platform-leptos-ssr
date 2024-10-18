@@ -10,7 +10,7 @@ use crate::{
         DateTimeRangePickerCustom, Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity,
         HSettingIcon,
     },
-    state::search_state::{SearchCtx, SearchListPage},
+    state::search_state::{SearchCtx, SearchListResults},
 };
 
 #[component]
@@ -148,13 +148,13 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             //  move to the hotel listing page
             nav(AppRoutes::HotelList.to_string(), Default::default());
 
-            SearchListPage::reset();
+            SearchListResults::reset();
 
             // call server function inside action
             spawn_local(async move {
                 let result = search_hotel(search_ctx.into()).await.ok();
                 // log!("SEARCH_HOTEL_API: {result:?}");
-                SearchListPage::set_search_results(result);
+                SearchListResults::set_search_results(result);
             });
         }
     });

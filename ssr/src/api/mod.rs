@@ -4,7 +4,7 @@ mod a00_search;
 pub use a00_search::{search_hotel, HotelSearchRequest, HotelSearchResponse, RoomGuest};
 
 mod a01_hotel_info;
-pub use a01_hotel_info::{HotelInfoRequest, HotelInfoResponse};
+pub use a01_hotel_info::{hotel_info, HotelInfoRequest, HotelInfoResponse};
 
 mod a02_get_room;
 pub use a02_get_room::{HotelRoomRequest, RoomList};

@@ -1,17 +1,20 @@
 use leptos::*;
+use leptos_router::use_navigate;
 
 use crate::component::SkeletonCards;
+use crate::state::search_state::HotelInfoResults;
 use crate::{
+    api::hotel_info,
     app::AppRoutes,
     component::{FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
-    state::{search_state::SearchListPage, view_state::HotelViewInfoCtx},
+    state::{search_state::SearchListResults, view_state::HotelInfoCtx},
 };
 use leptos::logging::log;
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
-    let search_list_page: SearchListPage = expect_context();
+    let search_list_page: SearchListResults = expect_context();
 
     let disabled_input_group: Signal<bool> = Signal::derive(move || {
         let val = search_list_page.search_result.get().is_none();
@@ -41,7 +44,7 @@ pub fn HotelListPage() -> impl IntoView {
                         when=move || search_list_page.search_result.get().is_some()
                         fallback=fallback
                     >
-                        <Transition fallback=fallback>
+                        // <Transition fallback=fallback>
                             {move || {
                                 search_list_page
                                     .search_result
@@ -63,7 +66,7 @@ pub fn HotelListPage() -> impl IntoView {
                                     .collect::<Vec<_>>()
                             }}
 
-                        </Transition>
+                        // </Transition>
                     </Show>
                 </div>
             </div>
@@ -79,15 +82,50 @@ pub fn HotelCard(
     hotel_code: String,
     hotel_name: String,
 ) -> impl IntoView {
+
     let price = create_rw_signal(price);
+
+    let search_list_page: SearchListResults = expect_context();
+
+    let navigate = use_navigate();
+    
+    let hotel_code_cloned = hotel_code.clone();
+
+
+    let search_hotel_info_action = create_action(move |_| {
+        let nav = navigate.clone();
+        let search_list_page = search_list_page.clone();
+        let hotel_code = hotel_code.clone();
+        log!("from action -- {search_list_page:?}");
+        log!("from action -- {hotel_code:?}");
+        async move {
+            //  move to the hotel info page
+            nav(AppRoutes::HotelDetails.to_string(), Default::default());
+
+            HotelInfoResults::reset();
+
+            let hotel_info_request = search_list_page.hotel_info_request(hotel_code);
+            log!("{hotel_info_request:?}"); 
+
+            // call server function inside action
+            spawn_local(async move {
+                let result = hotel_info(hotel_info_request).await.ok();
+                // log!("SEARCH_HOTEL_API: {result:?}");
+                HotelInfoResults::set_info_results(result);
+            });
+        }
+    });
+
     view! {
-        <a
-            href=AppRoutes::HotelDetails.to_string()
+        <div
+            // href=AppRoutes::HotelDetails.to_string()
             on:click=move |ev| {
                 ev.prevent_default();
-                let hotel_view_info_ctx: HotelViewInfoCtx = expect_context();
-                hotel_view_info_ctx.hotel_code.set(Some(hotel_code.clone()));
-                log!("hotel_code: {}", hotel_code);
+                // todoing -- 
+                let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+                hotel_view_info_ctx.hotel_code.set(Some(hotel_code_cloned.clone()));
+                log!("hotel_code: {}", hotel_code_cloned);
+                search_hotel_info_action.dispatch(())
             }
         >
             <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
@@ -107,19 +145,15 @@ pub fn HotelCard(
 
                     <div class="flex items-center justify-between px-6 pt-2">
                         <PriceDisplay price=price />
-                        <ViewDetails />
+                        <button 
+                            class="font-semibold underline underline-offset-2 decoration-solid text-xs"
+                        >
+                            "View details"
+                        </button>
                     </div>
                 </div>
             </div>
-        </a>
+        </div>
     }
 }
 
-#[component]
-pub fn ViewDetails() -> impl IntoView {
-    view! {
-        <span class="font-semibold underline underline-offset-2	 decoration-solid text-xs">
-            "View details"
-        </span>
-    }
-}

@@ -6,6 +6,7 @@ use crate::{
 use ev::{InputEvent, MouseEvent};
 use leptos::logging::log;
 use leptos::*;
+use crate::api::RoomGuest;
 use leptos_icons::*;
 
 #[derive(Debug, Clone, Default)]
@@ -42,7 +43,6 @@ impl ChildrenAges {
     }
 }
 
-use crate::api::RoomGuest;
 
 impl GuestSelection {
     pub fn get_room_guests(search_ctx: SearchCtx) -> Vec<RoomGuest> {

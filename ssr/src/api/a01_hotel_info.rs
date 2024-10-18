@@ -1,9 +1,12 @@
+use leptos::ServerFnError;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use leptos::*;
+use crate::state::search_state::SearchListResults;
 
-use super::{ProvabReq, ProvabReqMeta};
+use super::{a00_search::Search, Provab, ProvabReq, ProvabReqMeta};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 pub struct HotelDetailsLevel2 {
     checkin: String,
     checkout: String,
@@ -15,30 +18,30 @@ pub struct HotelDetailsLevel2 {
     star_rating: i32,
     #[serde(rename = "Description")]
     description: String,
-    #[serde(rename = "Attractions")]
-    attractions: Vec<String>,
-    #[serde(rename = "HotelPolicy")]
-    hotel_policy: String,
+    // #[serde(rename = "Attractions")]
+    // attractions: Vec<String>,
+    // #[serde(rename = "HotelPolicy")]
+    // hotel_policy: String,
     #[serde(rename = "HotelFacilities")]
     hotel_facilities: Vec<String>,
     #[serde(rename = "Address")]
     address: String,
-    #[serde(rename = "Latitude")]
-    latitude: f64,
-    #[serde(rename = "Longitude")]
-    longitude: f64,
-    #[serde(rename = "Images")]
+    // #[serde(rename = "Latitude")]
+    // latitude: f64,
+    // #[serde(rename = "Longitude")]
+    // longitude: f64,
+    // #[serde(rename = "Images")]
     images: Vec<String>,
     first_room_details: FirstRoomDetails,
-    first_rm_cancel_date: String,
-    cancel_date: String,
+    // first_rm_cancel_date: String,
+    // cancel_date: String,
     #[serde(rename = "Amenities")]
     amenities: Vec<String>,
-    trip_adv_url: String,
-    trip_rating: String,
+    // trip_adv_url: String,
+    // trip_rating: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 pub struct FirstRoomDetails {
     #[serde(rename = "Price")]
     price: Price,
@@ -50,7 +53,7 @@ pub struct FirstRoomDetails {
     room_data: RoomData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 pub struct Price {
     #[serde(rename = "PublishedPrice")]
     published_price: f64,
@@ -70,25 +73,25 @@ pub struct Price {
     child_charge: f64,
     #[serde(rename = "OtherCharges")]
     other_charges: f64,
-    #[serde(rename = "Discount")]
-    discount: f64,
-    #[serde(rename = "AgentCommission")]
-    agent_commission: f64,
-    #[serde(rename = "AgentMarkUp")]
-    agent_mark_up: f64,
-    #[serde(rename = "ServiceTax")]
-    service_tax: f64,
-    #[serde(rename = "TDS")]
-    tds: f64,
-    #[serde(rename = "RoomPriceWoGST")]
-    room_price_wo_gst: f64,
-    #[serde(rename = "GSTPrice")]
-    gst_price: f64,
+    // #[serde(rename = "Discount")]
+    // discount: f64,
+    // #[serde(rename = "AgentCommission")]
+    // agent_commission: f64,
+    // #[serde(rename = "AgentMarkUp")]
+    // agent_mark_up: f64,
+    // #[serde(rename = "ServiceTax")]
+    // service_tax: f64,
+    // #[serde(rename = "TDS")]
+    // tds: f64,
+    // #[serde(rename = "RoomPriceWoGST")]
+    // room_price_wo_gst: f64,
+    // #[serde(rename = "GSTPrice")]
+    // gst_price: f64,
     #[serde(rename = "CurrencyCode")]
     currency_code: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 pub struct CancellationPolicy {
     #[serde(rename = "Charge")]
     charge: f64,
@@ -102,7 +105,7 @@ pub struct CancellationPolicy {
     to_date: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 pub struct RoomData {
     #[serde(rename = "RoomUniqueId")]
     room_unique_id: String,
@@ -112,25 +115,25 @@ pub struct RoomData {
     group_code: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 pub struct HotelDetailsLevel1 {
     #[serde(rename = "HotelInfoResult")]
     hotel_info_result: HotelInfoResult,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelInfoResult {
     #[serde(rename = "HotelDetails")]
     hotel_details: HotelDetailsLevel2,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelInfoRequest {
     #[serde(rename = "ResultToken")]
-    token: String,
+    pub token: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize,Clone,  Debug)]
 // #[display("Status: {}, Message: {}", status, message)]
 pub struct HotelInfoResponse {
     #[serde(rename = "Status")]
@@ -141,6 +144,14 @@ pub struct HotelInfoResponse {
     hotel_details: Option<HotelDetailsLevel1>,
 }
 
+// impl HotelInfoResponse {
+//     pub fn get_hotel_details(&self) -> HotelDetailsLevel2 {
+//         self.hotel_details
+//         .clone()
+//         .map(|hotel_details| hotel_details.hotel_info_result.hotel_details)
+//     }
+// }
+
 impl ProvabReq for HotelInfoRequest {
     fn path_suffix() -> &'static str {
         "HotelDetails"
@@ -149,5 +160,39 @@ impl ProvabReq for HotelInfoRequest {
 
 impl ProvabReqMeta for HotelInfoRequest {
     const METHOD: Method = Method::POST;
+    const GZIP: bool = false;
     type Response = HotelInfoResponse;
+}
+
+// impl From<SearchListResults> for HotelInfoRequest {
+//     fn from(ctx: SearchListResults) -> Self {
+//         let request = HotelInfoRequest {
+//             token: "1".to_string()
+//         };
+
+//         // log!("HotelSearchRequest: {request:?}");
+
+//         request
+//     }
+// }
+
+#[server(HotelInfo, "/hotel_info")]
+pub async fn hotel_info(
+    request: HotelInfoRequest,
+    // hote_code: String
+) -> Result<HotelInfoResponse, ServerFnError> {
+    // log!("SEARCH_HOTEL_API: {request:?}");
+    // let search_list_page: SearchListResults = expect_context();
+    // let hotel_code_token = search_list_page.get_hotel_code_results_token_map().get(&hotel_code).unwrap();
+
+    let provab = Provab::default();
+
+    // log!("provab_default: {provab:?}");
+    match provab.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => {
+            // log!("server_fn_error: {}", e.to_string());
+            Err(ServerFnError::ServerError(e.to_string()))
+        }
+    }
 }

@@ -1,9 +1,9 @@
 use leptos::*;
 use leptos_icons::Icon;
-
+use leptos::logging::log;
 use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
+    page::{InputGroup, Navbar}, state::search_state::HotelInfoResults,
 };
 
 #[derive(Clone)]
@@ -24,7 +24,14 @@ struct Amenity {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
-    let rating = (4);
+    let rating = 4;
+
+    let hotel_info_results: HotelInfoResults = expect_context();
+
+    create_effect(move |_| {
+        log!("DO IT EVEN EFFECT THE WORK?");
+        log!("hotel_info_results: {:?}", hotel_info_results.search_result.get());
+    });
 
     let amenities = vec![
         Amenity {
@@ -56,10 +63,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
             text: "Family rooms",
         },
     ];
-    // let amenities: Vec<Amenity> = amenity_texts.iter()
-    // .filter_map(|text| icon_map.get(text.to_lowercase().as_str()).map(|&icon| Amenity { icon, text }))
-    // .collect();
-
+   
     view! {
         <section class="relative h-screen">
             <Navbar />

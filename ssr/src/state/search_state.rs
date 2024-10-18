@@ -1,5 +1,5 @@
 use crate::{
-    api::{HotelSearchRequest, HotelSearchResponse},
+    api::{HotelInfoRequest, HotelInfoResponse, HotelSearchRequest, HotelSearchResponse},
     component::{GuestSelection, SelectedDateRange},
 };
 use leptos::RwSignal;
@@ -92,11 +92,11 @@ impl SearchCtx {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct SearchListPage {
+pub struct SearchListResults {
     pub search_result: RwSignal<Option<HotelSearchResponse>>,
 }
 
-impl SearchListPage {
+impl SearchListResults {
     fn from_leptos_context() -> Self {
         expect_context()
     }
@@ -115,4 +115,37 @@ impl SearchListPage {
             .as_ref()
             .map_or_else(HashMap::new, |response| response.get_results_token_map())
     }
+
+
+    pub fn hotel_info_request(&self, hotel_code: String) -> HotelInfoRequest {
+        
+        let token = self.get_hotel_code_results_token_map().get(&hotel_code).unwrap().clone();
+
+        HotelInfoRequest{
+            token
+        }
+    }
+
+}
+
+
+#[derive(Debug, Clone, Default)]
+pub struct HotelInfoResults {
+    pub search_result: RwSignal<Option<HotelInfoResponse>>,
+}
+
+impl HotelInfoResults {
+    fn from_leptos_context() -> Self {
+        expect_context()
+    }
+    pub fn reset() {
+        Self::from_leptos_context().search_result.set(None);
+    }
+
+    pub fn set_info_results(hotel_info_response: Option<HotelInfoResponse>) {
+        Self::from_leptos_context()
+            .search_result
+            .set(hotel_info_response);
+    }
+
 }

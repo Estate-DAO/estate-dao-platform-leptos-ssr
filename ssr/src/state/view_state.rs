@@ -7,6 +7,6 @@ use leptos::*;
 use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone)]
-pub struct HotelViewInfoCtx {
+pub struct HotelInfoCtx {
     pub hotel_code: RwSignal<Option<String>>,
 }
