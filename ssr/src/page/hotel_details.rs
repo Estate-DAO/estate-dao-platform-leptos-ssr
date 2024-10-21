@@ -1,15 +1,18 @@
-use leptos::*;
-use leptos_icons::Icon;
-use leptos::logging::log;
 use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar}, state::search_state::HotelInfoResults,
+    page::{InputGroup, Navbar},
+    state::search_state::HotelInfoResults,
 };
+use leptos::logging::log;
+use leptos::*;
+use leptos_icons::Icon;
+use svg::Image;
 
 #[derive(Clone)]
 struct Amenity {
     icon: icondata::Icon,
-    text: &'static str,
+    text: String,
+    // text: &'static str,
 }
 
 // let icon_map = HashMap::from([
@@ -23,47 +26,128 @@ struct Amenity {
 // ]);
 
 #[component]
+pub fn ShowHotelInfoValues() -> impl IntoView {
+    let hotel_info_results: HotelInfoResults = expect_context();
+
+    let description_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_description()
+        } else {
+            "".to_owned()
+        }
+    };
+
+    view! { {description_signal} }
+}
+
+// macro_rules! create_reactive_value {
+//     ($name:ident, $hotel_info_results:ident, $getter:ident) => {
+//         let $name = move || {
+//             if let Some(hotel_info_api_response) = $hotel_info_results.search_result.get() {
+//                 hotel_info_api_response.$getter()
+//             } else {
+//                 "".to_owned()
+//             }
+//         };
+//     };
+// }
+
+fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
+    amenities
+        .into_iter()
+        .map(|text| Amenity {
+            icon: icondata::IoWifiSharp,
+            text: text.clone(),
+        })
+        .collect()
+}
+
+#[component]
 pub fn HotelDetailsPage() -> impl IntoView {
     let rating = 4;
 
     let hotel_info_results: HotelInfoResults = expect_context();
 
     create_effect(move |_| {
-        log!("DO IT EVEN EFFECT THE WORK?");
-        log!("hotel_info_results: {:?}", hotel_info_results.search_result.get());
+        log!(
+            "hotel_info_results: {:?}",
+            hotel_info_results.search_result.get()
+        );
     });
 
-    let amenities = vec![
-        Amenity {
-            icon: icondata::IoWifiSharp,
-            text: "Free wifi",
-        },
-        Amenity {
-            icon: icondata::LuParkingCircle,
-            text: "Free parking",
-        },
-        Amenity {
-            icon: icondata::BiSwimRegular,
-            text: "Swimming pool",
-        },
-        Amenity {
-            icon: icondata::BiSpaRegular,
-            text: "Spa",
-        },
-        Amenity {
-            icon: icondata::BsUmbrella,
-            text: "Private beach area",
-        },
-        Amenity {
-            icon: icondata::IoWineSharp,
-            text: "Bar",
-        },
-        Amenity {
-            icon: icondata::RiHomeSmile2BuildingsLine,
-            text: "Family rooms",
-        },
-    ];
-   
+    let address_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_address()
+        } else {
+            "".to_owned()
+        }
+    };
+
+    let description_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_description()
+        } else {
+            "".to_owned()
+        }
+    };
+
+    let amenities_signal = move || {
+        let amenities_str =
+            if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+                hotel_info_api_response.get_amenities()
+            } else {
+                vec![]
+            };
+
+        convert_to_amenities(amenities_str)
+    };
+
+    let images_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_images()
+        } else {
+            vec![]
+        }
+    };
+
+    create_effect(move |_| {
+        log!("images_signal: {:?}", images_signal());
+    });
+
+    // create_reactive_value!( address_signal, hotel_info_results, get_address );
+    // create_reactive_value!( description_signal, hotel_info_results, get_description );
+
+    // let amenities = vec![
+    //     Amenity {
+    //         icon: icondata::IoWifiSharp,
+    //         text: "Free wifi",
+    //     },
+    //     Amenity {
+    //         icon: icondata::LuParkingCircle,
+    //         text: "Free parking",
+    //     },
+    //     Amenity {
+    //         icon: icondata::BiSwimRegular,
+    //         text: "Swimming pool",
+    //     },
+    //     Amenity {
+    //         icon: icondata::BiSpaRegular,
+    //         text: "Spa",
+    //     },
+    //     Amenity {
+    //         icon: icondata::BsUmbrella,
+    //         text: "Private beach area",
+    //     },
+    //     Amenity {
+    //         icon: icondata::IoWineSharp,
+    //         text: "Bar",
+    //     },
+    //     Amenity {
+    //         icon: icondata::RiHomeSmile2BuildingsLine,
+    //         text: "Family rooms",
+    //     },
+    // ];
+
     view! {
         <section class="relative h-screen">
             <Navbar />
@@ -79,50 +163,10 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 </div>
 
                 <br />
+                // <div class="flex space-x-3 h-1/2 w-full">
                 <div class="space-y-3">
-                    <div class="flex space-x-3 h-1/2 w-full">
-                        <img
-                            src="/img/home.webp"
-                            alt="Destination"
-                            class="w-3/5 h-[397px] rounded-xl"
-                        />
-                        <div class="space-y-3 w-2/5">
-                            <img
-                                src="/img/home.webp"
-                                alt="Destination"
-                                class="object-fill h-[193px] w-full rounded-xl"
-                            />
-                            <img
-                                src="/img/home.webp"
-                                alt="Destination"
-                                class="object-fill h-[193px] w-full rounded-xl"
-                            />
-                        </div>
-                    </div>
-                    <div class="flex space-x-3">
-                        <img
-                            src="/img/home.webp"
-                            alt="Destination"
-                            class="w-[290px] h-1/3 rounded-xl"
-                        />
-                        <img
-                            src="/img/home.webp"
-                            alt="Destination"
-                            class="w-[290px] h-1/3 rounded-xl"
-                        />
-                        <div class="relative w-[290px] h-1/3 rounded-xl">
-                            <img
-                                src="/img/home.webp"
-                                alt="Destination"
-                                class="object-cover h-full w-full rounded-xl"
-                            />
-                            <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
-                                <span class="text-white text-lg font-semibold p-16">
-                                    See all photos
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+
+                    <HotelImages />
                 </div>
 
                 // bottom half
@@ -134,19 +178,22 @@ pub fn HotelDetailsPage() -> impl IntoView {
                         // About component
                         <div class="flex flex-col space-y-4">
                             <div class="text-xl">About</div>
-                            <div class="mb-8">
-                                "As the sun dipped below the horizon, casting a golden glow across the tranquil lake, Sarah found herself lost in thought. The gentle lapping of waves against the shore provided a soothing backdrop to her contemplation. Suddenly, a rustling in the nearby bushes caught her attention. To her amazement, a magnificent deer emerged, its antlers silhouetted against the fading light. Their eyes met for a brief moment, a connection bridging the gap between human and nature. Just as quickly as it appeared, the deer vanished into the forest, leaving Sarah with a sense of wonder and a story she'd cherish forever. The encounter reminded her of life's unexpected beauty and the importance of being present in each moment."
-                            </div>
+                            <div class="mb-8">{description_signal}</div>
                         </div>
-                        <hr class="mt-14 mb-10 border-t border-gray-300" />
-
+                        <hr class="mt-14 mb-5 border-t border-gray-300" />
+                        // Address bar component
+                        <div class=" flex flex-col space-y-8 mt-8">
+                            <div class="text-xl">Address</div>
+                            <div>{address_signal}</div>
+                        </div>
+                        <hr class="mt-14 mb-5 border-t border-gray-300" />
                         // amenities component
                         <div class=" flex flex-col space-y-8 mt-8">
                             <div class="text-xl">Amenities</div>
                             <div class="grid grid-cols-3 gap-4">
                                 <For
-                                    each=move || amenities.clone()
-                                    key=|amenity| amenity.text
+                                    each=amenities_signal
+                                    key=|amenity| amenity.text.clone()
                                     let:amenity
                                 >
                                     <AmenitiesIconText icon=amenity.icon text=amenity.text />
@@ -165,6 +212,79 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 </div>
             </div>
         </section>
+    }
+}
+
+#[component]
+pub fn HotelImages() -> impl IntoView {
+
+    let hotel_info_results: HotelInfoResults = expect_context();
+    
+    let images_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            let mut images = hotel_info_api_response.get_images();
+            if images.len() < 6 {
+                let repeat_count = 6 - images.len();
+                let repeated_images = images.clone();
+                images.extend(repeated_images.into_iter().take(repeat_count));
+            }
+            images
+        } else {
+            vec![]
+        }
+    };
+
+    {move || {
+        if images_signal().is_empty() {
+        view! { <div>No i adsasdf mages</div> }
+    } else {
+        view! {
+            <div class="flex flex-col space-y-3">
+                <div class="flex space-x-3  space-y-2 h-1/2 w-full">
+                    <img
+                        src=move || images_signal()[0].clone()
+                        alt="Destination"
+                        class="w-3/5 h-96 rounded-xl"
+                    />
+                    <div class=" flex flex-col space-y-3 w-2/5">
+                        <img
+                            src=move || images_signal()[1].clone()
+                            alt="Destination"
+                            class="object-fill h-[186px] w-full rounded-xl"
+                        />
+                        <img
+                            src=move || images_signal()[2].clone()
+                            alt="Destination"
+                            class="object-fill h-[186px] w-full rounded-xl"
+                        />
+                    </div>
+                </div>
+                <div class="flex justify-between space-x-3">
+                    <img
+                        src=move || images_signal()[3].clone()
+                        alt="Destination"
+                        class="w-72 h-48 rounded-xl"
+                    />
+                    <img
+                        src=move || images_signal()[4].clone()
+                        alt="Destination"
+                        class="w-72 h-48 rounded-xl"
+                    />
+                    <div class="relative w-72 h-48 rounded-xl">
+                        <img
+                            src=move || images_signal()[5].clone()
+                            alt="Destination"
+                            class="object-cover h-full w-full rounded-xl"
+                        />
+                        <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
+                            <span class="text-white text-lg font-semibold p-16 h-24">
+                                See all photos
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }}}
     }
 }
 

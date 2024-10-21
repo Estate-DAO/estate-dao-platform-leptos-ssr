@@ -1,13 +1,14 @@
+use crate::state::search_state::SearchListResults;
+use leptos::logging::log;
 use leptos::ServerFnError;
+use leptos::*;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use leptos::*;
-use leptos::logging::log;
-use crate::state::search_state::SearchListResults;
 
-use super::{a00_search::Search, Provab, ProvabReq, ProvabReqMeta};
+use super::{ProvabReq, ProvabReqMeta};
+use crate::api::Provab;
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelDetailsLevel2 {
     checkin: String,
     checkout: String,
@@ -42,7 +43,7 @@ pub struct HotelDetailsLevel2 {
     // trip_rating: String,
 }
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FirstRoomDetails {
     #[serde(rename = "Price")]
     price: Price,
@@ -54,7 +55,7 @@ pub struct FirstRoomDetails {
     room_data: RoomData,
 }
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Price {
     #[serde(rename = "PublishedPrice")]
     published_price: f64,
@@ -92,7 +93,7 @@ pub struct Price {
     currency_code: String,
 }
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CancellationPolicy {
     #[serde(rename = "Charge")]
     charge: f64,
@@ -106,7 +107,7 @@ pub struct CancellationPolicy {
     to_date: String,
 }
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RoomData {
     #[serde(rename = "RoomUniqueId")]
     room_unique_id: String,
@@ -116,7 +117,7 @@ pub struct RoomData {
     // group_code: String,
 }
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelDetailsLevel1 {
     #[serde(rename = "HotelInfoResult")]
     hotel_info_result: HotelInfoResult,
@@ -134,7 +135,7 @@ pub struct HotelInfoRequest {
     pub token: String,
 }
 
-#[derive(Serialize, Deserialize,Clone,  Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 // #[display("Status: {}, Message: {}", status, message)]
 pub struct HotelInfoResponse {
     #[serde(rename = "Status")]
@@ -145,13 +146,33 @@ pub struct HotelInfoResponse {
     hotel_details: Option<HotelDetailsLevel1>,
 }
 
-// impl HotelInfoResponse {
-//     pub fn get_hotel_details(&self) -> HotelDetailsLevel2 {
-//         self.hotel_details
-//         .clone()
-//         .map(|hotel_details| hotel_details.hotel_info_result.hotel_details)
-//     }
-// }
+impl HotelInfoResponse {
+    pub fn get_address(&self) -> String {
+        self.hotel_details.as_ref().map_or_else(
+            || "".to_owned(),
+            |details| details.hotel_info_result.hotel_details.address.clone(),
+        )
+    }
+    pub fn get_description(&self) -> String {
+        self.hotel_details.as_ref().map_or_else(
+            || "".to_string(),
+            |details| details.hotel_info_result.hotel_details.description.clone(),
+        )
+    }
+
+    pub fn get_amenities(&self) -> Vec<String> {
+        self.hotel_details.as_ref().map_or_else(
+            || vec![],
+            |details| details.hotel_info_result.hotel_details.amenities.clone(),
+        )
+    }
+    pub fn get_images(&self) -> Vec<String> {
+        self.hotel_details.as_ref().map_or_else(
+            || vec![],
+            |details| details.hotel_info_result.hotel_details.images.clone(),
+        )
+    }
+}
 
 impl ProvabReq for HotelInfoRequest {
     fn path_suffix() -> &'static str {
@@ -164,18 +185,6 @@ impl ProvabReqMeta for HotelInfoRequest {
     const GZIP: bool = false;
     type Response = HotelInfoResponse;
 }
-
-// impl From<SearchListResults> for HotelInfoRequest {
-//     fn from(ctx: SearchListResults) -> Self {
-//         let request = HotelInfoRequest {
-//             token: "1".to_string()
-//         };
-
-//         // log!("HotelSearchRequest: {request:?}");
-
-//         request
-//     }
-// }
 
 #[server(HotelInfo, "/hotel_info")]
 pub async fn hotel_info(
