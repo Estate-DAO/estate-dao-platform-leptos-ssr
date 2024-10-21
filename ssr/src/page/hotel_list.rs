@@ -140,7 +140,7 @@ pub fn HotelCard(
                                 hotel_name.clone()
                             }}
                         </p>
-                        <StarRating rating=rating />
+                        <StarRating rating={move || rating} />
                     </div>
 
                     <div class="flex items-center justify-between px-6 pt-2">

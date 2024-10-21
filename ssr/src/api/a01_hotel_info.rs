@@ -172,6 +172,19 @@ impl HotelInfoResponse {
             |details| details.hotel_info_result.hotel_details.images.clone(),
         )
     }
+    pub fn get_hotel_name(&self) -> String {
+        self.hotel_details.as_ref().map_or_else(
+            || "".to_owned(),
+            |details| details.hotel_info_result.hotel_details.hotel_name.clone(),
+        )
+    }
+
+    pub fn get_star_rating(&self) -> i32 {
+        self.hotel_details.as_ref().map_or_else(
+            || 0,
+            |details| details.hotel_info_result.hotel_details.star_rating,
+        )
+    }
 }
 
 impl ProvabReq for HotelInfoRequest {

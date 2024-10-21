@@ -110,6 +110,24 @@ pub fn HotelDetailsPage() -> impl IntoView {
         }
     };
 
+    let hotel_name_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_hotel_name()
+        } else {
+            "".into()
+        }
+    };
+
+
+    let star_rating_signal = move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_star_rating() as u8
+        } else {
+            0 as u8
+        }
+    };
+
+
     create_effect(move |_| {
         log!("images_signal: {:?}", images_signal());
     });
@@ -158,8 +176,8 @@ pub fn HotelDetailsPage() -> impl IntoView {
 
             <div class="max-w-4xl mx-auto py-8">
                 <div class="flex flex-col">
-                    <StarRating rating=rating />
-                    <div class="text-3xl font-semibold">Riva Beach Resort</div>
+                    {move || view!{<StarRating rating=star_rating_signal />}}
+                    <div class="text-3xl font-semibold">{hotel_name_signal}</div>
                 </div>
 
                 <br />
@@ -236,7 +254,7 @@ pub fn HotelImages() -> impl IntoView {
 
     {move || {
         if images_signal().is_empty() {
-        view! { <div>No i adsasdf mages</div> }
+        view! { <div>No images</div> }
     } else {
         view! {
             <div class="flex flex-col space-y-3">
