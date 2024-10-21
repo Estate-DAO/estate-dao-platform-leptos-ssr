@@ -185,6 +185,12 @@ impl HotelInfoResponse {
             |details| details.hotel_info_result.hotel_details.star_rating,
         )
     }
+    pub fn get_room_price(&self) -> f64 {
+        self.hotel_details.as_ref().map_or_else(
+            || 0.0,
+            |details| details.hotel_info_result.hotel_details.first_room_details.price.room_price,
+        )
+    }
 }
 
 impl ProvabReq for HotelInfoRequest {

@@ -23,7 +23,7 @@ pub fn PriceDisplay(
 
     view! {
         <div class=merged_base_class>
-            <span class=price_class> {formatted_price}</span>
+            <span class=price_class> {move || formatted_price()}</span>
             <Show
                 when=move || !appended_text.clone().is_none()
                 fallback=move || view! { <span class=subtext_class.clone()>" / night"</span> }

@@ -135,37 +135,6 @@ pub fn HotelDetailsPage() -> impl IntoView {
     // create_reactive_value!( address_signal, hotel_info_results, get_address );
     // create_reactive_value!( description_signal, hotel_info_results, get_description );
 
-    // let amenities = vec![
-    //     Amenity {
-    //         icon: icondata::IoWifiSharp,
-    //         text: "Free wifi",
-    //     },
-    //     Amenity {
-    //         icon: icondata::LuParkingCircle,
-    //         text: "Free parking",
-    //     },
-    //     Amenity {
-    //         icon: icondata::BiSwimRegular,
-    //         text: "Swimming pool",
-    //     },
-    //     Amenity {
-    //         icon: icondata::BiSpaRegular,
-    //         text: "Spa",
-    //     },
-    //     Amenity {
-    //         icon: icondata::BsUmbrella,
-    //         text: "Private beach area",
-    //     },
-    //     Amenity {
-    //         icon: icondata::IoWineSharp,
-    //         text: "Bar",
-    //     },
-    //     Amenity {
-    //         icon: icondata::RiHomeSmile2BuildingsLine,
-    //         text: "Family rooms",
-    //     },
-    // ];
-
     view! {
         <section class="relative h-screen">
             <Navbar />
@@ -308,7 +277,20 @@ pub fn HotelImages() -> impl IntoView {
 
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
-    let price = create_rw_signal(40500.9);
+
+    
+    let hotel_info_results: HotelInfoResults = expect_context();
+
+    let price = Signal::derive(move || {
+        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+            hotel_info_api_response.get_room_price()
+        } else {
+            0.0
+        }
+    });
+    
+
+    // let price = create_rw_signal(40500.9);
     let deluxe_counter = create_rw_signal(3_u32);
     let luxury_counter = create_rw_signal(0_u32);
 
