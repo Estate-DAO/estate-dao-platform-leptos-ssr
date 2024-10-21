@@ -2,6 +2,7 @@ use leptos::ServerFnError;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use leptos::*;
+use leptos::logging::log;
 use crate::state::search_state::SearchListResults;
 
 use super::{a00_search::Search, Provab, ProvabReq, ProvabReqMeta};
@@ -30,7 +31,7 @@ pub struct HotelDetailsLevel2 {
     // latitude: f64,
     // #[serde(rename = "Longitude")]
     // longitude: f64,
-    // #[serde(rename = "Images")]
+    #[serde(rename = "Images")]
     images: Vec<String>,
     first_room_details: FirstRoomDetails,
     // first_rm_cancel_date: String,
@@ -45,8 +46,8 @@ pub struct HotelDetailsLevel2 {
 pub struct FirstRoomDetails {
     #[serde(rename = "Price")]
     price: Price,
-    #[serde(rename = "cancellation_policy")]
-    cancellation_policy: Vec<CancellationPolicy>,
+    // #[serde(rename = "cancellation_policy")]
+    // cancellation_policy: Vec<CancellationPolicy>,
     #[serde(rename = "room_name")]
     room_name: String,
     #[serde(rename = "Room_data")]
@@ -111,8 +112,8 @@ pub struct RoomData {
     room_unique_id: String,
     #[serde(rename = "rate_key")]
     rate_key: String,
-    #[serde(rename = "group_code")]
-    group_code: String,
+    // #[serde(rename = "group_code")]
+    // group_code: String,
 }
 
 #[derive(Serialize, Deserialize,Clone,  Debug)]

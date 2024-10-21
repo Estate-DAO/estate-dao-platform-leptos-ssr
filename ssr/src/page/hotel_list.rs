@@ -19,11 +19,11 @@ pub fn HotelListPage() -> impl IntoView {
     let disabled_input_group: Signal<bool> = Signal::derive(move || {
         let val = search_list_page.search_result.get().is_none();
         // let val = search_list_page.search_result.get().is_some();
-        log!("disabled ig - {}", val);
-        log!(
-            "search_list_page.search_result.get(): {:?}",
-            search_list_page.search_result.get()
-        );
+        // log!("disabled ig - {}", val);
+        // log!(
+        //     "search_list_page.search_result.get(): {:?}",
+        //     search_list_page.search_result.get()
+        // );
         val
     });
 
@@ -110,7 +110,7 @@ pub fn HotelCard(
             // call server function inside action
             spawn_local(async move {
                 let result = hotel_info(hotel_info_request).await.ok();
-                // log!("SEARCH_HOTEL_API: {result:?}");
+                log!("SEARCH_HOTEL_API: {result:?}");
                 HotelInfoResults::set_info_results(result);
             });
         }
