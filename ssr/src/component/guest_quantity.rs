@@ -9,11 +9,23 @@ use leptos::*;
 use crate::api::RoomGuest;
 use leptos_icons::*;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct GuestSelection {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
+    pub rooms: RwSignal<u32>,
     pub children_ages: ChildrenAges,
+}
+
+impl Default for GuestSelection {
+    fn default() -> Self {
+        Self {
+            adults: RwSignal::new(0),
+            children: RwSignal::new(0),
+            rooms: RwSignal::new(1), // Set default value for rooms to 1
+            children_ages: ChildrenAges::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -42,7 +54,6 @@ impl ChildrenAges {
         });
     }
 }
-
 
 impl GuestSelection {
     pub fn get_room_guests(search_ctx: SearchCtx) -> Vec<RoomGuest> {
@@ -184,6 +195,8 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                 class="absolute right-0 bg-white rounded-md shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border border-gray-200 px-4"
             >
                 <NumberCounter label="Adults" counter=guest_selection.get().adults class="mt-2" />
+                <Divider />
+                <NumberCounter label="Rooms" counter=guest_selection.get().rooms class="mt-2" />
                 <Divider />
                 <NumberCounter
                     label="Children"
