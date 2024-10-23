@@ -8,6 +8,7 @@ use leptos::logging::log;
 use leptos::*;
 use crate::api::RoomGuest;
 use leptos_icons::*;
+use crate::utils::pluralize;
 
 #[derive(Debug, Clone)]
 pub struct GuestSelection {
@@ -229,7 +230,7 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                     }}
                 </div>
                 <Divider />
-                
+
                 <NumberCounter label="Rooms" counter=guest_selection.get().rooms class="mt-2" />
                 // <br />
                 <button
@@ -244,10 +245,3 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
     }
 }
 
-fn pluralize(count: u32, singular: &str, plural: &str) -> String {
-    if count == 1 {
-        format!("{} {}", count, singular)
-    } else {
-        format!("{} {}", count, plural)
-    }
-}

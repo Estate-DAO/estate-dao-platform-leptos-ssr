@@ -1,13 +1,15 @@
 use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
-    state::search_state::HotelInfoResults,
+    state::search_state::{HotelInfoResults, SearchCtx},
 };
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
 use svg::Image;
 use crate::component::FullScreenSpinnerGray;
+use crate::utils::pluralize;
+
 #[derive(Clone)]
 struct Amenity {
     icon: icondata::Icon,
@@ -284,6 +286,8 @@ pub fn PricingBookNow() -> impl IntoView {
 
     
     let hotel_info_results: HotelInfoResults = expect_context();
+    let search_ctx: SearchCtx = expect_context();
+    let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
 
     let price = Signal::derive(move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
@@ -317,7 +321,7 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex items-center  space-x-2">
                 <Icon icon=icondata::LuSofa class="text-black text-xl " />
-                <div>"2 rooms"</div>
+                <div>{move || pluralize(num_rooms.get(), "room", "rooms")}</div>
             </div>
 
             <div class="flex flex-col space-y-2">
