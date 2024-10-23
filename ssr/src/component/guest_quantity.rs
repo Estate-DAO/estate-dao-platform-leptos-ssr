@@ -196,8 +196,7 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
             >
                 <NumberCounter label="Adults" counter=guest_selection.get().adults class="mt-2" />
                 <Divider />
-                <NumberCounter label="Rooms" counter=guest_selection.get().rooms class="mt-2" />
-                <Divider />
+               
                 <NumberCounter
                     label="Children"
                     counter=guest_selection.get().children
@@ -229,7 +228,10 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                             .into_view()
                     }}
                 </div>
-                <br />
+                <Divider />
+                
+                <NumberCounter label="Rooms" counter=guest_selection.get().rooms class="mt-2" />
+                // <br />
                 <button
                     type="button"
                     class="w-full mb-4 bg-white border border-black-2 text-black py-2 rounded-full"
