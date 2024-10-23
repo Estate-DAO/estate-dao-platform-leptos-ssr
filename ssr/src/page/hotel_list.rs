@@ -34,7 +34,7 @@ pub fn HotelListPage() -> impl IntoView {
             <Navbar />
             <div class="flex flex-col items-center mt-6 p-4">
                 <InputGroup disabled=disabled_input_group />
-                <FilterAndSortBy />
+                // <FilterAndSortBy />
             </div>
 
             <div class="mx-auto">

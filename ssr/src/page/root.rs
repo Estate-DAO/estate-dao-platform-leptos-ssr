@@ -38,7 +38,8 @@ pub fn HeroSection() -> impl IntoView {
                     </h1>
                     <InputGroup />
                     <br />
-                    <FilterAndSortBy />
+                    // todo: uncomment in v2 when implementing filtering and sorting
+                    // <FilterAndSortBy />
                     <br />
                     <br />
                     <br />
