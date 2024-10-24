@@ -1,3 +1,5 @@
+use crate::component::FullScreenSpinnerGray;
+use crate::utils::pluralize;
 use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
@@ -7,8 +9,6 @@ use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
 use svg::Image;
-use crate::component::FullScreenSpinnerGray;
-use crate::utils::pluralize;
 
 #[derive(Clone)]
 struct Amenity {
@@ -120,7 +120,6 @@ pub fn HotelDetailsPage() -> impl IntoView {
         }
     };
 
-
     let star_rating_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
             hotel_info_api_response.get_star_rating() as u8
@@ -129,14 +128,11 @@ pub fn HotelDetailsPage() -> impl IntoView {
         }
     };
 
-
     create_effect(move |_| {
         log!("images_signal: {:?}", images_signal());
     });
 
-    let loaded = move || {
-        hotel_info_results.search_result.get().is_some()
-    };
+    let loaded = move || hotel_info_results.search_result.get().is_some();
     // create_reactive_value!( address_signal, hotel_info_results, get_address );
     // create_reactive_value!( description_signal, hotel_info_results, get_description );
 
@@ -210,9 +206,8 @@ pub fn HotelDetailsPage() -> impl IntoView {
 
 #[component]
 pub fn HotelImages() -> impl IntoView {
-
     let hotel_info_results: HotelInfoResults = expect_context();
-    
+
     let images_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
             let mut images = hotel_info_api_response.get_images();
@@ -227,64 +222,65 @@ pub fn HotelImages() -> impl IntoView {
         }
     };
 
-    {move || {
-        if images_signal().is_empty() {
-        view! { <div>No images</div> }
-    } else {
-        view! {
-            <div class="flex flex-col space-y-3">
-                <div class="flex space-x-3  space-y-2 h-1/2 w-full">
-                    <img
-                        src=move || images_signal()[0].clone()
-                        alt="Destination"
-                        class="w-3/5 h-96 rounded-xl"
-                    />
-                    <div class=" flex flex-col space-y-3 w-2/5">
-                        <img
-                            src=move || images_signal()[1].clone()
-                            alt="Destination"
-                            class="object-fill h-[186px] w-full rounded-xl"
-                        />
-                        <img
-                            src=move || images_signal()[2].clone()
-                            alt="Destination"
-                            class="object-fill h-[186px] w-full rounded-xl"
-                        />
-                    </div>
-                </div>
-                <div class="flex justify-between space-x-3">
-                    <img
-                        src=move || images_signal()[3].clone()
-                        alt="Destination"
-                        class="w-72 h-48 rounded-xl"
-                    />
-                    <img
-                        src=move || images_signal()[4].clone()
-                        alt="Destination"
-                        class="w-72 h-48 rounded-xl"
-                    />
-                    <div class="relative w-72 h-48 rounded-xl">
-                        <img
-                            src=move || images_signal()[5].clone()
-                            alt="Destination"
-                            class="object-cover h-full w-full rounded-xl"
-                        />
-                        <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
-                            <span class="text-white text-lg font-semibold p-16 h-24">
-                                See all photos
-                            </span>
+    {
+        move || {
+            if images_signal().is_empty() {
+                view! { <div>No images</div> }
+            } else {
+                view! {
+                    <div class="flex flex-col space-y-3">
+                        <div class="flex space-x-3  space-y-2 h-1/2 w-full">
+                            <img
+                                src=move || images_signal()[0].clone()
+                                alt="Destination"
+                                class="w-3/5 h-96 rounded-xl"
+                            />
+                            <div class=" flex flex-col space-y-3 w-2/5">
+                                <img
+                                    src=move || images_signal()[1].clone()
+                                    alt="Destination"
+                                    class="object-fill h-[186px] w-full rounded-xl"
+                                />
+                                <img
+                                    src=move || images_signal()[2].clone()
+                                    alt="Destination"
+                                    class="object-fill h-[186px] w-full rounded-xl"
+                                />
+                            </div>
+                        </div>
+                        <div class="flex justify-between space-x-3">
+                            <img
+                                src=move || images_signal()[3].clone()
+                                alt="Destination"
+                                class="w-72 h-48 rounded-xl"
+                            />
+                            <img
+                                src=move || images_signal()[4].clone()
+                                alt="Destination"
+                                class="w-72 h-48 rounded-xl"
+                            />
+                            <div class="relative w-72 h-48 rounded-xl">
+                                <img
+                                    src=move || images_signal()[5].clone()
+                                    alt="Destination"
+                                    class="object-cover h-full w-full rounded-xl"
+                                />
+                                <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
+                                    <span class="text-white text-lg font-semibold p-16 h-24">
+                                        See all photos
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        }}}
+                }
+            }
+        }
     }
 }
 
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
-
-    
     let hotel_info_results: HotelInfoResults = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
@@ -296,7 +292,6 @@ pub fn PricingBookNow() -> impl IntoView {
             0.0
         }
     });
-    
 
     // let price = create_rw_signal(40500.9);
     let deluxe_counter = create_rw_signal(3_u32);

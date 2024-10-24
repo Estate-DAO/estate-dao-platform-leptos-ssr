@@ -1,12 +1,12 @@
+use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
-use leptos::logging::log;
 
 #[component]
 pub fn StarRating<T>(rating: T) -> impl IntoView
-where 
-T:  Fn() -> u8 + 'static
- {
+where
+    T: Fn() -> u8 + 'static,
+{
     let derived_rating = Signal::derive(move || rating());
     create_effect(move |_| {
         log!("derived_rating: {}", derived_rating.get());
@@ -29,7 +29,7 @@ T:  Fn() -> u8 + 'static
                     })
                     .collect::<Vec<_>>()}
             </div>
-             <span class="inline-block text-xs text-blue-500">{derived_rating}.0</span> 
+             <span class="inline-block text-xs text-blue-500">{derived_rating}.0</span>
         </div>
     }
 }

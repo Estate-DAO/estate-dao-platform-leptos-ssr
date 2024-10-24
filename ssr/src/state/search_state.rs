@@ -1,5 +1,7 @@
 use crate::{
-    api::{HotelInfoRequest, HotelInfoResponse, HotelSearchRequest, HotelSearchResponse},
+    api::{
+        HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse
+    },
     component::{GuestSelection, SelectedDateRange},
 };
 use leptos::RwSignal;
@@ -116,28 +118,38 @@ impl SearchListResults {
             .map_or_else(HashMap::new, |response| response.get_results_token_map())
     }
 
+    fn get_result_token(&self, hotel_code: String) -> String {
+        self
+        .get_hotel_code_results_token_map()
+        .get(&hotel_code)
+        .unwrap()
+        .clone()
 
-    pub fn hotel_info_request(&self, hotel_code: String) -> HotelInfoRequest {
-        
-        let token = self.get_hotel_code_results_token_map().get(&hotel_code).unwrap().clone();
-
-        HotelInfoRequest{
-            token
-        }
     }
 
-}
+    pub fn hotel_info_request(&self, hotel_code: &str) -> HotelInfoRequest {
+      let token = self.get_result_token(hotel_code.into());
+        HotelInfoRequest { token }
+    }
 
+    pub fn hotel_room_request(&self, hotel_code: &str) -> HotelRoomRequest {
+        let token = self.get_result_token(hotel_code.into());
+        HotelRoomRequest { token }
+      }
+
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct HotelInfoResults {
     pub search_result: RwSignal<Option<HotelInfoResponse>>,
+    pub room_result: RwSignal<Option<HotelRoomResponse>>,
 }
 
 impl HotelInfoResults {
     fn from_leptos_context() -> Self {
         expect_context()
     }
+
     pub fn reset() {
         Self::from_leptos_context().search_result.set(None);
     }
@@ -148,4 +160,9 @@ impl HotelInfoResults {
             .set(hotel_info_response);
     }
 
+    pub fn set_room_results(hotel_room_response: Option<HotelRoomResponse>) {
+        Self::from_leptos_context()
+            .room_result
+            .set(hotel_room_response);
+    }
 }
