@@ -29,78 +29,78 @@ pub struct GetHotelRoomResult {
 pub struct HotelRoomDetail {
     #[serde(rename = "RoomUniqueId")]
     room_unique_id: String,
-    rate_key: String,
-    group_code: String,
-    room_code: String,
+    // rate_key: String,
+    // group_code: String,
+    // room_code: String,
     #[serde(rename = "ChildCount")]
     child_count: i32,
     #[serde(rename = "RoomTypeName")]
     room_type_name: String,
     #[serde(rename = "Price")]
     price: Price,
-    #[serde(rename = "SmokingPreference")]
-    smoking_preference: String,
-    #[serde(rename = "RatePlanCode")]
-    rate_plan_code: String,
+    // #[serde(rename = "SmokingPreference")]
+    // smoking_preference: String,
+    // #[serde(rename = "RatePlanCode")]
+    // rate_plan_code: String,
     #[serde(rename = "RoomTypeCode")]
     room_type_code: String,
     #[serde(rename = "RatePlanName")]
     rate_plan_name: String,
-    #[serde(rename = "Amenities")]
-    amenities: Vec<String>,
-    #[serde(rename = "OtherAmennities")]
-    other_amennities: Vec<String>,
+    // #[serde(rename = "Amenities")]
+    // amenities: Vec<String>,
+    // #[serde(rename = "OtherAmennities")]
+    // other_amennities: Vec<String>,
     room_only: String,
-    #[serde(rename = "LastCancellationDate")]
-    last_cancellation_date: String,
-    #[serde(rename = "CancellationPolicies")]
-    cancellation_policies: Vec<CancellationPolicy>,
-    #[serde(rename = "CancellationPolicy")]
-    cancellation_policy: String,
+    // #[serde(rename = "LastCancellationDate")]
+    // last_cancellation_date: String,
+    // #[serde(rename = "CancellationPolicies")]
+    // cancellation_policies: Vec<CancellationPolicy>,
+    // #[serde(rename = "CancellationPolicy")]
+    // cancellation_policy: String,
     #[serde(rename = "HOTEL_CODE")]
     hotel_code: String,
     #[serde(rename = "SEARCH_ID")]
     search_id: String,
     #[serde(rename = "RoomIndex")]
     room_index: i32,
-    #[serde(rename = "InfoSource")]
-    info_source: String,
+    // #[serde(rename = "InfoSource")]
+    // info_source: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Price {
-    #[serde(rename = "PublishedPrice")]
-    published_price: f64,
-    #[serde(rename = "PublishedPriceRoundedOff")]
-    published_price_rounded_off: i32,
-    #[serde(rename = "OfferedPrice")]
-    offered_price: f64,
-    #[serde(rename = "OfferedPriceRoundedOff")]
-    offered_price_rounded_off: i32,
+    // #[serde(rename = "PublishedPrice")]
+    // published_price: f64,
+    // #[serde(rename = "PublishedPriceRoundedOff")]
+    // published_price_rounded_off: i32,
+    // #[serde(rename = "OfferedPrice")]
+    // offered_price: f64,
+    // #[serde(rename = "OfferedPriceRoundedOff")]
+    // offered_price_rounded_off: i32,
     #[serde(rename = "RoomPrice")]
     room_price: i32,
-    #[serde(rename = "Tax")]
-    tax: i32,
+    // #[serde(rename = "Tax")]
+    // tax: i32,
     #[serde(rename = "ExtraGuestCharge")]
     extra_guest_charge: i32,
     #[serde(rename = "ChildCharge")]
     child_charge: i32,
     #[serde(rename = "OtherCharges")]
     other_charges: i32,
-    #[serde(rename = "Discount")]
-    discount: i32,
-    #[serde(rename = "AgentCommission")]
-    agent_commission: i32,
-    #[serde(rename = "AgentMarkUp")]
-    agent_mark_up: i32,
-    #[serde(rename = "ServiceTax")]
-    service_tax: i32,
-    #[serde(rename = "TDS")]
-    tds: i32,
-    #[serde(rename = "RoomPriceWoGST")]
-    room_price_wo_gst: i32,
-    #[serde(rename = "GSTPrice")]
-    gst_price: i32,
+    // #[serde(rename = "Discount")]
+    // discount: i32,
+    // #[serde(rename = "AgentCommission")]
+    // agent_commission: i32,
+    // #[serde(rename = "AgentMarkUp")]
+    // agent_mark_up: i32,
+    // #[serde(rename = "ServiceTax")]
+    // service_tax: i32,
+    // #[serde(rename = "TDS")]
+    // tds: i32,
+    // #[serde(rename = "RoomPriceWoGST")]
+    // room_price_wo_gst: i32,
+    // #[serde(rename = "GSTPrice")]
+    // gst_price: i32,
     #[serde(rename = "CurrencyCode")]
     currency_code: String,
 }
@@ -153,5 +153,6 @@ impl ProvabReq for HotelRoomRequest {
 
 impl ProvabReqMeta for HotelRoomRequest {
     const METHOD: Method = Method::POST;
+    const GZIP: bool = false;
     type Response = HotelRoomResponse;
 }
