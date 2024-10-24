@@ -19,6 +19,10 @@ pub fn get_provab_base_url_from_env() -> &'static str {
     }
 }
 
+pub fn is_local_env() -> bool {
+    Some("true") == option_env!("LOCAL")
+}
+
 pub fn get_headers_from_env() -> HeaderMap {
     let headers: Value =
         serde_json::from_str(option_env!("PROVAB_HEADERS").expect("PROVAB_HEADERS must be set"))

@@ -2,6 +2,7 @@ use leptos::*;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use super::consts::is_local_env;
 use super::{ProvabReq, ProvabReqMeta};
 use crate::api::Provab;
 use crate::component::GuestSelection;
@@ -153,7 +154,7 @@ pub struct HotelSearchRequest {
 impl Default for HotelSearchRequest {
     fn default() -> Self {
         Self {
-            check_in_date: String::new(),
+            check_in_date: "11-11-2024".into(),
             no_of_nights: 1,
             country_code: "IN".into(),
             city_id: 1254,
@@ -212,6 +213,9 @@ impl ProvabReqMeta for HotelSearchRequest {
 
 impl From<SearchCtx> for HotelSearchRequest {
     fn from(ctx: SearchCtx) -> Self {
+        if is_local_env() {
+            return Default::default();
+        }
         let check_in_date = SelectedDateRange::format_date(ctx.date_range.get_untracked().start);
         let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
         // let no_of_nights = 2;
@@ -236,7 +240,6 @@ pub async fn search_hotel(
     // log!("SEARCH_HOTEL_API: {request:?}");
     let provab = Provab::default();
 
-    // log!("provab_default: {provab:?}");
     match provab.send(request).await {
         Ok(response) => Ok(response),
         Err(e) => {
@@ -245,54 +248,3 @@ pub async fn search_hotel(
         }
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_create_hotel_map() {
-//         let hotel_results = vec![
-//             HotelResult {
-//                 hotel_code: "123".to_string(),
-//                 hotel_name: "Hotel A".to_string(),
-//                 hotel_category: "Luxury".to_string(),
-//                 star_rating: 5,
-//                 price: Price {
-//                     room_price: 200.0,
-//                     currency_code: "USD".to_string(),
-//                 },
-//                 hotel_picture: "url_a".to_string(),
-//                 result_token: "token_a".to_string(),
-//             },
-//             HotelResult {
-//                 hotel_code: "456".to_string(),
-//                 hotel_name: "Hotel B".to_string(),
-//                 hotel_category: "Budget".to_string(),
-//                 star_rating: 3,
-//                 price: Price {
-//                     room_price: 100.0,
-//                     currency_code: "USD".to_string(),
-//                 },
-//                 hotel_picture: "url_b".to_string(),
-//                 result_token: "token_b".to_string(),
-//             },
-//         ];
-
-//         let search = Search {
-//             hotel_search_result: HotelSearchResult { hotel_results },
-//         };
-
-//         let response = HotelSearchResponse {
-//             status: 1,
-//             message: "Success".to_string(),
-//             search: Some(search),
-//         };
-
-//         let hotel_map = response.get_results_token();
-
-//         assert_eq!(hotel_map.get("123"), Some(&"token_a".to_string()));
-//         assert_eq!(hotel_map.get("456"), Some(&"token_b".to_string()));
-//         assert_eq!(hotel_map.len(), 2);
-//     }
-// }
