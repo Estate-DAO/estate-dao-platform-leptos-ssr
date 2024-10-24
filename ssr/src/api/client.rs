@@ -11,6 +11,7 @@ use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::io::Read;
+
 pub trait ProvabReqMeta: Sized + Send {
     const METHOD: Method;
     const GZIP: bool = true;
@@ -35,10 +36,13 @@ pub trait ProvabReqMeta: Sized + Send {
             body
         };
 
-        let res: Self::Response = serde_json::from_str(&decompressed_body).map_err(|e| {
-            // log!("deserialize_response- JsonParseFailed: {e:?}");
-            report!(ApiError::JsonParseFailed(e))
-        })?;
+        let jd = &mut serde_json::Deserializer::from_str(&decompressed_body);
+        let res: Self::Response  = serde_path_to_error::deserialize(jd).map_err(|e| {
+                log!("deserialize_response- JsonParseFailed: {:?}", e.path().to_string());
+                let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner() );
+                report!(ApiError::JsonParseFailed( total_error))
+            })?;
+
 
         // log!("\n\ndeserialize_response- Ok : {res:?}\n\n\n");
 

@@ -2,7 +2,7 @@ use super::{ProvabReq, ProvabReqMeta};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomRequest {
     #[serde(rename = "ResultToken")]
     pub result_token: String,
@@ -17,13 +17,13 @@ pub struct BookRoomRequest {
     pub room_details: Vec<RoomDetail>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoomDetail {
     #[serde(rename = "PassengerDetails")]
     pub passenger_details: Vec<PassengerDetail>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PassengerDetail {
     #[serde(rename = "Title")]
     pub title: String, // Mr,Mrs,Ms possible values
@@ -56,7 +56,7 @@ fn default_true() -> bool {
     true
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PaxType {
     #[serde(rename = "Adult")]
     Adult = 1,
@@ -65,7 +65,7 @@ pub enum PaxType {
     Child = 2,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomResponse {
     #[serde(rename = "Status")]
     pub status: BookingStatus,
@@ -77,7 +77,7 @@ pub struct BookRoomResponse {
     pub commit_booking: Vec<BookingDetails>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookingDetails {
     #[serde(rename = "BookingId")]
     pub booking_id: String,
@@ -92,7 +92,7 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BookingStatus {
     #[serde(rename = "BookFailed")]
     BookFailed = 0,

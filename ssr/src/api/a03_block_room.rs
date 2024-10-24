@@ -1,8 +1,9 @@
 use super::{ProvabReq, ProvabReqMeta};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
+use crate::api::Provab;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomRequest {
     #[serde(rename = "ResultToken")]
     token: String,
@@ -10,7 +11,7 @@ pub struct BlockRoomRequest {
     room_unique_id: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomResponse {
     #[serde(rename = "IsPriceChanged")]
     pub is_price_changed: bool,
@@ -22,7 +23,7 @@ pub struct BlockRoomResponse {
     pub hotel_room_details: Vec<HotelRoomDetail>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HotelRoomDetail {
     #[serde(rename = "RoomUniqueId")]
     pub room_unique_id: String,
@@ -45,7 +46,7 @@ pub struct HotelRoomDetail {
     pub price: Price,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Price {
     // #[serde(rename = "PublishedPrice")]
     // published_price: f64,

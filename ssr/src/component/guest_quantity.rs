@@ -1,4 +1,6 @@
+use crate::api::RoomGuest;
 use crate::page::NumberCounter;
+use crate::utils::pluralize;
 use crate::{
     component::{Divider, HSettingIcon},
     state::search_state::SearchCtx,
@@ -6,9 +8,7 @@ use crate::{
 use ev::{InputEvent, MouseEvent};
 use leptos::logging::log;
 use leptos::*;
-use crate::api::RoomGuest;
 use leptos_icons::*;
-use crate::utils::pluralize;
 
 #[derive(Debug, Clone)]
 pub struct GuestSelection {
@@ -197,7 +197,7 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
             >
                 <NumberCounter label="Adults" counter=guest_selection.get().adults class="mt-2" />
                 <Divider />
-               
+
                 <NumberCounter
                     label="Children"
                     counter=guest_selection.get().children
@@ -244,4 +244,3 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
         </div>
     }
 }
-

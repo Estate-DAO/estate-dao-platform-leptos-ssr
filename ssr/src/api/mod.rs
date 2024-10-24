@@ -7,7 +7,7 @@ mod a01_hotel_info;
 pub use a01_hotel_info::{hotel_info, HotelInfoRequest, HotelInfoResponse};
 
 mod a02_get_room;
-pub use a02_get_room::{HotelRoomRequest, RoomList};
+pub use a02_get_room::{get_room, HotelRoomRequest, HotelRoomResponse};
 
 mod a03_block_room;
 pub use a03_block_room::{BlockRoomRequest, BlockRoomResponse};

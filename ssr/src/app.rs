@@ -48,10 +48,9 @@ pub fn App() -> impl IntoView {
 
     provide_context(SearchCtx::default());
     provide_context(SearchListResults::default());
-    
+
     provide_context(HotelInfoCtx::default());
     provide_context(HotelInfoResults::default());
-    
 
     view! {
         <Stylesheet id="leptos" href="/pkg/estate-fe.css" />

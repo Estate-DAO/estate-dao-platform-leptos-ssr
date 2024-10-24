@@ -26,7 +26,6 @@ pub fn FullScreenSpinner() -> impl IntoView {
     }
 }
 
-
 /// Spinner with constant size
 #[component]
 pub fn SpinnerGray() -> impl IntoView {

@@ -48,6 +48,7 @@ reqwest = { version = "0.12.8", default-features = false, features = [
     "http2",
 ] }
 flate2 = "1.0.34"
+serde_path_to_error = "0.1.16"
 # reqwest = { version = "0.12.8", default-features = false, features = ["json", "http2", "gzip", "deflate"] }
 # async-compression = { version = "0.4.14", features = ["gzip"] }
 

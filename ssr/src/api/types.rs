@@ -14,7 +14,7 @@ pub enum ApiError {
     #[error("HTTP request failed - {0}")]
     RequestFailed(#[from] reqwest::Error),
     #[error("JSON parsing failed `{0}`")]
-    JsonParseFailed(#[from] serde_json::Error),
+    JsonParseFailed(String),
     #[error("Invalid header Value")]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
     #[error("Invalid header Name")]

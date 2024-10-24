@@ -1,12 +1,11 @@
-use crate::state::search_state::SearchListResults;
 use leptos::logging::log;
 use leptos::ServerFnError;
 use leptos::*;
 use reqwest::Method;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{ Deserialize, Serialize};
+use crate::api::Provab;
 
 use super::{ProvabReq, ProvabReqMeta};
-use crate::api::Provab;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelDetailsLevel2 {
