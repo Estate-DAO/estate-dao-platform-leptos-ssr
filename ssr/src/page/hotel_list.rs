@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_router::use_navigate;
 
+use crate::api::get_room;
 use crate::component::SkeletonCards;
 use crate::state::search_state::HotelInfoResults;
 use crate::{
@@ -82,15 +83,14 @@ pub fn HotelCard(
     hotel_code: String,
     hotel_name: String,
 ) -> impl IntoView {
-
     let price = create_rw_signal(price);
 
     let search_list_page: SearchListResults = expect_context();
+    let search_list_page_clone = search_list_page.clone();
 
     let navigate = use_navigate();
-    
-    let hotel_code_cloned = hotel_code.clone();
 
+    let hotel_code_cloned = hotel_code.clone();
 
     let search_hotel_info_action = create_action(move |_| {
         let nav = navigate.clone();
@@ -104,27 +104,44 @@ pub fn HotelCard(
 
             HotelInfoResults::reset();
 
-            let hotel_info_request = search_list_page.hotel_info_request(hotel_code);
-            log!("{hotel_info_request:?}"); 
+            let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
+            log!("{hotel_info_request:?}");
 
+           
             // call server function inside action
             spawn_local(async move {
                 let result = hotel_info(hotel_info_request).await.ok();
                 log!("SEARCH_HOTEL_API: {result:?}");
                 HotelInfoResults::set_info_results(result);
             });
+
         }
     });
 
+    let hotel_code_2_cloned = hotel_code_cloned.clone();
+    let search_hotel_room_action = create_action(move |_|{
+        let search_list_page = search_list_page_clone.clone();
+        let hotel_code = hotel_code_2_cloned.clone();
+        async move {
+            let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
+            // call server function inside action
+            spawn_local(async move {
+                let result = get_room(hotel_room_request).await.ok();
+                log!("SEARCH_ROOM_API: {result:?}");
+                HotelInfoResults::set_room_results(result);
+            });
+        }
+    });
     view! {
         <div
             // href=AppRoutes::HotelDetails.to_string()
             on:click=move |ev| {
                 ev.prevent_default();
-                // todoing -- 
+                // todoing --
                 let hotel_view_info_ctx: HotelInfoCtx = expect_context();
                 hotel_view_info_ctx.hotel_code.set(Some(hotel_code_cloned.clone()));
                 log!("hotel_code: {}", hotel_code_cloned);
+                search_hotel_room_action.dispatch(());
                 search_hotel_info_action.dispatch(())
             }
         >
@@ -145,7 +162,7 @@ pub fn HotelCard(
 
                     <div class="flex items-center justify-between px-6 pt-2">
                         <PriceDisplay price=price />
-                        <button 
+                        <button
                             class="font-semibold underline underline-offset-2 decoration-solid text-xs"
                         >
                             "View details"
@@ -156,4 +173,3 @@ pub fn HotelCard(
         </div>
     }
 }
-
