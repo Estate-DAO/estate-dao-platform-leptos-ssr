@@ -84,3 +84,14 @@ LEPTOS_SITE_ADDR="127.0.0.1:3000"
 LEPTOS_RELOAD_PORT="3001"
 ```
 Finally, run the server binary.
+
+
+
+--------------------------------------------
+
+
+
+[ ] payment page design
+[ ] booking confirmation page design
+[ ] Destination - City, Country - on_select - CityId
+[ ] 'See all photos' in center

@@ -1,7 +1,7 @@
 use crate::{
     api::{
         HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse,
-        HotelSearchRequest, HotelSearchResponse,
+        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse
     },
     component::{GuestSelection, SelectedDateRange},
 };
@@ -164,3 +164,11 @@ impl HotelInfoResults {
             .set(hotel_room_response);
     }
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct BlockRoomResults {
+    pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
+}
+
+
+

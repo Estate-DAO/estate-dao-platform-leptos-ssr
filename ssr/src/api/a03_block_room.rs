@@ -2,6 +2,11 @@ use super::{ProvabReq, ProvabReqMeta};
 use crate::api::Provab;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
+use leptos::ServerFnError;
+use leptos::*;
+use leptos::logging::log;
+
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomRequest {
@@ -94,4 +99,17 @@ impl ProvabReqMeta for BlockRoomRequest {
     const METHOD: Method = Method::POST;
     const GZIP: bool = false;
     type Response = BlockRoomResponse;
+}
+
+#[server(BlockRoom, "/block_room")]
+pub async fn block_room(request: BlockRoomRequest) -> Result<BlockRoomResponse, ServerFnError> {
+    let provab = Provab::default();
+
+    match provab.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => {
+            log!("error: {:?}", e);
+            Err(ServerFnError::ServerError(e.to_string()))
+        }
+    }
 }
