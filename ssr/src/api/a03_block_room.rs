@@ -1,7 +1,7 @@
 use super::{ProvabReq, ProvabReqMeta};
+use crate::api::Provab;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
-use crate::api::Provab;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomRequest {

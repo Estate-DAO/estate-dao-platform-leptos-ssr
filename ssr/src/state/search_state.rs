@@ -1,6 +1,7 @@
 use crate::{
     api::{
-        HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse
+        HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse,
+        HotelSearchRequest, HotelSearchResponse,
     },
     component::{GuestSelection, SelectedDateRange},
 };
@@ -119,24 +120,21 @@ impl SearchListResults {
     }
 
     fn get_result_token(&self, hotel_code: String) -> String {
-        self
-        .get_hotel_code_results_token_map()
-        .get(&hotel_code)
-        .unwrap()
-        .clone()
-
+        self.get_hotel_code_results_token_map()
+            .get(&hotel_code)
+            .unwrap()
+            .clone()
     }
 
     pub fn hotel_info_request(&self, hotel_code: &str) -> HotelInfoRequest {
-      let token = self.get_result_token(hotel_code.into());
+        let token = self.get_result_token(hotel_code.into());
         HotelInfoRequest { token }
     }
 
     pub fn hotel_room_request(&self, hotel_code: &str) -> HotelRoomRequest {
         let token = self.get_result_token(hotel_code.into());
         HotelRoomRequest { token }
-      }
-
+    }
 }
 
 #[derive(Debug, Clone, Default)]

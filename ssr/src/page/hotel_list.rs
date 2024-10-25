@@ -107,19 +107,17 @@ pub fn HotelCard(
             let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
             log!("{hotel_info_request:?}");
 
-           
             // call server function inside action
             spawn_local(async move {
                 let result = hotel_info(hotel_info_request).await.ok();
                 log!("SEARCH_HOTEL_API: {result:?}");
                 HotelInfoResults::set_info_results(result);
             });
-
         }
     });
 
     let hotel_code_2_cloned = hotel_code_cloned.clone();
-    let search_hotel_room_action = create_action(move |_|{
+    let search_hotel_room_action = create_action(move |_| {
         let search_list_page = search_list_page_clone.clone();
         let hotel_code = hotel_code_2_cloned.clone();
         async move {
