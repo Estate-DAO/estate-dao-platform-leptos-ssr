@@ -1,6 +1,12 @@
 use super::{ProvabReq, ProvabReqMeta};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
+// use leptos::ServerFnError;
+use leptos:: *;
+use crate::api::Provab;
+use leptos::logging::log;
+
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomRequest {
@@ -108,5 +114,18 @@ impl ProvabReqMeta for BookRoomRequest {
 impl ProvabReq for BookRoomRequest {
     fn path_suffix() -> &'static str {
         "CommitBooking"
+    }
+}
+
+#[server(BlockRoom, "/book_room")]
+pub async fn book_room(request: BookRoomRequest) -> Result<BookRoomResponse, ServerFnError> {
+    let provab = Provab::default();
+
+    match provab.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => {
+            log!("error: {:?}", e);
+            Err(ServerFnError::ServerError(e.to_string()))
+        }
     }
 }

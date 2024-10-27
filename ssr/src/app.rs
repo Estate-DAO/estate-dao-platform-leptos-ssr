@@ -1,10 +1,10 @@
 use crate::{
     error_template::{AppError, ErrorTemplate},
     state::{
-        search_state::{HotelInfoResults, SearchCtx, SearchListResults, BlockRoomResults},
+        search_state::{HotelInfoResults, SearchCtx, SearchListResults, BlockRoomResults, ConfirmationResults},
         view_state::{HotelInfoCtx, BlockRoomCtx},
     },
-    page::{BlockRoomPage, HotelDetailsPage, HotelListPage, RootPage}
+    page::{BlockRoomPage, HotelDetailsPage, HotelListPage, RootPage, ConfirmationPage}
 };
 use leptos::*;
 use leptos_meta::*;
@@ -26,7 +26,8 @@ pub enum AppRoutes {
     Root,
     HotelList,
     HotelDetails,
-    BlockRoom
+    BlockRoom,
+    Confirmation,
 }
 
 impl AppRoutes {
@@ -35,7 +36,8 @@ impl AppRoutes {
             AppRoutes::Root => "",
             AppRoutes::HotelList => "/hotel-list",
             AppRoutes::HotelDetails => "/hotel-details",
-            AppRoutes::BlockRoom => "/block_room"
+            AppRoutes::BlockRoom => "/block_room",
+            Self::Confirmation => "/confirmation",
         }
     }
 }
@@ -53,6 +55,9 @@ pub fn App() -> impl IntoView {
     
     provide_context(BlockRoomCtx::default());
     provide_context(BlockRoomResults::default());
+    
+    provide_context(ConfirmationResults::default()); // Add this line
+
 
     view! {
         <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
@@ -76,6 +81,7 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
                     <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomPage />
+                    <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                 </Routes>
             </main>
         </Router>

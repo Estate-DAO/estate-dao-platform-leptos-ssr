@@ -1,7 +1,7 @@
 use crate::{
     api::{
         HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse,
-        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse
+        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse, BookRoomResponse
     },
     component::{GuestSelection, SelectedDateRange},
 };
@@ -168,6 +168,27 @@ impl HotelInfoResults {
 #[derive(Debug, Clone, Default)]
 pub struct BlockRoomResults {
     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ConfirmationResults {
+    pub booking_details: RwSignal<Option<BookRoomResponse>>,
+}
+
+impl ConfirmationResults {
+    fn from_leptos_context() -> Self {
+        expect_context()
+    }
+
+    pub fn reset() {
+        Self::from_leptos_context().booking_details.set(None);
+    }
+
+    pub fn set_booking_details(booking_response: Option<BookRoomResponse>) {
+        Self::from_leptos_context()
+            .booking_details
+            .set(booking_response);
+    }
 }
 
 

@@ -20,21 +20,21 @@ pub struct HotelRoomRequest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RoomList {
     #[serde(rename = "GetHotelRoomResult")]
-    get_hotel_room_result: GetHotelRoomResult,
+    pub get_hotel_room_result: GetHotelRoomResult,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GetHotelRoomResult {
     #[serde(rename = "HotelRoomsDetails")]
-    hotel_rooms_details: Vec<HotelRoomDetail>,
+    pub hotel_rooms_details: Vec<HotelRoomDetail>,
     #[serde(rename = "RoomCombinations")]
-    room_combinations: RoomCombinations,
+    pub room_combinations: RoomCombinations,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HotelRoomDetail {
     #[serde(rename = "RoomUniqueId")]
-    room_unique_id: String,
+    pub room_unique_id: String,
     // rate_key: String,
     // group_code: String,
     // room_code: String,
@@ -167,11 +167,11 @@ pub struct RoomCombination {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HotelRoomResponse {
     #[serde(rename = "Status")]
-    status: u32,
+    pub status: u32,
     #[serde(rename = "Message")]
-    message: String,
+    pub message: String,
     #[serde(rename = "RoomList")]
-    room_list: Option<RoomList>,
+    pub room_list: Option<RoomList>,
 }
 
 impl ProvabReq for HotelRoomRequest {

@@ -11,5 +11,8 @@ pub use hotel_list::*;
 mod block_room;
 pub use block_room::*;
 
+mod confirmation;
+pub use confirmation::*;
+
 pub mod location_search;
 // pub use location_search::*;

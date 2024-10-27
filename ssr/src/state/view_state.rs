@@ -9,6 +9,17 @@ use std::collections::HashMap;
 #[derive(Debug, Default, Clone)]
 pub struct HotelInfoCtx {
     pub hotel_code: RwSignal<Option<String>>,
+    pub selected_hotel_name: RwSignal<String>,
+    pub selected_hotel_image: RwSignal<String>,
+    pub selected_hotel_location: RwSignal<String>,
+}
+
+impl HotelInfoCtx {
+    pub fn set_selected_hotel_details(&self, name: String, image: String, location: String) {
+        self.selected_hotel_name.set(name);
+        self.selected_hotel_image.set(image);
+        self.selected_hotel_location.set(location);
+    }
 }
 
 #[derive(Clone, Default, Debug)]

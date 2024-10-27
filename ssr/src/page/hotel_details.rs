@@ -4,12 +4,15 @@ use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
     state::search_state::{HotelInfoResults, SearchCtx},
+    state::view_state::HotelInfoCtx,
     app::AppRoutes,
 };
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
 use svg::Image;
+use leptos_router::use_navigate;
+
 
 #[derive(Clone)]
 struct Amenity {
@@ -350,37 +353,30 @@ pub fn PricingBreakdown(
     let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get() as f64);
     let row_format_class = "flex justify-between";
     
+    let navigate = use_navigate();
+
+    let hotel_info_results: HotelInfoResults = expect_context();
+    let hotel_info_ctx: HotelInfoCtx = expect_context();
+
+    let search_block_room_action = create_action(move |_| {
+        let nav = navigate.clone();
+        let hotel_info = hotel_info_results.search_result.get();
+        
+        if let Some(hotel_info_response) = hotel_info {
+            // Save hotel details before navigation
+            hotel_info_ctx.set_selected_hotel_details(
+                hotel_info_response.get_hotel_name(),
+                hotel_info_response.get_images().first().cloned().unwrap_or_default(),
+                hotel_info_response.get_address(),
+            );
+        }
+
+        async move {
+            SearchCtx::log_state();
+            nav(AppRoutes::BlockRoom.to_string(), Default::default());
+        }
+    });
     
-    // let hotel_info_page: HotelDetails = expect_context();
-    // // let search_list_page_clone = search_list_page.clone();
-
-    // let navigate = use_navigate();
-
-    // // let hotel_code_cloned = hotel_code.clone();
-
-    // let search_hotel_info_action = create_action(move |_| {
-    //     let nav = navigate.clone();
-    //     let search_list_page = search_list_page.clone();
-    //     let hotel_code = hotel_code.clone();
-    //     log!("from action -- {search_list_page:?}");
-    //     log!("from action -- {hotel_code:?}");
-    //     async move {
-    //         //  move to the hotel info page
-    //         nav(AppRoutes::BlockRoom.to_string(), Default::default());
-
-    //         HotelInfoResults::reset();
-
-    //         let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
-    //         log!("{hotel_info_request:?}");
-
-    //         // call server function inside action
-    //         spawn_local(async move {
-    //             let result = hotel_info(hotel_info_request).await.ok();
-    //             log!("SEARCH_HOTEL_API: {result:?}");
-    //             HotelInfoResults::set_info_results(result);
-    //         });
-    //     }
-    // });
     
     view! {
         <div class="flex flex-col space-y-2 mt-4">
@@ -420,20 +416,13 @@ pub fn PricingBreakdown(
 
             <div class="flex flex-col space-y-8">
                 <div class="text-sm text-right font-semibold">
-                    Cryptocurrency payments accepted!
+                    "Cryptocurrency payments accepted!"
                 </div>
                 <button 
                     class="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-800"
-                    // on:click=move |ev| {
-                    //     ev.prevent_default();
-                    //     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
-                    //     hotel_view_info_ctx.hotel_code.set(Some(hotel_code_cloned.clone()));
-                    //     log!("hotel_code: {}", hotel_code_cloned);
-                    //     search_hotel_room_action.dispatch(());
-                    //     search_hotel_info_action.dispatch(())
-                    // }
+                    on:click=move |_| search_block_room_action.dispatch(())
                 >
-                    Book Now
+                    "Book Now"
                 </button>
             </div>
         </div>

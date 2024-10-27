@@ -13,7 +13,9 @@ mod a03_block_room;
 pub use a03_block_room::{BlockRoomRequest, BlockRoomResponse};
 
 mod a04_book_room;
-pub use a04_book_room::{BookRoomRequest, BookRoomResponse};
+pub use a04_book_room::{book_room,
+BookRoomRequest, BookRoomResponse, RoomDetail, 
+PassengerDetail, PaxType, BookingStatus};
 
 mod a05_hotel_booking_detail;
 pub use a05_hotel_booking_detail::{HotelBookingDetailRequest, HotelBookingDetailResponse};
