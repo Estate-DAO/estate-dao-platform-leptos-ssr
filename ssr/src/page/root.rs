@@ -7,8 +7,8 @@ use crate::{
     api::search_hotel,
     app::AppRoutes,
     component::{
-        DateTimeRangePickerCustom, Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity,
-        HSettingIcon,
+        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy, GuestQuantity,
+        HSettingIcon, DestinationPicker
     },
     state::search_state::{SearchCtx, SearchListResults},
 };
@@ -140,21 +140,24 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
 
     let search_ctx: SearchCtx = expect_context();
 
+    let destination_display = create_memo(move |_| {
+        search_ctx.destination.get()
+            .map(|d| format!("{}, {}", d.city, d.country))
+            .unwrap_or_else(|| "Where to?".to_string())
+    });
+    
     let navigate = use_navigate();
     let search_action = create_action(move |_| {
         let nav = navigate.clone();
         let search_ctx = search_ctx.clone();
         async move {
             log!("Search button clicked");
-            //  move to the hotel listing page
             nav(AppRoutes::HotelList.to_string(), Default::default());
 
             SearchListResults::reset();
 
-            // call server function inside action
             spawn_local(async move {
                 let result = search_hotel(search_ctx.into()).await.ok();
-                // log!("SEARCH_HOTEL_API: {result:?}");
                 SearchListResults::set_search_results(result);
             });
         }
@@ -172,7 +175,22 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // <!-- Destination input -->
 
             <div class="relative flex-1">
-                <Destination />
+                <div class="absolute inset-y-0 left-2 text-xl flex items-center">
+                    <Icon icon=icondata::BsMap class="text-black" />
+                </div>
+
+                <button
+                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
+                    disabled=disabled
+                >
+                    {move || destination_display.get()}
+                </button>
+
+                <Show when=move || !disabled.get()>
+                    <div class="absolute inset-0">
+                        <DestinationPicker />
+                    </div>
+                </Show>
             </div>
 
             // <!-- Date range picker -->

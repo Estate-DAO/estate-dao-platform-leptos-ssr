@@ -150,6 +150,23 @@ pub struct HotelSearchRequest {
     room_guests: Vec<RoomGuest>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Destination {
+    pub city: String,
+    pub country: String,
+    pub city_id: u32,
+}
+
+impl Default for Destination {
+    fn default() -> Self {
+        Self {
+            city: String::new(),
+            country: String::new(),
+            city_id: 0,
+        }
+    }
+}
+
 // TODO: remove these defaults when going in prod
 impl Default for HotelSearchRequest {
     fn default() -> Self {

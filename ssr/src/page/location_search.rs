@@ -1,12 +1,10 @@
 use leptos::RwSignal;
 use leptos::*;
-
-#[derive(Clone, Copy, Default)]
-pub struct SearchCtx {
-    form_state: RwSignal<SearchBarForm>,
-    invalid_cnt: RwSignal<u32>,
-    on_form_reset: Trigger,
-}
+use crate::{
+    state::search_state::SearchCtx,
+    component::DestinationPicker,
+    api::Destination
+};
 
 #[derive(Clone, Default)]
 pub struct SearchBarForm {
@@ -53,9 +51,7 @@ macro_rules! input_component {
             let ctx: SearchCtx = expect_context();
             let error = create_rw_signal(initial_value.is_none());
             let show_error = create_rw_signal(false);
-            if error.get_untracked() {
-                ctx.invalid_cnt.update(|c| *c += 1);
-            }
+
             let input_ref = create_node_ref::<html::$input_type>();
             let on_input = move || {
                 let Some(input) = input_ref() else {
@@ -64,19 +60,12 @@ macro_rules! input_component {
                 let value = input.value();
                 match validator(value) {
                     Some(v) => {
-                        if error.get_untracked() {
-                            ctx.invalid_cnt.update(|c| *c -= 1);
-                        }
                         error.set(false);
                         updater(v);
                     },
                     None => {
                         show_error.set(true);
-                        if error.get_untracked() {
-                            return;
-                        }
                         error.set(true);
-                        ctx.invalid_cnt.update(|c| *c += 1);
                         }
                     }
             };
@@ -130,20 +119,9 @@ input_component!(InputBox, input, Input, {});
 
 #[component]
 pub fn SearchLocation() -> impl IntoView {
-    let ctx: SearchCtx = expect_context();
-
-    let set_location = move |search_input: String| {
-        // println!("search_input: {}", search_input.clone());
-        ctx.form_state.update(|f| f.location = Some(search_input));
-    };
-
     view! {
-        <InputBox
-            // heading=""
-            placeholder="Where to?"
-            updater=set_location
-            validator=non_empty_string_validator
-            initial_value=ctx.form_state.with_untracked(|f| f.location.clone()).unwrap_or_default()
-        />
+        <div class="relative">
+            <DestinationPicker />
+        </div>
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     api::{
         HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse,
-        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse, BookRoomResponse
+        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse, BookRoomResponse, Destination
     },
     component::{GuestSelection, SelectedDateRange},
 };
@@ -12,14 +12,14 @@ use std::collections::HashMap;
 #[derive(Clone, Default, Debug)]
 pub struct SearchCtx {
     // invalid_cnt: RwSignal<u32>,
-    pub destination: RwSignal<Option<String>>,
+    pub destination: RwSignal<Option<Destination>>,
     pub date_range: RwSignal<SelectedDateRange>,
     pub guests: RwSignal<GuestSelection>,
     pub on_form_reset: Trigger,
 }
 
 impl SearchCtx {
-    pub fn set_destination(destination: String) {
+    pub fn set_destination(destination: Destination) {
         let this: Self = expect_context();
 
         this.destination.set(Some(destination));
