@@ -37,8 +37,9 @@ pub mod input_component;
 mod guest_quantity;
 pub use guest_quantity::*;
 
-mod destination;
-pub use destination::*;
+mod destination_picker;
+pub use destination_picker::*;
 
 mod date_time_range_picker;
 pub use date_time_range_picker::*;
+

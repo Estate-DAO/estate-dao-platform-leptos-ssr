@@ -44,18 +44,7 @@ pub fn ShowHotelInfoValues() -> impl IntoView {
 
     view! { {description_signal} }
 }
-
-// macro_rules! create_reactive_value {
-//     ($name:ident, $hotel_info_results:ident, $getter:ident) => {
-//         let $name = move || {
-//             if let Some(hotel_info_api_response) = $hotel_info_results.search_result.get() {
-//                 hotel_info_api_response.$getter()
-//             } else {
-//                 "".to_owned()
-//             }
-//         };
-//     };
-// }
+ 
 
 fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
     amenities

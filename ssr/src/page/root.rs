@@ -7,8 +7,8 @@ use crate::{
     api::search_hotel,
     app::AppRoutes,
     component::{
-        DateTimeRangePickerCustom, Destination, EstateDaoIcon, FilterAndSortBy, GuestQuantity,
-        HSettingIcon,
+        DateTimeRangePickerCustom, DestinationPicker, EstateDaoIcon, FilterAndSortBy,
+        GuestQuantity, HSettingIcon,
     },
     state::search_state::{SearchCtx, SearchListResults},
 };
@@ -140,6 +140,14 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
 
     let search_ctx: SearchCtx = expect_context();
 
+    let destination_display = create_memo(move |_| {
+        search_ctx
+            .destination
+            .get()
+            .map(|d| format!("{}, {}", d.city, d.country_name))
+            .unwrap_or_else(|| "Where to?".to_string())
+    });
+
     let navigate = use_navigate();
     let search_action = create_action(move |_| {
         let nav = navigate.clone();
@@ -172,23 +180,26 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // <!-- Destination input -->
 
             <div class="relative flex-1">
-                <Destination />
+            <div class="absolute inset-y-0 left-2 text-xl flex items-center">
+            <Icon icon=icondata::BsMap class="text-black" />
+        </div>
+
+        <button
+            class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
+            disabled=disabled
+        >
+            {move || destination_display.get()}
+        </button>
+
+        <Show when=move || !disabled.get()>
+            <div class="absolute inset-0">
+                <DestinationPicker />
+            </div>
+        </Show>
             </div>
 
             // <!-- Date range picker -->
             <div class="relative flex-1 border-l border-r border-white">
-                // <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
-                // <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
-                // </div>
-
-                // <input
-                // type="text"
-                // placeholder="Check in — Check out"
-                // class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
-                // onfocus="(this.type='date')"
-                // onblur="(this.type='text')"
-                // />
-                // <DateTimeRangePickerElements />
                 <DateTimeRangePickerCustom />
 
             </div>

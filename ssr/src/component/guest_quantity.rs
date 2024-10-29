@@ -57,7 +57,7 @@ impl ChildrenAges {
 }
 
 impl GuestSelection {
-    pub fn get_room_guests(search_ctx: SearchCtx) -> Vec<RoomGuest> {
+    pub fn get_room_guests(search_ctx: &SearchCtx) -> Vec<RoomGuest> {
         let guest_selection = search_ctx.guests;
 
         let no_of_adults = guest_selection.get_untracked().adults.get_untracked();

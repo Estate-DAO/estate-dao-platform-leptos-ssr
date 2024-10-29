@@ -1,10 +1,12 @@
 use crate::{
     error_template::{AppError, ErrorTemplate},
+    page::{BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage, RootPage},
     state::{
-        search_state::{HotelInfoResults, SearchCtx, SearchListResults, BlockRoomResults, ConfirmationResults},
-        view_state::{HotelInfoCtx, BlockRoomCtx},
+        search_state::{
+            BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
+        },
+        view_state::{BlockRoomCtx, HotelInfoCtx},
     },
-    page::{BlockRoomPage, HotelDetailsPage, HotelListPage, RootPage, ConfirmationPage}
 };
 use leptos::*;
 use leptos_meta::*;
@@ -52,12 +54,11 @@ pub fn App() -> impl IntoView {
 
     provide_context(HotelInfoCtx::default());
     provide_context(HotelInfoResults::default());
-    
+
     provide_context(BlockRoomCtx::default());
     provide_context(BlockRoomResults::default());
-    
-    provide_context(ConfirmationResults::default()); // Add this line
 
+    provide_context(ConfirmationResults::default()); // Add this line
 
     view! {
         <Stylesheet id="leptos" href="/pkg/estate-fe.css" />

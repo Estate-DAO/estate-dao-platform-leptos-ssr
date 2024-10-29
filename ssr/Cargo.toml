@@ -84,6 +84,12 @@ ssr = [
     # "reqwest/gzip"
 ]
 
+local_api = []
+
+local-lib = ["local_api", "hydrate" ]
+
+local-bin = ["ssr","local_api"]
+
 # # Defines a size-optimized profile for the WASM bundle in release mode
 # [profile.wasm-release]
 # inherits = "release"
