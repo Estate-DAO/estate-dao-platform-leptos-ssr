@@ -1,7 +1,7 @@
 use crate::{
     api::{
-        HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse,
-        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse, BookRoomResponse
+        BlockRoomResponse, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
+        HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse,
     },
     component::{GuestSelection, SelectedDateRange},
 };
@@ -163,6 +163,15 @@ impl HotelInfoResults {
             .room_result
             .set(hotel_room_response);
     }
+
+    pub fn get_hotel_room_details() -> Option<Vec<HotelRoomDetail>> {
+        if let Some(hotel_room_response) = Self::from_leptos_context().room_result.get() {
+            hotel_room_response.get_hotel_room_details()
+        } else {
+            None
+        }
+    }
+
 }
 
 #[derive(Debug, Clone, Default)]
@@ -190,6 +199,3 @@ impl ConfirmationResults {
             .set(booking_response);
     }
 }
-
-
-

@@ -41,9 +41,9 @@ pub struct HotelRoomDetail {
     #[serde(rename = "ChildCount")]
     child_count: u32,
     #[serde(rename = "RoomTypeName")]
-    room_type_name: String,
+    pub room_type_name: String,
     #[serde(rename = "Price")]
-    price: Price,
+    pub price: Price,
 
     // #[serde(rename = "SmokingPreference")]
     // smoking_preference: String,
@@ -51,7 +51,7 @@ pub struct HotelRoomDetail {
     // #[serde(rename = "RatePlanCode")]
     // rate_plan_code: String,
     #[serde(rename = "RoomTypeCode")]
-    room_type_code: String,
+    pub room_type_code: String,
 
     // #[serde(rename = "RatePlanName")]
     // rate_plan_name: String,
@@ -61,7 +61,7 @@ pub struct HotelRoomDetail {
 
     // #[serde(rename = "OtherAmennities")]
     // other_amennities: Vec<String>,
-    room_only: String,
+    pub room_only: String,
 
     // #[serde(rename = "LastCancellationDate")]
     // last_cancellation_date: String,
@@ -172,6 +172,15 @@ pub struct HotelRoomResponse {
     pub message: String,
     #[serde(rename = "RoomList")]
     pub room_list: Option<RoomList>,
+}
+
+
+impl HotelRoomResponse {
+    pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
+        self.room_list
+            .as_ref()
+            .map(|room_list| room_list.get_hotel_room_result.hotel_rooms_details.clone())
+    }
 }
 
 impl ProvabReq for HotelRoomRequest {

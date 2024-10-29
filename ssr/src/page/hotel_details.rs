@@ -1,18 +1,17 @@
 use crate::component::FullScreenSpinnerGray;
 use crate::utils::pluralize;
 use crate::{
+    app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
     state::search_state::{HotelInfoResults, SearchCtx},
     state::view_state::HotelInfoCtx,
-    app::AppRoutes,
 };
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
-use svg::Image;
 use leptos_router::use_navigate;
-
+use svg::Image;
 
 #[derive(Clone)]
 struct Amenity {
@@ -283,6 +282,30 @@ pub fn HotelImages() -> impl IntoView {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct RoomCounter {
+    pub counter: RwSignal<u32>,
+    pub name: String,
+}
+
+impl RoomCounter {
+    pub fn get_hotel_room_details_count() -> Option<Vec<RoomCounter>> {
+        if let Some(room_details_vec) = HotelInfoResults::get_hotel_room_details() {
+            let vec_room_counter: Vec<_> = room_details_vec
+                .iter()
+                .map(|detail| RoomCounter {
+                    counter: create_rw_signal(0),
+                    name: detail.room_type_name.clone(),
+                })
+                .collect();
+
+            Some(vec_room_counter)
+        } else {
+            None
+        }
+    }
+}
+
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
     let hotel_info_results: HotelInfoResults = expect_context();
@@ -310,7 +333,12 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex items-center  space-x-2">
                 <Icon icon=icondata::AiCalendarOutlined class="text-black  text-xl  " />
-                <div>"Thu, Aug 22 -- Mon, Aug 27"</div>
+                <div> 
+                    {move || {
+                        let date_range = search_ctx.date_range.get();
+                        date_range.format_as_human_readable_date()
+                    }}
+                    </div>
             </div>
 
             <div class="flex items-center space-x-2">
@@ -325,10 +353,20 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
-                <NumberCounter label="Deluxe Double Suite" counter=deluxe_counter class="mt-4" />
-                <Divider />
-                <NumberCounter label="Luxury Double Room" counter=luxury_counter />
-                <Divider />
+                <Show
+                when=move || RoomCounter::get_hotel_room_details_count().is_some()
+                fallback=|| view! { <div></div> }
+            >
+                {move || {
+                    RoomCounter::get_hotel_room_details_count().unwrap().into_iter().map(|room_counter| {
+                        view! {
+                            <NumberCounter label=room_counter.name counter=room_counter.counter class="mt-4"/>
+                            <Divider />
+                        }
+                    }).collect_view()
+                }}
+            </Show>
+            
                 <div>
                     <PricingBreakdown
                         price_per_night=price
@@ -352,7 +390,7 @@ pub fn PricingBreakdown(
         create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
     let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get() as f64);
     let row_format_class = "flex justify-between";
-    
+
     let navigate = use_navigate();
 
     let hotel_info_results: HotelInfoResults = expect_context();
@@ -361,12 +399,16 @@ pub fn PricingBreakdown(
     let search_block_room_action = create_action(move |_| {
         let nav = navigate.clone();
         let hotel_info = hotel_info_results.search_result.get();
-        
+
         if let Some(hotel_info_response) = hotel_info {
             // Save hotel details before navigation
             hotel_info_ctx.set_selected_hotel_details(
                 hotel_info_response.get_hotel_name(),
-                hotel_info_response.get_images().first().cloned().unwrap_or_default(),
+                hotel_info_response
+                    .get_images()
+                    .first()
+                    .cloned()
+                    .unwrap_or_default(),
                 hotel_info_response.get_address(),
             );
         }
@@ -376,8 +418,7 @@ pub fn PricingBreakdown(
             nav(AppRoutes::BlockRoom.to_string(), Default::default());
         }
     });
-    
-    
+
     view! {
         <div class="flex flex-col space-y-2 mt-4">
             <div class=row_format_class>
@@ -418,7 +459,7 @@ pub fn PricingBreakdown(
                 <div class="text-sm text-right font-semibold">
                     "Cryptocurrency payments accepted!"
                 </div>
-                <button 
+                <button
                     class="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-800"
                     on:click=move |_| search_block_room_action.dispatch(())
                 >

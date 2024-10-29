@@ -5,6 +5,7 @@ use leptos_icons::*;
 // use leptos_use::use_timestamp;
 use leptos::logging::log;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
+use chrono::NaiveDate;
 
 use crate::state::search_state::SearchCtx;
 
@@ -49,6 +50,19 @@ impl SelectedDateRange {
     pub fn format_date(date: (u32, u32, u32)) -> String {
         format!("{:02}-{:02}-{:04}", date.2, date.1, date.0)
     }
+    pub fn format_as_human_readable_date(&self) -> String {
+        let format_date = |(year, month, day): (u32, u32, u32)| {
+            NaiveDate::from_ymd_opt(year as i32, month, day)
+                .map(|d| d.format("%a, %b %d").to_string())
+                .unwrap_or_default()
+        };
+
+        format!("{} - {}",
+            format_date(self.start),
+            format_date(self.end)
+        )
+    }
+    
 }
 
 fn get_year_month(timestamp: f64) -> (u32, u32) {
