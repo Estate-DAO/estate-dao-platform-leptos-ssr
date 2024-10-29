@@ -42,11 +42,12 @@ impl Destination {
     }
 }
 
+#[server]
 pub async fn read_destinations_from_file(file_path: String) ->  Result<Vec<Destination>, ServerFnError> {
     let file = std::fs::File::open(file_path.as_str())?;
     let reader = std::io::BufReader::new(file);
     let result = serde_json::from_reader(reader)?;
-    log!("{result:?}");
+    // log!("{result:?}");
     Ok(result)
 }
 
@@ -56,7 +57,7 @@ pub fn DestinationPicker() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
     let search_ctx: SearchCtx = expect_context();
 
-    let destinations_resource = create_resource(is_open , move |_| read_destinations_from_file("city.json".into()));
+    let destinations_resource = create_resource(is_open , move  |_| async move { read_destinations_from_file("city.json".into()).await});
 
     let display_value = create_memo(move |_| {
         search_ctx.destination.get()
@@ -87,6 +88,7 @@ pub fn DestinationPicker() -> impl IntoView {
                                     destinations_resource
                                         .get()
                                         .map(|dest_vec| {
+                                            // log!("{dest_vec:?}");
                                             view! {
                                                 <ShowDestinations
                                                     dest_vec=dest_vec.unwrap_or_default()
@@ -108,6 +110,7 @@ pub fn DestinationPicker() -> impl IntoView {
 #[component]
 fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) -> impl IntoView {
     view! {
+        <div class="h-80 custom-scrollbar"> 
         {move || {
             dest_vec
                 .clone()
@@ -130,5 +133,6 @@ fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) 
                 })
                 .collect_view()
         }}
+        </div> 
     }
 }
