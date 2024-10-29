@@ -14,34 +14,94 @@ pub fn DestinationPicker() -> impl IntoView {
     
     let destinations = vec![
         Destination {
-            city: "Goa".to_string(),
-            country: "India".to_string(),
-            city_id: 1254,
+            city: "Bali".to_string(),
+            country: "Indonesia".to_string(),
+            city_id: 1001,
         },
         Destination {
-            city: "Barcelona".to_string(),
+            city: "Geneva".to_string(),
+            country: "Switzerland".to_string(),
+            city_id: 1002,
+        },
+        Destination {
+            city: "Rome".to_string(),
+            country: "Italy".to_string(),
+            city_id: 1003,
+        },
+        Destination {
+            city: "Dubai".to_string(),
+            country: "UAE".to_string(),
+            city_id: 1004,
+        },
+        Destination {
+            city: "Sydney".to_string(),
+            country: "Australia".to_string(),
+            city_id: 1005,
+        },
+        Destination {
+            city: "Phuket".to_string(),
+            country: "Thailand".to_string(),
+            city_id: 1006,
+        },
+        Destination {
+            city: "Maldives".to_string(),
+            country: "Maldives".to_string(),
+            city_id: 1007,
+        },
+        Destination {
+            city: "Santorini".to_string(),
+            country: "Greece".to_string(),
+            city_id: 1008,
+        },
+        Destination {
+            city: "Seychelles".to_string(),
+            country: "Seychelles".to_string(),
+            city_id: 1009,
+        },
+        Destination {
+            city: "Mumbai".to_string(),
+            country: "India".to_string(),
+            city_id: 1157,  // keeping original ID
+        },
+        Destination {
+            city: "Zermatt".to_string(),
+            country: "Switzerland".to_string(),
+            city_id: 1011,
+        },
+        Destination {
+            city: "New York City".to_string(),
+            country: "USA".to_string(),
+            city_id: 1012,
+        },
+        Destination {
+            city: "Seville".to_string(),
             country: "Spain".to_string(),
-            city_id: 2101,
+            city_id: 1013,
         },
         Destination {
-            city: "Lucknow".to_string(),
-            country: "India".to_string(),
-            city_id: 1432,
+            city: "Madrid".to_string(),
+            country: "Spain".to_string(),
+            city_id: 1014,
         },
         Destination {
-            city: "Delhi".to_string(),
-            country: "India".to_string(),
-            city_id: 1193,
+            city: "Granada".to_string(),
+            country: "Spain".to_string(),
+            city_id: 1015,
         },
         Destination {
-            city: "Tokyo".to_string(),
-            country: "Japan".to_string(),
-            city_id: 3301,
+            city: "Valencia".to_string(),
+            country: "Spain".to_string(),
+            city_id: 1016,
         },
         Destination {
-            city: "Paris".to_string(),
-            country: "France".to_string(),
-            city_id: 4201,
+            city: "Zurich".to_string(),
+            country: "Switzerland".to_string(),
+            city_id: 1017,
+        },
+        Destination {
+            city: "London".to_string(),
+            country: "UK".to_string(),
+            city_id: 1018,
         },
     ];
 

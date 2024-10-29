@@ -17,7 +17,7 @@ use crate::{
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
-    state::{search_state::{SearchCtx, SearchListResults, ConfirmationResults}, view_state::HotelInfoCtx},
+    state::{search_state::{SearchCtx, SearchListResults, ConfirmationResults, BlockRoomResults}, view_state::HotelInfoCtx},
 };
 use leptos::logging::log;
 use chrono::NaiveDate;
@@ -52,6 +52,16 @@ pub fn BlockRoomPage() -> impl IntoView {
     let confirmation_results: ConfirmationResults = expect_context();
 
     let navigate = use_navigate();
+    
+    // let block_room_results: BlockRoomResults = expect_context();
+    
+    // let is_price_changed = Signal::derive(move || {
+    //     block_room_results
+    //         .block_room_results
+    //         .get()
+    //         .map(|response| response.is_price_changed)
+    //         .unwrap_or(false)
+    // });
 
     // Helper function to create passenger details
     fn create_passenger_details(
@@ -266,6 +276,15 @@ pub fn BlockRoomPage() -> impl IntoView {
     });
     
     view! {
+        // <Show
+        //     when=move || is_price_changed.get()
+        //     fallback=|| view! { <div></div> }
+        // >
+        //     <div class="text-yellow-600">
+        //         "Price has changed since your last search"
+        //     </div>
+        // </Show>
+        
         <section class="relative h-screen">
             <Navbar />
             <div class="relative mt-48 flex h-screen place-content-center items-center justify-center px-[20rem] pt-48">

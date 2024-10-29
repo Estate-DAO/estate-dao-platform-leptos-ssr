@@ -11,9 +11,9 @@ use leptos::logging::log;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomRequest {
     #[serde(rename = "ResultToken")]
-    token: String,
+    pub token: String,
     #[serde(rename = "RoomUniqueId")]
-    room_unique_id: Vec<String>,
+    pub room_unique_id: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
