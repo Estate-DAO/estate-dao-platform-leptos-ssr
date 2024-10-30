@@ -88,6 +88,8 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let child_count = create_memo(move |_| search_ctx.guests.get().children.get());
 
+    let children_ages = search_ctx.guests.get().children_ages.clone();
+
     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
 
     BlockRoomCtx::create_adults(adult_count.get() as usize);
@@ -98,18 +100,15 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let update_adult = move |index: usize, field: &str, value: String| {
         BlockRoomCtx::update_adult(index, field, value);
-        set_trigger_validation.update(|n| *n += 1);
     };
 
     let update_child = move |index: usize, field: &str, value: String| {
         BlockRoomCtx::update_child(index, field, value);
-        set_trigger_validation.update(|n| *n += 1);
     };
 
     let update_terms = move |checked: bool| {
         BlockRoomCtx::set_terms_accepted(checked);
         // Trigger validation check
-        set_trigger_validation.update(|n| *n += 1);
     };
 
 
@@ -184,37 +183,81 @@ pub fn BlockRoomPage() -> impl IntoView {
             // }
         }
     });
+    let is_form_valid: RwSignal<bool> = create_rw_signal(false);
 
-    let is_form_valid = create_memo(move |_| {
-        trigger_validation.get();
-
+    
+    // Validation logic function
+    let validate_form = move || {
         let adult_list = adults.get();
         let child_list = children.get();
-
-        // Validate primary adult (needs all fields)
+    
+        // Helper function for email validation
+        let is_valid_email = |email: &str| email.contains('@') && email.contains('.');
+    
+        // Helper function for phone validation
+        let is_valid_phone = |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
+    
+        // Validate primary adult
         let primary_adult_valid = adult_list.first().map_or(false, |adult| {
-            !adult.first_name.is_empty()
-                && adult.email.as_ref().map_or(false, |e| !e.is_empty())
-                && adult.phone.as_ref().map_or(false, |p| !p.is_empty())
+            !adult.first_name.trim().is_empty() &&
+            adult.email.as_ref().map_or(false, |e| !e.trim().is_empty() && is_valid_email(e)) &&
+            adult.phone.as_ref().map_or(false, |p| !p.trim().is_empty() && is_valid_phone(p))
         });
-
-        // Validate other adults (only first name required)
-        let other_adults_valid = adult_list
-            .iter()
-            .skip(1)
-            .all(|adult| !adult.first_name.is_empty());
-
-        // Validate children (first name and age required)
-        let children_valid = child_list
-            .iter()
-            .all(|child| !child.first_name.is_empty() && child.age.is_some());
-
-        // Terms must be accepted
+    
+        // Validate other adults
+        let other_adults_valid = adult_list.iter().skip(1).all(|adult| {
+            !adult.first_name.trim().is_empty()
+        });
+    
+        // Validate children
+        let children_valid = child_list.iter().all(|child| {
+            !child.first_name.trim().is_empty() &&
+            child.age.is_some()
+        });
+    
+        // Check if terms are accepted
         let terms_valid = terms_accepted.get();
-
-        // All conditions must be true
-        primary_adult_valid && other_adults_valid && children_valid && terms_valid
+    
+        // Set the value of is_form_valid based on validation results
+        is_form_valid.set(primary_adult_valid && other_adults_valid && children_valid && terms_valid);
+    };
+      
+    // Call the validation function whenever inputs change
+    let _ = create_effect(move |_| {
+        validate_form();
     });
+    
+
+    // let is_form_valid = create_memo(move |_| {
+    //     trigger_validation.get();
+
+    //     let adult_list = adults.get();
+    //     let child_list = children.get();
+
+    //     // Validate primary adult (needs all fields)
+    //     let primary_adult_valid = adult_list.first().map_or(false, |adult| {
+    //         !adult.first_name.is_empty()
+    //             && adult.email.as_ref().map_or(false, |e| !e.is_empty())
+    //             && adult.phone.as_ref().map_or(false, |p| !p.is_empty())
+    //     });
+
+    //     // Validate other adults (only first name required)
+    //     let other_adults_valid = adult_list
+    //         .iter()
+    //         .skip(1)
+    //         .all(|adult| !adult.first_name.is_empty());
+
+    //     // Validate children (first name and age required)
+    //     let children_valid = child_list
+    //         .iter()
+    //         .all(|child| !child.first_name.is_empty() && child.age.is_some());
+
+    //     // Terms must be accepted
+    //     let terms_valid = terms_accepted.get();
+
+    //     // All conditions must be true
+    //     primary_adult_valid && other_adults_valid && children_valid && terms_valid
+    // });
 
     let images_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
@@ -243,6 +286,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     }};
 
     view! {
+        
         <section class="relative h-screen">
             <Navbar />
             <div class="relative mt-24 flex h-screen  items-center place-content-center p-4 max-w-4xl mx-auto ">
@@ -293,6 +337,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                         <div class="payment-methods mt-4 space-y-6">
                         { // Loop for adults
                             (0..adult_count.get()).map(|i| {
+                                let i_usize = i as usize;
                                 view! {
                                     <div class="person-details">
                                         <h3 class="font-semibold text-gray-700">
@@ -308,15 +353,22 @@ pub fn BlockRoomPage() -> impl IntoView {
                                             placeholder="First Name *"
                                             class="w-1/2 rounded-md border border-gray-300 p-2"
                                             required=true
-                                            on:input=move |ev| update_adult(0, "first_name", event_target_value(&ev))
+                                            on:input=move |ev| {
+                                                update_adult(i_usize, "first_name", event_target_value(&ev));
+                                                validate_form();
+                                            }
                                         />
                                         <input type="text" placeholder="Last Name" class="w-1/2 rounded-md border border-gray-300 p-2" />
                                         </div>
                                         {move || if i == 0 {
                                             view! {
                                                 <div>
-                                                    <input type="email" placeholder="Email *" class="mt-2 w-full rounded-md border border-gray-300 p-2" required=true on:input=move |ev| update_adult(0, "email", event_target_value(&ev)) />
-                                                    <input type="tel" placeholder="Phone Number *" class="mt-2 w-full rounded-md border border-gray-300 p-2" required=true on:input=move |ev| update_adult(0, "phone_number", event_target_value(&ev)) />
+                                                    <input type="email" placeholder="Email *" class="mt-2 w-full rounded-md border border-gray-300 p-2"
+                                                        required=true on:input=move |ev| update_adult(0, "email", event_target_value(&ev))
+                                                    />
+                                                    <input type="tel" placeholder="Phone *" class="mt-2 w-full rounded-md border border-gray-300 p-2"
+                                                        required=true on:input=move |ev| update_adult(0, "phone", event_target_value(&ev))
+                                                    />
                                                 </div>
                                             }.into_view()
                                         } else {
@@ -329,6 +381,9 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                         { // Loop for children
                             (0..child_count.get()).map(|i| {
+                                let i_usize = i as usize;
+                                let age_value = children_ages.get_value_at(i as u32); // Get the age for the current child
+
                                 view! {
                                     <div class="person-details">
                                         <h3 class="font-semibold text-gray-700">{format!("Child {}", i + 1)}</h3>
@@ -338,7 +393,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                                                 placeholder="First Name *"
                                                 class="w-2/5 rounded-md border border-gray-300 p-2"
                                                 required=true
-                                                on:input=move |ev| update_child(0, "first_name", event_target_value(&ev))
+                                                on:input=move |ev| {
+                                                    update_child(i_usize, "first_name", event_target_value(&ev));
+                                                    validate_form();
+                                                }
                                             />
                                             <input
                                                 type="text"
@@ -348,11 +406,17 @@ pub fn BlockRoomPage() -> impl IntoView {
                                             <select
                                                 class="w-1/5 rounded-md border border-gray-300 bg-white p-2"
                                                 required=true
-                                                on:input=move |ev| update_adult(0, "age", event_target_value(&ev))
+                                                on:input=move |ev| {
+                                                    update_child(i_usize, "age", event_target_value(&ev));
+                                                    validate_form();
+                                                }
                                             >
-                                                <option value="" disabled selected>"Age *"</option>
-                                                { (1..18).map(|age| view! { <option value={age.to_string()}>{age}</option> })
-                                                    .collect::<Vec<_>>() }
+                                                
+                                            <option disabled selected>{age_value}</option>
+                                            { (1..18).map(|age| {
+                                                let selected = if age == age_value { "selected" } else { "" };
+                                                view! { <option value={age.to_string()} {selected}>{age}</option> }
+                                            }).collect::<Vec<_>>() }
                                             </select>
                                         </div>
                                     </div>
@@ -389,6 +453,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                         </div>
                         <button
                             class="mt-6 w-1/3 rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300"
+                            disabled=move || !is_form_valid.get()
                             on:click=move |_| handle_booking.dispatch(())
                         >
                             "Confirm and pay"

@@ -258,7 +258,7 @@ pub fn HotelImages() -> impl IntoView {
                                     class="object-cover h-full w-full rounded-xl"
                                 />
                                 <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
-                                    <span class="text-white text-lg font-semibold p-16 h-24">
+                                    <span class="text-white text-lg font-semibold py-16 px-16">
                                         See all photos
                                     </span>
                                 </div>
