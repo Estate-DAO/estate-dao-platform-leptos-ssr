@@ -46,12 +46,39 @@ pub fn HotelListPage() -> impl IntoView {
                         fallback=fallback
                     >
                         // <Transition fallback=fallback>
-                            {move || {
-                                search_list_page
-                                    .search_result
-                                    .get()
-                                    .unwrap()
-                                    .hotel_results()
+                            // {move || {
+                            //     search_list_page
+                            //         .search_result
+                            //         .get()
+                            //         .unwrap()
+                            //         .hotel_results()
+                            //         .iter()
+                            //         .map(|hotel_result| {
+                            //             view! {
+                            //                 <HotelCard
+                            //                     img=hotel_result.hotel_picture.clone()
+                            //                     rating=hotel_result.star_rating
+                            //                     hotel_name=hotel_result.hotel_name.clone()
+                            //                     price=hotel_result.price.room_price
+                            //                     hotel_code=hotel_result.hotel_code.clone()
+                            //                 />
+                            //             }
+                            //         })
+                            //         .collect::<Vec<_>>()
+                            // }}
+
+                        // </Transition>
+                        {move || {
+                            let hotel_results = search_list_page
+                                .search_result
+                                .get()
+                                .unwrap()
+                                .hotel_results();
+
+                            if hotel_results.is_empty() {
+                                view! { <p class="text-center">"No hotels found for your search criteria."</p> }.into_view()
+                            } else {
+                                hotel_results
                                     .iter()
                                     .map(|hotel_result| {
                                         view! {
@@ -64,10 +91,9 @@ pub fn HotelListPage() -> impl IntoView {
                                             />
                                         }
                                     })
-                                    .collect::<Vec<_>>()
-                            }}
-
-                        // </Transition>
+                                    .collect_view()
+                            }
+                        }}
                     </Show>
                 </div>
             </div>
