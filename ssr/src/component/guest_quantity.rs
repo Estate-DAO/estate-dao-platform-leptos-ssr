@@ -9,6 +9,7 @@ use ev::{InputEvent, MouseEvent};
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::*;
+use std::ops::Index;
 
 #[derive(Debug, Clone)]
 pub struct GuestSelection {
@@ -29,7 +30,7 @@ impl Default for GuestSelection {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default,PartialEq)]
 pub struct ChildrenAges(RwSignal<Vec<u32>>);
 
 impl ChildrenAges {

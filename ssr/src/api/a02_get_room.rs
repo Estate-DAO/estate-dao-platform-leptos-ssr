@@ -181,6 +181,20 @@ impl HotelRoomResponse {
             .as_ref()
             .map(|room_list| room_list.get_hotel_room_result.hotel_rooms_details.clone())
     }
+
+    pub fn get_room_unique_ids(&self) -> Vec<String> {
+        self.room_list
+            .as_ref()
+            .map(|room_list| {
+                room_list
+                    .get_hotel_room_result
+                    .hotel_rooms_details
+                    .iter()
+                    .map(|room| room.room_unique_id.clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
 }
 
 impl ProvabReq for HotelRoomRequest {

@@ -1,4 +1,6 @@
+use crate::api::block_room;
 use crate::component::FullScreenSpinnerGray;
+use crate::state::search_state::BlockRoomResults;
 use crate::utils::pluralize;
 use crate::{
     app::AppRoutes,
@@ -385,25 +387,49 @@ pub fn PricingBreakdown(
     let hotel_info_results: HotelInfoResults = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-    let search_block_room_action = create_action(move |_| {
+    // let search_block_room_action = create_action(move |_| {
+    //     let nav = navigate.clone();
+    //     let hotel_info = hotel_info_results.search_result.get();
+
+    //     if let Some(hotel_info_response) = hotel_info {
+    //         // Save hotel details before navigation
+    //         hotel_info_ctx.set_selected_hotel_details(
+    //             hotel_info_response.get_hotel_name(),
+    //             hotel_info_response
+    //                 .get_images()
+    //                 .first()
+    //                 .cloned()
+    //                 .unwrap_or_default(),
+    //             hotel_info_response.get_address(),
+    //         );
+    //     }
+
+    //     async move {
+    //         SearchCtx::log_state();
+    //         nav(AppRoutes::BlockRoom.to_string(), Default::default());
+    //     }
+    // });
+
+
+    let block_room_action = create_action(move |_| {
         let nav = navigate.clone();
-        let hotel_info = hotel_info_results.search_result.get();
-
-        if let Some(hotel_info_response) = hotel_info {
-            // Save hotel details before navigation
-            hotel_info_ctx.set_selected_hotel_details(
-                hotel_info_response.get_hotel_name(),
-                hotel_info_response
-                    .get_images()
-                    .first()
-                    .cloned()
-                    .unwrap_or_default(),
-                hotel_info_response.get_address(),
-            );
-        }
-
+        let hotel_info_results: HotelInfoResults = expect_context();
+    
         async move {
-            SearchCtx::log_state();
+            // Reset previous block room results
+            BlockRoomResults::reset();
+    
+            // Create block room request using HotelInfoResults
+            let block_room_request = hotel_info_results.block_room_request();
+            
+            // Call server function inside action
+            spawn_local(async move {
+                let result = block_room(block_room_request).await.ok();
+                log!("BLOCK_ROOM_API: {result:?}");
+                BlockRoomResults::set_results(result);
+            });
+    
+            // Navigate to block room page
             nav(AppRoutes::BlockRoom.to_string(), Default::default());
         }
     });
@@ -450,7 +476,7 @@ pub fn PricingBreakdown(
                 </div>
                 <button
                     class="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-800"
-                    on:click=move |_| search_block_room_action.dispatch(())
+                    on:click=move |_| block_room_action.dispatch(())
                 >
                     "Book Now"
                 </button>
