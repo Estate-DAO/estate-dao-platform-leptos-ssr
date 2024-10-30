@@ -7,7 +7,9 @@ use crate::{
 };
 use leptos_icons::*;
 use leptos::logging::log;
+use std::time::Duration;
 
+use leptos_query::{query_persister, *};
 
 #[derive(Clone, Debug, PartialEq , Serialize, Deserialize)]
 pub struct Destination {
@@ -42,22 +44,51 @@ impl Destination {
     }
 }
 
-#[server]
+#[server(GetCityList, "/city_list")]
 pub async fn read_destinations_from_file(file_path: String) ->  Result<Vec<Destination>, ServerFnError> {
     let file = std::fs::File::open(file_path.as_str())?;
     let reader = std::io::BufReader::new(file);
     let result = serde_json::from_reader(reader)?;
-    // log!("{result:?}");
+    log!("{result:?}");
+
+    // let result = vec![Destination::default()];
+    // log!("read destinations from file called");
     Ok(result)
 }
 
+fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
+    // log!("destinations_query called");
+    leptos_query::create_query(
+        |_| async move { 
+            // log!("will call read_destinations_from_file in async move");
+            read_destinations_from_file("city.json".into()).await.ok()
+         },
+        QueryOptions {
+            default_value: None,
+            refetch_interval: None,
+            resource_option: Some(ResourceOption::NonBlocking),
+            stale_time: Some(Duration::from_secs(5)),
+            gc_time: Some(Duration::from_secs(60)),
+        },
+    )
+}
  
 #[component]
 pub fn DestinationPicker() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
     let search_ctx: SearchCtx = expect_context();
 
-    let destinations_resource = create_resource(is_open , move  |_| async move { read_destinations_from_file("city.json".into()).await});
+    // let destinations_resource = create_resource(is_open , move  |_| async move { read_destinations_from_file("city.json".into()).await});
+
+    let QueryResult { 
+        data: destinations_resource,
+        state,
+        // is_loading,
+        // is_fetching,
+        // is_invalid,
+        ..
+ } = destinations_query().use_query(move || is_open.get());
+
 
     let display_value = create_memo(move |_| {
         search_ctx.destination.get()

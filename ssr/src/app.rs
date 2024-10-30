@@ -8,9 +8,11 @@ use crate::{
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
 };
+use leptos_query_devtools::LeptosQueryDevtools;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use leptos_query::{query_persister, *};
 
 #[component]
 fn NotFound() -> impl IntoView {
@@ -60,6 +62,13 @@ pub fn App() -> impl IntoView {
 
     provide_context(ConfirmationResults::default()); // Add this line
 
+    // Provides Query Client for entire app.
+    // leptos_query::provide_query_client();
+    provide_query_client_with_options_and_persister(
+        Default::default(),
+        query_persister::LocalStoragePersister,
+    );
+
     view! {
         <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
 
@@ -73,7 +82,7 @@ pub fn App() -> impl IntoView {
             href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
             rel="stylesheet"
         />
-
+        <LeptosQueryDevtools/>
         // content for this welcome page
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
             <main>
