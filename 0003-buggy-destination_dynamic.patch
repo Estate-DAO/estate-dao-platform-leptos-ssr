@@ -1,0 +1,258 @@
+From 1f779e01de7487f3bbe07207524b6b2aac81b966 Mon Sep 17 00:00:00 2001
+From: Dorfeuheinz <lord03shrey@gmail.com>
+Date: Mon, 4 Nov 2024 19:11:18 +0530
+Subject: [PATCH 3/3] buggy destination_dynamic
+
+---
+ ssr/src/component/destination_picker.rs | 103 ++++++++++++++++--------
+ ssr/src/page/location_search.rs         |   7 +-
+ ssr/src/page/root.rs                    |  55 +++++--------
+ 3 files changed, 93 insertions(+), 72 deletions(-)
+
+diff --git a/ssr/src/component/destination_picker.rs b/ssr/src/component/destination_picker.rs
+index b5290af..001dad0 100644
+--- a/ssr/src/component/destination_picker.rs
++++ b/ssr/src/component/destination_picker.rs
+@@ -8,8 +8,11 @@ use crate::{
+ use leptos_icons::*;
+ 
+ #[component]
+-pub fn DestinationPicker() -> impl IntoView {
+-    let (is_open, set_is_open) = create_signal(false);
++pub fn DestinationPicker(
++    #[prop(into)] is_open: Signal<bool>,
++    #[prop(into)] set_is_open: WriteSignal<bool>,
++) -> impl IntoView {
++    let search_text = create_rw_signal(String::new());
+     let search_ctx: SearchCtx = expect_context();
+     
+     let destinations = vec![
+@@ -105,46 +108,76 @@ pub fn DestinationPicker() -> impl IntoView {
+         },
+     ];
+ 
+-    let display_value = create_memo(move |_| {
+-        search_ctx.destination.get()
+-            .map(|d| format!("{}, {}", d.city, d.country))
+-            .unwrap_or_else(|| "Where to?".to_string())
++    let filtered_destinations = create_memo(move |_| {
++        let search = search_text.get().trim().to_lowercase();
++        if search.is_empty() {
++            vec![]
++        } else {
++            destinations
++                .iter()
++                .filter(|dest| {
++                    let city = dest.city.to_lowercase();
++                    let country = dest.country.to_lowercase();
++                    city.contains(&search) || country.contains(&search)
++                })
++                .cloned()
++                .collect::<Vec<_>>()
++        }
+     });
+-
++    
+     view! {
+         <div class="relative w-full">
+-            <div class="w-full" on:click=move |_| set_is_open.update(|open| *open = !*open)>
+-                <input
+-                    type="text"
+-                    placeholder="Where to?"
+-                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
+-                    prop:value=display_value
+-                    readonly=true
+-                />
+-            </div>
++            <input
++                type="text"
++                placeholder="Where to?"
++                value=""  // Empty initial value
++                class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm placeholder-gray-500"
++                prop:value=move || search_text()  // Using signal value directly
++                on:input=move |ev| {
++                    let value = event_target_value(&ev);
++                    search_text.set(value.clone());
++                    set_is_open.set(!value.is_empty());
++                }
++                on:blur=move |_| {
++                    if search_text.get().is_empty() {
++                        set_is_open.set(false);
++                    }
++                }
++            />
+ 
+-            <Show when=move || is_open()>
+-                <div class="absolute mt-2 w-80 bg-white borderSortOptions border border-gray-200 rounded-xl shadow-lg z-50">
++            <Show
++                when=move || {
++                    is_open.get() && 
++                    !search_text.get().is_empty() && 
++                    !filtered_destinations.get().is_empty()
++                }
++            >
++                <div class="absolute mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                     <div class="p-4">
+                         <div class="space-y-4">
+-                            {destinations.iter().map(|dest| {
+-                                let dest_for_click = dest.clone();
+-                                let dest_for_display = dest.clone();
+-                                view! {
+-                                    <div
+-                                        class="cursor-pointer hover:bg-gray-50 p-2 rounded"
+-                                        on:click=move |_| {
+-                                            SearchCtx::set_destination(dest_for_click.clone());
+-                                            set_is_open.set(false);
+-                                        }
+-                                    >
+-                                        <span class="text-gray-800">
+-                                            {format!("{}, {}", dest_for_display.city, dest_for_display.country)}
+-                                        </span>
+-                                    </div>
+-                                    <Divider />
++                            <For
++                                each=move || filtered_destinations.get()
++                                key=|dest| dest.city_id
++                                let:dest
++                            >
++                                {
++                                    let dest_clone = dest.clone();
++                                    view! {
++                                        <div
++                                            class="cursor-pointer hover:bg-gray-50 p-2 rounded"
++                                            on:mousedown=move |_| {
++                                                SearchCtx::set_destination(dest_clone.clone());
++                                                search_text.set(format!("{}, {}", dest_clone.city, dest_clone.country));
++                                                set_is_open.set(false);
++                                            }
++                                        >
++                                            <span class="text-gray-800">
++                                                {format!("{}, {}", dest.city, dest.country)}
++                                            </span>
++                                        </div>
++                                    }
+                                 }
+-                            }).collect_view()}
++                            </For>
+                         </div>
+                     </div>
+                 </div>
+diff --git a/ssr/src/page/location_search.rs b/ssr/src/page/location_search.rs
+index adaf2f5..948a275 100644
+--- a/ssr/src/page/location_search.rs
++++ b/ssr/src/page/location_search.rs
+@@ -119,9 +119,14 @@ input_component!(InputBox, input, Input, {});
+ 
+ #[component]
+ pub fn SearchLocation() -> impl IntoView {
++    let (is_open, set_is_open) = create_signal(false);
++    
+     view! {
+         <div class="relative">
+-            <DestinationPicker />
++            <DestinationPicker 
++                is_open=is_open
++                set_is_open=set_is_open
++            />
+         </div>
+     }
+ }
+diff --git a/ssr/src/page/root.rs b/ssr/src/page/root.rs
+index c087bdc..4ec81f0 100644
+--- a/ssr/src/page/root.rs
++++ b/ssr/src/page/root.rs
+@@ -139,6 +139,7 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
+     };
+ 
+     let search_ctx: SearchCtx = expect_context();
++    let (is_picker_open, set_is_picker_open) = create_signal(false);
+ 
+     let destination_display = create_memo(move |_| {
+         search_ctx.destination.get()
+@@ -166,65 +167,47 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
+     // -------------------------------------
+ 
+     view! {
+-        <div class=move || {
+-            format!(
+-                " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
+-                bg_class(),
+-            )
+-        }>
+-            // <!-- Destination input -->
+-
++        <div class=move || format!(
++            "{} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
++            bg_class()
++        )>
+             <div class="relative flex-1">
+                 <div class="absolute inset-y-0 left-2 text-xl flex items-center">
+                     <Icon icon=icondata::BsMap class="text-black" />
+                 </div>
+ 
+-                <button
+-                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
++                <input
++                    type="text"
++                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
++                    placeholder="Where to?"
++                    prop:value=move || destination_display.get()
++                    on:focus=move |_| set_is_picker_open.set(true)
+                     disabled=disabled
+-                >
+-                    {move || destination_display.get()}
+-                </button>
+-
+-                <Show when=move || !disabled.get()>
++                />
++            
++                <Show when=move || !disabled.get() && is_picker_open.get()>
+                     <div class="absolute inset-0">
+-                        <DestinationPicker />
++                        <DestinationPicker 
++                            is_open=is_picker_open
++                            set_is_open=set_is_picker_open
++                        />
+                     </div>
+                 </Show>
+             </div>
+ 
+-            // <!-- Date range picker -->
+             <div class="relative flex-1 border-l border-r border-white">
+-                // <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
+-                // <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
+-                // </div>
+-
+-                // <input
+-                // type="text"
+-                // placeholder="Check in — Check out"
+-                // class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm"
+-                // onfocus="(this.type='date')"
+-                // onblur="(this.type='text')"
+-                // />
+-                // <DateTimeRangePickerElements />
+                 <DateTimeRangePickerCustom />
+-
+             </div>
+ 
+-            // <!-- Guests dropdown -->
+             <div class="relative flex-1 flex items-center">
+                 <GuestQuantity />
+             </div>
+ 
+-            // <!-- Search button -->
+             <button
+                 on:click=move |_| search_action.dispatch(())
+-                class=move || {
+-                    format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
+-                }
++                class=move || format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
+             >
+                 <div>
+-                    // done with tricks shared by generous Prakash!
+                     <Show
+                         when=move || disabled.get()
+                         fallback=move || {
+-- 
+2.45.2
+

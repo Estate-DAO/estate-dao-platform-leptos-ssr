@@ -1,0 +1,394 @@
+From a60233bc7aa891cf037083d1db28998d17843a6f Mon Sep 17 00:00:00 2001
+From: Abhishek Tripathi <abhishek@estatedao.org>
+Date: Wed, 30 Oct 2024 03:15:54 +0530
+Subject: [PATCH 1/3] block_room api error unresolved
+
+---
+ ssr/src/api/a02_get_room.rs             | 16 +++++
+ ssr/src/api/a03_block_room.rs           |  4 +-
+ ssr/src/api/mod.rs                      |  2 +-
+ ssr/src/component/destination_picker.rs | 92 ++++++++++++++++++++-----
+ ssr/src/page/block_room.rs              | 21 +++++-
+ ssr/src/page/hotel_details.rs           | 35 ++++++----
+ ssr/src/state/search_state.rs           | 61 +++++++++++++++-
+ 7 files changed, 195 insertions(+), 36 deletions(-)
+
+diff --git a/ssr/src/api/a02_get_room.rs b/ssr/src/api/a02_get_room.rs
+index 6f2c341..a2c2013 100644
+--- a/ssr/src/api/a02_get_room.rs
++++ b/ssr/src/api/a02_get_room.rs
+@@ -174,6 +174,22 @@ pub struct HotelRoomResponse {
+     pub room_list: Option<RoomList>,
+ }
+ 
++impl HotelRoomResponse {
++    pub fn get_room_unique_ids(&self) -> Vec<String> {
++        self.room_list
++            .as_ref()
++            .map(|room_list| {
++                room_list
++                    .get_hotel_room_result
++                    .hotel_rooms_details
++                    .iter()
++                    .map(|room| room.room_unique_id.clone())
++                    .collect()
++            })
++            .unwrap_or_default()
++    }
++}
++
+ impl ProvabReq for HotelRoomRequest {
+     fn path_suffix() -> &'static str {
+         "RoomList"
+diff --git a/ssr/src/api/a03_block_room.rs b/ssr/src/api/a03_block_room.rs
+index f103842..9b1b7e9 100644
+--- a/ssr/src/api/a03_block_room.rs
++++ b/ssr/src/api/a03_block_room.rs
+@@ -11,9 +11,9 @@ use leptos::logging::log;
+ #[derive(Serialize, Deserialize, Debug, Clone)]
+ pub struct BlockRoomRequest {
+     #[serde(rename = "ResultToken")]
+-    token: String,
++    pub token: String,
+     #[serde(rename = "RoomUniqueId")]
+-    room_unique_id: Vec<String>,
++    pub room_unique_id: Vec<String>,
+ }
+ 
+ #[derive(Serialize, Deserialize, Debug, Clone)]
+diff --git a/ssr/src/api/mod.rs b/ssr/src/api/mod.rs
+index c6c11f5..12aa879 100644
+--- a/ssr/src/api/mod.rs
++++ b/ssr/src/api/mod.rs
+@@ -10,7 +10,7 @@ mod a02_get_room;
+ pub use a02_get_room::{get_room, HotelRoomRequest, HotelRoomResponse};
+ 
+ mod a03_block_room;
+-pub use a03_block_room::{BlockRoomRequest, BlockRoomResponse};
++pub use a03_block_room::{block_room, BlockRoomRequest, BlockRoomResponse};
+ 
+ mod a04_book_room;
+ pub use a04_book_room::{book_room,
+diff --git a/ssr/src/component/destination_picker.rs b/ssr/src/component/destination_picker.rs
+index ff7411f..b5290af 100644
+--- a/ssr/src/component/destination_picker.rs
++++ b/ssr/src/component/destination_picker.rs
+@@ -14,34 +14,94 @@ pub fn DestinationPicker() -> impl IntoView {
+     
+     let destinations = vec![
+         Destination {
+-            city: "Goa".to_string(),
++            city: "Bali".to_string(),
++            country: "Indonesia".to_string(),
++            city_id: 1001,
++        },
++        Destination {
++            city: "Geneva".to_string(),
++            country: "Switzerland".to_string(),
++            city_id: 1002,
++        },
++        Destination {
++            city: "Rome".to_string(),
++            country: "Italy".to_string(),
++            city_id: 1003,
++        },
++        Destination {
++            city: "Dubai".to_string(),
++            country: "UAE".to_string(),
++            city_id: 1004,
++        },
++        Destination {
++            city: "Sydney".to_string(),
++            country: "Australia".to_string(),
++            city_id: 1005,
++        },
++        Destination {
++            city: "Phuket".to_string(),
++            country: "Thailand".to_string(),
++            city_id: 1006,
++        },
++        Destination {
++            city: "Maldives".to_string(),
++            country: "Maldives".to_string(),
++            city_id: 1007,
++        },
++        Destination {
++            city: "Santorini".to_string(),
++            country: "Greece".to_string(),
++            city_id: 1008,
++        },
++        Destination {
++            city: "Seychelles".to_string(),
++            country: "Seychelles".to_string(),
++            city_id: 1009,
++        },
++        Destination {
++            city: "Mumbai".to_string(),
+             country: "India".to_string(),
+-            city_id: 1254,
++            city_id: 1157,  // keeping original ID
++        },
++        Destination {
++            city: "Zermatt".to_string(),
++            country: "Switzerland".to_string(),
++            city_id: 1011,
++        },
++        Destination {
++            city: "New York City".to_string(),
++            country: "USA".to_string(),
++            city_id: 1012,
+         },
+         Destination {
+-            city: "Barcelona".to_string(),
++            city: "Seville".to_string(),
+             country: "Spain".to_string(),
+-            city_id: 2101,
++            city_id: 1013,
+         },
+         Destination {
+-            city: "Lucknow".to_string(),
+-            country: "India".to_string(),
+-            city_id: 1432,
++            city: "Madrid".to_string(),
++            country: "Spain".to_string(),
++            city_id: 1014,
+         },
+         Destination {
+-            city: "Delhi".to_string(),
+-            country: "India".to_string(),
+-            city_id: 1193,
++            city: "Granada".to_string(),
++            country: "Spain".to_string(),
++            city_id: 1015,
++        },
++        Destination {
++            city: "Valencia".to_string(),
++            country: "Spain".to_string(),
++            city_id: 1016,
+         },
+         Destination {
+-            city: "Tokyo".to_string(),
+-            country: "Japan".to_string(),
+-            city_id: 3301,
++            city: "Zurich".to_string(),
++            country: "Switzerland".to_string(),
++            city_id: 1017,
+         },
+         Destination {
+-            city: "Paris".to_string(),
+-            country: "France".to_string(),
+-            city_id: 4201,
++            city: "London".to_string(),
++            country: "UK".to_string(),
++            city_id: 1018,
+         },
+     ];
+ 
+diff --git a/ssr/src/page/block_room.rs b/ssr/src/page/block_room.rs
+index aebf527..fdc308b 100644
+--- a/ssr/src/page/block_room.rs
++++ b/ssr/src/page/block_room.rs
+@@ -17,7 +17,7 @@ use crate::{
+     app::AppRoutes,
+     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
+     page::{InputGroup, Navbar},
+-    state::{search_state::{SearchCtx, SearchListResults, ConfirmationResults}, view_state::HotelInfoCtx},
++    state::{search_state::{SearchCtx, SearchListResults, ConfirmationResults, BlockRoomResults}, view_state::HotelInfoCtx},
+ };
+ use leptos::logging::log;
+ use chrono::NaiveDate;
+@@ -52,6 +52,16 @@ pub fn BlockRoomPage() -> impl IntoView {
+     let confirmation_results: ConfirmationResults = expect_context();
+ 
+     let navigate = use_navigate();
++    
++    // let block_room_results: BlockRoomResults = expect_context();
++    
++    // let is_price_changed = Signal::derive(move || {
++    //     block_room_results
++    //         .block_room_results
++    //         .get()
++    //         .map(|response| response.is_price_changed)
++    //         .unwrap_or(false)
++    // });
+ 
+     // Helper function to create passenger details
+     fn create_passenger_details(
+@@ -266,6 +276,15 @@ pub fn BlockRoomPage() -> impl IntoView {
+     });
+     
+     view! {
++        // <Show
++        //     when=move || is_price_changed.get()
++        //     fallback=|| view! { <div></div> }
++        // >
++        //     <div class="text-yellow-600">
++        //         "Price has changed since your last search"
++        //     </div>
++        // </Show>
++        
+         <section class="relative h-screen">
+             <Navbar />
+             <div class="relative mt-48 flex h-screen place-content-center items-center justify-center px-[20rem] pt-48">
+diff --git a/ssr/src/page/hotel_details.rs b/ssr/src/page/hotel_details.rs
+index 1aa28df..06f6815 100644
+--- a/ssr/src/page/hotel_details.rs
++++ b/ssr/src/page/hotel_details.rs
+@@ -3,9 +3,10 @@ use crate::utils::pluralize;
+ use crate::{
+     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
+     page::{InputGroup, Navbar},
+-    state::search_state::{HotelInfoResults, SearchCtx},
++    state::search_state::{HotelInfoResults, SearchCtx, BlockRoomResults},
+     state::view_state::HotelInfoCtx,
+     app::AppRoutes,
++    api::block_room
+ };
+ use leptos::logging::log;
+ use leptos::*;
+@@ -358,21 +359,25 @@ pub fn PricingBreakdown(
+     let hotel_info_results: HotelInfoResults = expect_context();
+     let hotel_info_ctx: HotelInfoCtx = expect_context();
+ 
+-    let search_block_room_action = create_action(move |_| {
++    let block_room_action = create_action(move |_| {
+         let nav = navigate.clone();
+-        let hotel_info = hotel_info_results.search_result.get();
+-        
+-        if let Some(hotel_info_response) = hotel_info {
+-            // Save hotel details before navigation
+-            hotel_info_ctx.set_selected_hotel_details(
+-                hotel_info_response.get_hotel_name(),
+-                hotel_info_response.get_images().first().cloned().unwrap_or_default(),
+-                hotel_info_response.get_address(),
+-            );
+-        }
+-
++        let hotel_info_results: HotelInfoResults = expect_context();
++    
+         async move {
+-            SearchCtx::log_state();
++            // Reset previous block room results
++            BlockRoomResults::reset();
++    
++            // Create block room request using HotelInfoResults
++            let block_room_request = hotel_info_results.block_room_request();
++            
++            // Call server function inside action
++            spawn_local(async move {
++                let result = block_room(block_room_request).await.ok();
++                log!("BLOCK_ROOM_API: {result:?}");
++                BlockRoomResults::set_results(result);
++            });
++    
++            // Navigate to block room page
+             nav(AppRoutes::BlockRoom.to_string(), Default::default());
+         }
+     });
+@@ -420,7 +425,7 @@ pub fn PricingBreakdown(
+                 </div>
+                 <button 
+                     class="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-800"
+-                    on:click=move |_| search_block_room_action.dispatch(())
++                    on:click=move |_| block_room_action.dispatch(())
+                 >
+                     "Book Now"
+                 </button>
+diff --git a/ssr/src/state/search_state.rs b/ssr/src/state/search_state.rs
+index 5cc20bd..5753965 100644
+--- a/ssr/src/state/search_state.rs
++++ b/ssr/src/state/search_state.rs
+@@ -1,9 +1,11 @@
+ use crate::{
+     api::{
+         HotelInfoRequest, HotelInfoResponse, HotelRoomRequest, HotelRoomResponse,
+-        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse, BookRoomResponse, Destination
++        HotelSearchRequest, HotelSearchResponse, BlockRoomResponse, BookRoomResponse, Destination,
++        BlockRoomRequest
+     },
+     component::{GuestSelection, SelectedDateRange},
++    state::view_state::{HotelInfoCtx, BlockRoomCtx}
+ };
+ use leptos::RwSignal;
+ use leptos::*;
+@@ -150,6 +152,7 @@ impl HotelInfoResults {
+ 
+     pub fn reset() {
+         Self::from_leptos_context().search_result.set(None);
++        Self::from_leptos_context().room_result.set(None);
+     }
+ 
+     pub fn set_info_results(hotel_info_response: Option<HotelInfoResponse>) {
+@@ -163,6 +166,44 @@ impl HotelInfoResults {
+             .room_result
+             .set(hotel_room_response);
+     }
++    
++    pub fn block_room_request(&self) -> BlockRoomRequest {
++        // Get unique room IDs from the room response
++        let room_unique_id = self.room_result
++            .get()
++            .as_ref()
++            .map(|response| {
++                response.room_list
++                    .as_ref()
++                    .map(|room_list| {
++                        room_list
++                            .get_hotel_room_result
++                            .hotel_rooms_details
++                            .iter()
++                            .map(|room| room.room_unique_id.clone())
++                            .collect()
++                    })
++                    .unwrap_or_default()
++            })
++            .unwrap_or_default();
++
++        // Get token from SearchListResults context since that has the token map
++        let search_list_results: SearchListResults = expect_context();
++        let hotel_info_ctx: HotelInfoCtx = expect_context();
++        
++        let token = hotel_info_ctx.hotel_code
++            .get()
++            .and_then(|hotel_code| {
++                let token_map = search_list_results.get_hotel_code_results_token_map();
++                token_map.get(&hotel_code).cloned()
++            })
++            .unwrap_or_default();
++
++        BlockRoomRequest {
++            token,
++            room_unique_id,
++        }
++    }
+ }
+ 
+ #[derive(Debug, Clone, Default)]
+@@ -170,6 +211,24 @@ pub struct BlockRoomResults {
+     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
+ }
+ 
++impl BlockRoomResults {
++    fn from_leptos_context() -> Self {
++        expect_context()
++    }
++
++    pub fn reset() {
++        Self::from_leptos_context()
++            .block_room_results
++            .set(None);
++    }
++
++    pub fn set_results(results: Option<BlockRoomResponse>) {
++        Self::from_leptos_context()
++            .block_room_results
++            .set(results);
++    }
++}
++
+ #[derive(Debug, Clone, Default)]
+ pub struct ConfirmationResults {
+     pub booking_details: RwSignal<Option<BookRoomResponse>>,
+-- 
+2.45.2
+
