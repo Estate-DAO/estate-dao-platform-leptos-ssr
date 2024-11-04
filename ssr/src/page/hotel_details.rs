@@ -287,11 +287,14 @@ pub fn HotelImages() -> impl IntoView {
 pub fn PricingBookNow() -> impl IntoView {
     let hotel_info_results: HotelInfoResults = expect_context();
     let search_ctx: SearchCtx = expect_context();
+    let num_adults = Signal::derive(move || search_ctx.guests.get().adults.get());
     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
-    
+
     // Create a memo for room details
     let room_details = create_memo(move |_| {
-        let details = hotel_info_results.get_hotel_room_details().unwrap_or_default();
+        let details = hotel_info_results
+            .get_hotel_room_details()
+            .unwrap_or_default();
         log!("Room details: {:?}", details);
         details
     });
@@ -302,15 +305,13 @@ pub fn PricingBookNow() -> impl IntoView {
     // Create a memo for the processed room data
     let sorted_rooms = create_memo(move |_| {
         let mut room_count_map: HashMap<String, (u32, f64)> = HashMap::new();
-        
+
         for room in room_details.get() {
             let room_type = room.room_type_name.to_string(); // Convert to owned String
-            let entry = room_count_map
-                .entry(room_type.clone())
-                .or_insert((0, 0.0));
+            let entry = room_count_map.entry(room_type.clone()).or_insert((0, 0.0));
             entry.0 += 1;
             entry.1 = room.price.room_price as f64;
-            
+
             room_counters.update(|counters| {
                 if !counters.contains_key(&room_type) {
                     counters.insert(room_type, create_rw_signal(0));
@@ -322,7 +323,7 @@ pub fn PricingBookNow() -> impl IntoView {
             .into_iter()
             .map(|(k, v)| (k, v.0, v.1))
             .collect();
-        
+
         sorted.sort_by(|a, b| b.1.cmp(&a.1));
         sorted.truncate(5);
         sorted
@@ -330,18 +331,53 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Create a memo for total price calculation
     let total_room_price = create_memo(move |_| {
-        sorted_rooms.get().iter().fold(0.0, |acc, (room_type, _, price)| {
-            let counter = room_counters.get()
-                .get(room_type.as_str()) // Change: use as_str() to get a string slice
-                .map(|sig| sig.get())
-                .unwrap_or(0);
-            acc + (price * counter as f64)
-        })
+        sorted_rooms
+            .get()
+            .iter()
+            .fold(0.0, |acc, (room_type, _, price)| {
+                let counter = room_counters
+                    .get()
+                    .get(room_type.as_str()) // Change: use as_str() to get a string slice
+                    .map(|sig| sig.get())
+                    .unwrap_or(0);
+                acc + (price * counter as f64)
+            })
     });
 
     let price = Signal::derive(move || total_room_price.get());
-    let num_nights = create_rw_signal(3_u32);
-    let taxes_fees = create_rw_signal(1000_f64);
+    let num_nights = Signal::derive(move || {
+        let date_range = search_ctx.date_range.get();
+        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples 
+        // representing (year, month, day)
+        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) = 
+            (date_range.start, date_range.end) 
+        {
+            // Convert tuple to NaiveDate
+            let start = chrono::NaiveDate::from_ymd_opt(
+                start_year as i32,
+                start_month as u32,
+                start_day as u32,
+            ).unwrap_or_default();
+            
+            let end = chrono::NaiveDate::from_ymd_opt(
+                end_year as i32,
+                end_month as u32,
+                end_day as u32,
+            ).unwrap_or_default();
+    
+            let duration = end.signed_duration_since(start);
+            duration.num_days() as u32
+        } else {
+            0
+        }
+    });
+    
+    let total_selected_rooms = create_memo(move |_| {
+        room_counters
+            .get()
+            .values()
+            .fold(0, |acc, counter| acc + counter.get())
+    });
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
@@ -354,7 +390,7 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex items-center space-x-2">
                 <Icon icon=icondata::BsPerson class="text-black text-xl" />
-                <div>"4 adults"</div>
+                <div>{move || pluralize(num_adults.get(), "adult", "adults")}</div>
             </div>
 
             <div class="flex items-center space-x-2">
@@ -371,19 +407,33 @@ pub fn PricingBookNow() -> impl IntoView {
                 >
                     {
                         let (room_type, count, price) = room;
-                        let counter = room_counters.get()
+                        let base_counter = room_counters.get()
                             .get(&room_type)
                             .cloned()
                             .unwrap_or_else(|| create_rw_signal(0));
                         
+                        // Create a clamped counter wrapper
+                        let clamped_counter = create_rw_signal(base_counter.get());
+                        
+                        // Effect to enforce room limit
+                        create_effect(move |_| {
+                            let current_value = base_counter.get();
+                            let other_rooms = total_selected_rooms.get() - current_value;
+                            let max_rooms = num_rooms.get();
+                            
+                            if other_rooms + current_value > max_rooms {
+                                base_counter.set(max_rooms - other_rooms);
+                            }
+                        });
+
                         view! {
                             <div class="flex justify-between items-center border-b border-gray-300 py-2">
                                 <span class="font-medium">
                                     {format!("{} {} - ${:.2}/night", count, room_type, price)}
                                 </span>
-                                <NumberCounter 
+                                <NumberCounter
                                     label=""
-                                    counter=counter
+                                    counter=base_counter
                                     class="mt-4"
                                 />
                             </div>
@@ -395,7 +445,6 @@ pub fn PricingBookNow() -> impl IntoView {
                     <PricingBreakdown
                         price_per_night=price
                         number_of_nights=num_nights
-                        taxes_fees
                     />
                 </div>
             </div>
@@ -407,11 +456,10 @@ pub fn PricingBookNow() -> impl IntoView {
 pub fn PricingBreakdown(
     #[prop(into)] price_per_night: Signal<f64>,
     #[prop(into)] number_of_nights: Signal<u32>,
-    #[prop(into)] taxes_fees: Signal<f64>,
 ) -> impl IntoView {
     let per_night_calc =
         create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
-    let total_calc = create_memo(move |_| per_night_calc.get() + taxes_fees.get() as f64);
+    let total_calc = create_memo(move |_| per_night_calc.get());
     let row_format_class = "flex justify-between";
 
     let navigate = use_navigate();
@@ -462,14 +510,6 @@ pub fn PricingBreakdown(
                 </div>
             </div>
 
-            // taxes / fees
-            <div class=row_format_class>
-                <div>Taxes and fees</div>
-                <div class="flex-none">
-
-                    <PriceDisplay price=taxes_fees price_class="" appended_text=Some("".into()) />
-                </div>
-            </div>
             // Total
             <div class=row_format_class>
                 <div class="font-semibold">Total</div>
@@ -501,6 +541,7 @@ pub fn NumberCounter(
 ) -> impl IntoView {
     let merged_class = format!("flex items-center justify-between {}", class);
 
+    
     view! {
         <div class=merged_class>
             <p>{label}</p>
