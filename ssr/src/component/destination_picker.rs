@@ -87,7 +87,7 @@ pub fn DestinationPicker() -> impl IntoView {
         // is_fetching,
         // is_invalid,
         ..
- } = destinations_query().use_query(move || is_open.get());
+    } = destinations_query().use_query(move || is_open.get());
 
 
     let display_value = create_memo(move |_| {

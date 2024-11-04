@@ -31,7 +31,7 @@ pub struct GetHotelRoomResult {
     pub room_combinations: RoomCombinations,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct HotelRoomDetail {
     #[serde(rename = "RoomUniqueId")]
     pub room_unique_id: String,
@@ -85,7 +85,7 @@ pub struct HotelRoomDetail {
     // info_source: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Price {
     // #[serde(rename = "PublishedPrice")]
     // published_price: f64,
@@ -99,16 +99,16 @@ pub struct Price {
     // #[serde(rename = "OfferedPriceRoundedOff")]
     // offered_price_rounded_off: i32,
     #[serde(rename = "RoomPrice")]
-    room_price: f32,
+    pub room_price: f32,
 
     // #[serde(rename = "Tax")]
     // tax: i32,
     #[serde(rename = "ExtraGuestCharge")]
-    extra_guest_charge: f32,
+    pub extra_guest_charge: f32,
     #[serde(rename = "ChildCharge")]
-    child_charge: f32,
+    pub child_charge: f32,
     #[serde(rename = "OtherCharges")]
-    other_charges: f32,
+    pub other_charges: f32,
 
     // #[serde(rename = "Discount")]
     // discount: i32,
@@ -131,7 +131,7 @@ pub struct Price {
     // #[serde(rename = "GSTPrice")]
     // gst_price: i32,
     #[serde(rename = "CurrencyCode")]
-    currency_code: String,
+    pub currency_code: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

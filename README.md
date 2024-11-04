@@ -95,3 +95,16 @@ Finally, run the server binary.
 [ ] booking confirmation page design
 [ ] Destination - City, Country - on_select - CityId
 [ ] 'See all photos' in center
+_______________________________________________________________________
+
+[x] room api call - de-duplication + take top 5
+
+[x] hotel list - "no hotel found in center"
+  git Branch - "block_room"
+
+[] use_query in the room + hotel_details 
+  https://github.com/Estate-DAO/estatedao_fe/blob/6175c04c0e7088d5414a8f2d9b69d07b1b216db2/ssr/src/component/destination_picker.rs#L80-L91
+
+[] Destination - In a separate Branch - destination_dynamic
+
+[] sort_by -- component -- in separate branch -- filters_sort_dynamic

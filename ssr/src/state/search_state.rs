@@ -166,13 +166,21 @@ impl HotelInfoResults {
             .set(hotel_room_response);
     }
 
-    pub fn get_hotel_room_details() -> Option<Vec<HotelRoomDetail>> {
-        if let Some(hotel_room_response) = Self::from_leptos_context().room_result.get() {
-            hotel_room_response.get_hotel_room_details()
-        } else {
-            None
-        }
+    // pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
+    //     // Assuming room_result is of type Option<HotelRoomResponse>
+    //     if let Some(hotel_room_response) = self.room_result.get() {
+    //         // Assuming hotel_room_response has a method that returns Vec<HotelRoomDetail>
+    //         hotel_room_response.get_hotel_room_details() // This should return Vec<HotelRoomDetail>
+    //     } else {
+    //         None
+    //     }
+    // }
+    pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
+        self.room_result.get().and_then(|response| {
+            response.get_hotel_room_details()
+        })
     }
+    
 
     pub fn block_room_request(&self) -> BlockRoomRequest {
         // Get unique room IDs from the room response

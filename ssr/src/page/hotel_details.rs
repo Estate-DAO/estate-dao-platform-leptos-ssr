@@ -1,19 +1,18 @@
-use crate::api::block_room;
 use crate::component::FullScreenSpinnerGray;
-use crate::state::search_state::BlockRoomResults;
 use crate::utils::pluralize;
 use crate::{
+    api::block_room,
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
-    state::search_state::{HotelInfoResults, SearchCtx},
+    state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
     state::view_state::HotelInfoCtx,
 };
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::use_navigate;
-use svg::Image;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 struct Amenity {
@@ -44,9 +43,20 @@ pub fn ShowHotelInfoValues() -> impl IntoView {
         }
     };
 
-    view! { {description_signal} }
+    view! { description_signal }
 }
- 
+
+// macro_rules! create_reactive_value {
+//     ($name:ident, $hotel_info_results:ident, $getter:ident) => {
+//         let $name = move || {
+//             if let Some(hotel_info_api_response) = $hotel_info_results.search_result.get() {
+//                 hotel_info_api_response.$getter()
+//             } else {
+//                 "".to_owned()
+//             }
+//         };
+//     };
+// }
 
 fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
     amenities
@@ -273,48 +283,63 @@ pub fn HotelImages() -> impl IntoView {
     }
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct RoomCounter {
-    pub counter: RwSignal<u32>,
-    pub name: String,
-}
-
-impl RoomCounter {
-    pub fn get_hotel_room_details_count() -> Option<Vec<RoomCounter>> {
-        if let Some(room_details_vec) = HotelInfoResults::get_hotel_room_details() {
-            let vec_room_counter: Vec<_> = room_details_vec
-                .iter()
-                .map(|detail| RoomCounter {
-                    counter: create_rw_signal(0),
-                    name: detail.room_type_name.clone(),
-                })
-                .collect();
-
-            Some(vec_room_counter)
-        } else {
-            None
-        }
-    }
-}
-
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
     let hotel_info_results: HotelInfoResults = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
-
-    let price = Signal::derive(move || {
-        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
-            hotel_info_api_response.get_room_price()
-        } else {
-            0.0
-        }
+    
+    // Create a memo for room details
+    let room_details = create_memo(move |_| {
+        let details = hotel_info_results.get_hotel_room_details().unwrap_or_default();
+        log!("Room details: {:?}", details);
+        details
     });
 
-    // let price = create_rw_signal(40500.9);
-    let deluxe_counter = create_rw_signal(3_u32);
-    let luxury_counter = create_rw_signal(0_u32);
+    // Create RwSignal for room counters map
+    let room_counters = create_rw_signal(HashMap::<String, RwSignal<u32>>::new());
 
+    // Create a memo for the processed room data
+    let sorted_rooms = create_memo(move |_| {
+        let mut room_count_map: HashMap<String, (u32, f64)> = HashMap::new();
+        
+        for room in room_details.get() {
+            let room_type = room.room_type_name.to_string(); // Convert to owned String
+            let entry = room_count_map
+                .entry(room_type.clone())
+                .or_insert((0, 0.0));
+            entry.0 += 1;
+            entry.1 = room.price.room_price as f64;
+            
+            room_counters.update(|counters| {
+                if !counters.contains_key(&room_type) {
+                    counters.insert(room_type, create_rw_signal(0));
+                }
+            });
+        }
+
+        let mut sorted: Vec<(String, u32, f64)> = room_count_map
+            .into_iter()
+            .map(|(k, v)| (k, v.0, v.1))
+            .collect();
+        
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.truncate(5);
+        sorted
+    });
+
+    // Create a memo for total price calculation
+    let total_room_price = create_memo(move |_| {
+        sorted_rooms.get().iter().fold(0.0, |acc, (room_type, _, price)| {
+            let counter = room_counters.get()
+                .get(room_type.as_str()) // Change: use as_str() to get a string slice
+                .map(|sig| sig.get())
+                .unwrap_or(0);
+            acc + (price * counter as f64)
+        })
+    });
+
+    let price = Signal::derive(move || total_room_price.get());
     let num_nights = create_rw_signal(3_u32);
     let taxes_fees = create_rw_signal(1000_f64);
 
@@ -322,14 +347,9 @@ pub fn PricingBookNow() -> impl IntoView {
         <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
             <PriceDisplay price=price price_class="text-2xl font-semibold" />
 
-            <div class="flex items-center  space-x-2">
-                <Icon icon=icondata::AiCalendarOutlined class="text-black  text-xl  " />
-                <div> 
-                    {move || {
-                        let date_range = search_ctx.date_range.get();
-                        date_range.format_as_human_readable_date()
-                    }}
-                    </div>
+            <div class="flex items-center space-x-2">
+                <Icon icon=icondata::AiCalendarOutlined class="text-black text-xl" />
+                <div>"Thu, Aug 22 -- Mon, Aug 27"</div>
             </div>
 
             <div class="flex items-center space-x-2">
@@ -337,27 +357,40 @@ pub fn PricingBookNow() -> impl IntoView {
                 <div>"4 adults"</div>
             </div>
 
-            <div class="flex items-center  space-x-2">
-                <Icon icon=icondata::LuSofa class="text-black text-xl " />
+            <div class="flex items-center space-x-2">
+                <Icon icon=icondata::LuSofa class="text-black text-xl" />
                 <div>{move || pluralize(num_rooms.get(), "room", "rooms")}</div>
             </div>
 
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
-                <Show
-                when=move || RoomCounter::get_hotel_room_details_count().is_some()
-                fallback=|| view! { <div></div> }
-            >
-                {move || {
-                    RoomCounter::get_hotel_room_details_count().unwrap().into_iter().map(|room_counter| {
+                <For
+                    each=move || sorted_rooms.get()
+                    key=|(room_type, _, _)| room_type.clone()
+                    let:room
+                >
+                    {
+                        let (room_type, count, price) = room;
+                        let counter = room_counters.get()
+                            .get(&room_type)
+                            .cloned()
+                            .unwrap_or_else(|| create_rw_signal(0));
+                        
                         view! {
-                            <NumberCounter label=room_counter.name counter=room_counter.counter class="mt-4"/>
-                            <Divider />
+                            <div class="flex justify-between items-center border-b border-gray-300 py-2">
+                                <span class="font-medium">
+                                    {format!("{} {} - ${:.2}/night", count, room_type, price)}
+                                </span>
+                                <NumberCounter 
+                                    label=""
+                                    counter=counter
+                                    class="mt-4"
+                                />
+                            </div>
                         }
-                    }).collect_view()
-                }}
-            </Show>
-            
+                    }
+                </For>
+
                 <div>
                     <PricingBreakdown
                         price_per_night=price
@@ -366,7 +399,6 @@ pub fn PricingBookNow() -> impl IntoView {
                     />
                 </div>
             </div>
-
         </div>
     }
 }
@@ -387,48 +419,24 @@ pub fn PricingBreakdown(
     let hotel_info_results: HotelInfoResults = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-    // let search_block_room_action = create_action(move |_| {
-    //     let nav = navigate.clone();
-    //     let hotel_info = hotel_info_results.search_result.get();
-
-    //     if let Some(hotel_info_response) = hotel_info {
-    //         // Save hotel details before navigation
-    //         hotel_info_ctx.set_selected_hotel_details(
-    //             hotel_info_response.get_hotel_name(),
-    //             hotel_info_response
-    //                 .get_images()
-    //                 .first()
-    //                 .cloned()
-    //                 .unwrap_or_default(),
-    //             hotel_info_response.get_address(),
-    //         );
-    //     }
-
-    //     async move {
-    //         SearchCtx::log_state();
-    //         nav(AppRoutes::BlockRoom.to_string(), Default::default());
-    //     }
-    // });
-
-
     let block_room_action = create_action(move |_| {
         let nav = navigate.clone();
         let hotel_info_results: HotelInfoResults = expect_context();
-    
+
         async move {
             // Reset previous block room results
             BlockRoomResults::reset();
-    
+
             // Create block room request using HotelInfoResults
             let block_room_request = hotel_info_results.block_room_request();
-            
+
             // Call server function inside action
             spawn_local(async move {
                 let result = block_room(block_room_request).await.ok();
                 log!("BLOCK_ROOM_API: {result:?}");
                 BlockRoomResults::set_results(result);
             });
-    
+
             // Navigate to block room page
             nav(AppRoutes::BlockRoom.to_string(), Default::default());
         }
