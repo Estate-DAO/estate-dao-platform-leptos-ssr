@@ -381,11 +381,19 @@ pub fn PricingBookNow() -> impl IntoView {
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
-            <PriceDisplay price=price price_class="text-2xl font-semibold" />
-
+            <Show when=move || (price.get() > 0.0)>
+                <PriceDisplay price=price price_class="text-2xl font-semibold" />
+            </Show>
+                
             <div class="flex items-center space-x-2">
                 <Icon icon=icondata::AiCalendarOutlined class="text-black text-xl" />
-                <div>"Thu, Aug 22 -- Mon, Aug 27"</div>
+                <div>
+                    {move || {
+                        let search_ctx: SearchCtx = expect_context();
+                        let date_range = search_ctx.date_range.get();
+                        date_range.format_as_human_readable_date()
+                    }}
+                </div>
             </div>
 
             <div class="flex items-center space-x-2">
@@ -429,7 +437,7 @@ pub fn PricingBookNow() -> impl IntoView {
                         view! {
                             <div class="flex justify-between items-center border-b border-gray-300 py-2">
                                 <span class="font-medium">
-                                    {format!("{} {} - ${:.2}/night", count, room_type, price)}
+                                    {format!("{} - ₹{:.2}/night", room_type, price)}
                                 </span>
                                 <NumberCounter
                                     label=""

@@ -523,7 +523,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                     </div>
                 </div>
                 <div class="mb-[40rem] rounded-xl bg-white p-6 shadow-xl">
-                    <h2 class="mb-4 text-xl font-bold">"₹29,999/night"</h2>
+                    <h2 class="mb-4 text-xl font-bold">"₹"{total_price_per_night.get() as u64}"/" "night" </h2>
                     <Divider />
                     <div class="price-breakdown">
                         <div class="flex justify-between">
