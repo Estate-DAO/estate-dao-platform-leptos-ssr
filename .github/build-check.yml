@@ -1,0 +1,93 @@
+name: Build and Check linting
+
+on:
+  workflow_call:
+    inputs:
+      publish-artifact:
+        default: false
+        required: false
+        type: boolean
+  workflow_dispatch:
+
+jobs:
+  build_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      # - name: Install prereqs
+      #   run: |
+      #     sudo apt-get install protobuf-compiler
+
+      - name: Rust Setup
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "nightly-2024-09-23"
+          targets: "x86_64-unknown-linux-musl,wasm32-unknown-unknown"
+          components: "clippy,rustfmt"
+
+      - uses: cargo-bins/cargo-binstall@main
+      - name: cargo-leptos setup
+        run: cargo binstall --no-confirm cargo-leptos --version 0.2.20
+
+      - name: Cache rust dependencies and build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install npm deps
+        run: pnpm install
+
+      - uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools # provides musl-gcc
+          version: 1.0
+
+      - name: lint check
+        run: |
+          cargo fmt --check
+          cargo clippy --no-deps --all-features --release -- -Dwarnings
+
+      - name: Build the Leptos project to `musl` output
+        run: LOCAL=true PROVAB_HEADERS="$PROVAB_HEADERS" cargo leptos build --release
+        env:
+          LEPTOS_BIN_TARGET_TRIPLE: x86_64-unknown-linux-musl
+          LEPTOS_HASH_FILES: true
+          LOCAL: ${{ secrets.PROVAB_STAGING_OR_PROD }}
+          PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
+      - run: touch .empty
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        if: ${{ inputs.publish-artifact }}
+        with:
+          name: build-musl
+          path: |
+            target/x86_64-unknown-linux-musl/release/estate-fe
+            hash.txt
+            target/site
+            .empty

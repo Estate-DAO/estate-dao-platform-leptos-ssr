@@ -1,0 +1,1 @@
+export FLY_API_TOKEN=$(cat .env.fly)

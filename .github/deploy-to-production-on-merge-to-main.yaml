@@ -1,0 +1,48 @@
+name: Deploy to Fly on push to main
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_check:
+    uses: ./.github/workflows/build-check.yml
+    with:
+      publish-artifact: true
+
+  deploy:
+    name: Deploy
+    needs: build_check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download build
+        uses: actions/download-artifact@v3
+        with:
+          name: build-musl
+      - run: chmod +x target/x86_64-unknown-linux-musl/release/estate-fe
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Set secret tokens
+        run: |
+          flyctl secrets set LOCAL="$LOCAL" --app "estate-dao-769" --stage
+          flyctl secrets set PROVAB_HEADERS="$PROVAB_HEADERS" --app "estate-dao-769" --stage
+        env:
+          # BACKEND_ADMIN_IDENTITY: ${{ secrets.YRAL_WHITELISTED_BACKEND_GLOBAL_ADMIN_SECRET_KEY }}
+          LOCAL: ${{ secrets.PROVAB_STAGING_OR_PROD }}
+          PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+      - name: Deploy a docker container to Fly.io
+        run: flyctl deploy --remote-only -c fly-prod.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+
+      # # post_deploy:
+      # # trigger automation test in another repo as post deploy action
+      # - name: Trigger automation testing workflow in 'estate-fe-e2e-test' repo
+      #   run: |
+      #     curl -X POST https://api.github.com/repos/yral-dapp/estate-fe-e2e-test/dispatches \
+      #     -H 'Accept: application/vnd.github+json' \
+      #     -H 'Authorization: token ${{ secrets.TOKEN_FINE_GRAINED_E2E_TESTS }}' \
+      #     -d '{"event_type": "call"}'
