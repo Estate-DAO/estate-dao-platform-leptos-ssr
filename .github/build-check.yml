@@ -91,3 +91,4 @@ jobs:
             hash.txt
             target/site
             .empty
+            city.json
