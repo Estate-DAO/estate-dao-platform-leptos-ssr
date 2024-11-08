@@ -2,7 +2,6 @@ use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
-
         use axum::{
             body::Body as AxumBody,
             extract::{Path, State},
@@ -77,7 +76,8 @@ cfg_if! {
 
     #[tokio::main]
     async fn main() {
-        
+        better_panic::install();
+
         // Setting get_configuration(None) means we'll be using cargo-leptos's env values
         // For deployment these variables are:
         // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
@@ -86,7 +86,9 @@ cfg_if! {
         let conf = get_configuration(None).await.unwrap();
         let leptos_options = conf.leptos_options;
         let addr = leptos_options.site_addr;
-        let routes = generate_route_list(App);
+        // let routes = generate_route_list(App);
+        let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
+
 
         // build our application with a route
         let app = Router::new()

@@ -1,0 +1,27 @@
+
+app = 'estate-dao-769'
+primary_region = 'bom'
+
+[processes]
+# The command below is used to launch a Rails server; be sure to
+# replace with the command you're using to launch your server.
+web = "./estate-fe"
+
+[[services]]
+internal_port = 3000
+protocol = "tcp"
+processes = ["web"]
+http_checks = []
+
+[[services.ports]]
+handlers = ["tls", "http"] 
+tls_options = { "versions" = ["TLSv1.2", "TLSv1.3"] } 
+port = 443
+
+[env]
+RUST_LOG="info"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024

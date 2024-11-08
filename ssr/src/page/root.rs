@@ -1,20 +1,27 @@
+use leptos::logging::log;
 use leptos::*;
-// use leptos_router::*;
+use leptos_icons::*;
+use leptos_router::use_navigate;
 
-// use crate::component::FullScreenSpinner;
+use crate::{
+    api::search_hotel,
+    app::AppRoutes,
+    component::{
+        DateTimeRangePickerCustom, DestinationPicker, EstateDaoIcon, FilterAndSortBy,
+        GuestQuantity, HSettingIcon,
+    },
+    state::search_state::{SearchCtx, SearchListResults},
+};
 
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
-        <main class="  py-4 ">
-            <div class="">
-
-                <Navbar />
-
+        <main>
+            <div>
                 <HeroSection />
-
                 <MostPopular />
             </div>
+            <Footer />
         </main>
     }
 }
@@ -22,16 +29,32 @@ pub fn RootPage() -> impl IntoView {
 #[component]
 pub fn HeroSection() -> impl IntoView {
     view! {
-        <section class="bg-cover bg-center h-screen  bg-[url('/img/home.webp')]">
-            <div class="flex flex-col items-center justify-center h-full text-center">
-                <h1 class="text-4xl font-bold text-black mb-8">Hey! Where are you off to?</h1>
-                <div class="flex space-x-4 mb-8">
-
+        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')]">
+            <Navbar />
+            <div class="mt-40">
+                <div class="flex flex-col items-center justify-center h-full">
+                    <h1 class="text-5xl font-semibold text-black mb-8">
+                        Hey! Where are you off to?
+                    </h1>
                     <InputGroup />
-                </div>
-                <div class="flex space-x-4">
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded">Filter</button>
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded">Sort By</button>
+                    <br />
+                    // todo: uncomment in v2 when implementing filtering and sorting
+                    // <FilterAndSortBy />
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <div class="flex items-end px-6 py-3 bg-white rounded-xl max-w-fit w-full ">
+                        "We're the first decentralized booking platform powered by ICP."
+                        <span class="font-semibold text-blue-500 ml-4 inline">"Learn more"</span>
+                        <Icon
+                            class="w-6 h-6 font-semibold inline ml-2 text-blue-500"
+                            icon=icondata::CgArrowRight
+                        />
+                    </div>
+                    <br />
+                    <br />
+                    <br />
                 </div>
             </div>
         </section>
@@ -41,16 +64,23 @@ pub fn HeroSection() -> impl IntoView {
 #[component]
 pub fn Navbar() -> impl IntoView {
     view! {
-        <nav class="flex justify-between items-center py-4 px-8">
-            <div class="flex items-center">
-                <img src="/img/estate_dao_logo.webp" alt="Icon" class="h-8 w-full" />
+        <nav class="flex justify-between items-center py-10 px-8">
+            <div class="flex items-center text-xl">
+                // <Icon icon=EstateDaoIcon />
+                <a href="/">
+                    <img
+                        src="/img/estate_dao_logo_transparent.webp"
+                        alt="Icon"
+                        class="h-8 w-full"
+                    />
+                </a>
             </div>
-            <div class="flex space-x-4">
+            <div class="flex space-x-8">
                 <a href="#" class="text-gray-700 hover:text-gray-900">
                     Whitepaper
                 </a>
                 <a href="#" class="text-gray-700 hover:text-gray-900">
-                    About Us
+                    About us
                 </a>
             </div>
         </nav>
@@ -58,127 +88,153 @@ pub fn Navbar() -> impl IntoView {
 }
 
 #[component]
-pub fn InputGroup() -> impl IntoView {
+pub fn Footer() -> impl IntoView {
     view! {
-        <div class="bg-white bg-opacity-80 rounded-full flex items-center p-1 shadow-lg max-w-4xl w-full">
-            // <!-- Destination input -->
-            <div class="relative flex-1">
-                <select class="w-full py-2 pl-10 pr-4 text-gray-700 bg-transparent border-none rounded-full focus:outline-none">
-                    <option value="" disabled selected>
-                        Destination
-                    </option>
-                    <option value="paris">Paris</option>
-                    <option value="london">London</option>
-                    <option value="new-york">New York</option>
-                </select>
-                <div class="absolute inset-y-0 left-3 flex items-center">
-                    <svg
-                        class="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        ></path>
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                    </svg>
+        <div class="py-16 px-20 flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <div class="font-semibold text-xl">hello@estatedao.com</div>
+                <div class="text-xl">
+                    <Icon icon=icondata::IoLogoInstagram />
                 </div>
+                <div class="text-xl">
+                    <Icon icon=icondata::BiLinkedin />
+                </div>
+
+            </div>
+            <div class="text-gray-400 font-semibold">
+                "Copyright © 2024 EstateDao. All Rights Reserved."
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl IntoView {
+    // -------------------------------------
+    // BACKGROUND CLASSES FOR DISABLED STATE
+    // -------------------------------------
+
+    let bg_class = move || {
+        if disabled.get() {
+            "bg-gray-300 bg-opacity-[40%]"
+        } else {
+            "bg-white bg-opacity-[40%]"
+        }
+    };
+
+    let bg_search_class = move || {
+        if disabled.get() {
+            "bg-gray-300"
+        } else {
+            "bg-white text-white hover:bg-blue-200"
+        }
+    };
+
+    let bg_search_icon_class = move || {
+        if disabled.get() {
+            "text-gray-400"
+        } else {
+            "text-blue-600 "
+        }
+    };
+
+    let search_ctx: SearchCtx = expect_context();
+
+    let destination_display = create_memo(move |_| {
+        search_ctx
+            .destination
+            .get()
+            .map(|d| format!("{}, {}", d.city, d.country_name))
+            .unwrap_or_else(|| "Where to?".to_string())
+    });
+
+    let navigate = use_navigate();
+    let search_action = create_action(move |_| {
+        let nav = navigate.clone();
+        let search_ctx = search_ctx.clone();
+        async move {
+            log!("Search button clicked");
+            //  move to the hotel listing page
+            nav(AppRoutes::HotelList.to_string(), Default::default());
+
+            SearchListResults::reset();
+
+            // call server function inside action
+            spawn_local(async move {
+                let result = search_hotel(search_ctx.into()).await.ok();
+                // log!("SEARCH_HOTEL_API: {result:?}");
+                SearchListResults::set_search_results(result);
+            });
+        }
+    });
+
+    // -------------------------------------
+
+    view! {
+        <div class=move || {
+            format!(
+                " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
+                bg_class(),
+            )
+        }>
+            // <!-- Destination input -->
+
+            <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-2 text-xl flex items-center">
+            <Icon icon=icondata::BsMap class="text-black" />
+        </div>
+
+        <button
+            class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
+            disabled=disabled
+        >
+            {move || destination_display.get()}
+        </button>
+
+        <Show when=move || !disabled.get()>
+            <div class="absolute inset-0">
+                <DestinationPicker />
+            </div>
+        </Show>
             </div>
 
             // <!-- Date range picker -->
-            <div class="flex-1 border-l border-r border-gray-300">
-                <input
-                    type="text"
-                    placeholder="Check in — Check out"
-                    class="w-full py-2 px-4 text-gray-700 bg-transparent border-none focus:outline-none"
-                    onfocus="(this.type='date')"
-                    onblur="(this.type='text')"
-                />
+            <div class="relative flex-1 border-l border-r border-white">
+                <DateTimeRangePickerCustom />
+
             </div>
 
             // <!-- Guests dropdown -->
-            <div class="relative flex-1">
-                <button
-                    id="guestsDropdown"
-                    class="w-full py-2 pl-4 pr-10 text-left text-gray-700 bg-transparent rounded-full focus:outline-none"
-                >
-                    "0 adult • 0 children"
-                </button>
-                <div class="absolute inset-y-0 right-3 flex items-center">
-                    <svg
-                        class="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                        ></path>
-                    </svg>
-                </div>
-                <div
-                    id="guestsDropdownContent"
-                    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg"
-                >
-                    <div class="p-4">
-                        <div class="mb-4">
-                            <label for="adults" class="block text-sm font-medium text-gray-700">
-                                Adults
-                            </label>
-                            <input
-                                type="number"
-                                id="adults"
-                                min="0"
-                                value="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                        <div>
-                            <label for="children" class="block text-sm font-medium text-gray-700">
-                                Children
-                            </label>
-                            <input
-                                type="number"
-                                id="children"
-                                min="0"
-                                value="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                    </div>
-                </div>
+            <div class="relative flex-1 flex items-center">
+                <GuestQuantity />
             </div>
 
             // <!-- Search button -->
-            <button class="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <svg
-                    class="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    ></path>
-                </svg>
+            <button
+                on:click=move |_| search_action.dispatch(())
+                class=move || {
+                    format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
+                }
+            >
+                <div>
+                    // done with tricks shared by generous Prakash!
+                    <Show
+                        when=move || disabled.get()
+                        fallback=move || {
+                            view! {
+                                <Icon
+                                    icon=icondata::AiSearchOutlined
+                                    class=format!("{} p-[1px]", bg_search_icon_class())
+                                />
+                            }
+                        }
+                    >
+                        <Icon
+                            icon=icondata::AiSearchOutlined
+                            class=format!("{} p-[1px]", bg_search_icon_class())
+                        />
+                    </Show>
+                </div>
             </button>
         </div>
     }
@@ -187,10 +243,10 @@ pub fn InputGroup() -> impl IntoView {
 #[component]
 fn MostPopular() -> impl IntoView {
     view! {
-        <div class="bg-white rounded-lg shadow-lg p-8">
-            <div class="flex flex-col justify-center">
-                <h1 class="text-2xl font-bold text-center mt-8">Most Popular Destinations</h1>
-                <div class="flex space-x-2 justify-center mt-8">
+        <div class="bg-white rounded-[45px] p-4 w-full -mt-8">
+            <div class="py-16 px-20">
+                <div class="text-2xl font-semibold text-left mb-6">Most popular destinations</div>
+                <div class="grid grid-cols-3 gap-4">
                     <Card />
                     <Card />
                     <Card />
@@ -203,15 +259,10 @@ fn MostPopular() -> impl IntoView {
 #[component]
 fn Card() -> impl IntoView {
     view! {
-        <div>
-            <img
-                src="/img/home.webp"
-                alt="Card Image"
-                class="w-full h-48 object-cover rounded-xl"
-            />
-            <div class="p-4">
-                <h3 class="text-lg font-semibold">Card Title</h3>
-                <p class="text-gray-600">This is a description of the card.</p>
+        <div class="rounded-lg overflow-hidden border border-gray-300 h-4/5">
+            <img src="/img/home.webp" alt="Destination" class="w-full  object-cover  w-96 h-3/4" />
+            <div class="p-4 bg-white">
+                <p class="text-lg font-semibold">Mehico</p>
             </div>
         </div>
     }
