@@ -3,9 +3,9 @@ use chrono::Datelike;
 use leptos::*;
 use leptos_icons::*;
 // use leptos_use::use_timestamp;
+use chrono::NaiveDate;
 use leptos::logging::log;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
-use chrono::NaiveDate;
 
 use crate::state::search_state::SearchCtx;
 
@@ -57,12 +57,8 @@ impl SelectedDateRange {
                 .unwrap_or_default()
         };
 
-        format!("{} - {}",
-            format_date(self.start),
-            format_date(self.end)
-        )
+        format!("{} - {}", format_date(self.start), format_date(self.end))
     }
-    
 }
 
 fn get_year_month(timestamp: f64) -> (u32, u32) {

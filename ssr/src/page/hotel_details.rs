@@ -347,31 +347,30 @@ pub fn PricingBookNow() -> impl IntoView {
     let price = Signal::derive(move || total_room_price.get());
     let num_nights = Signal::derive(move || {
         let date_range = search_ctx.date_range.get();
-        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples 
+        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples
         // representing (year, month, day)
-        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) = 
-            (date_range.start, date_range.end) 
+        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) =
+            (date_range.start, date_range.end)
         {
             // Convert tuple to NaiveDate
             let start = chrono::NaiveDate::from_ymd_opt(
                 start_year as i32,
                 start_month as u32,
                 start_day as u32,
-            ).unwrap_or_default();
-            
-            let end = chrono::NaiveDate::from_ymd_opt(
-                end_year as i32,
-                end_month as u32,
-                end_day as u32,
-            ).unwrap_or_default();
-    
+            )
+            .unwrap_or_default();
+
+            let end =
+                chrono::NaiveDate::from_ymd_opt(end_year as i32, end_month as u32, end_day as u32)
+                    .unwrap_or_default();
+
             let duration = end.signed_duration_since(start);
             duration.num_days() as u32
         } else {
             0
         }
     });
-    
+
     let total_selected_rooms = create_memo(move |_| {
         room_counters
             .get()
@@ -384,7 +383,7 @@ pub fn PricingBookNow() -> impl IntoView {
             <Show when=move || (price.get() > 0.0)>
                 <PriceDisplay price=price price_class="text-2xl font-semibold" />
             </Show>
-                
+
             <div class="flex items-center space-x-2">
                 <Icon icon=icondata::AiCalendarOutlined class="text-black text-xl" />
                 <div>
@@ -419,16 +418,16 @@ pub fn PricingBookNow() -> impl IntoView {
                             .get(&room_type)
                             .cloned()
                             .unwrap_or_else(|| create_rw_signal(0));
-                        
+
                         // Create a clamped counter wrapper
                         let clamped_counter = create_rw_signal(base_counter.get());
-                        
+
                         // Effect to enforce room limit
                         create_effect(move |_| {
                             let current_value = base_counter.get();
                             let other_rooms = total_selected_rooms.get() - current_value;
                             let max_rooms = num_rooms.get();
-                            
+
                             if other_rooms + current_value > max_rooms {
                                 base_counter.set(max_rooms - other_rooms);
                             }
@@ -549,7 +548,6 @@ pub fn NumberCounter(
 ) -> impl IntoView {
     let merged_class = format!("flex items-center justify-between {}", class);
 
-    
     view! {
         <div class=merged_class>
             <p>{label}</p>

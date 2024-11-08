@@ -174,7 +174,6 @@ pub struct HotelRoomResponse {
     pub room_list: Option<RoomList>,
 }
 
-
 impl HotelRoomResponse {
     pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
         self.room_list

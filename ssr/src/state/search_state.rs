@@ -1,6 +1,8 @@
 use crate::{
     api::{
-        BlockRoomRequest, BlockRoomResponse, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse
+        BlockRoomRequest, BlockRoomResponse, BookRoomResponse, HotelInfoRequest, HotelInfoResponse,
+        HotelRoomDetail, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest,
+        HotelSearchResponse,
     },
     component::{Destination, GuestSelection, SelectedDateRange},
 };
@@ -176,19 +178,20 @@ impl HotelInfoResults {
     //     }
     // }
     pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
-        self.room_result.get().and_then(|response| {
-            response.get_hotel_room_details()
-        })
+        self.room_result
+            .get()
+            .and_then(|response| response.get_hotel_room_details())
     }
-    
 
     pub fn block_room_request(&self) -> BlockRoomRequest {
         // Get unique room IDs from the room response
-        let room_unique_id = self.room_result
+        let room_unique_id = self
+            .room_result
             .get()
             .as_ref()
             .map(|response| {
-                response.room_list
+                response
+                    .room_list
                     .as_ref()
                     .map(|room_list| {
                         room_list
@@ -205,8 +208,9 @@ impl HotelInfoResults {
         // Get token from SearchListResults context since that has the token map
         let search_list_results: SearchListResults = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
-        
-        let token = hotel_info_ctx.hotel_code
+
+        let token = hotel_info_ctx
+            .hotel_code
             .get()
             .and_then(|hotel_code| {
                 let token_map = search_list_results.get_hotel_code_results_token_map();
@@ -219,9 +223,7 @@ impl HotelInfoResults {
             room_unique_id,
         }
     }
-
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct BlockRoomResults {
@@ -234,18 +236,13 @@ impl BlockRoomResults {
     }
 
     pub fn reset() {
-        Self::from_leptos_context()
-            .block_room_results
-            .set(None);
+        Self::from_leptos_context().block_room_results.set(None);
     }
 
     pub fn set_results(results: Option<BlockRoomResponse>) {
-        Self::from_leptos_context()
-            .block_room_results
-            .set(results);
+        Self::from_leptos_context().block_room_results.set(results);
     }
 }
-
 
 #[derive(Debug, Clone, Default)]
 pub struct ConfirmationResults {

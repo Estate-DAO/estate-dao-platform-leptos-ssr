@@ -2,16 +2,16 @@
 #![allow(dead_code)]
 
 use leptos::*;
-use leptos_router::use_navigate;
 use leptos_icons::*;
+use leptos_router::use_navigate;
 
 use crate::api::get_room;
 use crate::utils::pluralize;
 
 use crate::component::SkeletonCards;
 use crate::state::search_state::HotelInfoResults;
-use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::AdultDetail;
+use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::ChildDetail;
 
 use crate::{
@@ -42,7 +42,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let navigate = use_navigate();
     let block_room_ctx = expect_context::<BlockRoomCtx>();
-    
+
     let hotel_info_results_clone = hotel_info_results.clone();
     let room_price = create_memo(move |_| {
         hotel_info_results_clone
@@ -58,49 +58,46 @@ pub fn BlockRoomPage() -> impl IntoView {
             })
             .unwrap_or(0.0)
     });
-    
+
     let total_price_per_night = create_memo(move |_| {
         let price = room_price.get();
         let num_rooms = search_ctx.guests.get().rooms.get();
         price * num_rooms as f64
     });
-    
+
     let num_nights = Signal::derive(move || {
         let date_range = search_ctx.date_range.get();
-        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples 
+        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples
         // representing (year, month, day)
-        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) = 
-            (date_range.start, date_range.end) 
+        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) =
+            (date_range.start, date_range.end)
         {
             // Convert tuple to NaiveDate
             let start = chrono::NaiveDate::from_ymd_opt(
                 start_year as i32,
                 start_month as u32,
                 start_day as u32,
-            ).unwrap_or_default();
-            
-            let end = chrono::NaiveDate::from_ymd_opt(
-                end_year as i32,
-                end_month as u32,
-                end_day as u32,
-            ).unwrap_or_default();
-    
+            )
+            .unwrap_or_default();
+
+            let end =
+                chrono::NaiveDate::from_ymd_opt(end_year as i32, end_month as u32, end_day as u32)
+                    .unwrap_or_default();
+
             let duration = end.signed_duration_since(start);
             duration.num_days() as u32
         } else {
             0
         }
     });
-    
+
     let total_price = create_memo(move |_| {
         let price_per_night = total_price_per_night.get();
         let nights = num_nights.get();
         price_per_night * nights as f64
     });
-    
-    let final_total = create_memo(move |_| {
-        total_price.get()
-    });
+
+    let final_total = create_memo(move |_| total_price.get());
 
     // Helper function to create passenger details
     fn create_passenger_details(
@@ -171,7 +168,6 @@ pub fn BlockRoomPage() -> impl IntoView {
         // Trigger validation check
     };
 
-
     let navigate = use_navigate();
     let nav = navigate.clone(); // Clone it here for the first use
 
@@ -230,7 +226,7 @@ pub fn BlockRoomPage() -> impl IntoView {
             //             BookingStatus::Confirmed => {
             //                 // Set the booking details in context
             //                 ConfirmationResults::set_booking_details(Some(response));
-                            nav(AppRoutes::Confirmation.to_string(), Default::default());
+            nav(AppRoutes::Confirmation.to_string(), Default::default());
             //             }
             //             BookingStatus::BookFailed => {
             //                 log!("Booking failed: {:?}", response.message);
@@ -245,48 +241,54 @@ pub fn BlockRoomPage() -> impl IntoView {
     });
     let is_form_valid: RwSignal<bool> = create_rw_signal(false);
 
-    
     // Validation logic function
     let validate_form = move || {
         let adult_list = adults.get();
         let child_list = children.get();
-    
+
         // Helper function for email validation
         let is_valid_email = |email: &str| email.contains('@') && email.contains('.');
-    
+
         // Helper function for phone validation
-        let is_valid_phone = |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
-    
+        let is_valid_phone =
+            |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
+
         // Validate primary adult
         let primary_adult_valid = adult_list.first().map_or(false, |adult| {
-            !adult.first_name.trim().is_empty() &&
-            adult.email.as_ref().map_or(false, |e| !e.trim().is_empty() && is_valid_email(e)) &&
-            adult.phone.as_ref().map_or(false, |p| !p.trim().is_empty() && is_valid_phone(p))
-        });
-    
-        // Validate other adults
-        let other_adults_valid = adult_list.iter().skip(1).all(|adult| {
             !adult.first_name.trim().is_empty()
+                && adult
+                    .email
+                    .as_ref()
+                    .map_or(false, |e| !e.trim().is_empty() && is_valid_email(e))
+                && adult
+                    .phone
+                    .as_ref()
+                    .map_or(false, |p| !p.trim().is_empty() && is_valid_phone(p))
         });
-    
+
+        // Validate other adults
+        let other_adults_valid = adult_list
+            .iter()
+            .skip(1)
+            .all(|adult| !adult.first_name.trim().is_empty());
+
         // Validate children
-        let children_valid = child_list.iter().all(|child| {
-            !child.first_name.trim().is_empty() &&
-            child.age.is_some()
-        });
-    
+        let children_valid = child_list
+            .iter()
+            .all(|child| !child.first_name.trim().is_empty() && child.age.is_some());
+
         // Check if terms are accepted
         let terms_valid = terms_accepted.get();
-    
+
         // Set the value of is_form_valid based on validation results
-        is_form_valid.set(primary_adult_valid && other_adults_valid && children_valid && terms_valid);
+        is_form_valid
+            .set(primary_adult_valid && other_adults_valid && children_valid && terms_valid);
     };
-      
+
     // Call the validation function whenever inputs change
     let _ = create_effect(move |_| {
         validate_form();
     });
-    
 
     // let is_form_valid = create_memo(move |_| {
     //     trigger_validation.get();
@@ -337,25 +339,29 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let destination = create_memo(move |_| search_ctx.destination.get().unwrap_or_default());
 
-    let insert_real_image_or_default = {move || {
-        if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
-            hotel_info_api_response.get_images().first().cloned().unwrap_or_else(|| "/img/home.webp".to_string())
-        } else {
-            "/img/home.webp".to_string()
+    let insert_real_image_or_default = {
+        move || {
+            if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+                hotel_info_api_response
+                    .get_images()
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "/img/home.webp".to_string())
+            } else {
+                "/img/home.webp".to_string()
+            }
         }
-    }};
-    
-
+    };
 
     view! {
-        
+
         <section class="relative h-screen">
             <Navbar />
             <div class="relative mt-24 flex h-screen  items-center place-content-center p-4 max-w-4xl mx-auto ">
                 <div class="container w-4/5 justify-between gap-6">
                     <button type="text" class="text-3xl font-bold pb-4 flex" on:click=go_back_to_details>
                     // "<- You're just one step away!"
-                    <span class="inline-block items-center"> <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" /> </span> 
+                    <span class="inline-block items-center"> <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" /> </span>
                     <div class="ml-4">"You're just one step away!" </div>
                     </button>
                     <br />
@@ -473,7 +479,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                                     validate_form();
                                                 }
                                             >
-                                                
+
                                             <option disabled selected>{age_value}</option>
                                             { (1..18).map(|age| {
                                                 let selected = if age == age_value { "selected" } else { "" };

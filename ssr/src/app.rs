@@ -8,11 +8,11 @@ use crate::{
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
 };
-use leptos_query_devtools::LeptosQueryDevtools;
 use leptos::*;
 use leptos_meta::*;
-use leptos_router::*;
 use leptos_query::{query_persister, *};
+use leptos_query_devtools::LeptosQueryDevtools;
+use leptos_router::*;
 
 #[component]
 fn NotFound() -> impl IntoView {

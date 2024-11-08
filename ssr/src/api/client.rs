@@ -39,10 +39,7 @@ pub trait ProvabReqMeta: Sized + Send {
         let jd = &mut serde_json::Deserializer::from_str(&decompressed_body);
         let res: Self::Response = serde_path_to_error::deserialize(jd).map_err(|e| {
             let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
-            log!(
-                "deserialize_response- JsonParseFailed: {:?}",
-                total_error
-            );
+            log!("deserialize_response- JsonParseFailed: {:?}", total_error);
             report!(ApiError::JsonParseFailed(total_error))
         })?;
 

@@ -25,14 +25,16 @@ pub fn ConfirmationPage() -> impl IntoView {
             .unwrap_or_default()
     };
 
-    let insert_real_image_or_default = {move || {
-        let val =  hotel_info_ctx.selected_hotel_image.get() ;
-          if val == "" {
-             "/img/home.webp".to_string()
-          } else{
-            val
-          }
-    }};
+    let insert_real_image_or_default = {
+        move || {
+            let val = hotel_info_ctx.selected_hotel_image.get();
+            if val == "" {
+                "/img/home.webp".to_string()
+            } else {
+                val
+            }
+        }
+    };
 
     view! {
         <section class="relative h-screen">
