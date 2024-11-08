@@ -1,0 +1,128 @@
+[
+    {
+        "city_code": "53301",
+        "city_name": "Bali",
+        "country_name": "Indonesia",
+        "country_code": "ID"
+    },
+    {
+        "city_code": "461",
+        "city_name": "Geneva",
+        "country_name": "Switzerland",
+        "country_code": "CH"
+    },
+    {
+        "city_code": "970",
+        "city_name": "Rome",
+        "country_name": "Italy",
+        "country_code": "IT"
+    },
+    {
+        "city_code": "53331",
+        "city_name": "Dubai",
+        "country_name": "United Arab Emirates",
+        "country_code": "AE"
+    },
+    {
+        "city_code": "14",
+        "city_name": "Sydney",
+        "country_name": "Australia",
+        "country_code": "AU"
+    },
+    {
+        "city_code": "737",
+        "city_name": "Phuket",
+        "country_name": "Thailand",
+        "country_code": "TH"
+    },
+    {
+        "city_code": "53342",
+        "city_name": "Maldives",
+        "country_name": "Maldives",
+        "country_code": "MV"
+    },
+    {
+        "city_code": "195",
+        "city_name": "Santorin",
+        "country_name": "Greece",
+        "country_code": "GR"
+    },
+    {
+        "city_code": "66530",
+        "city_name": "Seychelles",
+        "country_name": "Mahe Island",
+        "country_code": "SC"
+    },
+    {
+        "city_code": "1254",
+        "city_name": "Goa",
+        "country_name": "India",
+        "country_code": "IN"
+    },
+    {
+        "city_code": "5200",
+        "city_name": "Bombay/ Mumbai",
+        "country_name": "India",
+        "country_code": "IN"
+    },
+    {
+        "city_code": "5100",
+        "city_name": "Delhi",
+        "country_name": "India",
+        "country_code": "IN"
+    },
+    {
+        "city_code": "82",
+        "city_name": "Paris",
+        "country_name": "France",
+        "country_code": "FR"
+    },
+    {
+        "city_code": "2320",
+        "city_name": "Zermatt",
+        "country_name": "Switzerland",
+        "country_code": "CH"
+    },
+    {
+        "city_code": "60589",
+        "city_name": "New York City",
+        "country_name": "United States",
+        "country_code": "US"
+    },
+    {
+        "city_code": "484",
+        "city_name": "Barcelona",
+        "country_name": "Spain",
+        "country_code": "ES"
+    },
+    {
+        "city_code": "527",
+        "city_name": "Seville",
+        "country_name": "Spain",
+        "country_code": "ES"
+    },
+    {
+        "city_code": "501",
+        "city_name": "Granada",
+        "country_name": "Spain",
+        "country_code": "ES"
+    },
+    {
+        "city_code": "534",
+        "city_name": "Valencia",
+        "country_name": "Spain",
+        "country_code": "ES"
+    },
+    {
+        "city_code": "2178",
+        "city_name": "Zurich",
+        "country_name": "Switzerland",
+        "country_code": "CH"
+    },
+    {
+        "city_code": "251",
+        "city_name": "London",
+        "country_name": "United Kingdom",
+        "country_code": "GB"
+    }
+]

@@ -15,6 +15,12 @@ playwright/.cache/
 
 plan.md 
 
-.*
 bun.lockb
 !.gitignore
+
+*.log
+*.json
+
+!city.json
+
+patches/*

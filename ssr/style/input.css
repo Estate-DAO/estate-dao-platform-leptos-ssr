@@ -18,6 +18,50 @@
     }
 }
 
+@layer components{
+    .custom-scrollbar {
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f1f1f1;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+        transition: background-color 0.2s ease-in-out;
+      }
+      
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      
+      /* Dark theme variant */
+      /* .custom-scrollbar-dark {
+        scrollbar-color: #4b5563 #1f2937;
+      }
+      
+      .custom-scrollbar-dark::-webkit-scrollbar-track {
+        background: #1f2937;
+      }
+      
+      .custom-scrollbar-dark::-webkit-scrollbar-thumb {
+        background: #4b5563;
+      }
+      
+      .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+        background: #6b7280;
+      } */
+}
+
 @media (min-height:820px) and (max-height:899px){
     .hot-left-arrow{
         margin-top: 206px !important;
