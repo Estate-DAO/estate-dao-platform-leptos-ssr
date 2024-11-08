@@ -1,5 +1,6 @@
 
-FROM scratch
+
+FROM debian:bullseye-slim as runner
 
 WORKDIR /app
 
@@ -15,6 +16,10 @@ ENV LEPTOS_ENV="production"
 # ENV LEPTOS_HASH_FILES="true"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
 ENV RUST_LOG="info"
+# these will be passed by fly vm
+ENV PROVAB_HEADERS
+ENV LOCAL
 EXPOSE 3000
 
-CMD ["LOCAL=$LOCAL PROVAB_HEADERS=$PROVAB_HEADERS ./estate-fe"]
+CMD ["sh", "-c", "LOCAL=$LOCAL PROVAB_HEADERS=$PROVAB_HEADERS ./estate-fe"]
+
