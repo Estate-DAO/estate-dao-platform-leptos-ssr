@@ -76,7 +76,7 @@ jobs:
         run: LOCAL=true PROVAB_HEADERS="$PROVAB_HEADERS" cargo leptos build --release
         env:
           LEPTOS_BIN_TARGET_TRIPLE: x86_64-unknown-linux-musl
-          LEPTOS_HASH_FILES: true
+          # LEPTOS_HASH_FILES: true
           LOCAL: ${{ secrets.LOCAL }}
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
       - run: touch .empty
@@ -87,7 +87,6 @@ jobs:
           name: build-musl
           path: |
             target/x86_64-unknown-linux-musl/release/estate-fe
-            hash.txt
             target/site
             .empty
             city.json
