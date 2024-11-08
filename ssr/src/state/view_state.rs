@@ -2,9 +2,9 @@ use crate::{
     api::{HotelSearchRequest, HotelSearchResponse},
     component::{GuestSelection, SelectedDateRange},
 };
+use leptos::logging::log;
 use leptos::RwSignal;
 use leptos::*;
-use leptos::logging::log;
 use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone)]

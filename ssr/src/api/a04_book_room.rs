@@ -2,11 +2,9 @@ use super::{ProvabReq, ProvabReqMeta};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 // use leptos::ServerFnError;
-use leptos:: *;
 use crate::api::Provab;
 use leptos::logging::log;
-
-
+use leptos::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomRequest {

@@ -30,7 +30,7 @@ impl Default for GuestSelection {
     }
 }
 
-#[derive(Debug, Clone, Default,PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ChildrenAges(RwSignal<Vec<u32>>);
 
 impl ChildrenAges {

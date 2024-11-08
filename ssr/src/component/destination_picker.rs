@@ -3,15 +3,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     component::{Divider, HSettingIcon},
-    state::search_state::SearchCtx
+    state::search_state::SearchCtx,
 };
-use leptos_icons::*;
 use leptos::logging::log;
+use leptos_icons::*;
 use std::time::Duration;
 
 use leptos_query::{query_persister, *};
 
-#[derive(Clone, Debug, PartialEq , Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Destination {
     #[serde(rename = "city_name")]
     pub city: String,
@@ -27,13 +27,16 @@ impl Default for Destination {
             city: "Goa".into(),
             country_name: "IN".into(),
             city_id: "1254".into(),
-            country_code: "IN".into()
+            country_code: "IN".into(),
         }
     }
 }
 impl Destination {
     pub fn get_country_code(ctx: &SearchCtx) -> String {
-        ctx.destination.get_untracked().map(|d| d.country_code.clone()).unwrap_or_default()
+        ctx.destination
+            .get_untracked()
+            .map(|d| d.country_code.clone())
+            .unwrap_or_default()
     }
 
     pub fn get_city_id(ctx: &SearchCtx) -> u32 {
@@ -45,7 +48,9 @@ impl Destination {
 }
 
 #[server(GetCityList, "/city_list")]
-pub async fn read_destinations_from_file(file_path: String) ->  Result<Vec<Destination>, ServerFnError> {
+pub async fn read_destinations_from_file(
+    file_path: String,
+) -> Result<Vec<Destination>, ServerFnError> {
     let file = std::fs::File::open(file_path.as_str())?;
     let reader = std::io::BufReader::new(file);
     let result = serde_json::from_reader(reader)?;
@@ -59,10 +64,10 @@ pub async fn read_destinations_from_file(file_path: String) ->  Result<Vec<Desti
 fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
     // log!("destinations_query called");
     leptos_query::create_query(
-        |_| async move { 
+        |_| async move {
             // log!("will call read_destinations_from_file in async move");
             read_destinations_from_file("city.json".into()).await.ok()
-         },
+        },
         QueryOptions {
             default_value: None,
             refetch_interval: None,
@@ -72,7 +77,7 @@ fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
         },
     )
 }
- 
+
 #[component]
 pub fn DestinationPicker() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
@@ -80,7 +85,7 @@ pub fn DestinationPicker() -> impl IntoView {
 
     // let destinations_resource = create_resource(is_open , move  |_| async move { read_destinations_from_file("city.json".into()).await});
 
-    let QueryResult { 
+    let QueryResult {
         data: destinations_resource,
         state,
         // is_loading,
@@ -89,9 +94,10 @@ pub fn DestinationPicker() -> impl IntoView {
         ..
     } = destinations_query().use_query(move || is_open.get());
 
-
     let display_value = create_memo(move |_| {
-        search_ctx.destination.get()
+        search_ctx
+            .destination
+            .get()
             .map(|d| format!("{}, {}", d.city, d.country_name))
             .unwrap_or_else(|| "Where to?".to_string())
     });
@@ -141,7 +147,7 @@ pub fn DestinationPicker() -> impl IntoView {
 #[component]
 fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) -> impl IntoView {
     view! {
-        <div class="h-80 custom-scrollbar"> 
+        <div class="h-80 custom-scrollbar">
         {move || {
             dest_vec
                 .clone()
@@ -164,6 +170,6 @@ fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) 
                 })
                 .collect_view()
         }}
-        </div> 
+        </div>
     }
 }

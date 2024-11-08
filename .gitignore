@@ -24,3 +24,5 @@ bun.lockb
 !city.json
 
 patches/*
+.env
+.env.fly

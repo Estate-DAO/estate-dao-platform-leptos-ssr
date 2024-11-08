@@ -76,10 +76,10 @@ pub fn HotelListPage() -> impl IntoView {
                                 .hotel_results();
 
                             if hotel_results.is_empty() {
-                                view! {         
+                                view! {
                                     <div class="flex flex-col items-center justify-center mt-6 p-4 col-span-full min-h-[200px]">
                                         <p class="text-center">No hotels found for your search criteria.</p>
-                                    </div> 
+                                    </div>
                                 }.into_view()
                             } else {
                                 hotel_results
