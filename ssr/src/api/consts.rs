@@ -1,7 +1,7 @@
 pub const PROVAB_BASE_URL_PROD: &str =
     "https://prod.services.travelomatix.com/webservices/index.php/hotel_v3/service";
 
-pub const PROVAB_BASE_URL_TEST: &str = "http://5.75.246.9/webservices/index.php/hotel_v3/service";
+pub const PROVAB_BASE_URL_TEST: &str = "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
 // pub const PROVAB_BASE_URL_LOCAL: &str = "https://api.cloudflare.com/client/v4/";
 use serde_json::Value;
