@@ -4,7 +4,6 @@ FROM scratch
 WORKDIR /app
 
 COPY ./target/x86_64-unknown-linux-musl/release/estate-fe .
-COPY ./hash.txt .
 COPY ./city.json .
 
 COPY ./target/site ./site
