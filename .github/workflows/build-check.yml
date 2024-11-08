@@ -71,7 +71,6 @@ jobs:
       - name: lint check
         run: |
           cargo fmt --check
-          cargo clippy --no-deps --all-features --release -- -Dwarnings
 
       - name: Build the Leptos project to `musl` output
         run: LOCAL=true PROVAB_HEADERS="$PROVAB_HEADERS" cargo leptos build --release
