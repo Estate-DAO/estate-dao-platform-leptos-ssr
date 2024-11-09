@@ -53,8 +53,8 @@ pub async fn read_destinations_from_file(
 ) -> Result<Vec<Destination>, ServerFnError> {
     let file = std::fs::File::open(file_path.as_str())?;
     let reader = std::io::BufReader::new(file);
-    let result = serde_json::from_reader(reader)?;
-    log!("{result:?}");
+    let result: Vec<Destination> = serde_json::from_reader(reader)?;
+    log!("{:?}", result.first());
 
     // let result = vec![Destination::default()];
     // log!("read destinations from file called");

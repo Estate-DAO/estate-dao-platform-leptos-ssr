@@ -26,7 +26,7 @@ impl EnvVarConfig {
         .unwrap();
 
         if provab_headers.is_empty() {
-            panic!("set PROVAB_HEADERS as empty string!");
+            panic!(" PROVAB_HEADERS  = {provab_headers:?}");
         };
         let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();
 
@@ -35,7 +35,6 @@ impl EnvVarConfig {
             provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL_TEST).unwrap(),
         };
 
-        dbg!(&value);
         value
     }
 
@@ -82,8 +81,8 @@ pub enum EstateEnvConfigError {
     // ConfigSectionNotFound,
     #[error("Failed to get Estate Environment. Did you set environment vairables?")]
     EnvError,
-    #[error("Config Error: {0}")]
-    ConfigError(String),
+    // #[error("Config Error: {0}")]
+    // ConfigError(String),
     #[error("Config Error: {0}")]
     EnvVarError(String),
 }

@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use super::consts::EnvVarConfig;
-use super::{
-    ApiClientResult,
-    ApiError,
-};
+use super::{ApiClientResult, ApiError};
 use error_stack::{report, Report, ResultExt};
 use leptos::expect_context;
 use leptos::logging::log;
