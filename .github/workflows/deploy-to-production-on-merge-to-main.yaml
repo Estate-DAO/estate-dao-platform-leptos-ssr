@@ -26,8 +26,8 @@ jobs:
 
       - name: Set secret tokens
         run: |
-          flyctl secrets set LOCAL="$LOCAL" --app "estatefe" --stage
-          flyctl secrets set PROVAB_HEADERS="$PROVAB_HEADERS" --app "estatefe" --stage
+          flyctl secrets set LOCAL=$LOCAL --app "estatefe" --stage
+          flyctl secrets set PROVAB_HEADERS=$PROVAB_HEADERS --app "estatefe" --stage
         env:
           LOCAL: ${{ secrets.PROVAB_STAGING_OR_PROD }}
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
