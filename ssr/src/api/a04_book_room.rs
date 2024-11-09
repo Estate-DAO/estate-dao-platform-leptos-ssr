@@ -115,7 +115,7 @@ impl ProvabReq for BookRoomRequest {
     }
 }
 
-#[server(BlockRoom, "/book_room")]
+#[server(BlockRoom)]
 pub async fn book_room(request: BookRoomRequest) -> Result<BookRoomResponse, ServerFnError> {
     let provab = Provab::default();
 

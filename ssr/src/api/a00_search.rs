@@ -2,7 +2,6 @@ use leptos::*;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use super::consts::is_local_env;
 use super::{ProvabReq, ProvabReqMeta};
 use crate::api::Provab;
 use crate::component::{Destination, GuestSelection};
@@ -213,9 +212,6 @@ impl ProvabReqMeta for HotelSearchRequest {
 
 impl From<SearchCtx> for HotelSearchRequest {
     fn from(ctx: SearchCtx) -> Self {
-        // if is_local_env() {
-        //     return Default::default();
-        // }
         let check_in_date = SelectedDateRange::format_date(ctx.date_range.get_untracked().start);
         let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
         // let no_of_nights = 2;
@@ -235,7 +231,7 @@ impl From<SearchCtx> for HotelSearchRequest {
     }
 }
 
-#[server(SearchHotel, "/search_hotel")]
+#[server(SearchHotel)]
 pub async fn search_hotel(
     request: HotelSearchRequest,
 ) -> Result<HotelSearchResponse, ServerFnError> {

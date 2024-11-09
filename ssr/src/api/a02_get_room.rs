@@ -1,6 +1,7 @@
 use super::{
-    consts::{get_headers_from_env, get_provab_base_url_from_env},
-    ProvabReq, ProvabReqMeta,
+    // consts::{get_headers_from_env, get_provab_base_url_from_env},
+    ProvabReq,
+    ProvabReqMeta,
 };
 use crate::api::Provab;
 
@@ -208,7 +209,7 @@ impl ProvabReqMeta for HotelRoomRequest {
     type Response = HotelRoomResponse;
 }
 
-#[server(GetRoom, "/get_room")]
+#[server(GetRoom)]
 pub async fn get_room(request: HotelRoomRequest) -> Result<HotelRoomResponse, ServerFnError> {
     let provab = Provab::default();
 

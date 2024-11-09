@@ -1,4 +1,5 @@
 use crate::{
+    api::consts::EnvVarConfig,
     error_template::{AppError, ErrorTemplate},
     page::{BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage, RootPage},
     state::{
@@ -50,6 +51,10 @@ impl AppRoutes {
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+
+    // fallible component in app startup
+    // -> if environment variables are not defined, panic!
+    provide_context(EnvVarConfig::try_from_env());
 
     provide_context(SearchCtx::default());
     provide_context(SearchListResults::default());

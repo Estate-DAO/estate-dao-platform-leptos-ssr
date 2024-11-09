@@ -1,4 +1,5 @@
 use cfg_if::cfg_if;
+use estate_fe::{api::consts::EnvVarConfig, init::AppStateBuilder};
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -29,18 +30,7 @@ cfg_if! {
 
             handle_server_fns_with_context(
                 move || {
-                    // provide_context(app_state.canisters.clone());
-                    // #[cfg(feature = "backend-admin")]
-                    // provide_context(app_state.admin_canisters.clone());
-                    // #[cfg(feature = "cloudflare")]
-                    // provide_context(app_state.cloudflare.clone());
-                    // provide_context(app_state.kv.clone());
-                    // provide_context(app_state.cookie_key.clone());
-                    // #[cfg(feature = "oauth-ssr")]
-                    // provide_context(app_state.google_oauth_clients.clone());
-
-                    // #[cfg(feature = "ga4")]
-                    // provide_context(app_state.grpc_offchain_channel.clone());
+                    provide_context(app_state.env_var_config.clone());
                 },
                 request,
             )
@@ -67,6 +57,7 @@ cfg_if! {
 
                     // #[cfg(feature = "ga4")]
                     // provide_context(app_state.grpc_offchain_channel.clone());
+                    provide_context(app_state.env_var_config.clone());
                 },
                 App,
             );
@@ -89,19 +80,28 @@ cfg_if! {
         // let routes = generate_route_list(App);
         let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
 
+        let res = AppStateBuilder::new(leptos_options, routes.clone())
+        .build()
+        .await;
 
         // build our application with a route
         let app = Router::new()
-            .leptos_routes(&leptos_options, routes, App)
+            .route(
+                "/api/*fn_name",
+                get(server_fn_handler).post(server_fn_handler),
+            )
+            .leptos_routes_with_handler(routes, get(leptos_routes_handler))
             .fallback(file_and_error_handler)
-            .with_state(leptos_options);
+            .with_state(res);
 
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
         logging::log!("listening on http://{}", &addr);
         axum::serve(listener, app.into_make_service())
             .await
             .unwrap();
+
     }
+
     }
 }
 
