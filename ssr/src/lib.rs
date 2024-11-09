@@ -6,8 +6,12 @@ pub mod page;
 pub mod state;
 pub mod utils;
 
-#[cfg(feature = "ssr")]
-pub mod fallback;
+cfg_if::cfg_if! {
+    if #[cfg(feature =   "ssr")]{
+        pub mod fallback;
+        pub mod init;
+    }
+}
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "hydrate")] {

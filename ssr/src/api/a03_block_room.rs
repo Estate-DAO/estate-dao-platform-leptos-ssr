@@ -99,7 +99,7 @@ impl ProvabReqMeta for BlockRoomRequest {
     type Response = BlockRoomResponse;
 }
 
-#[server(BlockRoom, "/block_room")]
+#[server(BlockRoom)]
 pub async fn block_room(request: BlockRoomRequest) -> Result<BlockRoomResponse, ServerFnError> {
     let provab = Provab::default();
 

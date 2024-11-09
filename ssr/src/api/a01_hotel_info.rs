@@ -211,7 +211,7 @@ impl ProvabReqMeta for HotelInfoRequest {
     type Response = HotelInfoResponse;
 }
 
-#[server(HotelInfo, "/hotel_info")]
+#[server(HotelInfo)]
 pub async fn hotel_info(
     request: HotelInfoRequest,
     // hote_code: String

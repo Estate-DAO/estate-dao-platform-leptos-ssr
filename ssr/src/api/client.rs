@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use super::consts::EnvVarConfig;
 use super::{
-    consts::{get_headers_from_env, get_provab_base_url_from_env},
-    ApiClientResult, ApiError,
+    ApiClientResult,
+    ApiError,
 };
 use error_stack::{report, Report, ResultExt};
+use leptos::expect_context;
 use leptos::logging::log;
 use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
@@ -51,7 +53,13 @@ pub trait ProvabReqMeta: Sized + Send {
 
 pub trait ProvabReq: ProvabReqMeta {
     fn base_path() -> String {
-        get_provab_base_url_from_env().to_owned()
+        // get_provab_base_url_from_env().to_owned()
+        // log!("base_path() BEFORE");
+
+        let env_var_config: EnvVarConfig = expect_context();
+        // log!("base_path(): {env_var_config:#?}");
+
+        env_var_config.provab_base_url
     }
 
     fn path() -> String {
@@ -61,7 +69,12 @@ pub trait ProvabReq: ProvabReqMeta {
     fn path_suffix() -> &'static str;
 
     fn headers() -> HeaderMap {
-        get_headers_from_env()
+        // get_headers_from_env()
+        // log!("headers(): BEFORE");
+
+        let env_var_config: EnvVarConfig = expect_context();
+
+        env_var_config.get_headers()
     }
 
     fn custom_headers() -> HeaderMap {
@@ -72,7 +85,7 @@ pub trait ProvabReq: ProvabReqMeta {
 #[derive(Clone, Debug)]
 pub struct Provab {
     client: reqwest::Client,
-    base_url: Arc<Url>,
+    // base_url: Arc<Url>,
 }
 
 impl Default for Provab {
@@ -82,7 +95,7 @@ impl Default for Provab {
                 // .gzip(true)
                 .build()
                 .unwrap(),
-            base_url: Arc::new(get_provab_base_url_from_env().parse().unwrap()),
+            // base_url: Arc::new(get_provab_base_url_from_env().parse().unwrap()),
         }
     }
 }
@@ -93,7 +106,7 @@ impl Provab {
     pub fn new(base_url: Url) -> Self {
         Self {
             client: Default::default(),
-            base_url: Arc::new(base_url),
+            // base_url: Arc::new(base_url),
         }
     }
 

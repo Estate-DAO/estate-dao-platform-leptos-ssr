@@ -47,7 +47,7 @@ impl Destination {
     }
 }
 
-#[server(GetCityList, "/city_list")]
+#[server(GetCityList)]
 pub async fn read_destinations_from_file(
     file_path: String,
 ) -> Result<Vec<Destination>, ServerFnError> {
