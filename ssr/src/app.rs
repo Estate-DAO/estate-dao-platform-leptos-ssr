@@ -54,7 +54,7 @@ pub fn App() -> impl IntoView {
 
     // fallible component in app startup
     // -> if environment variables are not defined, panic!
-    provide_context(EnvVarConfig::try_from_env());
+    // provide_context(EnvVarConfig::try_from_env());
 
     provide_context(SearchCtx::default());
     provide_context(SearchListResults::default());
