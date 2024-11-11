@@ -9,6 +9,9 @@ on:
         type: boolean
   workflow_dispatch:
 
+env:
+  ACTIONS_STEP_DEBUG: true
+
 jobs:
   build_check:
     runs-on: ubuntu-latest
@@ -83,13 +86,11 @@ jobs:
       - name: Archive production artifacts
         uses: actions/upload-artifact@v3
         if: ${{ inputs.publish-artifact }}
-        env:
-          ACTIONS_STEP_DEBUG: true
         with:
           name: build-musl
           path: |
             target/x86_64-unknown-linux-musl/release/estate-fe
             target/site
             .empty
-            target/debug/hash.txt
+            ssr/target/release/hash.txt
             city.json
