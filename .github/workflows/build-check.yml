@@ -9,8 +9,8 @@ on:
         type: boolean
   workflow_dispatch:
 
-env:
-  ACTIONS_STEP_DEBUG: true
+# env:
+#   ACTIONS_STEP_DEBUG: true
 
 jobs:
   build_check:
@@ -83,10 +83,10 @@ jobs:
           LOCAL: ${{ secrets.LOCAL }}
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
       
-      - name: List files and directory structure
-        run: |
-          echo "Current directory structure:"
-          tree -a || (apt-get update && apt-get install -y tree && tree -a)
+      # - name: List files and directory structure
+      #   run: |
+      #     echo "Current directory structure:"
+      #     tree -a || (apt-get update && apt-get install -y tree && tree -a)
   
       - run: touch .empty
       - name: Archive production artifacts
