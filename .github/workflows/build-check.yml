@@ -31,7 +31,7 @@ jobs:
 
       - uses: cargo-bins/cargo-binstall@main
       - name: cargo-leptos setup
-        run: cargo binstall --no-confirm cargo-leptos --version 0.2.20
+        run: cargo binstall --no-confirm cargo-leptos --version 0.2.21
 
       - name: Cache rust dependencies and build output
         uses: Swatinem/rust-cache@v2
@@ -89,5 +89,5 @@ jobs:
             target/x86_64-unknown-linux-musl/release/estate-fe
             target/site
             .empty
-            hash.txt
+            target/debug/hash.txt
             city.json
