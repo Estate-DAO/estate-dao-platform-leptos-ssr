@@ -7,8 +7,8 @@ WORKDIR /app
 
 COPY ./target/x86_64-unknown-linux-musl/release/estate-fe .
 COPY ./city.json .
-COPY ./ssr/target/debug/hash.txt ./debug/hash.txt
-COPY ./ssr/target/debug/hash.txt ./hash.txt
+COPY ./ssr/target/release/hash.txt ./release/hash.txt
+COPY ./ssr/target/release/hash.txt ./hash.txt
 COPY ./target/site ./site
 
 ENV LEPTOS_SITE_ROOT=site
