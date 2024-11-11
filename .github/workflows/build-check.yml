@@ -83,6 +83,8 @@ jobs:
       - name: Archive production artifacts
         uses: actions/upload-artifact@v3
         if: ${{ inputs.publish-artifact }}
+        env:
+          ACTIONS_STEP_DEBUG: true
         with:
           name: build-musl
           path: |
