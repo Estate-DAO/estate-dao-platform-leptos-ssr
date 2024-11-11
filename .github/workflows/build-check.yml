@@ -98,5 +98,5 @@ jobs:
             target/x86_64-unknown-linux-musl/release/estate-fe
             target/site
             .empty
-            ssr/target/release/hash.txt
+            ssr/target/x86_64-unknown-linux-musl/release/hash.txt
             city.json
