@@ -71,11 +71,6 @@ jobs:
           packages: musl-tools # provides musl-gcc
           version: 1.0
 
-      - name: List files and directory structure
-        run: |
-          echo "Current directory structure:"
-          tree -a || (apt-get update && apt-get install -y tree && tree -a)
-
       - name: lint check
         run: |
           cargo fmt --check
@@ -87,6 +82,12 @@ jobs:
           LEPTOS_HASH_FILES: true
           LOCAL: ${{ secrets.LOCAL }}
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
+      
+      - name: List files and directory structure
+        run: |
+          echo "Current directory structure:"
+          tree -a || (apt-get update && apt-get install -y tree && tree -a)
+  
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v3
