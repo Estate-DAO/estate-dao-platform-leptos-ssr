@@ -34,40 +34,6 @@ impl SearchCtx {
         this.date_range.set(date_range);
     }
 
-    // pub fn set_adults(num_adult: u32) {
-    //     let this: Self = expect_context();
-
-    //     this.guests
-    //         .update(|guest_selection| guest_selection.adults.set(num_adult));
-    // }
-
-    // pub fn set_children(num_children: u32) {
-    //     let this: Self = expect_context();
-
-    //     this.guests
-    //         .update(|guest_selection| guest_selection.children.set(num_children));
-    // }
-
-    // /// ensure total number of children does not exceed the number of children ages
-    // pub fn set_children_ages(ages: Vec<u32>) {
-    //     let this: Self = expect_context();
-
-    //     let children_count = this.guests.get_untracked().children.get();
-    //     if children_count >= 1 && ages.len() <= children_count as usize {
-    //         this.guests.update(|guest_selection| {
-    //             guest_selection
-    //                 .children_ages
-    //                 .update(|existing_ages| existing_ages.extend(ages))
-    //         });
-    //     }
-    // }
-
-    //     pub fn set_guests(guest_selection: GuestSelection) {
-    //         let this: Self = expect_context();
-
-    //         this.guests.set(guest_selection);
-    //     }
-
     pub fn log_state() {
         let this: Self = expect_context();
 

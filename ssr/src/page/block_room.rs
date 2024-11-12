@@ -66,29 +66,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     });
 
     let num_nights = Signal::derive(move || {
-        let date_range = search_ctx.date_range.get();
-        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples
-        // representing (year, month, day)
-        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) =
-            (date_range.start, date_range.end)
-        {
-            // Convert tuple to NaiveDate
-            let start = chrono::NaiveDate::from_ymd_opt(
-                start_year as i32,
-                start_month as u32,
-                start_day as u32,
-            )
-            .unwrap_or_default();
-
-            let end =
-                chrono::NaiveDate::from_ymd_opt(end_year as i32, end_month as u32, end_day as u32)
-                    .unwrap_or_default();
-
-            let duration = end.signed_duration_since(start);
-            duration.num_days() as u32
-        } else {
-            0
-        }
+        search_ctx.date_range.get().no_of_nights()
     });
 
     let total_price = create_memo(move |_| {
