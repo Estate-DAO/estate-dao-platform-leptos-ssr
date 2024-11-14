@@ -8,6 +8,9 @@ pub enum ApiError {
     #[error("Provab response error")]
     ResponseError,
 
+    #[error("Base64DecodeFailed - {0}")]
+    Base64DecodeFailed(String),
+
     #[error("Decompression failed - {0}")]
     DecompressionFailed(String),
 

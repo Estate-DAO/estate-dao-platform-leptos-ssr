@@ -858,6 +858,7 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
+ "base64",
  "better-panic",
  "cfg-if",
  "chrono",

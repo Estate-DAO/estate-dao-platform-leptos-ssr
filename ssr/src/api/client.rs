@@ -21,19 +21,44 @@ pub trait ProvabReqMeta: Sized + Send {
     /// and extracts the `result` field
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
         use flate2::read::GzDecoder;
+        use flate2::read::MultiGzDecoder;
+        use base64::prelude::*;
 
-        // log!("deserialize_response- body:String : {body:?}\n\n\n");
+
+        log!("deserialize_response- body:String : {:?}\n\n\n", body);
         let decompressed_body = if Self::GZIP {
-            let mut d = GzDecoder::new(body.as_bytes());
-            let mut s = String::new();
-            d.read_to_string(&mut s).map_err(|e| {
-                // log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
-                report!(ApiError::DecompressionFailed(e.to_string()))
+
+        let decoded_body = BASE64_STANDARD
+            .decode(body)
+            .map_err(|e| {
+                log!("\n\ndeserialize_response- Base64DecodeFailed: {e:?}\n\n");
+                report!(ApiError::Base64DecodeFailed(e.to_string()))
             })?;
-            s
-        } else {
-            body
-        };
+
+            log!("base64 decoded_body:String : {:?}\n\n\n", decoded_body);
+
+        //     let mut d = GzDecoder::new(decoded_body);
+        //     // let mut d = MultiGzDecoder::new(decoded_body);
+        //     let mut s = String::new();
+        //     d.read_to_string(&mut s).map_err(|e| {
+        //         log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
+        //         report!(ApiError::DecompressionFailed(e.to_string()))
+        //     })?;
+        //     s
+        // } else {
+        //     body
+        // };
+
+        let mut d = GzDecoder::new(std::io::Cursor::new(decoded_body)); // Wrap decoded_body in a Cursor
+        let mut s = String::new();
+        d.read_to_string(&mut s).map_err(|e| {
+            log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
+            report!(ApiError::DecompressionFailed(e.to_string()))
+        })?;
+        s
+    } else {
+        body
+    };
 
         let jd = &mut serde_json::Deserializer::from_str(&decompressed_body);
         let res: Self::Response = serde_path_to_error::deserialize(jd).map_err(|e| {
