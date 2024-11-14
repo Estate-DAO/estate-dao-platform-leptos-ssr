@@ -4,7 +4,7 @@ use crate::{
         HotelRoomDetail, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest,
         HotelSearchResponse,
     },
-    component::{Destination, GuestSelection, SelectedDateRange},
+    component::{Destination, GuestSelection, SelectedDateRange}, page::{SortedRoom, RoomCounterKeyValue},
 };
 use leptos::RwSignal;
 use leptos::*;
@@ -110,7 +110,10 @@ impl SearchListResults {
 pub struct HotelInfoResults {
     pub search_result: RwSignal<Option<HotelInfoResponse>>,
     pub room_result: RwSignal<Option<HotelRoomResponse>>,
+    pub price_per_night: RwSignal<f64>,
+    pub room_counters: RwSignal<HashMap::<String, RoomCounterKeyValue>>
 }
+
 
 impl HotelInfoResults {
     fn from_leptos_context() -> Self {
@@ -149,27 +152,41 @@ impl HotelInfoResults {
             .and_then(|response| response.get_hotel_room_details())
     }
 
-    pub fn block_room_request(&self) -> BlockRoomRequest {
+    pub fn set_price_per_night(&self, per_night_calc: f64) {
+        Self::from_leptos_context()
+            .price_per_night
+            .set(per_night_calc);
+    }
+
+    pub fn set_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
+        Self::from_leptos_context()
+            .room_counters
+            .set(room_counters);
+    }
+
+    pub fn block_room_request(&self, uniq_room_ids: Vec<String>) -> BlockRoomRequest {
         // Get unique room IDs from the room response
-        let room_unique_id = self
-            .room_result
-            .get()
-            .as_ref()
-            .map(|response| {
-                response
-                    .room_list
-                    .as_ref()
-                    .map(|room_list| {
-                        room_list
-                            .get_hotel_room_result
-                            .hotel_rooms_details
-                            .iter()
-                            .map(|room| room.room_unique_id.clone())
-                            .collect()
-                    })
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default();
+        // let room_unique_id = self
+        //     .room_result
+        //     .get()
+        //     .as_ref()
+        //     .map(|response| {
+        //         response
+        //             .room_list
+        //             .as_ref()
+        //             .map(|room_list| {
+        //                 room_list
+        //                     .get_hotel_room_result
+        //                     .hotel_rooms_details
+        //                     .iter()
+        //                     .map(|room| room.room_unique_id.clone())
+        //                     .collect()
+        //             })
+        //             .unwrap_or_default()
+        //     })
+        //     .unwrap_or_default();
+
+        let room_unique_id = uniq_room_ids;
 
         // Get token from SearchListResults context since that has the token map
         let search_list_results: SearchListResults = expect_context();
