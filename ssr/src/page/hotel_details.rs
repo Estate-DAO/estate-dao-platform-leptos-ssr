@@ -285,7 +285,8 @@ pub fn HotelImages() -> impl IntoView {
 
 
 #[derive( Debug, Clone)]
-struct RoomCounterKeyValue{
+pub struct RoomCounterKeyValue{
+    // counter room
     key: RwSignal<u32>,
     /// room_unique_id
     value: RwSignal<Option<String>>
@@ -322,10 +323,11 @@ pub fn PricingBookNow() -> impl IntoView {
     let search_ctx: SearchCtx = expect_context();
     let num_adults = Signal::derive(move || search_ctx.guests.get().adults.get());
     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
+    let hotel_info_results_clone = hotel_info_results.clone();
 
     // Create a memo for room details
     let room_details = create_memo(move |_| {
-        let details = hotel_info_results
+        let details = hotel_info_results_clone
             .get_hotel_room_details()
             .unwrap_or_default();
         log!("Room details: {:?}", details);
@@ -333,6 +335,8 @@ pub fn PricingBookNow() -> impl IntoView {
     });
 
     // Create RwSignal for room counters map
+    // let room_counters = hotel_info_results.room_counters;
+
     let room_counters = create_rw_signal(HashMap::<String, RoomCounterKeyValue>::new());
 
     // Create a memo for the processed room data
@@ -346,7 +350,7 @@ pub fn PricingBookNow() -> impl IntoView {
             let entry = room_count_map.entry(room_type.clone()).or_insert(("".to_string(), 0, 0.0));
             entry.0 = room.room_unique_id;
             entry.1 += 1;
-            entry.2 = room.price.room_price as f64;
+            entry.2 = room.price.offered_price as f64;
 
 
             room_counters.update(|counters| {
@@ -467,6 +471,7 @@ pub fn PricingBookNow() -> impl IntoView {
                     <PricingBreakdown
                         price_per_night=price
                         number_of_nights=num_nights
+                        room_counters=room_counters
                     />
                 </div>
             </div>
@@ -478,6 +483,7 @@ pub fn PricingBookNow() -> impl IntoView {
 pub fn PricingBreakdown(
     #[prop(into)] price_per_night: Signal<f64>,
     #[prop(into)] number_of_nights: Signal<u32>,
+    #[prop(into)] room_counters: RwSignal<HashMap::<String, RoomCounterKeyValue>>,
 ) -> impl IntoView {
     let per_night_calc =
         create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
@@ -493,13 +499,23 @@ pub fn PricingBreakdown(
         let nav = navigate.clone();
         let hotel_info_results: HotelInfoResults = expect_context();
 
+        let uniq_room_ids: Vec<String> =
+        room_counters
+        .get_untracked()
+        .values()
+        .filter_map(|counter| counter.value.get_untracked())
+        .collect();
+
         async move {
             // Reset previous block room results
             BlockRoomResults::reset();
 
             // Create block room request using HotelInfoResults
             // todo use room_counters
-            let block_room_request = hotel_info_results.block_room_request();
+            hotel_info_results.set_price_per_night(price_per_night.get());
+            hotel_info_results.set_room_counters(room_counters.get());
+
+            let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 
             // Call server function inside action
             spawn_local(async move {
