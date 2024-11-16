@@ -43,6 +43,18 @@
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #555;
       }
+
+      .payment-button {
+        transition: border-color 0.3s ease;
+      }
+    
+      input[type='radio']:checked + label {
+        background-color: #e0ffe0; /* Light green background when selected */
+      }
+    
+      input[type='radio'] {
+        display: none; /* Hide the radio input */
+      }
       
       /* Dark theme variant */
       /* .custom-scrollbar-dark {
