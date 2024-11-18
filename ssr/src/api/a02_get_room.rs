@@ -94,8 +94,8 @@ pub struct Price {
     // #[serde(rename = "PublishedPriceRoundedOff")]
     // published_price_rounded_off: i32,
 
-    // #[serde(rename = "OfferedPrice")]
-    // offered_price: f64,
+    #[serde(rename = "OfferedPrice")]
+    pub offered_price: f64,
 
     // #[serde(rename = "OfferedPriceRoundedOff")]
     // offered_price_rounded_off: i32,
