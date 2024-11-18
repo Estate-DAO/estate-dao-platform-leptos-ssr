@@ -283,21 +283,19 @@ pub fn HotelImages() -> impl IntoView {
     }
 }
 
-
-#[derive( Debug, Clone)]
-pub struct RoomCounterKeyValue{
+#[derive(Debug, Clone)]
+pub struct RoomCounterKeyValue {
     // counter room
     key: RwSignal<u32>,
     /// room_unique_id
-    value: RwSignal<Option<String>>
+    value: RwSignal<Option<String>>,
 }
 
-impl RoomCounterKeyValue{
-    fn new() -> Self{
+impl RoomCounterKeyValue {
+    fn new() -> Self {
         Self::default()
     }
 }
-
 
 impl Default for RoomCounterKeyValue {
     fn default() -> Self {
@@ -308,14 +306,13 @@ impl Default for RoomCounterKeyValue {
     }
 }
 
-#[derive(PartialEq,  Debug, Default, Clone)]
+#[derive(PartialEq, Debug, Default, Clone)]
 pub struct SortedRoom {
-    room_type:  String,
+    room_type: String,
     room_unique_id: String,
     room_count_for_given_type: u32,
-    room_price: f64
+    room_price: f64,
 }
-
 
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
@@ -346,12 +343,13 @@ pub fn PricingBookNow() -> impl IntoView {
 
         for room in room_details.get() {
             let room_type = room.room_type_name.to_string(); // Convert to owned String
-            
-            let entry = room_count_map.entry(room_type.clone()).or_insert(("".to_string(), 0, 0.0));
+
+            let entry = room_count_map
+                .entry(room_type.clone())
+                .or_insert(("".to_string(), 0, 0.0));
             entry.0 = room.room_unique_id;
             entry.1 += 1;
             entry.2 = room.price.offered_price as f64;
-
 
             room_counters.update(|counters| {
                 if !counters.contains_key(&room_type) {
@@ -362,10 +360,14 @@ pub fn PricingBookNow() -> impl IntoView {
 
         let mut sorted: Vec<SortedRoom> = room_count_map
             .into_iter()
-            .map(|(k, v)| SortedRoom{room_type: k, room_unique_id: v.0, room_count_for_given_type: v.1, room_price: v.2} )
+            .map(|(k, v)| SortedRoom {
+                room_type: k,
+                room_unique_id: v.0,
+                room_count_for_given_type: v.1,
+                room_price: v.2,
+            })
             .collect();
 
-        
         sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type)); // Sort by room_type
         sorted.truncate(5);
         sorted
@@ -373,23 +375,27 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Create a memo for total price calculation
     let total_room_price = create_memo(move |_| {
-        sorted_rooms
-            .get()
-            .iter()
-            .fold(0.0, |acc, SortedRoom{room_type, room_unique_id, room_count_for_given_type, room_price}| {
+        sorted_rooms.get().iter().fold(
+            0.0,
+            |acc,
+             SortedRoom {
+                 room_type,
+                 room_unique_id,
+                 room_count_for_given_type,
+                 room_price,
+             }| {
                 let counter = room_counters
                     .get()
                     .get(room_type.as_str()) // Change: use as_str() to get a string slice
                     .map(|sig| sig.key.get())
                     .unwrap_or(0);
                 acc + (room_price * counter as f64)
-            })
+            },
+        )
     });
 
     let price = Signal::derive(move || total_room_price.get());
-    let num_nights = Signal::derive(move || {
-       search_ctx.date_range.get().no_of_nights() 
-    });
+    let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
     let total_selected_rooms = create_memo(move |_| {
         room_counters
@@ -455,7 +461,7 @@ pub fn PricingBookNow() -> impl IntoView {
                                 <span class="font-medium">
                                     {format!("{} - ₹{:.2}/night", room_type,  room_price)}
                                 </span>
-                                <NumberCounterWrapper 
+                                <NumberCounterWrapper
                                 label=""
                                 counter=base_counter.key
                                 class="mt-4"
@@ -483,7 +489,7 @@ pub fn PricingBookNow() -> impl IntoView {
 pub fn PricingBreakdown(
     #[prop(into)] price_per_night: Signal<f64>,
     #[prop(into)] number_of_nights: Signal<u32>,
-    #[prop(into)] room_counters: RwSignal<HashMap::<String, RoomCounterKeyValue>>,
+    #[prop(into)] room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
 ) -> impl IntoView {
     let per_night_calc =
         create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
@@ -499,12 +505,11 @@ pub fn PricingBreakdown(
         let nav = navigate.clone();
         let hotel_info_results: HotelInfoResults = expect_context();
 
-        let uniq_room_ids: Vec<String> =
-        room_counters
-        .get_untracked()
-        .values()
-        .filter_map(|counter| counter.value.get_untracked())
-        .collect();
+        let uniq_room_ids: Vec<String> = room_counters
+            .get_untracked()
+            .values()
+            .filter_map(|counter| counter.value.get_untracked())
+            .collect();
 
         async move {
             // Reset previous block room results
@@ -572,8 +577,6 @@ pub fn PricingBreakdown(
     }
 }
 
-
-
 #[component]
 pub fn NumberCounterWrapper(
     #[prop(into)] label: String,
@@ -602,8 +605,6 @@ pub fn NumberCounterWrapper(
         />
     }
 }
-
-
 
 #[component]
 pub fn NumberCounter(
