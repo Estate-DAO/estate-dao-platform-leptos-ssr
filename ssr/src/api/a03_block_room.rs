@@ -15,29 +15,54 @@ pub struct BlockRoomRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlockRoomResponse {
+pub struct BlockRoomResult {
     #[serde(rename = "IsPriceChanged")]
     pub is_price_changed: bool,
 
     #[serde(rename = "IsCancellationPolicyChanged")]
     pub is_cancellation_policy_changed: bool,
 
-    #[serde(rename = "HotelRoomDetails")]
-    pub hotel_room_details: Vec<HotelRoomDetail>,
+    #[serde(rename = "BlockRoomId")]
+    pub block_room_id: String, 
+
+    #[serde(rename = "HotelRoomsDetails")]
+    pub hotel_rooms_details: Vec<HotelRoomDetail>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BlockRoomResponse {
+    #[serde(rename = "Status")]
+    pub status: u32,
+
+    #[serde(rename = "Message")]
+    pub message: Option<String>,
+    
+    #[serde(rename = "BlockRoom")]
+    pub block_room: BlockRoomContainer,
+    
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct  BlockRoomContainer {
+    #[serde(rename = "BlockRoomResult")]
+    block_room_result: BlockRoomResult
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HotelRoomDetail {
-    #[serde(rename = "RoomUniqueId")]
-    pub room_unique_id: String,
+    // #[serde(rename = "RoomUniqueId")]
+    // pub room_unique_id: String,
 
     pub room_code: String,
 
-    #[serde(rename = "RoomIndex")]
-    pub room_index: i32,
+    #[serde(rename = "HotelCode")]
+    pub hotel_code: String,
 
-    #[serde(rename = "RatePlanCode")]
-    pub rate_plan_code: Option<String>,
+    // #[serde(rename = "RoomIndex")]
+    // pub room_index: i32,
+
+    // #[serde(rename = "RatePlanCode")]
+    // pub rate_plan_code: Option<String>,
 
     #[serde(rename = "RoomTypeCode")]
     pub room_type_code: Option<String>,
@@ -55,20 +80,20 @@ pub struct Price {
     // published_price: f64,
     // #[serde(rename = "PublishedPriceRoundedOff")]
     // published_price_rounded_off: i32,
-    // #[serde(rename = "OfferedPrice")]
-    // offered_price: f64,
+    #[serde(rename = "OfferedPrice")]
+    offered_price: f64,
     // #[serde(rename = "OfferedPriceRoundedOff")]
     // offered_price_rounded_off: i32,
-    #[serde(rename = "RoomPrice")]
-    room_price: i32,
+    // #[serde(rename = "RoomPrice")]
+    // room_price: f64,
     // #[serde(rename = "Tax")]
     // tax: i32,
-    #[serde(rename = "ExtraGuestCharge")]
-    extra_guest_charge: i32,
-    #[serde(rename = "ChildCharge")]
-    child_charge: i32,
-    #[serde(rename = "OtherCharges")]
-    other_charges: i32,
+    // #[serde(rename = "ExtraGuestCharge")]
+    // extra_guest_charge: f64,
+    // #[serde(rename = "ChildCharge")]
+    // child_charge: f64,
+    // #[serde(rename = "OtherCharges")]
+    // other_charges: f64,
     // #[serde(rename = "Discount")]
     // discount: i32,
     // #[serde(rename = "AgentCommission")]

@@ -44,60 +44,43 @@ pub fn BlockRoomPage() -> impl IntoView {
     let block_room_ctx = expect_context::<BlockRoomCtx>();
 
     let hotel_info_results_clone = hotel_info_results.clone();
+    // let room_price = create_memo(move |_| {
+    //     hotel_info_results_clone
+    //         .room_result
+    //         .get()
+    //         .and_then(|response| response.room_list.clone())
+    //         .and_then(|room_list| {
+    //             room_list
+    //                 .get_hotel_room_result
+    //                 .hotel_rooms_details
+    //                 .first()
+    //                 .map(|room| room.price.room_price as f64)
+    //         })
+    //         .unwrap_or(0.0)
+    // });
     let room_price = create_memo(move |_| {
         hotel_info_results_clone
-            .room_result
+            .price_per_night
             .get()
-            .and_then(|response| response.room_list.clone())
-            .and_then(|room_list| {
-                room_list
-                    .get_hotel_room_result
-                    .hotel_rooms_details
-                    .first()
-                    .map(|room| room.price.room_price as f64)
-            })
-            .unwrap_or(0.0)
     });
 
-    let total_price_per_night = create_memo(move |_| {
-        let price = room_price.get();
-        let num_rooms = search_ctx.guests.get().rooms.get();
-        price * num_rooms as f64
-    });
+    // let total_price_per_night = create_memo(move |_| {
+    //     let price = room_price.get();
+    //     let num_rooms = search_ctx.guests.get().rooms.get();
+    //     price * num_rooms as f64
+    // });
 
     let num_nights = Signal::derive(move || {
-        let date_range = search_ctx.date_range.get();
-        // Assuming date_range.start and date_range.end are (u32, u32, u32) tuples
-        // representing (year, month, day)
-        if let ((start_year, start_month, start_day), (end_year, end_month, end_day)) =
-            (date_range.start, date_range.end)
-        {
-            // Convert tuple to NaiveDate
-            let start = chrono::NaiveDate::from_ymd_opt(
-                start_year as i32,
-                start_month as u32,
-                start_day as u32,
-            )
-            .unwrap_or_default();
-
-            let end =
-                chrono::NaiveDate::from_ymd_opt(end_year as i32, end_month as u32, end_day as u32)
-                    .unwrap_or_default();
-
-            let duration = end.signed_duration_since(start);
-            duration.num_days() as u32
-        } else {
-            0
-        }
+        search_ctx.date_range.get().no_of_nights()
     });
 
     let total_price = create_memo(move |_| {
-        let price_per_night = total_price_per_night.get();
+        let room_price = room_price.get();
         let nights = num_nights.get();
-        price_per_night * nights as f64
+        room_price * nights as f64
     });
 
-    let final_total = create_memo(move |_| total_price.get());
+    // let final_total = create_memo(move |_| total_price.get());
 
     // Helper function to create passenger details
     fn create_passenger_details(
@@ -529,16 +512,16 @@ pub fn BlockRoomPage() -> impl IntoView {
                     </div>
                 </div>
                 <div class="mb-[40rem] rounded-xl bg-white p-6 shadow-xl">
-                    <h2 class="mb-4 text-xl font-bold">"₹"{total_price_per_night.get() as u64}"/" "night" </h2>
+                    <h2 class="mb-4 text-xl font-bold">"₹"{room_price.get() as u64}"/" "night" </h2>
                     <Divider />
                     <div class="price-breakdown">
                         <div class="flex justify-between">
-                            <span>"₹"{total_price_per_night.get() as u64}" x "{move || pluralize(num_nights.get(), "night", "nights")}</span>
+                            <span>"₹"{room_price.get() as u64}" x "{move || pluralize(num_nights.get(), "night", "nights")}</span>
                         </div>
 
                         <div class="price-total mt-4 flex justify-between font-bold">
                             <span>"Total"</span>
-                            <span>"₹"{final_total.get() as u64}</span>
+                            <span>"₹"{total_price.get() as u64}</span>
                         </div>
                     </div>
                 </div>
