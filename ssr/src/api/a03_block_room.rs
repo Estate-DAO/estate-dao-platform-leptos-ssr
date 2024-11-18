@@ -23,7 +23,7 @@ pub struct BlockRoomResult {
     pub is_cancellation_policy_changed: bool,
 
     #[serde(rename = "BlockRoomId")]
-    pub block_room_id: String, 
+    pub block_room_id: String,
 
     #[serde(rename = "HotelRoomsDetails")]
     pub hotel_rooms_details: Vec<HotelRoomDetail>,
@@ -36,23 +36,21 @@ pub struct BlockRoomResponse {
 
     #[serde(rename = "Message")]
     pub message: Option<String>,
-    
+
     #[serde(rename = "BlockRoom")]
     pub block_room: BlockRoomContainer,
-    
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct  BlockRoomContainer {
+pub struct BlockRoomContainer {
     #[serde(rename = "BlockRoomResult")]
-    block_room_result: BlockRoomResult
+    block_room_result: BlockRoomResult,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HotelRoomDetail {
     // #[serde(rename = "RoomUniqueId")]
     // pub room_unique_id: String,
-
     pub room_code: String,
 
     #[serde(rename = "HotelCode")]
@@ -63,7 +61,6 @@ pub struct HotelRoomDetail {
 
     // #[serde(rename = "RatePlanCode")]
     // pub rate_plan_code: Option<String>,
-
     #[serde(rename = "RoomTypeCode")]
     pub room_type_code: Option<String>,
 

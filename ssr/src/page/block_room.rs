@@ -58,11 +58,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     //         })
     //         .unwrap_or(0.0)
     // });
-    let room_price = create_memo(move |_| {
-        hotel_info_results_clone
-            .price_per_night
-            .get()
-    });
+    let room_price = create_memo(move |_| hotel_info_results_clone.price_per_night.get());
 
     // let total_price_per_night = create_memo(move |_| {
     //     let price = room_price.get();
@@ -70,9 +66,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     //     price * num_rooms as f64
     // });
 
-    let num_nights = Signal::derive(move || {
-        search_ctx.date_range.get().no_of_nights()
-    });
+    let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
     let total_price = create_memo(move |_| {
         let room_price = room_price.get();
