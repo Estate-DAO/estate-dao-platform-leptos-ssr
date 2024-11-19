@@ -856,7 +856,6 @@ version = "0.1.0"
 dependencies = [
  "accounting",
  "anyhow",
- "async-trait",
  "axum",
  "axum-extra",
  "better-panic",

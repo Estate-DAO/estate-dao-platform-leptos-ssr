@@ -32,3 +32,5 @@ mod types;
 pub use types::*;
 
 pub mod consts;
+
+pub mod payments;

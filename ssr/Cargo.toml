@@ -51,7 +51,7 @@ serde_path_to_error = "0.1.16"
 leptos_query = { version = "0.5.3", features = ["local_storage", "indexed_db"] }
 leptos_query_devtools = { version = "0.1.3", features = ["wasm-bindgen", "web-sys", "js-sys"] }
 better-panic = "0.3.0"
-async-trait = "0.1"
+# async-trait = "0.1"
 wasm-bindgen-futures = "0.4"
 
 # reqwest = { version = "0.12.8", default-features = false, features = ["json", "http2", "gzip", "deflate"] }
