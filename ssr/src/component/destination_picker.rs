@@ -73,7 +73,7 @@ fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
             refetch_interval: None,
             resource_option: Some(ResourceOption::NonBlocking),
             stale_time: Some(Duration::from_secs(2 * 60)),
-            gc_time: Some(Duration::from_secs(60)),
+            gc_time: Some(Duration::from_secs(5 * 60)),
         },
     )
 }
