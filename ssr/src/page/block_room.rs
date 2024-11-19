@@ -13,6 +13,9 @@ use crate::state::search_state::HotelInfoResults;
 use crate::state::view_state::AdultDetail;
 use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::ChildDetail;
+// use web_sys::localStorage;
+use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 
 use crate::{
     api::{
@@ -29,6 +32,131 @@ use crate::{
 };
 use chrono::NaiveDate;
 use leptos::logging::log;
+
+#[derive(Serialize)]
+struct CreateInvoiceRequest {
+    price_amount: u32,
+    price_currency: String,
+    order_id: String,
+    order_description: String,
+    ipn_callback_url: String,
+    success_url: String,
+    cancel_url: String,
+    partially_paid_url: String,
+    is_fixed_rate: bool,
+    is_fee_paid_by_user: bool,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct CreateInvoiceResponse {
+    id: String,
+    token_id: String,
+    order_id: String,
+    order_description: String,
+    price_amount: String,
+    price_currency: String,
+    pay_currency: Option<String>,
+    ipn_callback_url: String,
+    invoice_url: String,
+    success_url: String,
+    cancel_url: String,
+    customer_email: Option<String>,
+    partially_paid_url: String,
+    payout_currency: Option<String>,
+    created_at: String,
+    updated_at: String,
+    is_fixed_rate: bool,
+    is_fee_paid_by_user: bool,
+    source: Option<String>,
+}
+
+#[async_trait(?Send)]
+trait PaymentGateway {
+    async fn create_invoice(&self, request: &CreateInvoiceRequest) -> Result<String, String>;
+    async fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String>;
+}
+
+struct NowPayments {
+    api_key: String,
+    api_host: String,
+}
+
+impl NowPayments {
+    fn new(api_key: String, api_host: String) -> Self {
+        Self { api_key, api_host }
+    }
+}
+
+#[async_trait(?Send)]
+impl PaymentGateway for NowPayments {
+    async fn create_invoice(&self, request: &CreateInvoiceRequest) -> Result<String, String> {
+        let client = reqwest::Client::new();
+        let url = format!("{}/v1/invoice", self.api_host);
+
+        let response = client
+            .post(url)
+            .header("x-api-key", &self.api_key)
+            .json(request)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let invoice_response: CreateInvoiceResponse = response.json().await.map_err(|e| e.to_string())?;
+
+        Ok(invoice_response.invoice_url)
+    }
+
+    async fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String> {
+        let client = reqwest::Client::new();
+        let url = format!("{}/v1/payment/{}", self.api_host, payment_id);
+
+        let response = client
+            .get(url)
+            .header("x-api-key", &self.api_key)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Parse response and determine PaymentStatus
+        // Placeholder implementation; replace with actual logic
+        if response.status().is_success() {
+            let payment_status_response: NowPaymentsPaymentStatusResponse = response.json().await.map_err(|e| e.to_string())?;
+
+            let status = match payment_status_response.payment_status.as_str() {
+                "waiting" => PaymentStatus::Waiting,
+                "confirming" => PaymentStatus::Confirming,
+                "confirmed" => PaymentStatus::Confirmed,
+                "sending" => PaymentStatus::Sending,
+                "partially_paid" => PaymentStatus::PartiallyPaid,
+                "finished" => PaymentStatus::Finished,
+                "refunded" => PaymentStatus::Refunded,
+                "expired" => PaymentStatus::Expired,
+                _ => PaymentStatus::Failed
+            };
+            Ok(status)
+        } else {
+            Err(format!("Failed to get payment status: {}", response.status()))
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum PaymentStatus {
+    Waiting,
+    Confirming,
+    Confirmed,
+    Sending,
+    PartiallyPaid,
+    Finished,
+    Failed,
+    Refunded,
+    Expired,
+}
+
+#[derive(Deserialize, Debug)]
+struct NowPaymentsPaymentStatusResponse {
+    payment_status: String,
+}
 
 #[component]
 pub fn BlockRoomPage() -> impl IntoView {
@@ -222,11 +350,81 @@ pub fn BlockRoomPage() -> impl IntoView {
     let open_modal = move |_| { show_modal.set(true); };
 
     let handle_pay_click = move |payment_method: String| {
-        // Store payment method if needed
-        // ...
+        match payment_method.as_str() {
+            "binance" => { todo!(); },
+            "NOWPayments" => {
+                let nowpayments = NowPayments::new("512XQ4K-0F9MBV7-GW0FMMQ-C1B1343".to_string(), "https://api.nowpayments.io".to_string());
+                let invoice_request = CreateInvoiceRequest {
+                    price_amount: total_price.get() as u32,
+                    price_currency: "USD".to_string(),
+                    order_id: "order_watever".to_string(),
+                    order_description: "Hotel Room Booking".to_string(),
+                    ipn_callback_url: "https://nowpayments.io".to_string(),
+                    success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
+                    cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
+                    partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
+                    is_fixed_rate: false,
+                    is_fee_paid_by_user: false,
+                };
+                wasm_bindgen_futures::spawn_local(async move {
+                    let invoice_url = nowpayments.create_invoice(&invoice_request).await;
+
+                    match invoice_url {
+                        Ok(url) => {
+                            let _ = window().location().assign(&url);
+                            // let payment_status_response = nowpayments.get_payment_status("payment_id?").await;
+
+                            // match payment_status_response {
+                            //     Ok(status) => {
+                            //         if status == PaymentStatus::Finished {
+                            //             handle_booking.dispatch(());
+                            //         } else {
+                            //             log!("Payment not successful: {:?}", status);
+                            //             // Optionally, redirect back to the booking page or display an error message
+                            //         }
+                            //     }
+                            //     Err(e) => {
+                            //         log!("Error getting payment status: {:?}", e);
+                            //         // Handle error, e.g., display an error message
+                            //     }
+                            // }
+                        },
+                        Err(e) => {
+                            log!("Error creating invoice: {:?}", e);
+                        }
+                    }
+                });
+
+            },
+            _ => { /* Handle other payment methods */ }
+        }
         show_modal.set(false);
-        handle_booking.dispatch(()); 
     };
+
+    create_effect(move |_| {
+        // Check the URL for a payment status parameter after redirect
+        let params = window().location().search().unwrap_or_default();
+        let url_params = web_sys::UrlSearchParams::new_with_str(&params).unwrap_or(web_sys::UrlSearchParams::new().unwrap());
+
+        if let Some(payment_status) = url_params.get("payment") {
+            match payment_status.as_str() {
+                "success" => {
+                    // Payment successful, trigger booking
+                    handle_booking.dispatch(());
+                },
+                "cancel" => {
+                    // Payment cancelled, handle accordingly (e.g., show a message)
+                    log!("Payment cancelled.");
+                },
+                "partial" => {
+                    log!("Payment partially paid.");
+                }
+                _ => {
+                    log!("Unknown payment status: {}", payment_status);
+                }
+            }
+        }
+    });
 
     // Validation logic function
     let validate_form = move || {

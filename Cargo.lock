@@ -856,6 +856,7 @@ version = "0.1.0"
 dependencies = [
  "accounting",
  "anyhow",
+ "async-trait",
  "axum",
  "axum-extra",
  "better-panic",
@@ -889,6 +890,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
