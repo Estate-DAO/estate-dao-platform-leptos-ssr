@@ -1,21 +1,21 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-use leptos::*;
-use leptos_icons::*;
-use leptos_router::use_navigate;
-
+use crate::api::block_room;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::ports::CreateInvoiceRequest;
 use crate::api::payments::NowPayments;
-use crate::utils::pluralize;
-
 use crate::component::SkeletonCards;
+use crate::state::search_state::BlockRoomResults;
 use crate::state::search_state::HotelInfoResults;
 use crate::state::view_state::AdultDetail;
 use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::ChildDetail;
+use crate::utils::pluralize;
+use leptos::*;
+use leptos_icons::*;
+use leptos_router::use_navigate;
 // use web_sys::localStorage;
 use serde::{Deserialize, Serialize};
 
@@ -39,38 +39,28 @@ use leptos::logging::log;
 #[component]
 pub fn BlockRoomPage() -> impl IntoView {
     let search_ctx: SearchCtx = expect_context();
-    let hotel_info_results: HotelInfoResults = expect_context();
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
     let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
+
+    let hotel_info_results: HotelInfoResults = expect_context();
+    let hotel_info_ctx: HotelInfoCtx = expect_context();
 
     let confirmation_results: ConfirmationResults = expect_context();
 
     let navigate = use_navigate();
+
     let block_room_ctx = expect_context::<BlockRoomCtx>();
+    let block_room_results_context: BlockRoomResults = expect_context();
 
-    let hotel_info_results_clone = hotel_info_results.clone();
-    // let room_price = create_memo(move |_| {
-    //     hotel_info_results_clone
-    //         .room_result
-    //         .get()
-    //         .and_then(|response| response.room_list.clone())
-    //         .and_then(|room_list| {
-    //             room_list
-    //                 .get_hotel_room_result
-    //                 .hotel_rooms_details
-    //                 .first()
-    //                 .map(|room| room.price.room_price as f64)
-    //         })
-    //         .unwrap_or(0.0)
-    // });
-    let room_price = create_memo(move |_| hotel_info_results_clone.price_per_night.get());
+    let room_price = Signal::derive(move || {
+        // let room_price = create_memo(move |_| {
+        if let Some(block_room_response) = block_room_results_context.block_room_results.get() {
+            block_room_response.get_room_price_summed()
+        } else {
+            0.0
+        }
+    });
 
-    // let total_price_per_night = create_memo(move |_| {
-    //     let price = room_price.get();
-    //     let num_rooms = search_ctx.guests.get().rooms.get();
-    //     price * num_rooms as f64
-    // });
 
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
@@ -229,6 +219,38 @@ pub fn BlockRoomPage() -> impl IntoView {
     let open_modal = move |_| {
         show_modal.set(true);
     };
+
+    let _block_room_call = create_resource(show_modal, move |modal_value| {
+        let hotel_info_results = expect_context::<HotelInfoResults>();
+        let room_counters = hotel_info_results.block_room_counters.get_untracked();
+        // log!("block_room.rs -- component room_coutners value - \n {room_counters:#?}");
+        async move {
+            if modal_value {
+                // log!("modal open. calling block API now");
+
+                // log!("{:?}", room_counters ); // Add this line
+                // Reset previous block room results
+                BlockRoomResults::reset();
+
+                let uniq_room_ids: Vec<String> = room_counters
+                    .values()
+                    .filter_map(|counter| counter.value.clone())
+                    .collect();
+                log!("{uniq_room_ids:#?}");
+
+                let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
+
+                // Call server function inside action
+                spawn_local(async move {
+                    let result = block_room(block_room_request).await.ok();
+                    // log!("BLOCK_ROOM_API: {result:?}");
+                    BlockRoomResults::set_results(result);
+                });
+            } else {
+                log!("modal closed. Nothing to do");
+            }
+        }
+    });
 
     let handle_pay_click = move |payment_method: String| {
         match payment_method.as_str() {
@@ -606,16 +628,19 @@ pub fn BlockRoomPage() -> impl IntoView {
                     </div>
                 </div>
                 <div class="mb-[40rem] rounded-xl bg-white p-6 shadow-xl">
-                    <h2 class="mb-4 text-xl font-bold">"₹"{room_price.get() as u64}"/" "night" </h2>
+                    <h2 class="mb-4 text-xl font-bold">"₹"{move || room_price.get() as u64}"/" "night" </h2>
                     <Divider />
                     <div class="price-breakdown">
                         <div class="flex justify-between">
-                            <span>"₹"{room_price.get() as u64}" x "{move || pluralize(num_nights.get(), "night", "nights")}</span>
+                            <span>"₹"{move || room_price.get() as u64}" x "{move || {
+                                let nights = move || num_nights.get();
+                                pluralize(nights(), "night", "nights")}
+                            }</span>
                         </div>
 
                         <div class="price-total mt-4 flex justify-between font-bold">
                             <span>"Total"</span>
-                            <span>"₹"{total_price.get() as u64}</span>
+                            <span>"₹"{move || total_price.get() as u64}</span>
                         </div>
                     </div>
                 </div>
@@ -626,13 +651,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                 <div class="fixed inset-0 bg-black opacity-50" on:click=move |_| show_modal.set(false)></div>
                 <div class="w-1/2 max-w-[60rem] bg-white rounded-lg p-8 z-50 shadow-xl">
                     <div class="flex justify-between">
-                        <h2 class="mb-4 text-xl font-bold">"₹"{room_price.get() as u64}"/" "night" </h2>
+                        <h2 class="mb-4 text-xl font-bold">"₹"{move || room_price.get() as u64}"/" "night" </h2>
                         <span> "x "{move || pluralize(num_nights.get(), "night", "nights")}</span>
                     </div>
                         <Divider />
                         <div class="price-breakdown price-total mt-4 flex justify-between font-bold">
                             <span>"Total"</span >
-                            <span>"₹"{total_price.get() as u64}</span>
+                            <span>"₹"{move || total_price.get() as u64}</span>
                         </div>
                         <Divider />
                         <div class="font-bold">

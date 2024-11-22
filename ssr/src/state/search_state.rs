@@ -5,8 +5,9 @@ use crate::{
         HotelSearchResponse,
     },
     component::{Destination, GuestSelection, SelectedDateRange},
-    page::{RoomCounterKeyValue, SortedRoom},
+    page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
 };
+use leptos::logging::log;
 use leptos::RwSignal;
 use leptos::*;
 use std::collections::HashMap;
@@ -113,6 +114,7 @@ pub struct HotelInfoResults {
     pub room_result: RwSignal<Option<HotelRoomResponse>>,
     pub price_per_night: RwSignal<f64>,
     pub room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
+    pub block_room_counters: RwSignal<HashMap<String, RoomCounterKeyValueStatic>>,
 }
 
 impl HotelInfoResults {
@@ -160,6 +162,19 @@ impl HotelInfoResults {
 
     pub fn set_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
         Self::from_leptos_context().room_counters.set(room_counters);
+    }
+
+    pub fn set_block_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
+        // log!("set_block_room_counters : input:  {room_counters:#?}");
+
+        let new_map: HashMap<String, RoomCounterKeyValueStatic> = room_counters
+            .into_iter()
+            .map(|(key, value)| (key, RoomCounterKeyValueStatic::from(value)))
+            .collect();
+
+        // log!("final new_map for block_room_counters:  {new_map:#?}");
+
+        Self::from_leptos_context().block_room_counters.set(new_map);
     }
 
     pub fn block_room_request(&self, uniq_room_ids: Vec<String>) -> BlockRoomRequest {
