@@ -27,7 +27,6 @@ jobs:
       - name: Set secret tokens
         run: |
           flyctl secrets set NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY --app "estatefe" --stage
-          flyctl secrets set PROVAB_HEADERS=$PROVAB_HEADERS --app "estatefe" --stage
         env:
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
