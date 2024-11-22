@@ -61,7 +61,6 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     });
 
-
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
     let total_price = create_memo(move |_| {
