@@ -6,6 +6,7 @@ pub const PROVAB_BASE_URL_TEST: &str =
 
 use serde::Deserialize;
 use std::collections::HashMap;
+use thiserror::Error;
 
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
@@ -15,24 +16,19 @@ pub struct EnvVarConfig {
     #[serde(default = "provab_base_url_default")]
     pub provab_base_url: String,
     provab_headers: HashMap<String, String>,
+    pub nowpayments_api_key: String,
 }
 
 impl EnvVarConfig {
     pub fn try_from_env() -> Self {
-        let provab_headers = env_w_default(
-            "PROVAB_HEADERS",
-            std::option_env!("PROVAB_HEADERS",).unwrap_or_default(),
-        )
-        .unwrap();
+        let provab_headers = env_or_panic("PROVAB_HEADERS");
 
-        if provab_headers.is_empty() {
-            panic!(" PROVAB_HEADERS  = {provab_headers:?}");
-        };
         let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();
 
         let value = Self {
             provab_headers: pv_hashmap,
             provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL_TEST).unwrap(),
+            nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
         };
 
         value
@@ -55,6 +51,21 @@ fn env_w_default(key: &str, default: &str) -> Result<String, EstateEnvConfigErro
     }
 }
 
+fn env_wo_default(key: &str) -> Result<Option<String>, EstateEnvConfigError> {
+    match std::env::var(key) {
+        Ok(val) => Ok(Some(val)),
+        Err(VarError::NotPresent) => Ok(None),
+        Err(e) => Err(EstateEnvConfigError::EnvVarError(format!("{key}: {e}"))),
+    }
+}
+
+fn env_or_panic(key: &str) -> String {
+    match std::env::var(key) {
+        Ok(val) => val,
+        Err(e) => panic!("missing {key}: {e}"),
+    }
+}
+
 fn provab_base_url_default() -> String {
     PROVAB_BASE_URL_TEST.to_string()
 }
@@ -70,8 +81,6 @@ pub fn transform_headers(headers: &HashMap<String, String>) -> HeaderMap {
     }
     header_map
 }
-
-use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
 pub enum EstateEnvConfigError {
