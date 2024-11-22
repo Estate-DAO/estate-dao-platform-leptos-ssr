@@ -29,8 +29,7 @@ impl EnvVarConfig {
         let value = Self {
             provab_headers: pv_hashmap,
             provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL_TEST).unwrap(),
-            // nowpayments_api_key: env_wo_default("NOWPAYMENTS_API_KEY").unwrap(),
-            nowpayments_api_key: env_or_panic("NOWPAYMENTS_API_KEY"),
+            nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
         };
 
         value
