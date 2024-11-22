@@ -21,7 +21,6 @@ pub struct EnvVarConfig {
 
 impl EnvVarConfig {
     pub fn try_from_env() -> Self {
-
         let provab_headers = env_or_panic("PROVAB_HEADERS");
 
         let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();

@@ -1,8 +1,8 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use reqwest::Url;
-use anyhow::{Result, anyhow};
-
+use anyhow::{anyhow, Result};
+use reqwest::{IntoUrl, Method, RequestBuilder, Url};
+use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CreateInvoiceRequest {
@@ -18,7 +18,7 @@ pub struct CreateInvoiceRequest {
     pub is_fee_paid_by_user: bool,
 }
 
-#[derive(Deserialize, Serialize,Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct CreateInvoiceResponse {
     pub id: String,
     pub token_id: String,
@@ -54,8 +54,6 @@ pub enum PaymentStatus {
     Expired,
 }
 
-use std::fmt::Debug;
-use reqwest::{IntoUrl, Method, RequestBuilder};
 // #[async_trait(?Send)]
 pub trait PaymentGateway {
     const METHOD: Method;
@@ -63,20 +61,18 @@ pub trait PaymentGateway {
     type PaymentGatewayResponse: DeserializeOwned + Debug;
 
     // fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String>;
-
 }
-pub trait PaymentGatewayParams{
+pub trait PaymentGatewayParams {
     fn path_suffix() -> String;
 
     fn build_url(base_url: &str) -> Result<Url> {
         let path_suffix = Self::path_suffix();
         // Parse the base URL first
-        let base = Url::parse(base_url)
-            .map_err(|e| anyhow!("Invalid base URL: {}", e))?;
-    
+        let base = Url::parse(base_url).map_err(|e| anyhow!("Invalid base URL: {}", e))?;
+
         // Join the path suffix, trimming any leading/trailing slashes
         let path = path_suffix.trim_matches('/');
-        
+
         // Combine the base URL with the path
         base.join(path)
             .map_err(|e| anyhow!("Failed to join URL parts: {}", e))

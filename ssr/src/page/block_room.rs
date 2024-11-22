@@ -251,16 +251,15 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                 spawn_local(async move {
                     // let invoice_url = nowpayments.create_invoice(&invoice_request).await;
-                    let create_invoice_response =
-                        nowpayments_create_invoice(invoice_request).await;
-                    match create_invoice_response{
+                    let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
+                    match create_invoice_response {
                         Ok(resp) => {
-                    let _ = window().location().assign(&resp.invoice_url);
-
-                        },
-                        Err(e) => {   log!("Error creating invoice: {:?}", e);}
+                            let _ = window().location().assign(&resp.invoice_url);
+                        }
+                        Err(e) => {
+                            log!("Error creating invoice: {:?}", e);
+                        }
                     }
-                    
 
                     // match invoice_url {
                     //     Ok(url) => {
