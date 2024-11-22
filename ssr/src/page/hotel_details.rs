@@ -288,7 +288,7 @@ pub struct RoomCounterKeyValue {
     // counter room
     key: RwSignal<u32>,
     /// room_unique_id
-    value: RwSignal<Option<String>>,
+    pub value: RwSignal<Option<String>>,
 }
 
 impl RoomCounterKeyValue {
@@ -306,6 +306,24 @@ impl Default for RoomCounterKeyValue {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct RoomCounterKeyValueStatic {
+    pub key: u32,
+    pub value: Option<String>,
+}
+
+impl From<RoomCounterKeyValue> for RoomCounterKeyValueStatic {
+    fn from(room_counter: RoomCounterKeyValue) -> Self {
+        let rkvs = RoomCounterKeyValueStatic {
+            key: room_counter.key.get_untracked(),
+            value: room_counter.value.get_untracked(),
+        };
+
+        log!("impl from {rkvs:#?}");
+        rkvs
+    }
+}
+
 #[derive(PartialEq, Debug, Default, Clone)]
 pub struct SortedRoom {
     room_type: String,
@@ -316,10 +334,11 @@ pub struct SortedRoom {
 
 #[component]
 pub fn PricingBookNow() -> impl IntoView {
-    let hotel_info_results: HotelInfoResults = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let num_adults = Signal::derive(move || search_ctx.guests.get().adults.get());
     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
+
+    let hotel_info_results: HotelInfoResults = expect_context();
     let hotel_info_results_clone = hotel_info_results.clone();
 
     // Create a memo for room details
@@ -332,9 +351,8 @@ pub fn PricingBookNow() -> impl IntoView {
     });
 
     // Create RwSignal for room counters map
-    // let room_counters = hotel_info_results.room_counters;
-
-    let room_counters = create_rw_signal(HashMap::<String, RoomCounterKeyValue>::new());
+    let room_counters = hotel_info_results.room_counters;
+    // let room_counters = create_rw_signal(HashMap::<String, RoomCounterKeyValue>::new());
 
     // Create a memo for the processed room data
     let sorted_rooms = create_memo(move |_| {
@@ -403,6 +421,8 @@ pub fn PricingBookNow() -> impl IntoView {
             .values()
             .fold(0, |acc, counter| acc + counter.key.get())
     });
+
+    let room_counters_clone = room_counters.clone();
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
@@ -477,7 +497,7 @@ pub fn PricingBookNow() -> impl IntoView {
                     <PricingBreakdown
                         price_per_night=price
                         number_of_nights=num_nights
-                        room_counters=room_counters
+                        room_counters=room_counters_clone
                     />
                 </div>
             </div>
@@ -498,8 +518,8 @@ pub fn PricingBreakdown(
 
     let navigate = use_navigate();
 
-    let hotel_info_results: HotelInfoResults = expect_context();
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
+    // let hotel_info_results: HotelInfoResults = expect_context();
+    // let hotel_info_ctx: HotelInfoCtx = expect_context();
 
     let block_room_action = create_action(move |_| {
         let nav = navigate.clone();
@@ -518,7 +538,8 @@ pub fn PricingBreakdown(
             // Create block room request using HotelInfoResults
             // todo use room_counters
             hotel_info_results.set_price_per_night(price_per_night.get());
-            hotel_info_results.set_room_counters(room_counters.get());
+            // hotel_info_results.set_room_counters(room_counters.get());
+            hotel_info_results.set_block_room_counters(room_counters.get());
 
             let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 

@@ -41,6 +41,28 @@ pub struct BlockRoomResponse {
     pub block_room: BlockRoomContainer,
 }
 
+impl BlockRoomResponse {
+    pub fn get_block_room_hotel_details(&self) -> Vec<HotelRoomDetail> {
+        self.block_room
+            .block_room_result
+            .hotel_rooms_details
+            .clone()
+    }
+
+    pub fn get_room_price_summed(&self) -> f64 {
+        self.get_block_room_hotel_details()
+            .iter()
+            .map(|detail| detail.get_offered_price())
+            .sum()
+    }
+}
+
+impl HotelRoomDetail {
+    pub fn get_offered_price(&self) -> f64 {
+        self.price.offered_price
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomContainer {
     #[serde(rename = "BlockRoomResult")]
