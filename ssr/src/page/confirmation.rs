@@ -5,7 +5,7 @@ use crate::{
     api::hotel_info,
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
+    page::{ Navbar},
     state::{
         search_state::{HotelInfoResults, SearchCtx, SearchListResults},
         view_state::HotelInfoCtx,
@@ -35,6 +35,13 @@ pub fn ConfirmationPage() -> impl IntoView {
             }
         }
     };
+
+    let handle_book_room = create_action(move |_|{
+
+        async move {
+            log!("handle book room called ");
+        }
+    });
 
     view! {
         <section class="relative h-screen">
@@ -69,6 +76,16 @@ pub fn ConfirmationPage() -> impl IntoView {
                     exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
                 </p>
             </div>
+
+            <button
+            class="mt-6 w-1/3 rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300"
+            on:click=move |_| {
+                // Assuming handle_booking dispatches an action and calls book_room
+                handle_book_room.dispatch(()); 
+            }
+        >
+            "Book Room"
+        </button>
         </section>
     }
 }
