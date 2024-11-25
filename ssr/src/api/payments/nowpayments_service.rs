@@ -1,6 +1,5 @@
 use super::ports::{
-    CreateInvoiceRequest, CreateInvoiceResponse, PaymentGateway, PaymentGatewayParams,
-    PaymentStatus,
+    CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse, PaymentGateway, PaymentGatewayParams, PaymentStatus
 };
 use crate::api::consts::EnvVarConfig;
 use leptos::*;
@@ -26,7 +25,7 @@ impl NowPayments {
         &self,
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
-        let url = Req::build_url(&self.api_host)?;
+        let url = req.build_url(&self.api_host)?;
 
         let response = self
             .client
@@ -90,7 +89,7 @@ impl Default for NowPayments {
 // }
 
 impl PaymentGatewayParams for CreateInvoiceRequest {
-    fn path_suffix() -> String {
+    fn path_suffix(&self) -> String {
         "/v1/invoice".to_owned()
     }
 }
@@ -120,3 +119,33 @@ pub async fn nowpayments_create_invoice(
         }
     }
 }
+
+//////////////////////////////
+// Get payments status 
+//////////////////////////////
+
+
+impl PaymentGatewayParams for GetPaymentStatusRequest {
+    fn path_suffix(&self) -> String {
+        format!("/v1/payment/{}", self.payment_id)
+    }
+}
+
+impl PaymentGateway for GetPaymentStatusRequest {
+    const METHOD: Method = Method::GET;
+    type PaymentGatewayResponse = GetPaymentStatusResponse;
+}
+
+
+#[server]
+pub async fn nowpayments_get_payment_status(
+    request: GetPaymentStatusRequest,
+) -> Result<GetPaymentStatusResponse, ServerFnError> {
+    let nowpayments = NowPayments::default();
+    match nowpayments.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => Err(ServerFnError::ServerError(e.to_string())),
+    }
+}
+
+//////////////////////////////

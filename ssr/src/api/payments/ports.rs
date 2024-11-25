@@ -41,6 +41,38 @@ pub struct CreateInvoiceResponse {
     pub source: Option<String>,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct GetPaymentStatusRequest {
+    pub payment_id: u64,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct GetPaymentStatusResponse {
+    pub payment_id: u64,
+    pub invoice_id: u64,
+    pub payment_status: String,
+    pub pay_address: String,
+    pub payin_extra_id: Option<String>,
+    pub price_amount: u64,
+    pub price_currency: String,
+    pub pay_amount: f64,
+    pub actually_paid: u64,
+    pub pay_currency: String,
+    pub order_id: String,
+    pub order_description: String,
+    pub purchase_id: u64,
+    pub outcome_amount: f64,
+    pub outcome_currency: String,
+    pub payout_hash: Option<String>,
+    pub payin_hash: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub burning_percent: Option<String>,
+    #[serde(rename = "type")]
+    pub type_field: String,
+}
+
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PaymentStatus {
     Waiting,
@@ -63,10 +95,10 @@ pub trait PaymentGateway {
     // fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String>;
 }
 pub trait PaymentGatewayParams {
-    fn path_suffix() -> String;
+    fn path_suffix(&self) -> String;
 
-    fn build_url(base_url: &str) -> Result<Url> {
-        let path_suffix = Self::path_suffix();
+    fn build_url(&self, base_url: &str) -> Result<Url> {
+        let path_suffix = self.path_suffix();
         // Parse the base URL first
         let base = Url::parse(base_url).map_err(|e| anyhow!("Invalid base URL: {}", e))?;
 

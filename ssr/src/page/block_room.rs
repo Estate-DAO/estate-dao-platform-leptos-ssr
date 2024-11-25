@@ -4,7 +4,9 @@
 use crate::api::block_room;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
+use crate::api::payments::nowpayments_get_payment_status;
 use crate::api::payments::ports::CreateInvoiceRequest;
+use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
 use crate::component::SkeletonCards;
 use crate::state::search_state::BlockRoomResults;
@@ -13,9 +15,13 @@ use crate::state::view_state::AdultDetail;
 use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::ChildDetail;
 use crate::utils::pluralize;
+use std::time::Duration;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;
+use leptos_use::use_interval_fn;
+use leptos_use::utils::Pausable;
+
 // use web_sys::localStorage;
 use serde::{Deserialize, Serialize};
 
@@ -213,6 +219,14 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     });
 
+    let get_payment_status_action: Action<(), ()> = create_action(move |_| {
+        async move {
+            let payment_id = 5991043299_u64;
+            let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id }).await.ok();
+            BlockRoomResults::set_payment_results(resp);
+        }
+    });
+
     let is_form_valid: RwSignal<bool> = create_rw_signal(false);
 
     let show_modal = create_rw_signal(false);
@@ -252,6 +266,40 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     });
 
+    // async fn check_payment_status(payment_id: u64) -> Pausable {
+    //     let pausable =  use_interval_fn(
+    //         move || {
+    //             spawn_local(
+    //                 async move {
+    //                     let payment_id = 5991043299;
+    //                     let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id }).await.ok();
+    //                     BlockRoomResults::set_payment_results(resp);
+    //                     // get_payment_status_action.dispatch(());
+
+    //                     match resp {
+    //                         Some(status) => {
+    //                             log!("payment_status_response: {:?}", status);
+    //                             if status.payment_status == "finished" {
+    //                                 // Stop the interval and proceed
+    //                                 return; // Return Some(()) to stop the interval
+    //                             } else {
+    //                                 None; // Return None to continue the interval
+    //                             }
+    //                         }
+    //                         None => {
+    //                             log!("Error getting payment status: {:?}", e);
+    //                             None; // Return None to continue on error
+    //                         }
+    //                     }
+    //                 }
+    //             );
+    //         },
+    //         1000,
+    //     );
+    //     pausable.pause();
+    //     return pausable;
+    // }
+
     let handle_pay_click = move |payment_method: String| {
         match payment_method.as_str() {
             "binance" => {
@@ -277,6 +325,9 @@ pub fn BlockRoomPage() -> impl IntoView {
                     match create_invoice_response {
                         Ok(resp) => {
                             // let _ = window().location().assign(&resp.invoice_url);
+                            log!("invoice response : {:?}", resp);
+
+                    
                             confirmation_action.dispatch(());
                         }
                         Err(e) => {
@@ -315,6 +366,56 @@ pub fn BlockRoomPage() -> impl IntoView {
         show_modal.set(false);
     };
 
+    ////////////////////////
+    // TIMER CHECK FOR PAYMENT STATUS 
+    //  ////////////////////////  
+
+    let Pausable {pause, resume, is_active} =  use_interval_fn(
+        move || {
+            spawn_local(
+                async move {
+                    let payment_id = 5991043299;
+                    let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id }).await.ok();
+                    BlockRoomResults::set_payment_results(resp);
+                    // get_payment_status_action.dispatch(());
+
+                }
+            );
+        },
+        1000,
+    );
+
+    pause();
+    let pause_clone = pause.clone();
+
+
+    create_effect(move |_| {
+        let block_room = expect_context::<BlockRoomResults>();
+        match block_room.payment_status_response.get() {
+            Some(status) => {
+                log!("payment_status_response: {:?}", status);
+                if status.payment_status == "finished" {
+                    // Stop the interval and proceed
+                    pause(); // Return Some(()) to stop the interval
+                } else {
+                    resume(); // Return None to continue the interval
+                }
+            }
+            None => {
+                resume();
+            }
+        }
+    });
+
+    on_cleanup( move || {
+        pause_clone();
+    });
+
+
+    ////////////////////////
+    // Timer END
+    ////////////////////////
+    
     create_effect(move |_| {
         // Check the URL for a payment status parameter after redirect
         // use_query_params()
