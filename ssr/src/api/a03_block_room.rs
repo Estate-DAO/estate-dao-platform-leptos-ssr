@@ -66,7 +66,7 @@ impl HotelRoomDetail {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomContainer {
     #[serde(rename = "BlockRoomResult")]
-    block_room_result: BlockRoomResult,
+    pub block_room_result: BlockRoomResult,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

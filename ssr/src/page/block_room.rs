@@ -152,7 +152,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     let children = block_room_ctx.children;
     let terms_accepted = block_room_ctx.terms_accepted;
 
-    let handle_booking = create_action(move |_| {
+    let confirmation_action = create_action(move |_| {
         let nav = nav.clone(); // Use the cloned version here
         let adults_data = adults.get();
         let children_data = children.get();
@@ -163,34 +163,35 @@ pub fn BlockRoomPage() -> impl IntoView {
             let room_detail = RoomDetail {
                 passenger_details: create_passenger_details(&adults_data, &children_data),
             };
+            ConfirmationResults::set_room_details(Some(room_detail));
 
             // Get room_unique_id from HotelRoomResponse
-            let block_room_id = hotel_info_results
-                .room_result
-                .get()
-                .and_then(|room_response| room_response.room_list.clone())
-                .and_then(|room_list| {
-                    room_list
-                        .get_hotel_room_result
-                        .hotel_rooms_details
-                        .first()
-                        .cloned()
-                })
-                .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
-                .unwrap_or_default();
+            // let block_room_id = hotel_info_results
+            //     .room_result
+            //     .get()
+            //     .and_then(|room_response| room_response.room_list.clone())
+            //     .and_then(|room_list| {
+            //         room_list
+            //             .get_hotel_room_result
+            //             .hotel_rooms_details
+            //             .first()
+            //             .cloned()
+            //     })
+            //     .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
+            //     .unwrap_or_default();
 
-            let token = search_list_results
-                .get_hotel_code_results_token_map()
-                .get(&hotel_code)
-                .cloned()
-                .unwrap_or_default();
+            // let token = search_list_results
+            //     .get_hotel_code_results_token_map()
+            //     .get(&hotel_code)
+            //     .cloned()
+            //     .unwrap_or_default();
 
-            let book_request = BookRoomRequest {
-                result_token: token,
-                block_room_id,
-                app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
-                room_details: vec![room_detail],
-            };
+            // let book_request = BookRoomRequest {
+            //     result_token: token,
+            //     block_room_id,
+            //     app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
+            //     room_details: vec![room_detail],
+            // };
 
             // match book_room(book_request).await {
             //     Ok(response) => {
@@ -275,7 +276,8 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
                     match create_invoice_response {
                         Ok(resp) => {
-                            let _ = window().location().assign(&resp.invoice_url);
+                            // let _ = window().location().assign(&resp.invoice_url);
+                            confirmation_action.dispatch(());
                         }
                         Err(e) => {
                             log!("Error creating invoice: {:?}", e);
@@ -324,7 +326,7 @@ pub fn BlockRoomPage() -> impl IntoView {
             match payment_status.as_str() {
                 "success" => {
                     // Payment successful, trigger booking
-                    handle_booking.dispatch(());
+                    confirmation_action.dispatch(());
                 }
                 "cancel" => {
                     // Payment cancelled, handle accordingly (e.g., show a message)

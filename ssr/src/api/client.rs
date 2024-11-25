@@ -22,7 +22,7 @@ pub trait ProvabReqMeta: Sized + Send {
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
         use flate2::read::GzDecoder;
 
-        // log!("deserialize_response- body:String : {body:?}\n\n\n");
+        log!("deserialize_response- body:String : {body:?}\n\n\n");
         let decompressed_body = if Self::GZIP {
             let mut d = GzDecoder::new(body.as_bytes());
             let mut s = String::new();

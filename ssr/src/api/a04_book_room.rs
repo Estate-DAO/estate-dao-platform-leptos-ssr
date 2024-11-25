@@ -1,6 +1,7 @@
 use super::{ProvabReq, ProvabReqMeta};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 // use leptos::ServerFnError;
 use crate::api::Provab;
 use leptos::logging::log;
@@ -60,12 +61,10 @@ fn default_true() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
+#[repr(u8)]
 pub enum PaxType {
-    #[serde(rename = "Adult")]
     Adult = 1,
-
-    #[serde(rename = "Child")]
     Child = 2,
 }
 
@@ -77,7 +76,7 @@ pub struct BookRoomResponse {
     #[serde(rename = "Message")]
     pub message: Option<String>,
 
-    #[serde(rename = "CommitBooking")]
+    #[serde(rename = "CommitBooking", default)]
     pub commit_booking: Vec<BookingDetails>,
 }
 
@@ -96,11 +95,10 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
+#[repr(u8)]
 pub enum BookingStatus {
-    #[serde(rename = "BookFailed")]
     BookFailed = 0,
-    #[serde(rename = "Confirmed")]
     Confirmed = 1,
 }
 

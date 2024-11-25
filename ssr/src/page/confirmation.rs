@@ -2,12 +2,12 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
-    api::hotel_info,
+    api::{book_room, hotel_info},
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{ Navbar},
+    page::Navbar,
     state::{
-        search_state::{HotelInfoResults, SearchCtx, SearchListResults},
+        search_state::{BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults},
         view_state::HotelInfoCtx,
     },
 };
@@ -18,12 +18,6 @@ use leptos::logging::log;
 pub fn ConfirmationPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
-
-    let format_date = |(year, month, day): (u32, u32, u32)| {
-        NaiveDate::from_ymd_opt(year as i32, month, day)
-            .map(|d| d.format("%a, %b %d").to_string())
-            .unwrap_or_default()
-    };
 
     let insert_real_image_or_default = {
         move || {
@@ -37,9 +31,15 @@ pub fn ConfirmationPage() -> impl IntoView {
     };
 
     let handle_book_room = create_action(move |_|{
+        let block_room = expect_context::<BlockRoomResults>();
 
         async move {
-            log!("handle book room called ");
+            let book_room_request = block_room.book_room_request();
+            let cloned_book_room_req = book_room_request.clone();
+            spawn_local(async move {
+                let result = book_room(book_room_request).await.ok();
+                ConfirmationResults::set_booking_details(result);
+            });
         }
     });
 
@@ -62,10 +62,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                     <p class="text-gray-600">
                         {move || {
                             let date_range = search_ctx.date_range.get();
-                            format!("{} - {}",
-                                format_date(date_range.start),
-                                format_date(date_range.end)
-                            )
+                            date_range.format_as_human_readable_date()
                         }}
                     </p>
                 </div>
