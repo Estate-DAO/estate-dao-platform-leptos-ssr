@@ -7,9 +7,17 @@ cfg_if! {
             body::Body as AxumBody,
             extract::{Path, State},
             http::Request,
+            http::header::HeaderMap,
             response::{IntoResponse, Response},
         };
-        use axum::{routing::get, Router};
+        use axum::extract::{rejection::JsonRejection, Query};
+
+        use axum::{routing::{get, post}, Router, Json};
+
+        use tracing::info;
+        use serde_json::{Value,json};
+        use serde::Deserialize;
+
 
         use leptos::*;
         use leptos::{get_configuration, logging::log, provide_context};
@@ -20,6 +28,12 @@ cfg_if! {
         use estate_fe::fallback::file_and_error_handler;
         use estate_fe::state::AppState;
 
+        #[derive(Debug, Deserialize)]
+        pub struct QueryParams {
+            // Add specific fields if known
+            #[serde(flatten)]
+            pub extra: std::collections::HashMap<String, String>,
+        }
 
         pub async fn server_fn_handler(
             State(app_state): State<AppState>,
@@ -65,6 +79,39 @@ cfg_if! {
         }
 
 
+        pub async fn handle_json(
+            headers: HeaderMap,
+            Query(query): Query<QueryParams>,
+            Json(payload): Json<Value>
+        ) -> Result<Json<Value>, JsonRejection>{
+
+            // Convert headers to a more loggable format
+            let headers: std::collections::HashMap<_, _> = headers
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.to_str().unwrap_or("Invalid header value")))
+            .collect();
+
+
+            println!("Query parameters: {:?}", query);
+            println!("Received payload: {}", payload);
+            println!("Received headers: {:#?}", headers);
+
+             // Structured logging with tracing
+            //  info!(
+            //     query = ?query,
+            //     payload = ?payload,
+            //     headers = ?headers,
+            //     "Received request"
+            // );
+
+
+            Ok(Json(json!({
+                "status": 1,
+                "message": "payload_received"
+            })))
+        }
+
+
     #[tokio::main]
     async fn main() {
         better_panic::install();
@@ -90,6 +137,7 @@ cfg_if! {
                 "/api/*fn_name",
                 get(server_fn_handler).post(server_fn_handler),
             )
+            .route("/webhooks", post(handle_json))
             .leptos_routes_with_handler(routes, get(leptos_routes_handler))
             .fallback(file_and_error_handler)
             .with_state(res);

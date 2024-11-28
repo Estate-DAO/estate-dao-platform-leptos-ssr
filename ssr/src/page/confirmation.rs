@@ -2,12 +2,14 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
-    api::hotel_info,
+    api::{book_room, hotel_info},
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
+    page::Navbar,
     state::{
-        search_state::{HotelInfoResults, SearchCtx, SearchListResults},
+        search_state::{
+            BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
+        },
         view_state::HotelInfoCtx,
     },
 };
@@ -19,12 +21,6 @@ pub fn ConfirmationPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
 
-    let format_date = |(year, month, day): (u32, u32, u32)| {
-        NaiveDate::from_ymd_opt(year as i32, month, day)
-            .map(|d| d.format("%a, %b %d").to_string())
-            .unwrap_or_default()
-    };
-
     let insert_real_image_or_default = {
         move || {
             let val = hotel_info_ctx.selected_hotel_image.get();
@@ -35,6 +31,19 @@ pub fn ConfirmationPage() -> impl IntoView {
             }
         }
     };
+
+    let handle_book_room = create_action(move |_| {
+        let block_room = expect_context::<BlockRoomResults>();
+
+        async move {
+            let book_room_request = block_room.book_room_request();
+            let cloned_book_room_req = book_room_request.clone();
+            spawn_local(async move {
+                let result = book_room(book_room_request).await.ok();
+                ConfirmationResults::set_booking_details(result);
+            });
+        }
+    });
 
     view! {
         <section class="relative h-screen">
@@ -55,10 +64,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                     <p class="text-gray-600">
                         {move || {
                             let date_range = search_ctx.date_range.get();
-                            format!("{} - {}",
-                                format_date(date_range.start),
-                                format_date(date_range.end)
-                            )
+                            date_range.format_as_human_readable_date()
                         }}
                     </p>
                 </div>
@@ -69,6 +75,16 @@ pub fn ConfirmationPage() -> impl IntoView {
                     exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
                 </p>
             </div>
+
+            <button
+            class="mt-6 w-1/3 rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300"
+            on:click=move |_| {
+                // Assuming handle_booking dispatches an action and calls book_room
+                handle_book_room.dispatch(());
+            }
+        >
+            "Book Room"
+        </button>
         </section>
     }
 }

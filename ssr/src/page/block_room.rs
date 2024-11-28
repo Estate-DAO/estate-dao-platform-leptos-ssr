@@ -4,7 +4,9 @@
 use crate::api::block_room;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
+use crate::api::payments::nowpayments_get_payment_status;
 use crate::api::payments::ports::CreateInvoiceRequest;
+use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
 use crate::component::SkeletonCards;
 use crate::state::search_state::BlockRoomResults;
@@ -16,6 +18,10 @@ use crate::utils::pluralize;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;
+use leptos_use::use_interval_fn;
+use leptos_use::utils::Pausable;
+use std::time::Duration;
+
 // use web_sys::localStorage;
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +44,7 @@ use leptos::logging::log;
 
 #[component]
 pub fn BlockRoomPage() -> impl IntoView {
+    // ================ SETUP context  ================
     let search_ctx: SearchCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
     let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
@@ -51,6 +58,8 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let block_room_ctx = expect_context::<BlockRoomCtx>();
     let block_room_results_context: BlockRoomResults = expect_context();
+
+    // ================ Pricing component signals  ================
 
     let room_price = Signal::derive(move || {
         // let room_price = create_memo(move |_| {
@@ -69,49 +78,9 @@ pub fn BlockRoomPage() -> impl IntoView {
         room_price * nights as f64
     });
 
-    // let final_total = create_memo(move |_| total_price.get());
+    // ================  Form Fields signals  ================
 
-    // Helper function to create passenger details
-    fn create_passenger_details(
-        adults: &[AdultDetail],
-        children: &[ChildDetail],
-    ) -> Vec<PassengerDetail> {
-        let mut passengers = Vec::new();
-
-        // Add adults
-        for (i, adult) in adults.iter().enumerate() {
-            passengers.push(PassengerDetail {
-                title: "Mr".to_string(), // Add logic for title selection
-                first_name: adult.first_name.clone(),
-                middle_name: None,
-                last_name: adult.last_name.clone().unwrap_or_default(),
-                email: if i == 0 {
-                    adult.email.clone().unwrap_or_default()
-                } else {
-                    String::new()
-                },
-                pax_type: PaxType::Adult,
-                lead_passenger: i == 0,
-                children_ages: None,
-            });
-        }
-
-        // Add children
-        for child in children {
-            passengers.push(PassengerDetail {
-                title: "".to_string(),
-                first_name: child.first_name.clone(),
-                middle_name: None,
-                last_name: child.last_name.clone().unwrap_or_default(),
-                email: String::new(),
-                pax_type: PaxType::Child,
-                lead_passenger: false,
-                children_ages: child.age.map(|age| age as u32), // Convert u8 to u32
-            });
-        }
-
-        passengers
-    }
+    let is_form_valid: RwSignal<bool> = create_rw_signal(false);
 
     let adult_count = create_memo(move |_| search_ctx.guests.get().adults.get());
 
@@ -140,205 +109,11 @@ pub fn BlockRoomPage() -> impl IntoView {
         // Trigger validation check
     };
 
-    let navigate = use_navigate();
-    let nav = navigate.clone(); // Clone it here for the first use
-
-    let go_back_to_details = move |ev: ev::MouseEvent| {
-        ev.prevent_default();
-        let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
-    };
+    // ================  Form Validation signals  ================
 
     let adults = block_room_ctx.adults;
     let children = block_room_ctx.children;
     let terms_accepted = block_room_ctx.terms_accepted;
-
-    let handle_booking = create_action(move |_| {
-        let nav = nav.clone(); // Use the cloned version here
-        let adults_data = adults.get();
-        let children_data = children.get();
-        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
-        let search_list_results = search_list_results.get_value(); // Get the stored value
-
-        async move {
-            let room_detail = RoomDetail {
-                passenger_details: create_passenger_details(&adults_data, &children_data),
-            };
-
-            // Get room_unique_id from HotelRoomResponse
-            let block_room_id = hotel_info_results
-                .room_result
-                .get()
-                .and_then(|room_response| room_response.room_list.clone())
-                .and_then(|room_list| {
-                    room_list
-                        .get_hotel_room_result
-                        .hotel_rooms_details
-                        .first()
-                        .cloned()
-                })
-                .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
-                .unwrap_or_default();
-
-            let token = search_list_results
-                .get_hotel_code_results_token_map()
-                .get(&hotel_code)
-                .cloned()
-                .unwrap_or_default();
-
-            let book_request = BookRoomRequest {
-                result_token: token,
-                block_room_id,
-                app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
-                room_details: vec![room_detail],
-            };
-
-            // match book_room(book_request).await {
-            //     Ok(response) => {
-            //         match response.status {
-            //             BookingStatus::Confirmed => {
-            //                 // Set the booking details in context
-            //                 ConfirmationResults::set_booking_details(Some(response));
-            nav(AppRoutes::Confirmation.to_string(), Default::default());
-            //             }
-            //             BookingStatus::BookFailed => {
-            //                 log!("Booking failed: {:?}", response.message);
-            //             }
-            //         }
-            //     }
-            //     Err(e) => {
-            //         log!("Error booking room: {:?}", e);
-            //     }
-            // }
-        }
-    });
-
-    let is_form_valid: RwSignal<bool> = create_rw_signal(false);
-
-    let show_modal = create_rw_signal(false);
-    let open_modal = move |_| {
-        show_modal.set(true);
-    };
-
-    let _block_room_call = create_resource(show_modal, move |modal_value| {
-        let hotel_info_results = expect_context::<HotelInfoResults>();
-        let room_counters = hotel_info_results.block_room_counters.get_untracked();
-        // log!("block_room.rs -- component room_coutners value - \n {room_counters:#?}");
-        async move {
-            if modal_value {
-                // log!("modal open. calling block API now");
-
-                // log!("{:?}", room_counters ); // Add this line
-                // Reset previous block room results
-                BlockRoomResults::reset();
-
-                let uniq_room_ids: Vec<String> = room_counters
-                    .values()
-                    .filter_map(|counter| counter.value.clone())
-                    .collect();
-                log!("{uniq_room_ids:#?}");
-
-                let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
-
-                // Call server function inside action
-                spawn_local(async move {
-                    let result = block_room(block_room_request).await.ok();
-                    // log!("BLOCK_ROOM_API: {result:?}");
-                    BlockRoomResults::set_results(result);
-                });
-            } else {
-                log!("modal closed. Nothing to do");
-            }
-        }
-    });
-
-    let handle_pay_click = move |payment_method: String| {
-        match payment_method.as_str() {
-            "binance" => {
-                todo!();
-            }
-            "NOWPayments" => {
-                let invoice_request = CreateInvoiceRequest {
-                    price_amount: total_price.get() as u32,
-                    price_currency: "USD".to_string(),
-                    order_id: "order_watever".to_string(),
-                    order_description: "Hotel Room Booking".to_string(),
-                    ipn_callback_url: "https://nowpayments.io".to_string(),
-                    success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
-                    cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
-                    partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
-                    is_fixed_rate: false,
-                    is_fee_paid_by_user: false,
-                };
-
-                spawn_local(async move {
-                    // let invoice_url = nowpayments.create_invoice(&invoice_request).await;
-                    let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
-                    match create_invoice_response {
-                        Ok(resp) => {
-                            let _ = window().location().assign(&resp.invoice_url);
-                        }
-                        Err(e) => {
-                            log!("Error creating invoice: {:?}", e);
-                        }
-                    }
-
-                    // match invoice_url {
-                    //     Ok(url) => {
-                    //         let _ = window().location().assign(&url);
-                    //         // let payment_status_response = nowpayments.get_payment_status("payment_id?").await;
-
-                    //         // match payment_status_response {
-                    //         //     Ok(status) => {
-                    //         //         if status == PaymentStatus::Finished {
-                    //         //             handle_booking.dispatch(());
-                    //         //         } else {
-                    //         //             log!("Payment not successful: {:?}", status);
-                    //         //             // Optionally, redirect back to the booking page or display an error message
-                    //         //         }
-                    //         //     }
-                    //         //     Err(e) => {
-                    //         //         log!("Error getting payment status: {:?}", e);
-                    //         //         // Handle error, e.g., display an error message
-                    //         //     }
-                    //         // }
-                    //     }
-                    //     Err(e) => {
-                    //         log!("Error creating invoice: {:?}", e);
-                    //     }
-                    // }
-                });
-            }
-            _ => { /* Handle other payment methods */ }
-        }
-        show_modal.set(false);
-    };
-
-    create_effect(move |_| {
-        // Check the URL for a payment status parameter after redirect
-        // use_query_params()
-        let params = window().location().search().unwrap_or_default();
-        let url_params = web_sys::UrlSearchParams::new_with_str(&params)
-            .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
-
-        if let Some(payment_status) = url_params.get("payment") {
-            match payment_status.as_str() {
-                "success" => {
-                    // Payment successful, trigger booking
-                    handle_booking.dispatch(());
-                }
-                "cancel" => {
-                    // Payment cancelled, handle accordingly (e.g., show a message)
-                    log!("Payment cancelled.");
-                }
-                "partial" => {
-                    log!("Payment partially paid.");
-                }
-                _ => {
-                    log!("Unknown payment status: {}", payment_status);
-                }
-            }
-        }
-    });
 
     // Validation logic function
     let validate_form = move || {
@@ -389,36 +164,246 @@ pub fn BlockRoomPage() -> impl IntoView {
         validate_form();
     });
 
-    // let is_form_valid = create_memo(move |_| {
-    //     trigger_validation.get();
+    // ================  Page Nav and Redirect signals  ================
 
-    //     let adult_list = adults.get();
-    //     let child_list = children.get();
+    let nav = navigate.clone();
 
-    //     // Validate primary adult (needs all fields)
-    //     let primary_adult_valid = adult_list.first().map_or(false, |adult| {
-    //         !adult.first_name.is_empty()
-    //             && adult.email.as_ref().map_or(false, |e| !e.is_empty())
-    //             && adult.phone.as_ref().map_or(false, |p| !p.is_empty())
-    //     });
+    let go_back_to_details = move |ev: ev::MouseEvent| {
+        ev.prevent_default();
+        let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
+    };
 
-    //     // Validate other adults (only first name required)
-    //     let other_adults_valid = adult_list
-    //         .iter()
-    //         .skip(1)
-    //         .all(|adult| !adult.first_name.is_empty());
+    let confirmation_action = create_action(move |_| {
+        let nav = nav.clone(); // Use the cloned version here
+        let adults_data = adults.get();
+        let children_data = children.get();
+        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
+        let search_list_results = search_list_results.get_value(); // Get the stored value
 
-    //     // Validate children (first name and age required)
-    //     let children_valid = child_list
-    //         .iter()
-    //         .all(|child| !child.first_name.is_empty() && child.age.is_some());
+        async move {
+            let room_detail = RoomDetail {
+                passenger_details: create_passenger_details(&adults_data, &children_data),
+            };
+            ConfirmationResults::set_room_details(Some(room_detail));
 
-    //     // Terms must be accepted
-    //     let terms_valid = terms_accepted.get();
+            // Get room_unique_id from HotelRoomResponse
+            // let block_room_id = hotel_info_results
+            //     .room_result
+            //     .get()
+            //     .and_then(|room_response| room_response.room_list.clone())
+            //     .and_then(|room_list| {
+            //         room_list
+            //             .get_hotel_room_result
+            //             .hotel_rooms_details
+            //             .first()
+            //             .cloned()
+            //     })
+            //     .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
+            //     .unwrap_or_default();
 
-    //     // All conditions must be true
-    //     primary_adult_valid && other_adults_valid && children_valid && terms_valid
-    // });
+            // let token = search_list_results
+            //     .get_hotel_code_results_token_map()
+            //     .get(&hotel_code)
+            //     .cloned()
+            //     .unwrap_or_default();
+
+            // let book_request = BookRoomRequest {
+            //     result_token: token,
+            //     block_room_id,
+            //     app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
+            //     room_details: vec![room_detail],
+            // };
+
+            // match book_room(book_request).await {
+            //     Ok(response) => {
+            //         match response.status {
+            //             BookingStatus::Confirmed => {
+            //                 // Set the booking details in context
+            //                 ConfirmationResults::set_booking_details(Some(response));
+            nav(AppRoutes::Confirmation.to_string(), Default::default());
+            //             }
+            //             BookingStatus::BookFailed => {
+            //                 log!("Booking failed: {:?}", response.message);
+            //             }
+            //         }
+            //     }
+            //     Err(e) => {
+            //         log!("Error booking room: {:?}", e);
+            //     }
+            // }
+        }
+    });
+
+    // ================  PAYMENT STATUS signals  ================
+
+    let get_payment_status_action: Action<(), ()> = create_action(move |_| async move {
+        let payment_id = 5991043299_u64;
+        let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
+            .await
+            .ok();
+        BlockRoomResults::set_payment_results(resp);
+    });
+
+    create_effect(move |_| {
+        // Check the URL for a payment status parameter after redirect
+        // use_query_params()
+        let params = window().location().search().unwrap_or_default();
+        let url_params = web_sys::UrlSearchParams::new_with_str(&params)
+            .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
+
+        if let Some(payment_status) = url_params.get("payment") {
+            match payment_status.as_str() {
+                "success" => {
+                    // Payment successful, trigger booking
+                    confirmation_action.dispatch(());
+                }
+                "cancel" => {
+                    // Payment cancelled, handle accordingly (e.g., show a message)
+                    log!("Payment cancelled.");
+                }
+                "partial" => {
+                    log!("Payment partially paid.");
+                }
+                _ => {
+                    log!("Unknown payment status: {}", payment_status);
+                }
+            }
+        }
+    });
+
+    // ================  Confirmation Modal signals  ================
+
+    let show_modal = create_rw_signal(false);
+    let open_modal = move |_| {
+        show_modal.set(true);
+    };
+
+    let _block_room_call = create_resource(show_modal, move |modal_value| {
+        let hotel_info_results = expect_context::<HotelInfoResults>();
+        let room_counters = hotel_info_results.block_room_counters.get_untracked();
+        // log!("block_room.rs -- component room_coutners value - \n {room_counters:#?}");
+        async move {
+            if modal_value {
+                // log!("modal open. calling block API now");
+
+                // log!("{:?}", room_counters ); // Add this line
+                // Reset previous block room results
+                BlockRoomResults::reset();
+
+                let uniq_room_ids: Vec<String> = room_counters
+                    .values()
+                    .filter_map(|counter| counter.value.clone())
+                    .collect();
+                log!("{uniq_room_ids:#?}");
+
+                let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
+
+                // Call server function inside action
+                spawn_local(async move {
+                    let result = block_room(block_room_request).await.ok();
+                    // log!("BLOCK_ROOM_API: {result:?}");
+                    BlockRoomResults::set_results(result);
+                });
+            } else {
+                log!("modal closed. Nothing to do");
+            }
+        }
+    });
+
+    let handle_pay_click = move |payment_method: String| {
+        match payment_method.as_str() {
+            "binance" => {
+                todo!();
+            }
+            "NOWPayments" => {
+                let invoice_request = CreateInvoiceRequest {
+                    price_amount: 20_u32,
+                    // price_amount: total_price.get() as u32,
+                    price_currency: "USD".to_string(),
+                    order_id: "order_watever".to_string(),
+                    order_description: "Hotel Room Booking".to_string(),
+                    ipn_callback_url: "https://nowpayments.io".to_string(),
+                    success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
+                    cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
+                    partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
+                    is_fixed_rate: false,
+                    is_fee_paid_by_user: false,
+                };
+
+                spawn_local(async move {
+                    // let invoice_url = nowpayments.create_invoice(&invoice_request).await;
+                    let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
+                    match create_invoice_response {
+                        Ok(resp) => {
+                            let _ = window().location().assign(&resp.invoice_url);
+                            log!("invoice response : {:?}", resp);
+
+                            // confirmation_action.dispatch(());
+                        }
+                        Err(e) => {
+                            log!("Error creating invoice: {:?}", e);
+                        }
+                    }
+
+                });
+            }
+            _ => { /* Handle other payment methods */ }
+        }
+        show_modal.set(false);
+    };
+
+    ////////////////////////
+    // TIMER CHECK FOR PAYMENT STATUS
+    //  ////////////////////////
+
+    let Pausable {
+        pause,
+        resume,
+        is_active,
+    } = use_interval_fn(
+        move || {
+            spawn_local(async move {
+                let payment_id = 5991043299;
+                let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
+                    .await
+                    .ok();
+                BlockRoomResults::set_payment_results(resp);
+                // get_payment_status_action.dispatch(());
+            });
+        },
+        1_00_000,
+    );
+
+    pause();
+    let pause_clone = pause.clone();
+
+    create_effect(move |_| {
+        let block_room = expect_context::<BlockRoomResults>();
+        match block_room.payment_status_response.get() {
+            Some(status) => {
+                log!("payment_status_response: {:?}", status);
+                if status.payment_status == "finished" {
+                    // Stop the interval and proceed
+                    pause(); // Return Some(()) to stop the interval
+                } else {
+                    resume(); // Return None to continue the interval
+                }
+            }
+            None => {
+                resume();
+            }
+        }
+    });
+
+    on_cleanup(move || {
+        pause_clone();
+    });
+
+    ////////////////////////
+    // Timer END
+    ////////////////////////
+
+    // =========== TOP section Summary display Component signals ==================
 
     let images_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
@@ -451,6 +436,8 @@ pub fn BlockRoomPage() -> impl IntoView {
             }
         }
     };
+
+    // =========== Page Layout and Components ==================
 
     view! {
         <section class="relative h-screen">
@@ -697,4 +684,46 @@ pub fn BlockRoomPage() -> impl IntoView {
             </div>
         </Show>
     }
+}
+
+// Helper function to create passenger details
+fn create_passenger_details(
+    adults: &[AdultDetail],
+    children: &[ChildDetail],
+) -> Vec<PassengerDetail> {
+    let mut passengers = Vec::new();
+
+    // Add adults
+    for (i, adult) in adults.iter().enumerate() {
+        passengers.push(PassengerDetail {
+            title: "Mr".to_string(), // Add logic for title selection
+            first_name: adult.first_name.clone(),
+            middle_name: None,
+            last_name: adult.last_name.clone().unwrap_or_default(),
+            email: if i == 0 {
+                adult.email.clone().unwrap_or_default()
+            } else {
+                String::new()
+            },
+            pax_type: PaxType::Adult,
+            lead_passenger: i == 0,
+            children_ages: None,
+        });
+    }
+
+    // Add children
+    for child in children {
+        passengers.push(PassengerDetail {
+            title: "".to_string(),
+            first_name: child.first_name.clone(),
+            middle_name: None,
+            last_name: child.last_name.clone().unwrap_or_default(),
+            email: String::new(),
+            pax_type: PaxType::Child,
+            lead_passenger: false,
+            children_ages: child.age.map(|age| age as u32), // Convert u8 to u32
+        });
+    }
+
+    passengers
 }

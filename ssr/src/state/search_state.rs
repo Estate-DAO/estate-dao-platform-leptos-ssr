@@ -1,8 +1,8 @@
 use crate::{
     api::{
-        BlockRoomRequest, BlockRoomResponse, BookRoomResponse, HotelInfoRequest, HotelInfoResponse,
-        HotelRoomDetail, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest,
-        HotelSearchResponse,
+        payments::ports::GetPaymentStatusResponse, BlockRoomRequest, BlockRoomResponse,
+        BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
+        HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     },
     component::{Destination, GuestSelection, SelectedDateRange},
     page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
@@ -12,7 +12,7 @@ use leptos::RwSignal;
 use leptos::*;
 use std::collections::HashMap;
 
-use super::view_state::HotelInfoCtx;
+use super::view_state::{BlockRoomCtx, HotelInfoCtx};
 
 #[derive(Clone, Default, Debug)]
 pub struct SearchCtx {
@@ -224,6 +224,7 @@ impl HotelInfoResults {
 #[derive(Debug, Clone, Default)]
 pub struct BlockRoomResults {
     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
+    pub payment_status_response: RwSignal<Option<GetPaymentStatusResponse>>,
 }
 
 impl BlockRoomResults {
@@ -238,11 +239,54 @@ impl BlockRoomResults {
     pub fn set_results(results: Option<BlockRoomResponse>) {
         Self::from_leptos_context().block_room_results.set(results);
     }
+
+    pub fn book_room_request(&self) -> BookRoomRequest {
+        // let search_list_results: SearchListResults = expect_context();
+        let hotel_info_ctx: HotelInfoCtx = expect_context();
+
+        // let result_token = hotel_info_ctx
+        //     .hotel_code
+        //     .get()
+        //     .and_then(|hotel_code| {
+        //         let token_map = search_list_results.get_hotel_code_results_token_map();
+        //         token_map.get(&hotel_code).cloned()
+        //     })
+        //     .unwrap_or_default();
+
+        let block_room_id = self
+            .block_room_results
+            .get_untracked()
+            .unwrap()
+            .get_block_room_id()
+            .expect("Block Room API call failed");
+
+        let result_token = block_room_id.clone();
+
+        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
+        let app_reference = format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code);
+
+        let confirmation: ConfirmationResults = expect_context();
+        let room_details = confirmation.room_details.get_untracked().unwrap();
+
+        BookRoomRequest {
+            result_token,
+            block_room_id,
+            app_reference,
+            room_details: vec![room_details],
+        }
+    }
+
+    pub fn set_payment_results(results: Option<GetPaymentStatusResponse>) {
+        Self::from_leptos_context()
+            .payment_status_response
+            .set(results);
+    }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct ConfirmationResults {
     pub booking_details: RwSignal<Option<BookRoomResponse>>,
+    pub room_details: RwSignal<Option<RoomDetail>>,
 }
 
 impl ConfirmationResults {
@@ -252,11 +296,16 @@ impl ConfirmationResults {
 
     pub fn reset() {
         Self::from_leptos_context().booking_details.set(None);
+        Self::from_leptos_context().room_details.set(None);
     }
 
     pub fn set_booking_details(booking_response: Option<BookRoomResponse>) {
         Self::from_leptos_context()
             .booking_details
             .set(booking_response);
+    }
+
+    pub fn set_room_details(room_detail: Option<RoomDetail>) {
+        Self::from_leptos_context().room_details.set(room_detail);
     }
 }

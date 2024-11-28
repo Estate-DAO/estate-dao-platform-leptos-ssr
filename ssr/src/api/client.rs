@@ -22,7 +22,7 @@ pub trait ProvabReqMeta: Sized + Send {
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
         use flate2::read::GzDecoder;
 
-        // log!("deserialize_response- body:String : {body:?}\n\n\n");
+        log!("deserialize_response- body:String : {body:?}\n\n\n");
         let decompressed_body = if Self::GZIP {
             let mut d = GzDecoder::new(body.as_bytes());
             let mut s = String::new();
@@ -129,13 +129,17 @@ impl Provab {
             .send()
             .await
             .map_err(|e| report!(ApiError::RequestFailed(e)))?;
-
+        let resp_status_clone = response.status().clone();
         if !response.status().is_success() {
             response.text().await.map_or_else(
                 |er| {
                     Err(ApiError::ResponseError).attach_printable_lazy(|| format!("Error: {er:?}"))
                 },
-                |t| Err(report!(ApiError::ResponseNotOK(t))),
+                |t| {
+                    let error_string =
+                        format!("Expected: 200, Got: {}, Error: {t}", resp_status_clone);
+                    Err(report!(ApiError::ResponseNotOK(error_string)))
+                },
             )
         } else {
             let res = Req::deserialize_response(
