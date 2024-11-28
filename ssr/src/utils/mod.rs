@@ -1,6 +1,6 @@
+pub mod app_reference;
 pub mod icon;
 pub mod route;
-pub mod app_reference;
 
 pub use app_reference::*;
 

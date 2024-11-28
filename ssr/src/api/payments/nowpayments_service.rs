@@ -1,5 +1,6 @@
 use super::ports::{
-    CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse, PaymentGateway, PaymentGatewayParams, PaymentStatus
+    CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
+    PaymentGateway, PaymentGatewayParams, PaymentStatus,
 };
 use crate::api::consts::EnvVarConfig;
 use leptos::*;
@@ -121,9 +122,8 @@ pub async fn nowpayments_create_invoice(
 }
 
 //////////////////////////////
-// Get payments status 
+// Get payments status
 //////////////////////////////
-
 
 impl PaymentGatewayParams for GetPaymentStatusRequest {
     fn path_suffix(&self) -> String {
@@ -135,7 +135,6 @@ impl PaymentGateway for GetPaymentStatusRequest {
     const METHOD: Method = Method::GET;
     type PaymentGatewayResponse = GetPaymentStatusResponse;
 }
-
 
 #[server]
 pub async fn nowpayments_get_payment_status(

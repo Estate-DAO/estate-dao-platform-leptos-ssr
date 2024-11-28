@@ -7,7 +7,9 @@ use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::Navbar,
     state::{
-        search_state::{BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults},
+        search_state::{
+            BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
+        },
         view_state::HotelInfoCtx,
     },
 };
@@ -30,7 +32,7 @@ pub fn ConfirmationPage() -> impl IntoView {
         }
     };
 
-    let handle_book_room = create_action(move |_|{
+    let handle_book_room = create_action(move |_| {
         let block_room = expect_context::<BlockRoomResults>();
 
         async move {
@@ -78,7 +80,7 @@ pub fn ConfirmationPage() -> impl IntoView {
             class="mt-6 w-1/3 rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300"
             on:click=move |_| {
                 // Assuming handle_booking dispatches an action and calls book_room
-                handle_book_room.dispatch(()); 
+                handle_book_room.dispatch(());
             }
         >
             "Book Room"

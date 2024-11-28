@@ -72,7 +72,6 @@ pub struct GetPaymentStatusResponse {
     pub type_field: String,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PaymentStatus {
     Waiting,

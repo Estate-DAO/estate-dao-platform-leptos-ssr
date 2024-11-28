@@ -15,12 +15,12 @@ use crate::state::view_state::AdultDetail;
 use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::ChildDetail;
 use crate::utils::pluralize;
-use std::time::Duration;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;
 use leptos_use::use_interval_fn;
 use leptos_use::utils::Pausable;
+use std::time::Duration;
 
 // use web_sys::localStorage;
 use serde::{Deserialize, Serialize};
@@ -219,12 +219,12 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     });
 
-    let get_payment_status_action: Action<(), ()> = create_action(move |_| {
-        async move {
-            let payment_id = 5991043299_u64;
-            let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id }).await.ok();
-            BlockRoomResults::set_payment_results(resp);
-        }
+    let get_payment_status_action: Action<(), ()> = create_action(move |_| async move {
+        let payment_id = 5991043299_u64;
+        let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
+            .await
+            .ok();
+        BlockRoomResults::set_payment_results(resp);
     });
 
     let is_form_valid: RwSignal<bool> = create_rw_signal(false);
@@ -327,7 +327,6 @@ pub fn BlockRoomPage() -> impl IntoView {
                             // let _ = window().location().assign(&resp.invoice_url);
                             log!("invoice response : {:?}", resp);
 
-                    
                             confirmation_action.dispatch(());
                         }
                         Err(e) => {
@@ -367,27 +366,29 @@ pub fn BlockRoomPage() -> impl IntoView {
     };
 
     ////////////////////////
-    // TIMER CHECK FOR PAYMENT STATUS 
-    //  ////////////////////////  
+    // TIMER CHECK FOR PAYMENT STATUS
+    //  ////////////////////////
 
-    let Pausable {pause, resume, is_active} =  use_interval_fn(
+    let Pausable {
+        pause,
+        resume,
+        is_active,
+    } = use_interval_fn(
         move || {
-            spawn_local(
-                async move {
-                    let payment_id = 5991043299;
-                    let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id }).await.ok();
-                    BlockRoomResults::set_payment_results(resp);
-                    // get_payment_status_action.dispatch(());
-
-                }
-            );
+            spawn_local(async move {
+                let payment_id = 5991043299;
+                let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
+                    .await
+                    .ok();
+                BlockRoomResults::set_payment_results(resp);
+                // get_payment_status_action.dispatch(());
+            });
         },
-        1000,
+        1_00_000,
     );
 
     pause();
     let pause_clone = pause.clone();
-
 
     create_effect(move |_| {
         let block_room = expect_context::<BlockRoomResults>();
@@ -407,15 +408,14 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     });
 
-    on_cleanup( move || {
+    on_cleanup(move || {
         pause_clone();
     });
-
 
     ////////////////////////
     // Timer END
     ////////////////////////
-    
+
     create_effect(move |_| {
         // Check the URL for a payment status parameter after redirect
         // use_query_params()

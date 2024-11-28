@@ -1,6 +1,8 @@
 use crate::{
     api::{
-        payments::ports::GetPaymentStatusResponse, BlockRoomRequest, BlockRoomResponse, BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail
+        payments::ports::GetPaymentStatusResponse, BlockRoomRequest, BlockRoomResponse,
+        BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
+        HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     },
     component::{Destination, GuestSelection, SelectedDateRange},
     page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
@@ -222,7 +224,7 @@ impl HotelInfoResults {
 #[derive(Debug, Clone, Default)]
 pub struct BlockRoomResults {
     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
-    pub payment_status_response: RwSignal<Option<GetPaymentStatusResponse>>
+    pub payment_status_response: RwSignal<Option<GetPaymentStatusResponse>>,
 }
 
 impl BlockRoomResults {
@@ -268,7 +270,9 @@ impl BlockRoomResults {
     }
 
     pub fn set_payment_results(results: Option<GetPaymentStatusResponse>) {
-        Self::from_leptos_context().payment_status_response.set(results);
+        Self::from_leptos_context()
+            .payment_status_response
+            .set(results);
     }
 }
 
@@ -295,8 +299,6 @@ impl ConfirmationResults {
     }
 
     pub fn set_room_details(room_detail: Option<RoomDetail>) {
-        Self::from_leptos_context()
-        .room_details
-        .set(room_detail);
+        Self::from_leptos_context().room_details.set(room_detail);
     }
 }
