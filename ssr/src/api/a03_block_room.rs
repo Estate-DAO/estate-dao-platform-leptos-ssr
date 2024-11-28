@@ -6,6 +6,15 @@ use leptos::*;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
+macro_rules! delegate_method {
+    ($enum_var:expr, $method:ident) => {
+        match $enum_var {
+            BlockRoomResponse::Success(success_response) => success_response.$method(),
+            BlockRoomResponse::Failure(failure_response) => failure_response.$method(),
+        }
+    };
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockRoomRequest {
     #[serde(rename = "ResultToken")]
@@ -30,7 +39,7 @@ pub struct BlockRoomResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlockRoomResponse {
+pub struct SuccessBlockRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
 
@@ -41,7 +50,23 @@ pub struct BlockRoomResponse {
     pub block_room: BlockRoomContainer,
 }
 
-impl BlockRoomResponse {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FailureBlockRoomResponse {
+    #[serde(rename = "Status")]
+    pub status: u32,
+
+    #[serde(rename = "Message")]
+    pub message: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum BlockRoomResponse {
+    Success(SuccessBlockRoomResponse),
+    Failure(FailureBlockRoomResponse),
+}
+
+impl SuccessBlockRoomResponse {
     pub fn get_block_room_hotel_details(&self) -> Vec<HotelRoomDetail> {
         self.block_room
             .block_room_result
@@ -49,11 +74,43 @@ impl BlockRoomResponse {
             .clone()
     }
 
+    pub fn get_block_room_id(&self) -> Option<String> {
+        Some(self.block_room.block_room_result.block_room_id.clone())
+    }
+}
+
+impl FailureBlockRoomResponse {
+    pub fn get_block_room_hotel_details(&self) -> Vec<HotelRoomDetail> {
+        Vec::new()
+    }
+
+    pub fn get_block_room_id(&self) -> Option<String> {
+        None
+    }
+}
+
+impl BlockRoomResponse {
+    pub fn get_block_room_hotel_details(&self) -> Vec<HotelRoomDetail> {
+        // match self {
+        //     BlockRoomResponse::Success(success_response) => {
+        //         success_response.get_block_room_hotel_details()
+        //     }
+        //     BlockRoomResponse::Failure(failre_response) => {
+        //         failre_response.get_block_room_hotel_details()
+        //     }
+        // }
+        delegate_method!(self, get_block_room_hotel_details)
+    }
+
     pub fn get_room_price_summed(&self) -> f64 {
         self.get_block_room_hotel_details()
             .iter()
             .map(|detail| detail.get_offered_price())
             .sum()
+    }
+
+    pub fn get_block_room_id(&self) -> Option<String> {
+        delegate_method!(self, get_block_room_id)
     }
 }
 
