@@ -241,19 +241,26 @@ impl BlockRoomResults {
     }
 
     pub fn book_room_request(&self) -> BookRoomRequest {
-        let search_list_results: SearchListResults = expect_context();
+        // let search_list_results: SearchListResults = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-        let result_token = hotel_info_ctx
-            .hotel_code
-            .get()
-            .and_then(|hotel_code| {
-                let token_map = search_list_results.get_hotel_code_results_token_map();
-                token_map.get(&hotel_code).cloned()
-            })
-            .unwrap_or_default();
+        // let result_token = hotel_info_ctx
+        //     .hotel_code
+        //     .get()
+        //     .and_then(|hotel_code| {
+        //         let token_map = search_list_results.get_hotel_code_results_token_map();
+        //         token_map.get(&hotel_code).cloned()
+        //     })
+        //     .unwrap_or_default();
 
-        let block_room_id = self.block_room_results.get_untracked().unwrap().block_room.block_room_result.block_room_id;
+        let block_room_id = self
+            .block_room_results
+            .get_untracked()
+            .unwrap()
+            .get_block_room_id()
+            .expect("Block Room API call failed");
+
+        let result_token = block_room_id.clone();
 
         let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
         let app_reference = format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code);
