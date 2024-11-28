@@ -27,3 +27,4 @@ patches/*
 .env
 .env.fly
 hash.txt
+test/.env.local
