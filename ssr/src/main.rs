@@ -1,5 +1,5 @@
 use cfg_if::cfg_if;
-use estate_fe::{api::consts::EnvVarConfig, init::AppStateBuilder};
+use estate_fe::{api::consts::EnvVarConfig, init::AppStateBuilder, utils::admin::AdminCanisters};
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -31,6 +31,7 @@ cfg_if! {
             handle_server_fns_with_context(
                 move || {
                     provide_context(app_state.env_var_config.clone());
+                    provide_context(AdminCanisters::from_env());
                 },
                 request,
             )

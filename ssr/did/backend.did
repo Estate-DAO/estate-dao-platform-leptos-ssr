@@ -1,1 +1,68 @@
-service : () -> { greet : (text) -> (text) query }
+type AdultDetail = record {
+  email : opt text;
+  first_name : text;
+  last_name : opt text;
+  phone : opt text;
+};
+type BackendPaymentStatus = variant { Paid : text; Unpaid : opt text };
+type BookRoomResponse = record {
+  status : BookingStatus;
+  commit_booking : vec BookingDetails;
+  message : opt text;
+};
+type Booking = record {
+  user_selected_hotel_room_details : HotelRoomDetails;
+  guests : UserDetails;
+  booking_id : record { text; text };
+  book_room_status : opt BookRoomResponse;
+  payment_details : PaymentDetails;
+};
+type BookingDetails = record {
+  booking_ref_no : text;
+  booking_status : BookingStatus;
+  confirmation_no : text;
+  booking_id : record { text; text };
+};
+type BookingStatus = variant { BookFailed; Confirmed };
+type ChildDetail = record {
+  age : nat8;
+  first_name : text;
+  last_name : opt text;
+};
+type Destination = record {
+  city_id : text;
+  city : text;
+  country_code : text;
+  country_name : text;
+};
+type HotelDetails = record { hotel_code : text; hotel_name : text };
+type HotelRoomDetails = record {
+  destination : opt Destination;
+  requested_payment_amount : float64;
+  date_range : SelectedDateRange;
+  room_details : vec RoomDetails;
+  hotel_details : HotelDetails;
+};
+type PaymentDetails = record {
+  payment_status : BackendPaymentStatus;
+  booking_id : record { text; text };
+};
+type Result = variant { Ok : text; Err : text };
+type RoomDetails = record {
+  room_price : float32;
+  room_unique_id : text;
+  room_type_name : text;
+};
+type SelectedDateRange = record {
+  end : record { nat32; nat32; nat32 };
+  start : record { nat32; nat32; nat32 };
+};
+type UserDetails = record {
+  children : vec ChildDetail;
+  adults : vec AdultDetail;
+};
+service : () -> {
+  add_booking : (text, Booking) -> (Result);
+  get_user_bookings : (text) -> (opt vec Booking) query;
+  greet : (text) -> (text) query;
+}
