@@ -34,3 +34,5 @@ pub use types::*;
 pub mod consts;
 
 pub mod payments;
+
+pub mod canister;

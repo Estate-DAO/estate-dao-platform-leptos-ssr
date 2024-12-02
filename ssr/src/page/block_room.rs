@@ -258,7 +258,8 @@ pub fn BlockRoomPage() -> impl IntoView {
             }
             "NOWPayments" => {
                 let invoice_request = CreateInvoiceRequest {
-                    price_amount: total_price.get() as u32,
+                    price_amount: 1_u32,
+                    // price_amount: total_price.get() as u32,
                     price_currency: "USD".to_string(),
                     order_id: "order_watever".to_string(),
                     order_description: "Hotel Room Booking".to_string(),
