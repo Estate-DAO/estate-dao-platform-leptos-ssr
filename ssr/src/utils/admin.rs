@@ -1,5 +1,7 @@
 use crate::api::consts::EnvVarConfig;
-use ic_agent::identity::{BasicIdentity, Secp256k1Identity};
+use candid::types::principal;
+use candid::Principal;
+use ic_agent::identity::{self, BasicIdentity};
 use ic_agent::{Agent, Identity};
 use leptos::expect_context;
 
@@ -25,18 +27,21 @@ impl AdminCanisters {
 
     pub async fn backend_canister(&self) -> Backend {
         let agent = self.agent.get_agent().await;
-        Backend(agent.get_principal().unwrap(), agent)
+        // let principal  = agent.get_principal().unwrap();
+        let principal = Principal::from_text("bkyz2-fmaaa-aaaaa-qaaaq-cai").unwrap();
+        println!("{principal:#?}");
+        Backend(principal, agent)
     }
 }
 
 /// Must be run on server only
 /// since EnvVarConfig is available in server context
-fn create_identity_from_admin_principal() -> BasicIdentity {
+fn create_identity_from_admin_principal() -> impl Identity {
     let config: EnvVarConfig = expect_context();
 
-    let identity = ic_agent::identity::BasicIdentity::from_pem(stringreader::StringReader::new(
-        config.admin_principal.as_str(),
-    ))
+    let identity = ic_agent::identity::Secp256k1Identity::from_pem(
+        stringreader::StringReader::new(config.admin_principal.as_str()),
+    )
     .unwrap();
 
     identity

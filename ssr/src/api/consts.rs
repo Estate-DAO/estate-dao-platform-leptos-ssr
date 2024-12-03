@@ -4,9 +4,12 @@ pub const PROVAB_BASE_URL_PROD: &str =
 pub const PROVAB_BASE_URL_TEST: &str =
     "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
-pub const AGENT_URL_REMOTE: &str = "https://ic0.app";
 pub const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
+// pub const AGENT_URL_LOCAL: &str = "https://ic0.app";
+pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
+
+use dotenvy::dotenv;
 use serde::Deserialize;
 use std::collections::HashMap;
 use thiserror::Error;
@@ -35,9 +38,10 @@ impl EnvVarConfig {
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
             admin_principal: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
-            ), // admin_private_key: env_or_panic("ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY")
+            ),
         };
 
+        println!("EnvVarConfig: {value:#?}");
         value
     }
 

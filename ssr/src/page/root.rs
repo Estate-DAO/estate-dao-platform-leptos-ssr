@@ -171,15 +171,13 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
         }
     });
 
-    let greet_action = create_action(move |_| {
-        async move {
-            match greet_backend("Knull".to_string()).await {
-                Ok(response) => {
-                    log!("{:#}", response);
-                }
-                Err(e) => {
-                    log!("Error greeting knull {:?}", e);
-                }
+    let greet_action = create_action(move |_| async move {
+        match greet_backend("Knull".to_string()).await {
+            Ok(response) => {
+                log!("{:#}", response);
+            }
+            Err(e) => {
+                log!("Error greeting knull {:?}", e);
             }
         }
     });

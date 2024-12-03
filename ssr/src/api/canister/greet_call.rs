@@ -8,7 +8,7 @@ pub async fn greet_backend(name: String) -> Result<String, ServerFnError> {
 
     let backend_cans = adm_cans.backend_canister().await;
 
-    let result = backend_cans.greet("STRINGGGGGGGG".into()).await.ok();
+    let result = backend_cans.greet("STRINGGGGGGGG".into()).await;
 
     log!("{result:?}");
 
