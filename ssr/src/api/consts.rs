@@ -1,15 +1,36 @@
+use crate::app::AppRoutes;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::env::VarError;
+use thiserror::Error;
+
 pub const PROVAB_BASE_URL_PROD: &str =
     "https://prod.services.travelomatix.com/webservices/index.php/hotel_v3/service";
 
 pub const PROVAB_BASE_URL_TEST: &str =
     "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
-use serde::Deserialize;
-use std::collections::HashMap;
-use thiserror::Error;
+pub const PROD_URL: &str = "https://estatefe.fly.dev";
+pub const LOCALHOST_DEV: &str = "http://127.0.0.1:3000";
+use cfg_if::cfg_if;
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+pub fn get_payments_url(status: &str) -> String {
+    cfg_if! {
+        if #[cfg(feature = "local-bin")] {
+            let url = LOCALHOST_DEV;
+        } else {
+            let url = PROD_URL;
+        }
+    }
 
+    format!(
+        "{}/{}?payment={}",
+        url,
+        AppRoutes::Confirmation.to_string(),
+        status
+    )
+}
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct EnvVarConfig {
@@ -38,8 +59,6 @@ impl EnvVarConfig {
         transform_headers(&self.provab_headers)
     }
 }
-
-use std::env::VarError;
 
 fn env_w_default(key: &str, default: &str) -> Result<String, EstateEnvConfigError> {
     match std::env::var(key) {

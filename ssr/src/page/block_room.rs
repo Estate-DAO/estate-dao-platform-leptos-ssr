@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 use crate::api::block_room;
+use crate::api::consts::get_payments_url;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::nowpayments_get_payment_status;
@@ -323,11 +324,11 @@ pub fn BlockRoomPage() -> impl IntoView {
                     order_id: "order_watever".to_string(),
                     order_description: "Hotel Room Booking".to_string(),
                     ipn_callback_url: "https://nowpayments.io".to_string(),
-                    success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
-                    cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
-                    partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
-                    is_fixed_rate: false,
-                    is_fee_paid_by_user: false,
+                    success_url: get_payments_url("success"),
+                    cancel_url: get_payments_url("cancel"),
+                    partially_paid_url: get_payments_url("partial"),
+                    is_fixed_rate: true,
+                    is_fee_paid_by_user: true,
                 };
 
                 spawn_local(async move {
@@ -335,16 +336,15 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
                     match create_invoice_response {
                         Ok(resp) => {
-                            let _ = window().location().assign(&resp.invoice_url);
-                            log!("invoice response : {:?}", resp);
+                            // let _ = window().location().assign(&resp.invoice_url);
+                            confirmation_action.dispatch(());
 
-                            // confirmation_action.dispatch(());
+                            log!("invoice response : {:?}", resp);
                         }
                         Err(e) => {
                             log!("Error creating invoice: {:?}", e);
                         }
                     }
-
                 });
             }
             _ => { /* Handle other payment methods */ }
