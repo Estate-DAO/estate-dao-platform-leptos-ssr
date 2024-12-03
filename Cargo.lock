@@ -1320,6 +1320,7 @@ dependencies = [
  "leptos_query_devtools",
  "leptos_router",
  "log",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
