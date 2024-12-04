@@ -317,6 +317,8 @@ pub fn BlockRoomPage() -> impl IntoView {
                     hotel_details: HotelDetails {
                         hotel_code: hotel_info_ctx.hotel_code.get().unwrap(),
                         hotel_name: hotel_info_ctx.selected_hotel_name.get(),
+                        hotel_image: hotel_info_ctx.selected_hotel_image.get(),
+                        hotel_location: hotel_info_ctx.selected_hotel_location.get(),
                     },
                 };
 
@@ -348,16 +350,19 @@ pub fn BlockRoomPage() -> impl IntoView {
                 )
                 .unwrap();
                 let email_cloned = email.clone();
-                let app_reference = generate_app_reference();
+                let email_cloned_twice = email.clone();
+                let app_reference = generate_app_reference(email_cloned_twice);
 
-                let booking_id = (app_reference.get().value(), email);
+                let booking_id = (app_reference.get().get_app_reference(), email);
                 let booking_id_cloned = booking_id.clone();
                 let payment_details = crate::canister::backend::PaymentDetails {
                     // payment_status: crate::canister::backend::BackendPaymentStatus {
                     //     status: "UnPaid".into(),
                     //     reason: "Payment Not Started".into(),
                     // },
-                    payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(Some("Payment Not Started".into())),
+                    payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(Some(
+                        "Payment Not Started".into(),
+                    )),
                     booking_id,
                 };
 

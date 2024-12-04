@@ -35,7 +35,12 @@ type Destination = record {
   country_code : text;
   country_name : text;
 };
-type HotelDetails = record { hotel_code : text; hotel_name : text };
+type HotelDetails = record {
+  hotel_code : text;
+  hotel_name : text;
+  hotel_image : text;
+  hotel_location : text;
+};
 type HotelRoomDetails = record {
   destination : opt Destination;
   requested_payment_amount : float64;
