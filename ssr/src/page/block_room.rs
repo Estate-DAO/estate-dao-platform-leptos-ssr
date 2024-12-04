@@ -1,11 +1,14 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
+use crate::api::_default_passenger_age;
 use crate::api::block_room;
 use crate::api::canister::add_booking::add_booking_backend;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
+use crate::api::payments::nowpayments_get_payment_status;
 use crate::api::payments::ports::CreateInvoiceRequest;
+use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
 use crate::canister::backend::BookRoomResponse;
 use crate::canister::backend::HotelDetails;
@@ -13,6 +16,7 @@ use crate::canister::backend::HotelRoomDetails;
 use crate::canister::backend::RoomDetails;
 use crate::canister::backend::UserDetails;
 use crate::component::SkeletonCards;
+// use crate::page::call_server_fn::call_add_booking_server_fn;
 use crate::state::search_state::BlockRoomResults;
 use crate::state::search_state::HotelInfoResults;
 use crate::state::view_state::AdultDetail;
@@ -43,6 +47,7 @@ use leptos::logging::log;
 
 #[component]
 pub fn BlockRoomPage() -> impl IntoView {
+    // ================ SETUP context  ================
     let search_ctx: SearchCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
     let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
@@ -57,14 +62,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     let block_room_ctx = expect_context::<BlockRoomCtx>();
     let block_room_results_context: BlockRoomResults = expect_context();
 
-    // let search_ctx: SearchCtx = expect_context();
-    // let search_list_results: SearchListResults = expect_context();
-    // let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
-    // let hotel_info_results: HotelInfoResults = expect_context();
-    // let hotel_info_ctx: HotelInfoCtx = expect_context();
-    // let confirmation_results: ConfirmationResults = expect_context();
-    // let block_room_ctx: BlockRoomCtx = expect_context();
-    // let block_room_results_context: BlockRoomResults = expect_context();
+    // ================ Pricing component signals  ================
 
     let room_price = Signal::derive(move || {
         // let room_price = create_memo(move |_| {
@@ -83,49 +81,9 @@ pub fn BlockRoomPage() -> impl IntoView {
         room_price * nights as f64
     });
 
-    // let final_total = create_memo(move |_| total_price.get());
+    // ================  Form Fields signals  ================
 
-    // Helper function to create passenger details
-    fn create_passenger_details(
-        adults: &[AdultDetail],
-        children: &[ChildDetail],
-    ) -> Vec<PassengerDetail> {
-        let mut passengers = Vec::new();
-
-        // Add adults
-        for (i, adult) in adults.iter().enumerate() {
-            passengers.push(PassengerDetail {
-                title: "Mr".to_string(), // Add logic for title selection
-                first_name: adult.first_name.clone(),
-                middle_name: None,
-                last_name: adult.last_name.clone().unwrap_or_default(),
-                email: if i == 0 {
-                    adult.email.clone().unwrap_or_default()
-                } else {
-                    String::new()
-                },
-                pax_type: PaxType::Adult,
-                lead_passenger: i == 0,
-                children_ages: None,
-            });
-        }
-
-        // Add children
-        for child in children {
-            passengers.push(PassengerDetail {
-                title: "".to_string(),
-                first_name: child.first_name.clone(),
-                middle_name: None,
-                last_name: child.last_name.clone().unwrap_or_default(),
-                email: String::new(),
-                pax_type: PaxType::Child,
-                lead_passenger: false,
-                children_ages: child.age.map(|age| age as u32), // Convert u8 to u32
-            });
-        }
-
-        passengers
-    }
+    let is_form_valid: RwSignal<bool> = create_rw_signal(false);
 
     let adult_count = create_memo(move |_| search_ctx.guests.get().adults.get());
 
@@ -154,31 +112,84 @@ pub fn BlockRoomPage() -> impl IntoView {
         // Trigger validation check
     };
 
-    let navigate = use_navigate();
-    let nav = navigate.clone(); // Clone it here for the first use
+    // ================  Form Validation signals  ================
+
+    let adults = block_room_ctx.adults;
+    let children = block_room_ctx.children;
+    let terms_accepted = block_room_ctx.terms_accepted;
+
+    // Validation logic function
+    let validate_form = move || {
+        let adult_list = adults.get();
+        let child_list = children.get();
+
+        // Helper function for email validation
+        let is_valid_email = |email: &str| email.contains('@') && email.contains('.');
+
+        // Helper function for phone validation
+        let is_valid_phone =
+            |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
+
+        // Validate primary adult
+        let primary_adult_valid = adult_list.first().map_or(false, |adult| {
+            !adult.first_name.trim().is_empty()
+                && adult
+                    .email
+                    .as_ref()
+                    .map_or(false, |e| !e.trim().is_empty() && is_valid_email(e))
+                && adult
+                    .phone
+                    .as_ref()
+                    .map_or(false, |p| !p.trim().is_empty() && is_valid_phone(p))
+        });
+
+        // Validate other adults
+        let other_adults_valid = adult_list
+            .iter()
+            .skip(1)
+            .all(|adult| !adult.first_name.trim().is_empty());
+
+        // Validate children
+        let children_valid = child_list
+            .iter()
+            .all(|child| !child.first_name.trim().is_empty() && child.age.is_some());
+
+        // Check if terms are accepted
+        let terms_valid = terms_accepted.get();
+
+        // Set the value of is_form_valid based on validation results
+        is_form_valid
+            .set(primary_adult_valid && other_adults_valid && children_valid && terms_valid);
+    };
+
+    // Call the validation function whenever inputs change
+    let _ = create_effect(move |_| {
+        validate_form();
+    });
+
+    // ================  Page Nav and Redirect signals  ================
+
+    let nav = navigate.clone();
 
     let go_back_to_details = move |ev: ev::MouseEvent| {
         ev.prevent_default();
         let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
     };
 
-    let adults = block_room_ctx.adults;
-    let children = block_room_ctx.children;
-    let terms_accepted = block_room_ctx.terms_accepted;
-
-    let handle_booking = create_action(move |_| {
+    let confirmation_action = create_action(move |()| {
         let nav = nav.clone(); // Use the cloned version here
-                               // let adults_data = adults.get();
-                               // let children_data = children.get();
-                               // let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
-                               // let search_list_results = search_list_results.get_value(); // Get the stored value
+        let adults_data = adults.get();
+        let children_data = children.get();
+        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
+        let search_list_results = search_list_results.get_value(); // Get the stored value
 
         async move {
-            // let room_detail = RoomDetail {
-            //     passenger_details: create_passenger_details(&adults_data, &children_data),
-            // };
+            let room_detail = RoomDetail {
+                passenger_details: create_passenger_details(&adults_data, &children_data),
+            };
+            ConfirmationResults::set_room_details(Some(room_detail));
 
-            // // Get room_unique_id from HotelRoomResponse
+            // Get room_unique_id from HotelRoomResponse
             // let block_room_id = hotel_info_results
             //     .room_result
             //     .get()
@@ -213,20 +224,57 @@ pub fn BlockRoomPage() -> impl IntoView {
             //                 // Set the booking details in context
             //                 ConfirmationResults::set_booking_details(Some(response));
             nav(AppRoutes::Confirmation.to_string(), Default::default());
-            //             }
-            //             BookingStatus::BookFailed => {
-            //                 log!("Booking failed: {:?}", response.message);
+            //                 }
+            //                 BookingStatus::BookFailed => {
+            //                     log!("Booking failed: {:?}", response.message);
+            //                 }
             //             }
             //         }
+            //         Err(e) => {
+            //             log!("Error booking room: {:?}", e);
+            //         }
             //     }
-            //     Err(e) => {
-            //         log!("Error booking room: {:?}", e);
-            //     }
-            // }
         }
     });
 
-    let is_form_valid: RwSignal<bool> = create_rw_signal(false);
+    // ================  PAYMENT STATUS signals  ================
+
+    let get_payment_status_action: Action<(), ()> = create_action(move |_| async move {
+        let payment_id = 5991043299_u64;
+        let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
+            .await
+            .ok();
+        BlockRoomResults::set_payment_results(resp);
+    });
+
+    // create_effect(move |_| {
+    //     // Check the URL for a payment status parameter after redirect
+    //     // use_query_params()
+    //     let params = window().location().search().unwrap_or_default();
+    //     let url_params = web_sys::UrlSearchParams::new_with_str(&params)
+    //         .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
+
+    //     if let Some(payment_status) = url_params.get("payment") {
+    //         match payment_status.as_str() {
+    //             "success" => {
+    //                 // Payment successful, trigger booking
+    //                 confirmation_action.dispatch(());
+    //             }
+    //             "cancel" => {
+    //                 // Payment cancelled, handle accordingly (e.g., show a message)
+    //                 log!("Payment cancelled.");
+    //             }
+    //             "partial" => {
+    //                 log!("Payment partially paid.");
+    //             }
+    //             _ => {
+    //                 log!("Unknown payment status: {}", payment_status);
+    //             }
+    //         }
+    //     }
+    // });
+
+    // ================  Confirmation Modal signals  ================
 
     let show_modal = create_rw_signal(false);
     let open_modal = move |_| {
@@ -432,32 +480,32 @@ pub fn BlockRoomPage() -> impl IntoView {
         show_modal.set(false);
     };
 
-    create_effect(move |_| {
-        // Check the URL for a payment status parameter after redirect
-        // use_query_params()
-        let params = window().location().search().unwrap_or_default();
-        let url_params = web_sys::UrlSearchParams::new_with_str(&params)
-            .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
+    // create_effect(move |_| {
+    //     // Check the URL for a payment status parameter after redirect
+    //     // use_query_params()
+    //     let params = window().location().search().unwrap_or_default();
+    //     let url_params = web_sys::UrlSearchParams::new_with_str(&params)
+    //         .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
 
-        if let Some(payment_status) = url_params.get("payment") {
-            match payment_status.as_str() {
-                "success" => {
-                    // Payment successful, trigger booking
-                    handle_booking.dispatch(());
-                }
-                "cancel" => {
-                    // Payment cancelled, handle accordingly (e.g., show a message)
-                    log!("Payment cancelled.");
-                }
-                "partial" => {
-                    log!("Payment partially paid.");
-                }
-                _ => {
-                    log!("Unknown payment status: {}", payment_status);
-                }
-            }
-        }
-    });
+    //     if let Some(payment_status) = url_params.get("payment") {
+    //         match payment_status.as_str() {
+    //             "success" => {
+    //                 // Payment successful, trigger booking
+    //                 confirmation_action.dispatch(());
+    //             }
+    //             "cancel" => {
+    //                 // Payment cancelled, handle accordingly (e.g., show a message)
+    //                 log!("Payment cancelled.");
+    //             }
+    //             "partial" => {
+    //                 log!("Payment partially paid.");
+    //             }
+    //             _ => {
+    //                 log!("Unknown payment status: {}", payment_status);
+    //             }
+    //         }
+    //     }
+    // });
 
     // Validation logic function
     let validate_form = move || {
@@ -643,7 +691,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                                                 validate_form();
                                             }
                                         />
-                                        <input type="text" placeholder="Last Name" class="w-1/2 rounded-md border border-gray-300 p-2" />
+                                        <input type="text" placeholder="Last Name" class="w-1/2 rounded-md border border-gray-300 p-2"
+                                        required=true
+                                        on:input=move |ev| {
+                                            update_adult(i_usize, "last_name", event_target_value(&ev));
+                                            validate_form();
+                                        }
+                                        />
                                         </div>
                                         {move || if i == 0 {
                                             view! {
@@ -816,4 +870,49 @@ pub fn BlockRoomPage() -> impl IntoView {
             </div>
         </Show>
     }
+}
+
+// Helper function to create passenger details
+fn create_passenger_details(
+    adults: &[AdultDetail],
+    children: &[ChildDetail],
+) -> Vec<PassengerDetail> {
+    let mut passengers = Vec::new();
+
+    // Add adults
+    for (i, adult) in adults.iter().enumerate() {
+        passengers.push(PassengerDetail {
+            title: "Mr".to_string(), // todo Add logic for title selection
+            first_name: adult.first_name.clone(),
+            last_name: adult.last_name.clone().unwrap_or_default(),
+            email: if i == 0 {
+                adult.email.clone().unwrap_or_default()
+            } else {
+                String::new()
+            },
+            pax_type: PaxType::Adult,
+            lead_passenger: i == 0,
+            age: _default_passenger_age(),
+            ..Default::default()
+        });
+    }
+
+    // Add children
+    for child in children {
+        passengers.push(PassengerDetail {
+            title: "".to_string(),
+            first_name: child.first_name.clone(),
+            last_name: child.last_name.clone().unwrap_or_default(),
+            email: String::new(),
+            pax_type: PaxType::Child,
+            lead_passenger: false,
+            age: child
+                .age
+                .map(|age| age as u32)
+                .expect("child age not defined"), // Convert u8 to u32
+            ..Default::default()
+        });
+    }
+
+    passengers
 }

@@ -27,7 +27,7 @@ pub struct RoomDetail {
     pub passenger_details: Vec<PassengerDetail>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct PassengerDetail {
     #[serde(rename = "Title")]
     pub title: String, // Mr,Mrs,Ms possible values
@@ -52,20 +52,24 @@ pub struct PassengerDetail {
     #[serde(rename = "LeadPassenger", default = "default_true")]
     pub lead_passenger: bool,
 
-    #[serde(rename = "Age")]
-    pub children_ages: Option<u32>, // Mandatory only for children, must be <= 18
+    #[serde(rename = "Age", default = "_default_passenger_age")]
+    pub age: u32, //for children, must be <= 18
+}
+
+pub fn _default_passenger_age() -> u32 {
+    25
 }
 
 fn default_true() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[repr(u8)]
 pub enum PaxType {
-    #[serde(rename = "Adult")]
+    #[default]
     Adult = 1,
 
-    #[serde(rename = "Child")]
     Child = 2,
 }
 

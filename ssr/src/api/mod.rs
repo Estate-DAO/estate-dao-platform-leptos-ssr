@@ -15,7 +15,7 @@ pub use a03_block_room::{block_room, BlockRoomRequest, BlockRoomResponse};
 mod a04_book_room;
 pub use a04_book_room::{
     book_room, BookRoomRequest, BookRoomResponse, BookingStatus, PassengerDetail, PaxType,
-    RoomDetail,
+    RoomDetail, _default_passenger_age,
 };
 
 mod a05_hotel_booking_detail;
