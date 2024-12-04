@@ -25,6 +25,7 @@ use leptos_icons::*;
 use leptos_router::use_navigate;
 // use web_sys::localStorage;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::api::payments::ports::PaymentGateway;
 use crate::{
@@ -352,7 +353,11 @@ pub fn BlockRoomPage() -> impl IntoView {
                 let booking_id = (app_reference.get().value(), email);
                 let booking_id_cloned = booking_id.clone();
                 let payment_details = crate::canister::backend::PaymentDetails {
-                    payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(None),
+                    // payment_status: crate::canister::backend::BackendPaymentStatus {
+                    //     status: "UnPaid".into(),
+                    //     reason: "Payment Not Started".into(),
+                    // },
+                    payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(Some("Payment Not Started".into())),
                     booking_id,
                 };
 
@@ -373,10 +378,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                         Ok(resp) => {
                             log!("heres CreateInvoiceResponse");
                             log!("{:?}\n{:?}", email_cloned, booking);
-                            match add_booking_backend(email_cloned, booking).await {
+                            let value_for_serverfn: String =
+                                serde_json::to_string(&booking).unwrap();
+
+                            match add_booking_backend(email_cloned, value_for_serverfn).await {
                                 Ok(response) => {
                                     println!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
-                                    let _ = window().location().assign(&resp.invoice_url);
+                                    // let _ = window().location().assign(&resp.invoice_url);
                                 }
                                 Err(e) => {
                                     log!("Error saving values {:?}", e);
