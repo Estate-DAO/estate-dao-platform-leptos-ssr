@@ -2,7 +2,7 @@ use crate::{
     api::{
         BlockRoomRequest, BlockRoomResponse, BookRoomResponse, HotelInfoRequest, HotelInfoResponse,
         HotelRoomDetail, HotelRoomRequest, HotelRoomResponse, HotelSearchRequest,
-        HotelSearchResponse,
+        HotelSearchResponse, RoomDetail,
     },
     component::{Destination, GuestSelection, SelectedDateRange},
     page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
@@ -115,6 +115,7 @@ pub struct HotelInfoResults {
     pub price_per_night: RwSignal<f64>,
     pub room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
     pub block_room_counters: RwSignal<HashMap<String, RoomCounterKeyValueStatic>>,
+    pub sorted_rooms: RwSignal<Vec<SortedRoom>>,
 }
 
 impl HotelInfoResults {
@@ -162,6 +163,10 @@ impl HotelInfoResults {
 
     pub fn set_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
         Self::from_leptos_context().room_counters.set(room_counters);
+    }
+
+    pub fn set_sorted_rooms(&self, sorted_rooms: Vec<SortedRoom>) {
+        Self::from_leptos_context().sorted_rooms.set(sorted_rooms);
     }
 
     pub fn set_block_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {

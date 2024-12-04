@@ -326,10 +326,10 @@ impl From<RoomCounterKeyValue> for RoomCounterKeyValueStatic {
 
 #[derive(PartialEq, Debug, Default, Clone)]
 pub struct SortedRoom {
-    room_type: String,
-    room_unique_id: String,
-    room_count_for_given_type: u32,
-    room_price: f64,
+    pub room_type: String,
+    pub room_unique_id: String,
+    pub room_count_for_given_type: u32,
+    pub room_price: f64,
 }
 
 #[component]
@@ -498,6 +498,7 @@ pub fn PricingBookNow() -> impl IntoView {
                         price_per_night=price
                         number_of_nights=num_nights
                         room_counters=room_counters_clone
+                        sorted_rooms=sorted_rooms.get()
                     />
                 </div>
             </div>
@@ -510,6 +511,7 @@ pub fn PricingBreakdown(
     #[prop(into)] price_per_night: Signal<f64>,
     #[prop(into)] number_of_nights: Signal<u32>,
     #[prop(into)] room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
+    #[prop(into)] sorted_rooms: Vec<SortedRoom>,
 ) -> impl IntoView {
     let per_night_calc =
         create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
@@ -531,6 +533,8 @@ pub fn PricingBreakdown(
             .filter_map(|counter| counter.value.get_untracked())
             .collect();
 
+        let sorted_rooms_clone = sorted_rooms.clone();
+
         async move {
             // Reset previous block room results
             BlockRoomResults::reset();
@@ -540,6 +544,8 @@ pub fn PricingBreakdown(
             hotel_info_results.set_price_per_night(price_per_night.get());
             // hotel_info_results.set_room_counters(room_counters.get());
             hotel_info_results.set_block_room_counters(room_counters.get());
+
+            hotel_info_results.set_sorted_rooms(sorted_rooms_clone);
 
             let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 

@@ -2,16 +2,23 @@
 #![allow(dead_code)]
 
 use crate::api::block_room;
+use crate::api::canister::add_booking::add_booking_backend;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::ports::CreateInvoiceRequest;
 use crate::api::payments::NowPayments;
+use crate::canister::backend::BookRoomResponse;
+use crate::canister::backend::HotelDetails;
+use crate::canister::backend::HotelRoomDetails;
+use crate::canister::backend::RoomDetails;
+use crate::canister::backend::UserDetails;
 use crate::component::SkeletonCards;
 use crate::state::search_state::BlockRoomResults;
 use crate::state::search_state::HotelInfoResults;
 use crate::state::view_state::AdultDetail;
 use crate::state::view_state::BlockRoomCtx;
 use crate::state::view_state::ChildDetail;
+use crate::utils::app_reference::generate_app_reference;
 use crate::utils::pluralize;
 use leptos::*;
 use leptos_icons::*;
@@ -21,10 +28,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::payments::ports::PaymentGateway;
 use crate::{
-    api::{
-        book_room, BookRoomRequest, BookRoomResponse, BookingStatus, PassengerDetail, PaxType,
-        RoomDetail,
-    },
+    api::{book_room, BookRoomRequest, BookingStatus, PassengerDetail, PaxType, RoomDetail},
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::{InputGroup, Navbar},
@@ -51,6 +55,15 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let block_room_ctx = expect_context::<BlockRoomCtx>();
     let block_room_results_context: BlockRoomResults = expect_context();
+
+    // let search_ctx: SearchCtx = expect_context();
+    // let search_list_results: SearchListResults = expect_context();
+    // let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
+    // let hotel_info_results: HotelInfoResults = expect_context();
+    // let hotel_info_ctx: HotelInfoCtx = expect_context();
+    // let confirmation_results: ConfirmationResults = expect_context();
+    // let block_room_ctx: BlockRoomCtx = expect_context();
+    // let block_room_results_context: BlockRoomResults = expect_context();
 
     let room_price = Signal::derive(move || {
         // let room_price = create_memo(move |_| {
@@ -154,43 +167,43 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let handle_booking = create_action(move |_| {
         let nav = nav.clone(); // Use the cloned version here
-        let adults_data = adults.get();
-        let children_data = children.get();
-        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
-        let search_list_results = search_list_results.get_value(); // Get the stored value
+                               // let adults_data = adults.get();
+                               // let children_data = children.get();
+                               // let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
+                               // let search_list_results = search_list_results.get_value(); // Get the stored value
 
         async move {
-            let room_detail = RoomDetail {
-                passenger_details: create_passenger_details(&adults_data, &children_data),
-            };
+            // let room_detail = RoomDetail {
+            //     passenger_details: create_passenger_details(&adults_data, &children_data),
+            // };
 
-            // Get room_unique_id from HotelRoomResponse
-            let block_room_id = hotel_info_results
-                .room_result
-                .get()
-                .and_then(|room_response| room_response.room_list.clone())
-                .and_then(|room_list| {
-                    room_list
-                        .get_hotel_room_result
-                        .hotel_rooms_details
-                        .first()
-                        .cloned()
-                })
-                .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
-                .unwrap_or_default();
+            // // Get room_unique_id from HotelRoomResponse
+            // let block_room_id = hotel_info_results
+            //     .room_result
+            //     .get()
+            //     .and_then(|room_response| room_response.room_list.clone())
+            //     .and_then(|room_list| {
+            //         room_list
+            //             .get_hotel_room_result
+            //             .hotel_rooms_details
+            //             .first()
+            //             .cloned()
+            //     })
+            //     .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
+            //     .unwrap_or_default();
 
-            let token = search_list_results
-                .get_hotel_code_results_token_map()
-                .get(&hotel_code)
-                .cloned()
-                .unwrap_or_default();
+            // let token = search_list_results
+            //     .get_hotel_code_results_token_map()
+            //     .get(&hotel_code)
+            //     .cloned()
+            //     .unwrap_or_default();
 
-            let book_request = BookRoomRequest {
-                result_token: token,
-                block_room_id,
-                app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
-                room_details: vec![room_detail],
-            };
+            // let book_request = BookRoomRequest {
+            //     result_token: token,
+            //     block_room_id,
+            //     app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
+            //     room_details: vec![room_detail],
+            // };
 
             // match book_room(book_request).await {
             //     Ok(response) => {
@@ -271,12 +284,104 @@ pub fn BlockRoomPage() -> impl IntoView {
                     is_fee_paid_by_user: false,
                 };
 
+                let sorted_rooms = hotel_info_results.sorted_rooms.get();
+
+                let room_details = sorted_rooms
+                    .into_iter()
+                    .map(|sorted_room| RoomDetails {
+                        room_price: sorted_room.room_price as f32,
+                        room_unique_id: sorted_room.room_unique_id,
+                        room_type_name: sorted_room.room_type,
+                    })
+                    .collect();
+
+                let destination = search_ctx.destination.get().map(|dest| {
+                    crate::canister::backend::Destination {
+                        city_id: dest.city_id,
+                        city: dest.city,
+                        country_code: dest.country_code,
+                        country_name: dest.country_name,
+                    }
+                });
+                let selected_date_range = search_ctx.date_range.get();
+                let date_range = crate::canister::backend::SelectedDateRange {
+                    start: selected_date_range.start,
+                    end: selected_date_range.end,
+                };
+                let user_selected_hotel_room_details = HotelRoomDetails {
+                    destination,
+                    requested_payment_amount: total_price.get(),
+                    date_range,
+                    room_details,
+                    hotel_details: HotelDetails {
+                        hotel_code: hotel_info_ctx.hotel_code.get().unwrap(),
+                        hotel_name: hotel_info_ctx.selected_hotel_name.get(),
+                    },
+                };
+
+                let adults: Vec<crate::canister::backend::AdultDetail> = block_room_ctx
+                    .adults
+                    .get()
+                    .into_iter()
+                    .map(|adult| crate::canister::backend::AdultDetail {
+                        email: adult.email,
+                        first_name: adult.first_name,
+                        last_name: adult.last_name,
+                        phone: adult.phone,
+                    })
+                    .collect();
+                let children: Vec<crate::canister::backend::ChildDetail> = block_room_ctx
+                    .children
+                    .get()
+                    .into_iter()
+                    .map(|child| crate::canister::backend::ChildDetail {
+                        age: child.age.unwrap(),
+                        first_name: child.first_name,
+                        last_name: child.last_name,
+                    })
+                    .collect();
+                let guests = UserDetails { children, adults };
+
+                let email = <std::option::Option<std::string::String> as Clone>::clone(
+                    &block_room_ctx.adults.get().first().unwrap().email,
+                )
+                .unwrap();
+                let email_cloned = email.clone();
+                let app_reference = generate_app_reference();
+
+                let booking_id = (app_reference.get().value(), email);
+                let booking_id_cloned = booking_id.clone();
+                let payment_details = crate::canister::backend::PaymentDetails {
+                    payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(None),
+                    booking_id,
+                };
+
+                let booking = crate::canister::backend::Booking {
+                    user_selected_hotel_room_details,
+                    guests,
+                    booking_id: booking_id_cloned,
+                    book_room_status: None,
+                    payment_details,
+                };
+
+                log!("block_room page - booking - {:#?}", booking);
+
                 spawn_local(async move {
-                    // let invoice_url = nowpayments.create_invoice(&invoice_request).await;
                     let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
+                    log!("creating invoice");
                     match create_invoice_response {
                         Ok(resp) => {
-                            let _ = window().location().assign(&resp.invoice_url);
+                            log!("heres CreateInvoiceResponse");
+                            log!("{:?}\n{:?}", email_cloned, booking);
+                            match add_booking_backend(email_cloned, booking).await {
+                                Ok(response) => {
+                                    println!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+                                    let _ = window().location().assign(&resp.invoice_url);
+                                }
+                                Err(e) => {
+                                    log!("Error saving values {:?}", e);
+                                }
+                            }
                         }
                         Err(e) => {
                             log!("Error creating invoice: {:?}", e);
