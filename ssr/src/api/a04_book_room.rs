@@ -27,7 +27,9 @@ pub struct RoomDetail {
     pub passenger_details: Vec<PassengerDetail>,
 }
 
-#[derive(Serialize, Deserialize, Default, Debug, Clone)]
+#[derive(Deserialize, Default, Debug, Clone)]
+/// customer serializer is implemented to ensure validation
+/// and override the serde's default behaviour around None values
 pub struct PassengerDetail {
     #[serde(rename = "Title")]
     pub title: String, // Mr,Mrs,Ms possible values
@@ -129,5 +131,44 @@ pub async fn book_room(request: BookRoomRequest) -> Result<BookRoomResponse, Ser
             log!("error: {:?}", e);
             Err(ServerFnError::ServerError(e.to_string()))
         }
+    }
+}
+
+// ======================  custom serializer for the PassengerDetail ======================
+use serde::ser::{SerializeStruct, Serializer};
+
+impl Serialize for PassengerDetail {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if self.first_name.len() < 2 || self.first_name.len() >= 50 {
+            return Err(serde::ser::Error::custom(
+                "First name must have at least 2 characters, max 50 characters",
+            ));
+        }
+
+        if self.last_name.len() < 2 || self.last_name.len() >= 50 {
+            return Err(serde::ser::Error::custom(
+                "Last name must have at least 2 characters, max 50 characters",
+            ));
+        }
+
+        let mut state = serializer.serialize_struct("PassengerDetail", 8)?;
+        state.serialize_field("Title", &self.title)?;
+
+        state.serialize_field("FirstName", &self.first_name)?;
+        state.serialize_field(
+            "MiddleName",
+            &self.middle_name.clone().unwrap_or_else(|| "".to_string()),
+        )?;
+
+        state.serialize_field("LastName", &self.last_name)?;
+
+        state.serialize_field("Email", &self.email)?;
+        state.serialize_field("PaxType", &(self.pax_type.clone() as u8).to_string())?;
+        state.serialize_field("LeadPassenger", &self.lead_passenger)?;
+        state.serialize_field("Age", &self.age)?;
+        state.end()
     }
 }
