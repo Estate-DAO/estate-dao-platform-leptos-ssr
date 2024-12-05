@@ -610,7 +610,7 @@ pub fn NumberCounterWrapper(
     // Sets the value of the signal if the counter is non-zero
     create_effect(move |_| {
         if counter.get() > 0 {
-            log!("base_counter.value: {value:?}");
+            // log!("base_counter.value: {value:?}");
             set_value.set(Some(value.clone()));
         } else {
             set_value.set(None); // Or handle the zero case differently
@@ -618,6 +618,7 @@ pub fn NumberCounterWrapper(
     });
 
     let can_increment = move || total_selected_rooms.get() < max_rooms;
+    let can_decrement = move || counter.get() > 0;
 
     view! {
         <div class=format!("flex items-center justify-between {}", class)>
@@ -625,6 +626,7 @@ pub fn NumberCounterWrapper(
             <div class="flex items-center space-x-1">
                 <button
                     class="ps-2 py-1 text-2xl"
+                    disabled={ move || !can_decrement()}
                     on:click=move |_| {
                         counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
                         total_selected_rooms.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });

@@ -23,7 +23,7 @@ pub struct EnvVarConfig {
     pub provab_base_url: String,
     provab_headers: HashMap<String, String>,
     pub nowpayments_api_key: String,
-    pub admin_principal: String,
+    pub admin_private_key: String,
 }
 
 impl EnvVarConfig {
@@ -36,12 +36,12 @@ impl EnvVarConfig {
             provab_headers: pv_hashmap,
             provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL_TEST).unwrap(),
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
-            admin_principal: env_or_panic(
+            admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
             ),
         };
 
-        println!("EnvVarConfig: {value:#?}");
+        // println!("EnvVarConfig: {value:#?}");
         value
     }
 

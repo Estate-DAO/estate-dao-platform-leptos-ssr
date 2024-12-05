@@ -40,7 +40,7 @@ fn create_identity_from_admin_principal() -> impl Identity {
     let config: EnvVarConfig = expect_context();
 
     let identity = ic_agent::identity::Secp256k1Identity::from_pem(
-        stringreader::StringReader::new(config.admin_principal.as_str()),
+        stringreader::StringReader::new(config.admin_private_key.as_str()),
     )
     .unwrap();
 
