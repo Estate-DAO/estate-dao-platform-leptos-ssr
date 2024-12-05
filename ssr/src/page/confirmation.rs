@@ -1,21 +1,86 @@
+use codee::string::JsonSerdeCodec;
 use leptos::*;
 use leptos_router::use_navigate;
+use leptos_use::storage::use_local_storage;
 
 use crate::{
-    api::hotel_info,
+    api::{canister::get_user_booking::get_user_booking_backend, hotel_info},
     app::AppRoutes,
-    component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
+    component::{Divider, FilterAndSortBy, PriceDisplay, SelectedDateRange, StarRating},
     page::{InputGroup, Navbar},
     state::{
         search_state::{HotelInfoResults, SearchCtx, SearchListResults},
         view_state::HotelInfoCtx,
     },
+    utils::app_reference::BookingId,
 };
 use chrono::NaiveDate;
 use leptos::logging::log;
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
+    create_effect(move |_| {
+        let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
+        let app_reference_string = state.get().get_app_reference();
+        let email = state.get().get_email();
+
+        log!(
+            "EMAIL >>>{:?}\nAPP_REF >>>{:?}",
+            email,
+            app_reference_string
+        );
+        let email_cloned_twice = state.get().get_email();
+
+        spawn_local(async move {
+            match get_user_booking_backend(email_cloned_twice).await {
+                Ok(response) => match response {
+                    Some(booking) => {
+                        let app_reference_string_cloned = app_reference_string.clone();
+                        let email_cloned = email.clone();
+                        let found_booking = booking
+                            .into_iter()
+                            .find(|b| {
+                                b.booking_id
+                                    == (app_reference_string_cloned.clone(), email_cloned.clone())
+                            })
+                            .unwrap();
+                        let date_range = SelectedDateRange {
+                            start: found_booking
+                                .user_selected_hotel_room_details
+                                .date_range
+                                .start,
+                            end: found_booking
+                                .user_selected_hotel_room_details
+                                .date_range
+                                .end,
+                        };
+                        SearchCtx::set_date_range(date_range);
+                        HotelInfoCtx::set_selected_hotel_details(
+                            found_booking
+                                .user_selected_hotel_room_details
+                                .hotel_details
+                                .hotel_name,
+                            found_booking
+                                .user_selected_hotel_room_details
+                                .hotel_details
+                                .hotel_image,
+                            found_booking
+                                .user_selected_hotel_room_details
+                                .hotel_details
+                                .hotel_location,
+                        );
+                    }
+                    None => {
+                        log!("No booking available")
+                    }
+                },
+                Err(e) => {
+                    log!("Error greeting knull {:?}", e);
+                }
+            }
+        });
+    });
+
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
 

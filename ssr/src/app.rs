@@ -42,7 +42,7 @@ impl AppRoutes {
             AppRoutes::HotelList => "/hotel-list",
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
-            Self::Confirmation => "/confirmation",
+            AppRoutes::Confirmation => "/confirmation",
         }
     }
 }

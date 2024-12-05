@@ -16,10 +16,11 @@ pub struct HotelInfoCtx {
 }
 
 impl HotelInfoCtx {
-    pub fn set_selected_hotel_details(&self, name: String, image: String, location: String) {
-        self.selected_hotel_name.set(name);
-        self.selected_hotel_image.set(image);
-        self.selected_hotel_location.set(location);
+    pub fn set_selected_hotel_details(name: String, image: String, location: String) {
+        let this: Self = expect_context();
+        this.selected_hotel_name.set(name);
+        this.selected_hotel_image.set(image);
+        this.selected_hotel_location.set(location);
     }
 }
 

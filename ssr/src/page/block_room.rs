@@ -399,15 +399,11 @@ pub fn BlockRoomPage() -> impl IntoView {
                 .unwrap();
                 let email_cloned = email.clone();
                 let email_cloned_twice = email.clone();
-                let app_reference = generate_app_reference(email_cloned_twice);
+                let local_booking_id = generate_app_reference(email_cloned_twice);
 
-                let booking_id = (app_reference.get().get_app_reference(), email);
+                let booking_id = (local_booking_id.get().get_app_reference(), email);
                 let booking_id_cloned = booking_id.clone();
                 let payment_details = crate::canister::backend::PaymentDetails {
-                    // payment_status: crate::canister::backend::BackendPaymentStatus {
-                    //     status: "UnPaid".into(),
-                    //     reason: "Payment Not Started".into(),
-                    // },
                     payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(Some(
                         "Payment Not Started".into(),
                     )),
@@ -436,8 +432,11 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                             match add_booking_backend(email_cloned, value_for_serverfn).await {
                                 Ok(response) => {
-                                    println!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+                                    log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
                                     // let _ = window().location().assign(&resp.invoice_url);
+                                    let _ = window()
+                                        .location()
+                                        .assign(&"http://localhost:3000/confirmation".to_string());
                                 }
                                 Err(e) => {
                                     log!("Error saving values {:?}", e);
