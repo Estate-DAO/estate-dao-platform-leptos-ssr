@@ -5,7 +5,7 @@ use leptos_use::storage::{use_local_storage, UseStorageOptions}; // Import neces
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::canister::backend::Booking;
+use crate::{canister::backend::Booking, state::local_storage::use_booking_id_store};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct BookingId {
@@ -30,13 +30,15 @@ impl BookingId {
     }
 }
 
-pub fn generate_app_reference(email: String) -> Signal<BookingId> {
+pub fn generate_app_reference(email: String) -> Signal<Option<BookingId>> {
     let today = Local::now().format("%d%m").to_string();
     let rand_num1: u32 = rand::thread_rng().gen_range(100000..999999);
     let rand_num2: u32 = rand::thread_rng().gen_range(100000..999999);
     let app_reference_string = format!("HB{}-{}-{}", today, rand_num1, rand_num2);
     let app_reference = BookingId::new(email, app_reference_string);
-    let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
-    set_state(app_reference);
+    // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
+    let (state, set_state, _) = use_booking_id_store();
+
+    set_state(Some(app_reference));
     state
 }

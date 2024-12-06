@@ -1,8 +1,3 @@
-use codee::string::JsonSerdeCodec;
-use leptos::*;
-use leptos_router::use_navigate;
-use leptos_use::{storage::use_local_storage, use_interval_fn, utils::Pausable};
-
 use crate::{
     api::{
         book_room,
@@ -34,8 +29,12 @@ use crate::{
     utils::app_reference::BookingId,
 };
 use chrono::NaiveDate;
+use codee::string::JsonSerdeCodec;
 use leptos::logging::log;
+use leptos::*;
+use leptos_router::use_navigate;
 use leptos_router::*;
+use leptos_use::{storage::use_local_storage, use_interval_fn, utils::Pausable};
 
 #[derive(Params, PartialEq, Clone)]
 struct NowpaymentsPaymentId {
@@ -59,6 +58,8 @@ pub fn ConfirmationPage() -> impl IntoView {
         val
     });
 
+    // let np_payment_id = create_rw_signal(Some(46676_u64));
+
     let (payment_store, set_payment_store, _) = use_payment_store();
 
     // whenever the payment ID changes, we update the value in local storage as well
@@ -74,23 +75,29 @@ pub fn ConfirmationPage() -> impl IntoView {
     // user data
     // if in context, => go ahead
     create_effect(move |_| {
-        let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
-        let app_reference_string = state.get().get_app_reference();
-        let email = state.get().get_email();
+        let (state, set_state, _) = use_booking_id_store();
+
+        let app_reference_string = state
+            .get_untracked()
+            .and_then(|booking| Some(booking.get_app_reference()));
+        let email = state
+            .get_untracked()
+            .and_then(|booking| Some(booking.get_email()));
 
         log!(
             "EMAIL >>>{:?}\nAPP_REF >>>{:?}",
             email,
             app_reference_string
         );
-        let email_cloned_twice = state.get().get_email();
+        let email_cloned_twice = email.clone().unwrap();
 
         spawn_local(async move {
             match get_user_booking_backend(email_cloned_twice).await {
                 Ok(response) => match response {
                     Some(booking) => {
-                        let app_reference_string_cloned = app_reference_string.clone();
-                        let email_cloned = email.clone();
+                        let app_reference_string_cloned =
+                            app_reference_string.clone().unwrap_or_default();
+                        let email_cloned = email.clone().unwrap_or_default();
                         let found_booking = booking
                             .into_iter()
                             .find(|b| {
@@ -186,9 +193,6 @@ pub fn ConfirmationPage() -> impl IntoView {
     // else get it from local_storage
     // else get it from backend
 
-    let (state, set_state, _) =
-        use_local_storage::<Option<BookingId>, JsonSerdeCodec>("booking_id");
-
     let booking_action = create_action(move |_| {
         let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
         // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
@@ -275,8 +279,7 @@ pub fn ConfirmationPage() -> impl IntoView {
         let app_reference_string = booking_id_signal_read
             .get_untracked()
             .and_then(|booking| Some(booking.get_app_reference()));
-        let app_reference_string_cloned_twice = app_reference_string.clone();
-        let email = state
+        let email = booking_id_signal_read
             .get_untracked()
             .and_then(|booking| Some(booking.get_email()));
         let app_reference_string_cloned = app_reference_string.clone();

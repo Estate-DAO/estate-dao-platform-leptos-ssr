@@ -4,6 +4,7 @@
 use crate::api::_default_passenger_age;
 use crate::api::block_room;
 use crate::api::canister::add_booking::add_booking_backend;
+use crate::api::consts::get_payments_url;
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::nowpayments_get_payment_status;
@@ -329,19 +330,20 @@ pub fn BlockRoomPage() -> impl IntoView {
                 }
                 "NOWPayments" => {
                     let invoice_request = CreateInvoiceRequest {
-                        price_amount: 1_u32,
+                        price_amount: 20_u32,
                         // price_amount: total_price.get() as u32,
                         price_currency: "USD".to_string(),
                         order_id: "order_watever".to_string(),
                         order_description: "Hotel Room Booking".to_string(),
                         ipn_callback_url: "https://nowpayments.io".to_string(),
-                        success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
-                        cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
-                        partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
+                        success_url: get_payments_url("success"),
+                        cancel_url: get_payments_url("cancel"),
+                        partially_paid_url: get_payments_url("partial"),
                         is_fixed_rate: false,
                         is_fee_paid_by_user: false,
                     };
 
+                    // todo: [UAT]  feedback - select only those room which are selected by the user!!
                     let sorted_rooms = hotel_info_results.sorted_rooms.get();
 
                     let room_details = sorted_rooms
@@ -423,7 +425,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let email_cloned_twice = email.clone();
                     let local_booking_id = generate_app_reference(email_cloned_twice);
 
-                    let booking_id = (local_booking_id.get().get_app_reference(), email);
+                    let booking_id = (
+                        local_booking_id
+                            .get()
+                            .expect("booking id is expected here")
+                            .get_app_reference(),
+                        email,
+                    );
                     let booking_id_cloned = booking_id.clone();
                     let payment_details = crate::canister::backend::PaymentDetails {
                         payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(

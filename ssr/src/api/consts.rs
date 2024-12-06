@@ -8,6 +8,8 @@ pub const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
 // pub const AGENT_URL_LOCAL: &str = "https://ic0.app";
 pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
+pub const LOCALHOST_DEV: &str = "http://127.0.0.1:3000";
+pub const PROD_URL: &str = "https://estatefe.fly.dev";
 
 // CONST FOR LOCAL STORAGE
 pub const PAYMENT_ID: &str = "estatedao_payment_id";
@@ -15,12 +17,28 @@ pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
 pub const BOOKING_ID: &str = "estatedao_booking_id";
 pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 
+use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
+use cfg_if::cfg_if;
 use dotenvy::dotenv;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::env::VarError;
 use thiserror::Error;
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+pub fn get_payments_url(status: &str) -> String {
+    cfg_if! {
+        if #[cfg(feature = "local-bin")] {
+            let base_url = LOCALHOST_DEV;
+        } else {
+            let base_url = PROD_URL;
+        }
+    }
+    join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string()).unwrap_or_else(|e| {
+        eprintln!("Error joining URL: {}", e);
+        format!("{}?payment={}", base_url, status) // Fallback to simpler construction if joining fails.
+    })
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -47,7 +65,6 @@ impl EnvVarConfig {
             ),
         };
 
-        // println!("EnvVarConfig: {value:#?}");
         value
     }
 
@@ -55,8 +72,6 @@ impl EnvVarConfig {
         transform_headers(&self.provab_headers)
     }
 }
-
-use std::env::VarError;
 
 fn env_w_default(key: &str, default: &str) -> Result<String, EstateEnvConfigError> {
     match std::env::var(key) {

@@ -286,7 +286,10 @@ impl BlockRoomResults {
         .unwrap();
 
         let app_reference = generate_app_reference(email);
-        let app_ref = app_reference.get().get_app_reference();
+        let app_ref = app_reference
+            .get()
+            .expect("app reference is not here")
+            .get_app_reference();
         log!("app_ref - {app_ref}");
 
         let confirmation: ConfirmationResults = expect_context();
