@@ -1,3 +1,4 @@
+
 use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
     PaymentGateway, PaymentGatewayParams,
@@ -6,6 +7,7 @@ use crate::api::consts::EnvVarConfig;
 use leptos::*;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
+use leptos::logging::log;
 
 pub struct NowPayments {
     pub api_key: String,
@@ -38,6 +40,7 @@ impl NowPayments {
             .await?;
 
         let response_struct: Req::PaymentGatewayResponse = response.json().await?;
+        log!("nowpayments reponse = {response_struct:#?}");
         Ok(response_struct)
     }
 }

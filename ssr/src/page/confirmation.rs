@@ -38,7 +38,7 @@ use leptos_use::{storage::use_local_storage, use_interval_fn, use_interval_fn_wi
 
 #[derive(Params, PartialEq, Clone, Debug)]
 struct NowpaymentsPaymentId {
-    np_id: u64,
+    NP_id: u64,
 }
 
 #[component]
@@ -57,7 +57,7 @@ pub fn ConfirmationPage() -> impl IntoView {
         
         log!("print_query_map - {print_query_map:?}");
 
-        let val = np_id_query_map.get().ok().and_then(|id| Some(id.np_id.clone()));
+        let val = np_id_query_map.get().ok().and_then(|id| Some(id.NP_id.clone()));
         log!("np_payment_id: {val:?}");
         val
     });
