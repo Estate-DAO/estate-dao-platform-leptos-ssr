@@ -122,7 +122,7 @@ pub enum PaxType {
     Child = 2,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub struct BookRoomResponse {
     #[serde(rename = "Status")]
     pub status: BookingStatus,
@@ -134,7 +134,7 @@ pub struct BookRoomResponse {
     pub commit_booking: Vec<BookingDetails>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub struct BookingDetails {
     #[serde(rename = "BookingId")]
     pub booking_id: String,
@@ -149,7 +149,7 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub enum BookingStatus {
     #[serde(rename = "BookFailed")]
     BookFailed = 0,

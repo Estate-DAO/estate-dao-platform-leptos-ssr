@@ -2,10 +2,11 @@ use codee::string::JsonSerdeCodec;
 use leptos::{Signal, WriteSignal};
 use leptos_use::storage::use_local_storage;
 
-use crate::{
-    api::consts::{BOOKING_ID, PAYMENT_ID, PAYMENT_STATUS},
-    utils::app_reference::BookingId,
+use crate::api::{
+    consts::{BOOK_ROOM_RESPONSE, PAYMENT_ID, PAYMENT_STATUS},
+    BookRoomResponse,
 };
+use crate::{api::consts::BOOKING_ID, utils::app_reference::BookingId};
 
 pub fn use_payment_store() -> (
     Signal<Option<u64>>,
@@ -31,4 +32,10 @@ pub fn use_booking_id_store() -> (
     use_local_storage::<Option<BookingId>, JsonSerdeCodec>(BOOKING_ID)
 }
 
-// let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
+pub fn use_booking_response_store() -> (
+    Signal<Option<BookRoomResponse>>,
+    WriteSignal<Option<BookRoomResponse>>,
+    impl Fn() + Clone,
+) {
+    use_local_storage::<Option<BookRoomResponse>, JsonSerdeCodec>(BOOK_ROOM_RESPONSE)
+}
