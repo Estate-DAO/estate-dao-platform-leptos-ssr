@@ -36,34 +36,35 @@ use leptos_router::use_navigate;
 use leptos_router::*;
 use leptos_use::{storage::use_local_storage, use_interval_fn, utils::Pausable};
 
-#[derive(Params, PartialEq, Clone)]
+#[derive(Params, PartialEq, Clone, Debug)]
 struct NowpaymentsPaymentId {
     np_id: u64,
 }
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
+
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
-
     let confirmation_ctx: ConfirmationResults = expect_context();
 
     // ========= get payments id from query param and store in local storage ==========
     let np_id_query_map = use_query::<NowpaymentsPaymentId>();
 
     let np_payment_id = Signal::derive(move || {
-        let val = np_id_query_map().ok().and_then(|id| Some(id.np_id.clone()));
+        let print_query_map = np_id_query_map.get();
+        
+        log!("print_query_map - {print_query_map:?}");
+
+        let val = np_id_query_map.get().ok().and_then(|id| Some(id.np_id.clone()));
         log!("np_payment_id: {val:?}");
         val
     });
 
-    // let np_payment_id = create_rw_signal(Some(46676_u64));
-
-    let (payment_store, set_payment_store, _) = use_payment_store();
-
     // whenever the payment ID changes, we update the value in local storage as well
     create_effect(move |_| {
+    let (payment_store, set_payment_store, _) = use_payment_store();
         if payment_store.get().is_some() {
             return;
         }
@@ -193,8 +194,8 @@ pub fn ConfirmationPage() -> impl IntoView {
     // else get it from local_storage
     // else get it from backend
 
-    let booking_action = create_action(move |_| {
-        let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
+    let booking_action = create_action(move |booking_id_signal_read: &Signal<Option<BookingId>>| {
+        // let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
         // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
         let app_reference = booking_id_signal_read
             .get_untracked()
@@ -256,7 +257,10 @@ pub fn ConfirmationPage() -> impl IntoView {
     } = use_interval_fn(
         move || {
             spawn_local(async move {
+                log!("inside use_interval_fn - np_payment_id - {:?}",np_payment_id.get());
                 if let Some(payment_id) = np_payment_id.get_untracked() {
+                log!("inside use_interval_fn - payment_id - {payment_id:?} ");
+
                     let resp =
                         nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
                             .await
@@ -264,6 +268,8 @@ pub fn ConfirmationPage() -> impl IntoView {
                     BlockRoomResults::set_payment_results(resp);
                     // get_payment_status_action.dispatch(());
                 }
+                log!("inside use_interval_fn - no payment id  ");
+
             });
         },
         1_00_000,
@@ -331,8 +337,8 @@ pub fn ConfirmationPage() -> impl IntoView {
                         .await
                         {
                             Ok(booking) => {
-                                let app_reference_string_cloned =
-                                    app_reference_string_cloned_twice.clone();
+                                // let app_reference_string_cloned =
+                                //     app_reference_string_cloned.clone();
                                 let email_cloned = email_cloned_twice.clone();
 
                                 let date_range = SelectedDateRange {
@@ -393,7 +399,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                         }
                     });
                     // 4. booking_action.dispatch()
-                    booking_action.dispatch({});
+                    booking_action.dispatch(booking_id_signal_read);
                     // Stop the interval and proceed
                     pause(); // Return Some(()) to stop the interval
                 } else {

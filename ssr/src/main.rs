@@ -1,3 +1,7 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
+
 use cfg_if::cfg_if;
 use estate_fe::{api::consts::EnvVarConfig, init::AppStateBuilder, utils::admin::AdminCanisters};
 
