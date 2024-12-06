@@ -12,7 +12,8 @@ use crate::{
         },
         hotel_info,
         payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest},
-        BookRoomRequest, PassengerDetail, RoomDetail,
+        BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, PassengerDetail,
+        RoomDetail,
     },
     app::AppRoutes,
     canister::backend::{
@@ -269,15 +270,18 @@ pub fn ConfirmationPage() -> impl IntoView {
 
     create_effect(move |_| {
         let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
+        let confirmation_ctx = expect_context::<ConfirmationResults>();
 
         let app_reference_string = booking_id_signal_read
             .get_untracked()
             .and_then(|booking| Some(booking.get_app_reference()));
+        let app_reference_string_cloned_twice = app_reference_string.clone();
         let email = state
             .get_untracked()
             .and_then(|booking| Some(booking.get_email()));
         let app_reference_string_cloned = app_reference_string.clone();
         let email_cloned = email.clone();
+        let email_cloned_twice = email.clone();
 
         let (payment_store, set_payment_store, _) = use_payment_store();
 
@@ -306,13 +310,85 @@ pub fn ConfirmationPage() -> impl IntoView {
                     // 2. save to local storage
                     set_payment_store(Some(status_clone.payment_id));
                     // 3. save to backend
-                    update_payment_details_backend(
-                        (
-                            app_reference_string_cloned.unwrap_or_default(),
-                            email_cloned.unwrap_or_default(),
-                        ),
-                        payment_details,
-                    );
+                    // update_payment_details_backend(
+                    //     (
+                    //         app_reference_string_cloned.unwrap_or_default(),
+                    //         email_cloned.unwrap_or_default(),
+                    //     ),
+                    //     payment_details,
+                    // );
+                    spawn_local(async move {
+                        match update_payment_details_backend(
+                            (
+                                app_reference_string_cloned.unwrap_or_default(),
+                                email_cloned.unwrap_or_default(),
+                            ),
+                            payment_details,
+                        )
+                        .await
+                        {
+                            Ok(booking) => {
+                                let app_reference_string_cloned =
+                                    app_reference_string_cloned_twice.clone();
+                                let email_cloned = email_cloned_twice.clone();
+
+                                let date_range = SelectedDateRange {
+                                    start: booking
+                                        .user_selected_hotel_room_details
+                                        .date_range
+                                        .start,
+                                    end: booking.user_selected_hotel_room_details.date_range.end,
+                                };
+
+                                SearchCtx::set_date_range(date_range);
+                                HotelInfoCtx::set_selected_hotel_details(
+                                    booking
+                                        .user_selected_hotel_room_details
+                                        .hotel_details
+                                        .hotel_code,
+                                    booking
+                                        .user_selected_hotel_room_details
+                                        .hotel_details
+                                        .hotel_name,
+                                    booking
+                                        .user_selected_hotel_room_details
+                                        .hotel_details
+                                        .hotel_image,
+                                    booking
+                                        .user_selected_hotel_room_details
+                                        .hotel_details
+                                        .hotel_location,
+                                );
+
+                                let book_room_status = booking.book_room_status;
+                                let book_room_status_cloned = book_room_status.clone();
+                                let book_room_status_twice = book_room_status.clone();
+
+                                let booking_details = BookRoomResponse {
+                                    status: match book_room_status_twice.unwrap().status {
+                                        crate::canister::backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
+                                        crate::canister::backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
+                                    },
+                                    message: book_room_status.unwrap().message,
+                                    commit_booking: book_room_status_cloned.unwrap().commit_booking.into_iter().map(|b| BookingDetails {
+                                        booking_id: b.booking_id.0,
+                                        booking_ref_no: b.booking_ref_no,
+                                        confirmation_no: b.confirmation_no,
+                                        booking_status: match b.booking_status {
+                                            crate::canister::backend::BookingStatus::Confirmed => "Confirmed".to_string(),
+                                            crate::canister::backend::BookingStatus::BookFailed => "BookFailed".to_string(),
+                                        },
+                                    }).collect(),
+                                };
+
+                                confirmation_ctx.booking_details.set(Some(booking_details));
+                                // Payment Details not being stored. Can use the calculated value above if wanna populate it anywhere.
+                            }
+                            Err(e) => {
+                                log!("Error greeting knull {:?}", e);
+                            }
+                        }
+                    });
                     // 4. booking_action.dispatch()
                     booking_action.dispatch({});
                     // Stop the interval and proceed
