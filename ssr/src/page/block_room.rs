@@ -459,10 +459,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                                 match add_booking_backend(email_cloned, value_for_serverfn).await {
                                     Ok(response) => {
                                         log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
-                                        // let _ = window().location().assign(&resp.invoice_url);
-                                        let _ = window().location().assign(
-                                            &"http://localhost:3000/confirmation".to_string(),
-                                        );
+                                        let _ = window().location().assign(&resp.invoice_url);
+                                        // let _ = window().location().assign(
+                                        //     &"http://localhost:3000/confirmation".to_string(),
+                                        // );
                                     }
                                     Err(e) => {
                                         log!("Error saving values {:?}", e);
