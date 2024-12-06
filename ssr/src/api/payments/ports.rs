@@ -41,18 +41,18 @@ pub struct CreateInvoiceResponse {
     pub source: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PaymentStatus {
-    Waiting,
-    Confirming,
-    Confirmed,
-    Sending,
-    PartiallyPaid,
-    Finished,
-    Failed,
-    Refunded,
-    Expired,
-}
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum PaymentStatus {
+//     Waiting,
+//     Confirming,
+//     Confirmed,
+//     Sending,
+//     PartiallyPaid,
+//     Finished,
+//     Failed,
+//     Refunded,
+//     Expired,
+// }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct GetPaymentStatusRequest {

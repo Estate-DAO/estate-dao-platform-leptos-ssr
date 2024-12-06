@@ -1,11 +1,14 @@
 use codee::string::JsonSerdeCodec;
 use leptos::*;
 use leptos_router::use_navigate;
-use leptos_use::storage::use_local_storage;
+use leptos_use::{storage::use_local_storage, use_interval_fn, utils::Pausable};
 
 use crate::{
     api::{
-        book_room, canister::get_user_booking::get_user_booking_backend, hotel_info,
+        book_room,
+        canister::get_user_booking::get_user_booking_backend,
+        hotel_info,
+        payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest},
         BookRoomRequest, PassengerDetail, RoomDetail,
     },
     app::AppRoutes,
@@ -14,19 +17,44 @@ use crate::{
     },
     page::{InputGroup, Navbar},
     state::{
-        search_state::{HotelInfoResults, SearchCtx, SearchListResults},
+        local_storage::use_payment_store,
+        search_state::{BlockRoomResults, HotelInfoResults, SearchCtx, SearchListResults},
         view_state::HotelInfoCtx,
     },
     utils::app_reference::BookingId,
 };
 use chrono::NaiveDate;
 use leptos::logging::log;
+use leptos_router::*;
+
+#[derive(Params, PartialEq, Clone)]
+struct NowpaymentsPaymentId {
+    np_id: u64,
+}
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
+
+    // ========= get payments id from query param and store in local storage ==========
+    let np_id_query_map = use_query::<NowpaymentsPaymentId>();
+
+    let np_payment_id =
+        Signal::derive(move || np_id_query_map().ok().and_then(|id| Some(id.np_id.clone())));
+
+    let (payment_store, set_payment_store, _) = use_payment_store();
+
+    // whenever the payment ID changes, we update the value in local storage as well
+    create_effect(move |_| {
+        if payment_store.get().is_some() {
+            return;
+        }
+        set_payment_store(np_payment_id.get())
+    });
+
+    // ===================
 
     create_effect(move |_| {
         let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
@@ -133,6 +161,85 @@ pub fn ConfirmationPage() -> impl IntoView {
 
     let booking_status = create_rw_signal(None);
 
+    ////////////////////////
+    // TIMER CHECK FOR PAYMENT STATUS
+    //  ////////////////////////
+
+    let Pausable {
+        pause,
+        resume,
+        is_active,
+    } = use_interval_fn(
+        move || {
+            spawn_local(async move {
+                if let Some(payment_id) = np_payment_id.get_untracked() {
+                    let resp =
+                        nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
+                            .await
+                            .ok();
+                    BlockRoomResults::set_payment_results(resp);
+                    // get_payment_status_action.dispatch(());
+                }
+            });
+        },
+        1_00_000,
+    );
+
+    pause();
+    let pause_clone = pause.clone();
+
+    create_effect(move |_| {
+        let block_room = expect_context::<BlockRoomResults>();
+        match block_room.payment_status_response.get() {
+            Some(status) => {
+                log!("payment_status_response: {:?}", status);
+                if status.payment_status == "finished" {
+                    // todo
+                    // 1. save to expect_context
+                    // 2. save to local storage
+                    // 3. save to backend
+                    // 4. booking_action.dispatch()
+                    // Stop the interval and proceed
+                    pause(); // Return Some(()) to stop the interval
+                } else {
+                    let p_status = block_room.payment_status_response.get();
+                    log!("payment status is {p_status:?}");
+                    resume(); // Return None to continue the interval
+                }
+            }
+            None => {
+                resume();
+            }
+        }
+    });
+
+    on_cleanup(move || {
+        pause_clone();
+    });
+
+    ////////////////////////
+    // Timer END
+    ////////////////////////
+
+    ////////////////////////
+    // Booking Start
+    ////////////////////////
+
+    // create_action()
+
+    // PAYMENTS DATA
+    // if you have data from expect_context => go ahead
+    // else get it from local_storage
+    // else get it from backend
+
+    // user data
+    // if in context, => go ahead
+    // else fetch from backend - create_local_resource
+
+    ////////////////////////
+    // Booking  END
+    ////////////////////////
+
     create_effect(move |_| {
         let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
         // let app_reference_string = state.get().get_app_reference();
@@ -141,7 +248,7 @@ pub fn ConfirmationPage() -> impl IntoView {
         let url_params = web_sys::UrlSearchParams::new_with_str(&params)
             .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
 
-        if let Some(payment_status) = url_params.get("payment") {
+        if let Some(payment_status) = url_params.get("NP_id") {
             match payment_status.as_str() {
                 "success" => {
                     spawn_local(async move {

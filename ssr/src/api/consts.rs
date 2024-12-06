@@ -9,6 +9,10 @@ pub const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 // pub const AGENT_URL_LOCAL: &str = "https://ic0.app";
 pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
 
+// CONST FOR LOCAL STORAGE
+pub const PAYMENT_ID: &str = "estatedao_payment_id";
+pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
+
 use dotenvy::dotenv;
 use serde::Deserialize;
 use std::collections::HashMap;
