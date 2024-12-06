@@ -34,7 +34,7 @@ use leptos::logging::log;
 use leptos::*;
 use leptos_router::use_navigate;
 use leptos_router::*;
-use leptos_use::{storage::use_local_storage, use_interval_fn, utils::Pausable};
+use leptos_use::{storage::use_local_storage, use_interval_fn, use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
 
 #[derive(Params, PartialEq, Clone, Debug)]
 struct NowpaymentsPaymentId {
@@ -254,7 +254,7 @@ pub fn ConfirmationPage() -> impl IntoView {
         pause,
         resume,
         is_active,
-    } = use_interval_fn(
+    } = use_interval_fn_with_options(
         move || {
             spawn_local(async move {
                 log!("inside use_interval_fn - np_payment_id - {:?}",np_payment_id.get());
@@ -273,10 +273,8 @@ pub fn ConfirmationPage() -> impl IntoView {
             });
         },
         1_00_000,
+        UseIntervalFnOptions{immediate: false, immediate_callback: true}
     );
-
-    pause();
-    let pause_clone = pause.clone();
 
     create_effect(move |_| {
         let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
@@ -412,10 +410,6 @@ pub fn ConfirmationPage() -> impl IntoView {
                 resume();
             }
         }
-    });
-
-    on_cleanup(move || {
-        pause_clone();
     });
 
     ////////////////////////
