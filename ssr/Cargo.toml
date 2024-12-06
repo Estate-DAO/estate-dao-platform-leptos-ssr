@@ -35,7 +35,7 @@ axum-extra = { version = "0.9.3", optional = true, features = [
 ] }
 simple_logger = "5.0.0"
 web-sys = "0.3.70"
-leptos-use = { version = "0.13.5", features = ["use_timestamp"] }
+leptos-use = { version = "0.13.11", features = ["use_timestamp"] }
 chrono = "0.4.38"
 anyhow = "1.0.89"
 derive_more = { version = "1.0.0", features = ["display"] }
@@ -108,6 +108,9 @@ ssr = [
     "dep:tracing",
     "reqwest/rustls-tls",
     "leptos-use/use_timestamp",
+    "leptos-use/ssr",
+    "leptos-use/axum",
+
     # "dep:dotenvy"
 
     # "reqwest/gzip"

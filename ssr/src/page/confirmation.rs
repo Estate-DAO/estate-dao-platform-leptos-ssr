@@ -34,7 +34,10 @@ use leptos::logging::log;
 use leptos::*;
 use leptos_router::use_navigate;
 use leptos_router::*;
-use leptos_use::{storage::use_local_storage, use_interval_fn, use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
+use leptos_use::{
+    storage::use_local_storage, use_interval_fn, use_interval_fn_with_options, utils::Pausable,
+    UseIntervalFnOptions,
+};
 
 #[derive(Params, PartialEq, Clone, Debug)]
 struct NowpaymentsPaymentId {
@@ -43,7 +46,6 @@ struct NowpaymentsPaymentId {
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
-
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
@@ -54,17 +56,20 @@ pub fn ConfirmationPage() -> impl IntoView {
 
     let np_payment_id = Signal::derive(move || {
         let print_query_map = np_id_query_map.get();
-        
+
         log!("print_query_map - {print_query_map:?}");
 
-        let val = np_id_query_map.get().ok().and_then(|id| Some(id.NP_id.clone()));
+        let val = np_id_query_map
+            .get()
+            .ok()
+            .and_then(|id| Some(id.NP_id.clone()));
         log!("np_payment_id: {val:?}");
         val
     });
 
     // whenever the payment ID changes, we update the value in local storage as well
     create_effect(move |_| {
-    let (payment_store, set_payment_store, _) = use_payment_store();
+        let (payment_store, set_payment_store, _) = use_payment_store();
         if payment_store.get().is_some() {
             return;
         }
@@ -194,53 +199,54 @@ pub fn ConfirmationPage() -> impl IntoView {
     // else get it from local_storage
     // else get it from backend
 
-    let booking_action = create_action(move |booking_id_signal_read: &Signal<Option<BookingId>>| {
-        // let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
-        // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
-        let app_reference = booking_id_signal_read
-            .get_untracked()
-            .and_then(|booking| Some(booking.get_app_reference()))
-            .unwrap_or_default();
-        // let nav = navigate.clone();
-        let block_room = expect_context::<BlockRoomResults>();
-        let conf_res = expect_context::<ConfirmationResults>();
-        // let payment_status_data = block_room.payment_status_response.get().unwrap();
-        // let payment_status_data = if block_room.payment_status_response.get().unwrap().payment_status == "finished" {
-        //     block_room.payment_status_response.get().unwrap()
-        // } else {
-        //     payment_status_data
-        // };
-        let hotel_info_ctx: HotelInfoCtx = expect_context();
-        let search_list_result = expect_context::<SearchListResults>();
-        let result_token = search_list_result.get_result_token(hotel_info_ctx.hotel_code.get());
-        let block_room_id = block_room
-            .block_room_results
-            .get()
-            .unwrap()
-            .get_block_room_id()
-            .unwrap_or_default();
-        let block_room_ctx = expect_context::<BlockRoomCtx>();
-        let adults = block_room_ctx.adults.get();
-        let children = block_room_ctx.children.get();
-        let room_detail = RoomDetail {
-            passenger_details: create_passenger_details(&adults, &children),
-        };
+    let booking_action =
+        create_action(move |booking_id_signal_read: &Signal<Option<BookingId>>| {
+            // let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
+            // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
+            let app_reference = booking_id_signal_read
+                .get_untracked()
+                .and_then(|booking| Some(booking.get_app_reference()))
+                .unwrap_or_default();
+            // let nav = navigate.clone();
+            let block_room = expect_context::<BlockRoomResults>();
+            let conf_res = expect_context::<ConfirmationResults>();
+            // let payment_status_data = block_room.payment_status_response.get().unwrap();
+            // let payment_status_data = if block_room.payment_status_response.get().unwrap().payment_status == "finished" {
+            //     block_room.payment_status_response.get().unwrap()
+            // } else {
+            //     payment_status_data
+            // };
+            let hotel_info_ctx: HotelInfoCtx = expect_context();
+            let search_list_result = expect_context::<SearchListResults>();
+            let result_token = search_list_result.get_result_token(hotel_info_ctx.hotel_code.get());
+            let block_room_id = block_room
+                .block_room_results
+                .get()
+                .unwrap()
+                .get_block_room_id()
+                .unwrap_or_default();
+            let block_room_ctx = expect_context::<BlockRoomCtx>();
+            let adults = block_room_ctx.adults.get();
+            let children = block_room_ctx.children.get();
+            let room_detail = RoomDetail {
+                passenger_details: create_passenger_details(&adults, &children),
+            };
 
-        async move {
-            // Call server function inside action
-            spawn_local(async move {
-                let req = BookRoomRequest {
-                    result_token,
-                    block_room_id,
-                    app_reference,
-                    room_details: vec![room_detail],
-                };
-                let result = book_room(req).await.ok();
-                log!("BOOK_ROOM_API: {result:?}");
-                conf_res.booking_details.set(result);
-            });
-        }
-    });
+            async move {
+                // Call server function inside action
+                spawn_local(async move {
+                    let req = BookRoomRequest {
+                        result_token,
+                        block_room_id,
+                        app_reference,
+                        room_details: vec![room_detail],
+                    };
+                    let result = book_room(req).await.ok();
+                    log!("BOOK_ROOM_API: {result:?}");
+                    conf_res.booking_details.set(result);
+                });
+            }
+        });
 
     ////////////////////////
     // Booking  END
@@ -257,9 +263,12 @@ pub fn ConfirmationPage() -> impl IntoView {
     } = use_interval_fn_with_options(
         move || {
             spawn_local(async move {
-                log!("inside use_interval_fn - np_payment_id - {:?}",np_payment_id.get());
+                log!(
+                    "inside use_interval_fn - np_payment_id - {:?}",
+                    np_payment_id.get()
+                );
                 if let Some(payment_id) = np_payment_id.get_untracked() {
-                log!("inside use_interval_fn - payment_id - {payment_id:?} ");
+                    log!("inside use_interval_fn - payment_id - {payment_id:?} ");
 
                     let resp =
                         nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
@@ -269,11 +278,13 @@ pub fn ConfirmationPage() -> impl IntoView {
                     // get_payment_status_action.dispatch(());
                 }
                 log!("inside use_interval_fn - no payment id  ");
-
             });
         },
         1_00_000,
-        UseIntervalFnOptions{immediate: false, immediate_callback: true}
+        UseIntervalFnOptions {
+            immediate: false,
+            immediate_callback: true,
+        },
     );
 
     create_effect(move |_| {
@@ -415,33 +426,6 @@ pub fn ConfirmationPage() -> impl IntoView {
     ////////////////////////
     // Timer END
     ////////////////////////
-
-    // let booking_status = create_rw_signal(None);
-
-    // create_effect(move |_| {
-    //     let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
-    //     // let app_reference_string = state.get().get_app_reference();
-    //     // let email = state.get().get_email();
-    //     let params = window().location().search().unwrap_or_default();
-    //     let url_params = web_sys::UrlSearchParams::new_with_str(&params)
-    //         .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
-
-    //     if let Some(payment_status) = url_params.get("NP_id") {
-    //         match payment_status.as_str() {
-    //             "success" => {
-    //                 spawn_local(async move {
-    //                     booking_status.set(Some(true));
-    //                 });
-    //             }
-    //             "cancel" => {
-    //                 booking_status.set(Some(false)); // Or handle cancellation differently
-    //                 log!("Payment cancelled.");
-    //             }
-    //             // ... other cases
-    //             _ => log!("Unknown payment status: {}", payment_status),
-    //         }
-    //     }
-    // });
 
     view! {
         <section class="relative h-screen">

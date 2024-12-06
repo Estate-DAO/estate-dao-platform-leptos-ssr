@@ -69,7 +69,7 @@ pub struct GetPaymentStatusResponse {
     pub price_amount: u64,
     pub price_currency: String,
     pub pay_amount: f64,
-    pub actually_paid: u64,
+    pub actually_paid: f64,
     pub pay_currency: String,
     pub order_id: String,
     pub order_description: String,

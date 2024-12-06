@@ -1,13 +1,12 @@
-
 use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
     PaymentGateway, PaymentGatewayParams,
 };
 use crate::api::consts::EnvVarConfig;
+use leptos::logging::log;
 use leptos::*;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
-use leptos::logging::log;
 
 pub struct NowPayments {
     pub api_key: String,
@@ -29,6 +28,7 @@ impl NowPayments {
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
         let url = req.build_url(&self.api_host)?;
+        println!("nowpayments url = {url:#?}");
 
         let response = self
             .client
@@ -39,8 +39,18 @@ impl NowPayments {
             .send()
             .await?;
 
-        let response_struct: Req::PaymentGatewayResponse = response.json().await?;
-        log!("nowpayments reponse = {response_struct:#?}");
+        println!("nowpayments reponse = {response:#?}");
+        let body_string = response.text().await?;
+
+        let jd = &mut serde_json::Deserializer::from_str(&body_string);
+        let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
+            .map_err(|e| {
+                let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
+                log!("deserialize_response- JsonParseFailed: {:?}", total_error);
+                e
+            })?;
+
+        println!("nowpayments reponse = {response_struct:#?}");
         Ok(response_struct)
     }
 }
@@ -108,6 +118,7 @@ pub async fn nowpayments_get_payment_status(
     request: GetPaymentStatusRequest,
 ) -> Result<GetPaymentStatusResponse, ServerFnError> {
     let nowpayments = NowPayments::default();
+    println!("{:#?}", request);
     match nowpayments.send(request).await {
         Ok(response) => Ok(response),
         Err(e) => Err(ServerFnError::ServerError(e.to_string())),
