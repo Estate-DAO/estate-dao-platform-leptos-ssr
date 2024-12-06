@@ -167,7 +167,7 @@ pub fn HotelCard(
                 ev.prevent_default();
                 // todoing --
                 let hotel_view_info_ctx: HotelInfoCtx = expect_context();
-                hotel_view_info_ctx.hotel_code.set(Some(hotel_code_cloned.clone()));
+                hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
                 log!("hotel_code: {}", hotel_code_cloned);
                 search_hotel_room_action.dispatch(());
                 search_hotel_info_action.dispatch(())

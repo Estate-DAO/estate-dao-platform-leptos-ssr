@@ -38,6 +38,12 @@ impl SearchCtx {
         this.date_range.set(date_range);
     }
 
+    pub fn set_guests(guests: GuestSelection) {
+        let this: Self = expect_context();
+
+        this.guests.set(guests);
+    }
+
     pub fn log_state() {
         let this: Self = expect_context();
 
@@ -92,7 +98,7 @@ impl SearchListResults {
             .map_or_else(HashMap::new, |response| response.get_results_token_map())
     }
 
-    fn get_result_token(&self, hotel_code: String) -> String {
+    pub fn get_result_token(&self, hotel_code: String) -> String {
         self.get_hotel_code_results_token_map()
             .get(&hotel_code)
             .unwrap()
@@ -212,13 +218,12 @@ impl HotelInfoResults {
         let search_list_results: SearchListResults = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-        let token = hotel_info_ctx
-            .hotel_code
-            .get()
-            .and_then(|hotel_code| {
-                let token_map = search_list_results.get_hotel_code_results_token_map();
-                token_map.get(&hotel_code).cloned()
-            })
+        let hotel_code = hotel_info_ctx.hotel_code.get();
+
+        let token = search_list_results
+            .get_hotel_code_results_token_map()
+            .get(&hotel_code)
+            .cloned()
             .unwrap_or_default();
 
         BlockRoomRequest {
@@ -259,13 +264,11 @@ impl BlockRoomResults {
         let hotel_info_ctx: HotelInfoCtx = expect_context();
         let block_room_ctx: BlockRoomCtx = expect_context();
 
-        let result_token = hotel_info_ctx
-            .hotel_code
-            .get()
-            .and_then(|hotel_code| {
-                let token_map = search_list_results.get_hotel_code_results_token_map();
-                token_map.get(&hotel_code).cloned()
-            })
+        let hotel_code = hotel_info_ctx.hotel_code.get();
+        let result_token = search_list_results
+            .get_hotel_code_results_token_map()
+            .get(&hotel_code)
+            .cloned()
             .unwrap_or_default();
 
         let block_room_id = self
@@ -275,7 +278,7 @@ impl BlockRoomResults {
             .get_block_room_id()
             .expect("Block Room API call failed");
 
-        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
+        // let hotel_code = hotel_info_ctx.hotel_code.get();
         // let app_reference = format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code);
         let email = <std::option::Option<std::string::String> as Clone>::clone(
             &block_room_ctx.adults.get().first().unwrap().email,

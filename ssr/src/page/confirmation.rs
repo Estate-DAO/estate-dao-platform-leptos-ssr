@@ -4,9 +4,14 @@ use leptos_router::use_navigate;
 use leptos_use::storage::use_local_storage;
 
 use crate::{
-    api::{canister::get_user_booking::get_user_booking_backend, hotel_info},
+    api::{
+        book_room, canister::get_user_booking::get_user_booking_backend, hotel_info,
+        BookRoomRequest, PassengerDetail, RoomDetail,
+    },
     app::AppRoutes,
-    component::{Divider, FilterAndSortBy, PriceDisplay, SelectedDateRange, StarRating},
+    component::{
+        Divider, FilterAndSortBy, GuestSelection, PriceDisplay, SelectedDateRange, StarRating,
+    },
     page::{InputGroup, Navbar},
     state::{
         search_state::{HotelInfoResults, SearchCtx, SearchListResults},
@@ -19,6 +24,10 @@ use leptos::logging::log;
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
+    let hotel_info_ctx: HotelInfoCtx = expect_context();
+    let search_ctx: SearchCtx = expect_context();
+    let search_list_results: SearchListResults = expect_context();
+
     create_effect(move |_| {
         let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
         let app_reference_string = state.get().get_app_reference();
@@ -54,8 +63,13 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 .date_range
                                 .end,
                         };
+
                         SearchCtx::set_date_range(date_range);
                         HotelInfoCtx::set_selected_hotel_details(
+                            found_booking
+                                .user_selected_hotel_room_details
+                                .hotel_details
+                                .hotel_code,
                             found_booking
                                 .user_selected_hotel_room_details
                                 .hotel_details
@@ -69,6 +83,25 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 .hotel_details
                                 .hotel_location,
                         );
+
+                        let passenger_details = Vec::<PassengerDetail>::from(&found_booking.guests);
+                        let room_detail = RoomDetail { passenger_details };
+                        // let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
+
+                        let book_room_request = BookRoomRequest {
+                            result_token: found_booking
+                                .user_selected_hotel_room_details
+                                .hotel_details
+                                .hotel_token,
+                            block_room_id: found_booking
+                                .user_selected_hotel_room_details
+                                .hotel_details
+                                .block_room_id,
+                            app_reference: app_reference_string,
+                            room_details: vec![room_detail],
+                        };
+
+                        let result = book_room(book_room_request).await; // Call book_room API
                     }
                     None => {
                         log!("No booking available")
@@ -80,9 +113,6 @@ pub fn ConfirmationPage() -> impl IntoView {
             }
         });
     });
-
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
-    let search_ctx: SearchCtx = expect_context();
 
     let format_date = |(year, month, day): (u32, u32, u32)| {
         NaiveDate::from_ymd_opt(year as i32, month, day)
@@ -100,6 +130,33 @@ pub fn ConfirmationPage() -> impl IntoView {
             }
         }
     };
+
+    let booking_status = create_rw_signal(None);
+
+    create_effect(move |_| {
+        let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
+        // let app_reference_string = state.get().get_app_reference();
+        // let email = state.get().get_email();
+        let params = window().location().search().unwrap_or_default();
+        let url_params = web_sys::UrlSearchParams::new_with_str(&params)
+            .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
+
+        if let Some(payment_status) = url_params.get("payment") {
+            match payment_status.as_str() {
+                "success" => {
+                    spawn_local(async move {
+                        booking_status.set(Some(true));
+                    });
+                }
+                "cancel" => {
+                    booking_status.set(Some(false)); // Or handle cancellation differently
+                    log!("Payment cancelled.");
+                }
+                // ... other cases
+                _ => log!("Unknown payment status: {}", payment_status),
+            }
+        }
+    });
 
     view! {
         <section class="relative h-screen">
@@ -133,6 +190,12 @@ pub fn ConfirmationPage() -> impl IntoView {
                     incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
                     exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
                 </p>
+
+                {move || match booking_status.get() {
+                    Some(true) => view! { <p>"Booking successful!"</p> }, // Display success message
+                    Some(false) => view! { <p>"Booking failed or cancelled."</p> }, // Display failure/cancel message
+                    None => view! { <p>"Checking booking status..."</p> }, // Display pending message
+                }}
             </div>
         </section>
     }

@@ -61,6 +61,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let block_room_ctx = expect_context::<BlockRoomCtx>();
     let block_room_results_context: BlockRoomResults = expect_context();
+    let block_room_results_context_cloned: BlockRoomResults = block_room_results_context.clone();
 
     // ================ Pricing component signals  ================
 
@@ -176,12 +177,14 @@ pub fn BlockRoomPage() -> impl IntoView {
         let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
     };
 
+    let hotel_code = hotel_info_ctx.hotel_code.get();
+    let search_list_results = search_list_results.get_value();
+
     let confirmation_action = create_action(move |()| {
         let nav = nav.clone(); // Use the cloned version here
         let adults_data = adults.get();
         let children_data = children.get();
-        let hotel_code = hotel_info_ctx.hotel_code.get().unwrap_or_default();
-        let search_list_results = search_list_results.get_value(); // Get the stored value
+        // let hotel_code = hotel_info_ctx.hotel_code.get();
 
         async move {
             let room_detail = RoomDetail {
@@ -313,198 +316,194 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     });
 
-    let handle_pay_click = move |payment_method: String| {
-        match payment_method.as_str() {
-            "binance" => {
-                todo!();
-            }
-            "NOWPayments" => {
-                let invoice_request = CreateInvoiceRequest {
-                    price_amount: 1_u32,
-                    // price_amount: total_price.get() as u32,
-                    price_currency: "USD".to_string(),
-                    order_id: "order_watever".to_string(),
-                    order_description: "Hotel Room Booking".to_string(),
-                    ipn_callback_url: "https://nowpayments.io".to_string(),
-                    success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
-                    cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
-                    partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
-                    is_fixed_rate: false,
-                    is_fee_paid_by_user: false,
-                };
+    let handle_pay_signal = create_rw_signal(String::new());
 
-                let sorted_rooms = hotel_info_results.sorted_rooms.get();
+    let handle_pay_click = create_resource(handle_pay_signal, move |payment_method: String| {
+        let hotel_code_cloned = hotel_code.clone();
+        let search_list_results_cloned = search_list_results.clone();
 
-                let room_details = sorted_rooms
-                    .into_iter()
-                    .map(|sorted_room| RoomDetails {
-                        room_price: sorted_room.room_price as f32,
-                        room_unique_id: sorted_room.room_unique_id,
-                        room_type_name: sorted_room.room_type,
-                    })
-                    .collect();
+        async move {
+            match payment_method.as_str() {
+                "binance" => {
+                    todo!();
+                }
+                "NOWPayments" => {
+                    let invoice_request = CreateInvoiceRequest {
+                        price_amount: 1_u32,
+                        // price_amount: total_price.get() as u32,
+                        price_currency: "USD".to_string(),
+                        order_id: "order_watever".to_string(),
+                        order_description: "Hotel Room Booking".to_string(),
+                        ipn_callback_url: "https://nowpayments.io".to_string(),
+                        success_url: "127.0.0.1:3000/block_room?payment=success".to_string(),
+                        cancel_url: "127.0.0.1:3000/block_room?payment=cancel".to_string(),
+                        partially_paid_url: "127.0.0.1:3000/block_room?payment=partial".to_string(),
+                        is_fixed_rate: false,
+                        is_fee_paid_by_user: false,
+                    };
 
-                let destination = search_ctx.destination.get().map(|dest| {
-                    crate::canister::backend::Destination {
-                        city_id: dest.city_id,
-                        city: dest.city,
-                        country_code: dest.country_code,
-                        country_name: dest.country_name,
-                    }
-                });
-                let selected_date_range = search_ctx.date_range.get();
-                let date_range = crate::canister::backend::SelectedDateRange {
-                    start: selected_date_range.start,
-                    end: selected_date_range.end,
-                };
-                let user_selected_hotel_room_details = HotelRoomDetails {
-                    destination,
-                    requested_payment_amount: total_price.get(),
-                    date_range,
-                    room_details,
-                    hotel_details: HotelDetails {
-                        hotel_code: hotel_info_ctx.hotel_code.get().unwrap(),
-                        hotel_name: hotel_info_ctx.selected_hotel_name.get(),
-                        hotel_image: hotel_info_ctx.selected_hotel_image.get(),
-                        hotel_location: hotel_info_ctx.selected_hotel_location.get(),
-                    },
-                };
+                    let sorted_rooms = hotel_info_results.sorted_rooms.get();
 
-                let adults: Vec<crate::canister::backend::AdultDetail> = block_room_ctx
-                    .adults
-                    .get()
-                    .into_iter()
-                    .map(|adult| crate::canister::backend::AdultDetail {
-                        email: adult.email,
-                        first_name: adult.first_name,
-                        last_name: adult.last_name,
-                        phone: adult.phone,
-                    })
-                    .collect();
-                let children: Vec<crate::canister::backend::ChildDetail> = block_room_ctx
-                    .children
-                    .get()
-                    .into_iter()
-                    .map(|child| crate::canister::backend::ChildDetail {
-                        age: child.age.unwrap(),
-                        first_name: child.first_name,
-                        last_name: child.last_name,
-                    })
-                    .collect();
-                let guests = UserDetails { children, adults };
+                    let room_details = sorted_rooms
+                        .into_iter()
+                        .map(|sorted_room| RoomDetails {
+                            room_price: sorted_room.room_price as f32,
+                            room_unique_id: sorted_room.room_unique_id,
+                            room_type_name: sorted_room.room_type,
+                        })
+                        .collect();
 
-                let email = <std::option::Option<std::string::String> as Clone>::clone(
-                    &block_room_ctx.adults.get().first().unwrap().email,
-                )
-                .unwrap();
-                let email_cloned = email.clone();
-                let email_cloned_twice = email.clone();
-                let local_booking_id = generate_app_reference(email_cloned_twice);
+                    let destination = search_ctx.destination.get().map(|dest| {
+                        crate::canister::backend::Destination {
+                            city_id: dest.city_id,
+                            city: dest.city,
+                            country_code: dest.country_code,
+                            country_name: dest.country_name,
+                        }
+                    });
+                    let selected_date_range = search_ctx.date_range.get();
+                    let date_range = crate::canister::backend::SelectedDateRange {
+                        start: selected_date_range.start,
+                        end: selected_date_range.end,
+                    };
 
-                let booking_id = (local_booking_id.get().get_app_reference(), email);
-                let booking_id_cloned = booking_id.clone();
-                let payment_details = crate::canister::backend::PaymentDetails {
-                    payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(Some(
-                        "Payment Not Started".into(),
-                    )),
-                    booking_id,
-                };
+                    let hotel_token =
+                        search_list_results_cloned.get_result_token(hotel_code_cloned.clone());
 
-                let booking = crate::canister::backend::Booking {
-                    user_selected_hotel_room_details,
-                    guests,
-                    booking_id: booking_id_cloned,
-                    book_room_status: None,
-                    payment_details,
-                };
+                    let block_room_id = block_room_results_context_cloned
+                        .block_room_results
+                        .get_untracked()
+                        .unwrap()
+                        .get_block_room_id()
+                        .unwrap_or_default();
 
-                log!("block_room page - booking - {:#?}", booking);
+                    let user_selected_hotel_room_details = HotelRoomDetails {
+                        destination,
+                        requested_payment_amount: total_price.get(),
+                        date_range,
+                        room_details,
+                        hotel_details: HotelDetails {
+                            hotel_code: hotel_code_cloned.clone(),
+                            hotel_name: hotel_info_ctx.selected_hotel_name.get(),
+                            hotel_image: hotel_info_ctx.selected_hotel_image.get(),
+                            hotel_location: hotel_info_ctx.selected_hotel_location.get(),
+                            block_room_id,
+                            hotel_token,
+                        },
+                    };
 
-                spawn_local(async move {
-                    let create_invoice_response = nowpayments_create_invoice(invoice_request).await;
-                    log!("creating invoice");
-                    match create_invoice_response {
-                        Ok(resp) => {
-                            log!("heres CreateInvoiceResponse");
-                            log!("{:?}\n{:?}", email_cloned, booking);
-                            let value_for_serverfn: String =
-                                serde_json::to_string(&booking).unwrap();
+                    let adults: Vec<crate::canister::backend::AdultDetail> = block_room_ctx
+                        .adults
+                        .get()
+                        .into_iter()
+                        .map(|adult| crate::canister::backend::AdultDetail {
+                            email: adult.email,
+                            first_name: adult.first_name,
+                            last_name: adult.last_name,
+                            phone: adult.phone,
+                        })
+                        .collect();
+                    let children: Vec<crate::canister::backend::ChildDetail> = block_room_ctx
+                        .children
+                        .get()
+                        .into_iter()
+                        .map(|child| crate::canister::backend::ChildDetail {
+                            age: child.age.unwrap(),
+                            first_name: child.first_name,
+                            last_name: child.last_name,
+                        })
+                        .collect();
+                    let guests = UserDetails { children, adults };
 
-                            match add_booking_backend(email_cloned, value_for_serverfn).await {
-                                Ok(response) => {
-                                    log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
-                                    // let _ = window().location().assign(&resp.invoice_url);
-                                    let _ = window()
-                                        .location()
-                                        .assign(&"http://localhost:3000/confirmation".to_string());
-                                }
-                                Err(e) => {
-                                    log!("Error saving values {:?}", e);
+                    let email = <std::option::Option<std::string::String> as Clone>::clone(
+                        &block_room_ctx.adults.get().first().unwrap().email,
+                    )
+                    .unwrap();
+                    let email_cloned = email.clone();
+                    let email_cloned_twice = email.clone();
+                    let local_booking_id = generate_app_reference(email_cloned_twice);
+
+                    let booking_id = (local_booking_id.get().get_app_reference(), email);
+                    let booking_id_cloned = booking_id.clone();
+                    let payment_details = crate::canister::backend::PaymentDetails {
+                        payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(
+                            Some("Payment Not Started".into()),
+                        ),
+                        booking_id,
+                    };
+
+                    let booking = crate::canister::backend::Booking {
+                        user_selected_hotel_room_details,
+                        guests,
+                        booking_id: booking_id_cloned,
+                        book_room_status: None,
+                        payment_details,
+                    };
+
+                    log!("block_room page - booking - {:#?}", booking);
+
+                    // async move {
+                    spawn_local(async move {
+                        let create_invoice_response =
+                            nowpayments_create_invoice(invoice_request).await;
+                        log!("creating invoice");
+                        match create_invoice_response {
+                            Ok(resp) => {
+                                log!("heres CreateInvoiceResponse");
+                                log!("{:?}\n{:?}", email_cloned, booking);
+                                let value_for_serverfn: String =
+                                    serde_json::to_string(&booking).unwrap();
+
+                                match add_booking_backend(email_cloned, value_for_serverfn).await {
+                                    Ok(response) => {
+                                        log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+                                        // let _ = window().location().assign(&resp.invoice_url);
+                                        let _ = window().location().assign(
+                                            &"http://localhost:3000/confirmation".to_string(),
+                                        );
+                                    }
+                                    Err(e) => {
+                                        log!("Error saving values {:?}", e);
+                                    }
                                 }
                             }
+                            Err(e) => {
+                                log!("Error creating invoice: {:?}", e);
+                            }
                         }
-                        Err(e) => {
-                            log!("Error creating invoice: {:?}", e);
-                        }
-                    }
 
-                    // match invoice_url {
-                    //     Ok(url) => {
-                    //         let _ = window().location().assign(&url);
-                    //         // let payment_status_response = nowpayments.get_payment_status("payment_id?").await;
+                        // match invoice_url {
+                        //     Ok(url) => {
+                        //         let _ = window().location().assign(&url);
+                        //         // let payment_status_response = nowpayments.get_payment_status("payment_id?").await;
 
-                    //         // match payment_status_response {
-                    //         //     Ok(status) => {
-                    //         //         if status == PaymentStatus::Finished {
-                    //         //             handle_booking.dispatch(());
-                    //         //         } else {
-                    //         //             log!("Payment not successful: {:?}", status);
-                    //         //             // Optionally, redirect back to the booking page or display an error message
-                    //         //         }
-                    //         //     }
-                    //         //     Err(e) => {
-                    //         //         log!("Error getting payment status: {:?}", e);
-                    //         //         // Handle error, e.g., display an error message
-                    //         //     }
-                    //         // }
-                    //     }
-                    //     Err(e) => {
-                    //         log!("Error creating invoice: {:?}", e);
-                    //     }
+                        //         // match payment_status_response {
+                        //         //     Ok(status) => {
+                        //         //         if status == PaymentStatus::Finished {
+                        //         //             handle_booking.dispatch(());
+                        //         //         } else {
+                        //         //             log!("Payment not successful: {:?}", status);
+                        //         //             // Optionally, redirect back to the booking page or display an error message
+                        //         //         }
+                        //         //     }
+                        //         //     Err(e) => {
+                        //         //         log!("Error getting payment status: {:?}", e);
+                        //         //         // Handle error, e.g., display an error message
+                        //         //     }
+                        //         // }
+                        //     }
+                        //     Err(e) => {
+                        //         log!("Error creating invoice: {:?}", e);
+                        //     }
+                        // }
+                    });
                     // }
-                });
+                }
+                _ => { /* Handle other payment methods */ }
             }
-            _ => { /* Handle other payment methods */ }
+            show_modal.set(false);
         }
-        show_modal.set(false);
-    };
-
-    // create_effect(move |_| {
-    //     // Check the URL for a payment status parameter after redirect
-    //     // use_query_params()
-    //     let params = window().location().search().unwrap_or_default();
-    //     let url_params = web_sys::UrlSearchParams::new_with_str(&params)
-    //         .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
-
-    //     if let Some(payment_status) = url_params.get("payment") {
-    //         match payment_status.as_str() {
-    //             "success" => {
-    //                 // Payment successful, trigger booking
-    //                 confirmation_action.dispatch(());
-    //             }
-    //             "cancel" => {
-    //                 // Payment cancelled, handle accordingly (e.g., show a message)
-    //                 log!("Payment cancelled.");
-    //             }
-    //             "partial" => {
-    //                 log!("Payment partially paid.");
-    //             }
-    //             _ => {
-    //                 log!("Unknown payment status: {}", payment_status);
-    //             }
-    //         }
-    //     }
-    // });
+    });
 
     // Validation logic function
     let validate_form = move || {
@@ -817,7 +816,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                 </div>
             </div>
         </section>
-        <Show when=move || show_modal.get()>
+        <Show when=show_modal>
             <div class="fixed inset-0 flex items-center justify-center z-50">
                 <div class="fixed inset-0 bg-black opacity-50" on:click=move |_| show_modal.set(false)></div>
                 <div class="w-1/2 max-w-[60rem] bg-white rounded-lg p-8 z-50 shadow-xl">
@@ -840,7 +839,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                         <div class="w-8 h-8 rounded-full border-2 border-gray-400 absolute  peer-checked:border-green-500"></div>
                                         <div class="w-6 h-6 rounded-full bg-white absolute left-1 top-1 peer-checked:bg-green-500"></div>
                                     </div>
-                                    <button class="ml-5" on:click=move |_| handle_pay_click("binance".to_string())>
+                                    <button class="ml-5" on:click=move |_| handle_pay_signal.set("binance".to_owned())>
                                                                 <svg xmlns="http://www.w3.org/2000/svg" height="35" width="160" id="svg20" version="1.1" viewBox="-76.3875 -25.59 662.025 153.54">
                                 <defs id="defs14"><style id="style12"/></defs><g transform="translate(-39.87 -50.56)" id="g18"><path id="path16" d="M63 101.74L51.43 113.3l-11.56-11.56 11.56-11.56zm28.05-28.07l19.81 19.82 11.56-11.56-31.37-31.37-31.37 31.37 11.56 11.56zm39.63 16.51l-11.56 11.56 11.56 11.56 11.55-11.56zm-39.63 39.63L71.24 110l-11.56 11.55 31.37 31.37 31.37-31.37L110.86 110zm0-16.51l11.56-11.56-11.56-11.56-11.56 11.56zm122 1.11v-.16c0-7.54-4-11.31-10.51-13.79 4-2.25 7.38-5.78 7.38-12.11v-.16c0-8.82-7.06-14.52-18.53-14.52h-26.04v56.14h26.7c12.67 0 21.02-5.13 21.02-15.4zm-15.4-24c0 4.17-3.45 5.94-8.9 5.94h-11.37V84.5h12.19c5.21 0 8.1 2.08 8.1 5.77zm3.13 22.46c0 4.17-3.29 6.09-8.75 6.09h-14.65v-12.33h14.27c6.34 0 9.15 2.33 9.15 6.1zM239 129.81V73.67h-12.39v56.14zm66.39 0V73.67h-12.23v34.57l-26.3-34.57h-11.39v56.14h12.19V94.12l27.18 35.69zm68.41 0l-24.1-56.54h-11.39l-24.05 56.54h12.59l5.15-12.59h23.74l5.13 12.59zm-22.45-23.5h-14.96l7.46-18.2zm81.32 23.5V73.67h-12.23v34.57l-26.31-34.57h-11.38v56.14h12.18V94.12l27.19 35.69zm63.75-9.06l-7.85-7.94c-4.41 4-8.34 6.57-14.76 6.57-9.62 0-16.28-8-16.28-17.64v-.16c0-9.62 6.82-17.48 16.28-17.48 5.61 0 10 2.4 14.36 6.33l7.83-9.06c-5.21-5.13-11.54-8.66-22.13-8.66-17.24 0-29.27 13.07-29.27 29v.16c0 16.12 12.27 28.87 28.79 28.87 10.81.03 17.22-3.82 22.99-9.99zm52.7 9.06v-11H518.6V107h26.47V96H518.6V84.66h30.08v-11h-42.35v56.14z" fill="#f0b90b"/></g>
                                 </svg>
@@ -855,7 +854,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                         <div class="w-8 h-8 rounded-full border-2 border-gray-400 absolute  peer-checked:border-green-500"></div>
                                         <div class="w-6 h-6 rounded-full bg-white absolute left-1 top-1 peer-checked:bg-green-500"></div>
                                     </div>
-                                    <button class="ml-10" on:click=move |_| handle_pay_click("NOWPayments".to_string())>
+                                    <button class="ml-10" on:click=move |_| handle_pay_signal.set("NOWPayments".to_owned())>
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="163" height="21" fill="none">
                                     <path d="M12.386 13.815l-.506.161V1.05h1.84V16h-1.84L2.174 3.258l.506-.161V16H.84V1.05h1.84l9.706 12.765zm12.278 2.415c-1.365 0-2.607-.314-3.726-.943-1.104-.644-1.986-1.541-2.645-2.691-.66-1.15-.99-2.507-.99-4.071 0-1.564.33-2.921.99-4.071.659-1.165 1.54-2.062 2.645-2.691 1.119-.629 2.361-.943 3.726-.943 1.364 0 2.599.314 3.703.943 1.119.629 2.008 1.526 2.668 2.691.659 1.15.989 2.507.989 4.071 0 1.564-.33 2.921-.99 4.071a7.137 7.137 0 01-2.667 2.691c-1.104.629-2.339.943-3.703.943zm0-1.725c1.042 0 1.978-.222 2.806-.667.828-.46 1.487-1.135 1.978-2.024.49-.89.736-1.986.736-3.289 0-1.303-.246-2.392-.736-3.266-.491-.89-1.15-1.564-1.978-2.024-.828-.46-1.764-.69-2.806-.69-1.028 0-1.963.23-2.806.69-.828.46-1.488 1.135-1.978 2.024-.491.874-.736 1.963-.736 3.266s.245 2.4.736 3.289c.49.89 1.15 1.564 1.978 2.024.843.445 1.778.667 2.806.667zM38.924 16l-5.38-14.95h1.978l4.623 12.972h-.552L44.03 1.05h1.978l4.439 12.972h-.552L54.519 1.05h1.932L51.115 16h-1.932L44.767 2.568h.506L40.857 16h-1.932z" fill="#64ACFF"/>
 

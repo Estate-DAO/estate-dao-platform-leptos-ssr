@@ -39,7 +39,9 @@ type HotelDetails = record {
   hotel_code : text;
   hotel_name : text;
   hotel_image : text;
+  block_room_id : text;
   hotel_location : text;
+  hotel_token : text;
 };
 type HotelRoomDetails = record {
   destination : opt Destination;
@@ -53,6 +55,7 @@ type PaymentDetails = record {
   booking_id : record { text; text };
 };
 type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok : Booking; Err : text };
 type RoomDetails = record {
   room_price : float32;
   room_unique_id : text;
@@ -70,4 +73,7 @@ service : () -> {
   add_booking : (text, Booking) -> (Result);
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;
+  update_payment_details : (record { text; text }, PaymentDetails) -> (
+      Result_1,
+    );
 }

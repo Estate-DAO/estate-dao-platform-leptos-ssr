@@ -3,6 +3,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 // use leptos::ServerFnError;
 use crate::api::Provab;
+use crate::canister::backend::{AdultDetail, Booking, UserDetails};
 use leptos::logging::log;
 use leptos::*;
 
@@ -56,6 +57,52 @@ pub struct PassengerDetail {
 
     #[serde(rename = "Age", default = "_default_passenger_age")]
     pub age: u32, //for children, must be <= 18
+}
+
+// impl PartialEq for AdultDetail{
+//     fn eq(&self, other: &Self) -> bool {
+//         self.email == other.email &&
+//         self.first_name == other.first_name &&
+//         self.last_name == other.last_name &&
+//         self.phone == other.phone &&
+//         self.age == other.age
+//     }
+// }
+
+impl From<&UserDetails> for Vec<PassengerDetail> {
+    fn from(user_details: &UserDetails) -> Self {
+        let mut passenger_details = Vec::new();
+
+        // Process adults
+        for (index, adult) in user_details.adults.iter().enumerate() {
+            passenger_details.push(PassengerDetail {
+                title: "Mr".to_string(),
+                first_name: adult.first_name.clone(),
+                middle_name: None,
+                last_name: adult.last_name.clone().unwrap_or_default(),
+                email: adult.email.clone().unwrap_or_default(),
+                pax_type: PaxType::Adult,
+                lead_passenger: index == 0,
+                age: 25,
+            });
+        }
+
+        // Process children
+        for (index, child) in user_details.children.iter().enumerate() {
+            passenger_details.push(PassengerDetail {
+                title: "Mr".to_string(),
+                first_name: child.first_name.clone(),
+                middle_name: None,
+                last_name: child.last_name.clone().unwrap_or_default(),
+                email: "".to_string(),
+                pax_type: PaxType::Child,
+                lead_passenger: false,
+                age: child.age as u32,
+            });
+        }
+
+        passenger_details
+    }
 }
 
 pub fn _default_passenger_age() -> u32 {
