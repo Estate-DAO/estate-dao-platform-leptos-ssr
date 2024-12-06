@@ -12,6 +12,7 @@ pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.
 // CONST FOR LOCAL STORAGE
 pub const PAYMENT_ID: &str = "estatedao_payment_id";
 pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
+pub const BOOKING_ID: &str = "estatedao_booking_id";
 
 use dotenvy::dotenv;
 use serde::Deserialize;

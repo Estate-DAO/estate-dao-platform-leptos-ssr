@@ -427,9 +427,11 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let booking_id_cloned = booking_id.clone();
                     let payment_details = crate::canister::backend::PaymentDetails {
                         payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(
-                            Some("Payment Not Started".into()),
+                            None,
                         ),
                         booking_id,
+                        payment_id: "".to_string(),
+                        provider: payment_method,
                     };
 
                     let booking = crate::canister::backend::Booking {
@@ -871,7 +873,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 }
 
 // Helper function to create passenger details
-fn create_passenger_details(
+pub fn create_passenger_details(
     adults: &[AdultDetail],
     children: &[ChildDetail],
 ) -> Vec<PassengerDetail> {

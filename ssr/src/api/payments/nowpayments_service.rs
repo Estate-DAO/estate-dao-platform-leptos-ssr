@@ -1,6 +1,6 @@
 use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
-    PaymentGateway, PaymentGatewayParams, PaymentStatus,
+    PaymentGateway, PaymentGatewayParams,
 };
 use crate::api::consts::EnvVarConfig;
 use leptos::*;

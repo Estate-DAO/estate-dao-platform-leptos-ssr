@@ -51,7 +51,9 @@ type HotelRoomDetails = record {
   hotel_details : HotelDetails;
 };
 type PaymentDetails = record {
+  provider : text;
   payment_status : BackendPaymentStatus;
+  payment_id : text;
   booking_id : record { text; text };
 };
 type Result = variant { Ok : text; Err : text };
