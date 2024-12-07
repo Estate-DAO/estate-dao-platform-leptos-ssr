@@ -237,6 +237,7 @@ impl HotelInfoResults {
 pub struct BlockRoomResults {
     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
     pub payment_status_response: RwSignal<Option<GetPaymentStatusResponse>>,
+    pub block_room_id: RwSignal<Option<String>>
 }
 
 impl BlockRoomResults {
@@ -251,6 +252,11 @@ impl BlockRoomResults {
     pub fn set_results(results: Option<BlockRoomResponse>) {
         Self::from_leptos_context().block_room_results.set(results);
     }
+
+    pub fn set_id(id: Option<String>) {
+        Self::from_leptos_context().block_room_id.set(id);
+    }
+
     pub fn set_payment_results(results: Option<GetPaymentStatusResponse>) {
         Self::from_leptos_context()
             .payment_status_response

@@ -146,6 +146,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 .hotel_details
                                 .hotel_location,
                         );
+                        BlockRoomResults::set_id(Some(found_booking.user_selected_hotel_room_details.hotel_details.block_room_id));
 
                         // let passenger_details = Vec::<PassengerDetail>::from(&found_booking.guests);
                         // let room_detail = RoomDetail { passenger_details };
@@ -223,12 +224,13 @@ pub fn ConfirmationPage() -> impl IntoView {
             let hotel_info_ctx: HotelInfoCtx = expect_context();
             let search_list_result = expect_context::<SearchListResults>();
             let result_token = search_list_result.get_result_token(hotel_info_ctx.hotel_code.get());
-            let block_room_id = block_room
-                .block_room_results
-                .get()
-                .unwrap_or_default()
-                .get_block_room_id()
-                .unwrap_or_default();
+            // let block_room_id = block_room
+            //     .block_room_results
+            //     .get()
+            //     .unwrap_or_default()
+            //     .get_block_room_id()
+            //     .unwrap_or_default();
+            let block_room_id = block_room.block_room_id.get().unwrap_or_default();
             let block_room_ctx = expect_context::<BlockRoomCtx>();
             let adults = block_room_ctx.adults.get();
             let children = block_room_ctx.children.get();
@@ -246,6 +248,8 @@ pub fn ConfirmationPage() -> impl IntoView {
                         room_details: vec![room_detail],
                     };
                     let value_for_serverfn: String = serde_json::to_string(&req).unwrap();
+
+                    log!("REQ FOR BOOK ROOM API >>>{:?}", req);
 
                     let result = book_room(value_for_serverfn).await.ok();
                     log!("BOOK_ROOM_API: {result:?}");
@@ -449,6 +453,17 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 };
 
                                 confirmation_ctx.booking_details.set(Some(booking_details));
+                                let booking_guests = booking.guests.clone();
+                                let booking_guests2 = booking.guests.clone();
+
+                                let adults: Vec<crate::state::view_state::AdultDetail> = booking_guests.into();
+                                let children: Vec<crate::state::view_state::ChildDetail> = booking_guests2.into();
+
+                                let adults_clon = adults.clone();
+                                let children_clon = children.clone();
+                                BlockRoomCtx::set_adults(adults);
+                                BlockRoomCtx::set_children(children);
+
                                 // Payment Details not being stored. Can use the calculated value above if wanna populate it anywhere.
                             }
                             Err(e) => {

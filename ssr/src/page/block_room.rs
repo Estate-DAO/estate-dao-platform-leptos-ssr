@@ -308,8 +308,16 @@ pub fn BlockRoomPage() -> impl IntoView {
                 // Call server function inside action
                 spawn_local(async move {
                     let result = block_room(block_room_request).await.ok();
+                    let res = result.clone();
+                    let block_room_id = res.and_then(|resp| resp.get_block_room_id());
                     // log!("BLOCK_ROOM_API: {result:?}");
+                    // log!("BLOCK_ROOM_ID: {block_room_id:?}");
+
                     BlockRoomResults::set_results(result);
+                    BlockRoomResults::set_id(block_room_id);
+
+                    let res: BlockRoomResults = expect_context();
+                    log!("\n LOOK HERE >{:?}", res.block_room_results.get());
                 });
             } else {
                 log!("modal closed. Nothing to do");
@@ -372,13 +380,16 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let hotel_token =
                         search_list_results_cloned.get_result_token(hotel_code_cloned.clone());
 
-                    let block_room_id = block_room_results_context_cloned
-                        .block_room_results
-                        .get_untracked()
-                        .unwrap()
-                        .get_block_room_id()
-                        .unwrap_or_default();
+                    // let block_room_id = block_room_results_context_cloned
+                    //     .block_room_results
+                    //     .get_untracked()
+                    //     .unwrap()
+                    //     .get_block_room_id()
+                    //     .unwrap_or_default();
 
+                    let block_room_id = block_room_results_context_cloned.block_room_id.get().unwrap_or_default();
+
+                    log!("BHAI BATA DE_____> {:?}", block_room_id);
                     let user_selected_hotel_room_details = HotelRoomDetails {
                         destination,
                         requested_payment_amount: total_price.get(),

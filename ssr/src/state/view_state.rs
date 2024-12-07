@@ -68,6 +68,16 @@ impl BlockRoomCtx {
         this.children.set(vec![ChildDetail::default(); count]);
     }
 
+    pub fn set_adults(adults: Vec<AdultDetail>) {
+        let this: Self = expect_context();
+        this.adults.set(adults);
+    }
+
+    pub fn set_children(children: Vec<ChildDetail>) {
+        let this: Self = expect_context();
+        this.children.set(children);
+    }
+
     pub fn set_terms_accepted(value: bool) {
         log!("set_terms_accepted");
 
