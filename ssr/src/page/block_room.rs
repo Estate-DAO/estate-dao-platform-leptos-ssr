@@ -434,28 +434,9 @@ pub fn BlockRoomPage() -> impl IntoView {
                         email,
                     );
                     let booking_id_cloned = booking_id.clone();
-                    let default_payment_response = BePaymentApiResponse {
-                        updated_at: String::default(),
-                        actually_paid: f64::default(),
-                        provider: String::default(),
-                        invoice_id: u64::default(),
-                        order_description: String::default(),
-                        pay_amount: f64::default(),
-                        pay_currency: String::default(),
-                        created_at: String::default(),
-                        payment_status: String::default(),
-                        price_amount: u64::default(),
-                        purchase_id: u64::default(),
-                        order_id: String::default(),
-                        price_currency: String::default(),
-                        payment_id: u64::default(),
-                    };
                     let payment_details = crate::canister::backend::PaymentDetails {
-                        payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(
-                            None,
-                        ),
                         booking_id,
-                        payment_api_response: default_payment_response,
+                        ..Default::default()
                     };
 
                     let booking = crate::canister::backend::Booking {
@@ -482,14 +463,14 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                                 match add_booking_backend(email_cloned, value_for_serverfn).await {
                                     Ok(response) => {
-                                        log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+                                        // log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
                                         let _ = window().location().assign(&resp.invoice_url);
                                         // let _ = window().location().assign(
                                         //     &"http://localhost:3000/confirmation".to_string(),
                                         // );
                                     }
                                     Err(e) => {
-                                        log!("Error saving values {:?}", e);
+                                        log!("Error add_booking_backend serverFn {:?}", e);
                                     }
                                 }
                             }
