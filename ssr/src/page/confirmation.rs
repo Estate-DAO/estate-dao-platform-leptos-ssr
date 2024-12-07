@@ -41,6 +41,8 @@ use leptos_use::{
 };
 use serde::{ser::SerializeStruct, Serialize, Serializer};
 
+
+#[allow(non_snake_case)]
 #[derive(Params, PartialEq, Clone, Debug)]
 struct NowpaymentsPaymentId {
     NP_id: u64,
