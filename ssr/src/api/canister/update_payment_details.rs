@@ -1,4 +1,4 @@
-use crate::canister::backend::{Booking, PaymentDetails, Result1};
+use crate::canister::backend::{Booking, PaymentDetails, Result2};
 use crate::utils::admin::admin_canister;
 use crate::utils::app_reference::BookingId;
 use leptos::logging::log;
@@ -24,8 +24,8 @@ pub async fn update_payment_details_backend(
     println!("{result:#?}");
 
     match result {
-        Ok(Result1::Ok(booking)) => Ok(booking),
-        Ok(Result1::Err(e)) => Err(ServerFnError::ServerError(e)),
+        Ok(Result2::Ok(booking)) => Ok(booking),
+        Ok(Result2::Err(e)) => Err(ServerFnError::ServerError(e)),
         Err(e) => {
             println!("Failed to update payment details: {:?}", e);
             Err(ServerFnError::ServerError(e.to_string()))

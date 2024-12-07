@@ -1,7 +1,7 @@
 use cfg_if::cfg_if;
 
 mod a00_search;
-pub use a00_search::{search_hotel, HotelSearchRequest, HotelSearchResponse, RoomGuest};
+pub use a00_search::{search_hotel, HotelSearchRequest, HotelSearchResponse, RoomGuest, Search, HotelSearchResult, HotelResult, Price};
 
 mod a01_hotel_info;
 pub use a01_hotel_info::{hotel_info, HotelInfoRequest, HotelInfoResponse};

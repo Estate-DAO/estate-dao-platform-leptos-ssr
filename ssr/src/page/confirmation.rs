@@ -1,14 +1,9 @@
 use crate::{
     api::{
-        book_room,
-        canister::{
+        book_room, canister::{
             get_user_booking::get_user_booking_backend,
             update_payment_details::update_payment_details_backend,
-        },
-        hotel_info,
-        payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest},
-        BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, PassengerDetail,
-        RoomDetail,
+        }, hotel_info, payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest}, BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, HotelResult, HotelSearchResponse, HotelSearchResult, PassengerDetail, Price, RoomDetail, Search
     },
     app::AppRoutes,
     canister::backend::{
@@ -328,6 +323,7 @@ pub fn ConfirmationPage() -> impl IntoView {
             serde_json::to_string(&payment_details).expect("payment details is not valid json");
 
         let block_room = expect_context::<BlockRoomResults>();
+        let search_list_result = expect_context::<SearchListResults>();
         match block_room.payment_status_response.get_untracked() {
             Some(status) => {
                 log!("payment_status_response: {:?}", status);
@@ -361,6 +357,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 // let app_reference_string_cloned =
                                 //     app_reference_string_cloned.clone();
                                 let email_cloned = email_cloned_twice.clone();
+                                let hotel_det_cloned = booking.user_selected_hotel_room_details.hotel_details.clone();
 
                                 let date_range = SelectedDateRange {
                                     start: booking
@@ -388,6 +385,35 @@ pub fn ConfirmationPage() -> impl IntoView {
                                         .user_selected_hotel_room_details
                                         .hotel_details
                                         .hotel_location,
+                                );
+
+
+                                // Storing hotel_location is the field given for hotel_category becoz why not
+                                let hotel_res = HotelResult {
+                                    hotel_code: hotel_det_cloned.hotel_code,
+                                    hotel_name: hotel_det_cloned.hotel_name,
+                                    hotel_picture: hotel_det_cloned.hotel_image,
+                                    hotel_category: hotel_det_cloned.hotel_location,
+                                    result_token: hotel_det_cloned.hotel_token,
+                                    star_rating: 0,
+                                    price: Price::default()
+                                };
+                                let hotel_search_res = HotelSearchResult {
+                                    hotel_results: vec![hotel_res],
+                                };
+                                let search_res = Search {
+                                    hotel_search_result: hotel_search_res,
+                                };
+                                let hotel_search_resp = HotelSearchResponse {
+                                    status: 0,
+                                    message: "Default Message".to_string(),
+                                    search: Some(search_res),
+                                };
+
+                                SearchListResults::set_search_results(
+                                    Some(
+                                        hotel_search_resp
+                                    )
                                 );
 
                                 let book_room_status = booking.book_room_status;
