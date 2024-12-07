@@ -3,7 +3,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 // use leptos::ServerFnError;
 use crate::api::Provab;
-use crate::canister::backend::{AdultDetail, Booking, UserDetails};
+use crate::canister::backend::{AdultDetail, BeBookRoomResponse, Booking, UserDetails};
 use leptos::logging::log;
 use leptos::*;
 
@@ -162,6 +162,14 @@ pub enum BookingStatus {
     #[serde(rename = "Confirmed")]
     Confirmed = 1,
 }
+impl From<crate::canister::backend::BookingStatus> for BookingStatus {
+    fn from(status: crate::canister::backend::BookingStatus) -> Self {
+        match status {
+            crate::canister::backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
+            crate::canister::backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
+        }
+    }
+}
 
 impl ProvabReqMeta for BookRoomRequest {
     const METHOD: Method = Method::POST;
@@ -228,5 +236,32 @@ impl Serialize for PassengerDetail {
         state.serialize_field("LeadPassenger", &self.lead_passenger)?;
         state.serialize_field("Age", &self.age)?;
         state.end()
+    }
+}
+
+impl Default for BeBookRoomResponse {
+    fn default() -> Self {
+        BeBookRoomResponse {
+            status: String::default(),
+            commit_booking: crate::canister::backend::BookingDetails::default(),
+            message: String::default(),
+        }
+    }
+}
+
+impl Default for crate::canister::backend::BookingDetails {
+    fn default() -> Self {
+        crate::canister::backend::BookingDetails {
+            booking_ref_no: String::default(),
+            booking_status: crate::canister::backend::BookingStatus::default(),
+            confirmation_no: String::default(),
+            booking_id: (String::default(), String::default()),
+        }
+    }
+}
+
+impl Default for crate::canister::backend::BookingStatus {
+    fn default() -> Self {
+        crate::canister::backend::BookingStatus::BookFailed
     }
 }

@@ -4,6 +4,11 @@ type AdultDetail = record {
   last_name : opt text;
   phone : opt text;
 };
+type BEBookRoomResponse = record {
+  status : text;
+  commit_booking : BookingDetails;
+  message : text;
+};
 type BEPaymentApiResponse = record {
   updated_at : text;
   actually_paid : float64;
@@ -21,16 +26,11 @@ type BEPaymentApiResponse = record {
   payment_id : nat64;
 };
 type BackendPaymentStatus = variant { Paid : text; Unpaid : opt text };
-type BookRoomResponse = record {
-  status : BookingStatus;
-  commit_booking : vec BookingDetails;
-  message : opt text;
-};
 type Booking = record {
   user_selected_hotel_room_details : HotelRoomDetails;
   guests : UserDetails;
   booking_id : record { text; text };
-  book_room_status : opt BookRoomResponse;
+  book_room_status : opt BEBookRoomResponse;
   payment_details : PaymentDetails;
 };
 type BookingDetails = record {
@@ -91,7 +91,7 @@ service : () -> {
   add_booking : (text, Booking) -> (Result);
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;
-  update_book_room_response : (record { text; text }, BookRoomResponse) -> (
+  update_book_room_response : (record { text; text }, BEBookRoomResponse) -> (
       Result_1,
     );
   update_payment_details : (record { text; text }, PaymentDetails) -> (

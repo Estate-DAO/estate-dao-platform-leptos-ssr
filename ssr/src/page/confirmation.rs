@@ -1,9 +1,15 @@
 use crate::{
     api::{
-        book_room, canister::{
+        book_room,
+        canister::{
             get_user_booking::get_user_booking_backend,
             update_payment_details::update_payment_details_backend,
-        }, hotel_info, payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest}, BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, HotelResult, HotelSearchResponse, HotelSearchResult, PassengerDetail, Price, RoomDetail, Search
+        },
+        hotel_info,
+        payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest},
+        BookRoomRequest, BookRoomResponse, BookingDetails, BookingDetailsContainer, BookingStatus,
+        HotelResult, HotelSearchResponse, HotelSearchResult, PassengerDetail, Price, RoomDetail,
+        Search,
     },
     app::AppRoutes,
     canister::backend::{
@@ -357,7 +363,10 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 // let app_reference_string_cloned =
                                 //     app_reference_string_cloned.clone();
                                 let email_cloned = email_cloned_twice.clone();
-                                let hotel_det_cloned = booking.user_selected_hotel_room_details.hotel_details.clone();
+                                let hotel_det_cloned = booking
+                                    .user_selected_hotel_room_details
+                                    .hotel_details
+                                    .clone();
 
                                 let date_range = SelectedDateRange {
                                     start: booking
@@ -387,7 +396,6 @@ pub fn ConfirmationPage() -> impl IntoView {
                                         .hotel_location,
                                 );
 
-
                                 // Storing hotel_location is the field given for hotel_category becoz why not
                                 let hotel_res = HotelResult {
                                     hotel_code: hotel_det_cloned.hotel_code,
@@ -396,7 +404,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                                     hotel_category: hotel_det_cloned.hotel_location,
                                     result_token: hotel_det_cloned.hotel_token,
                                     star_rating: 0,
-                                    price: Price::default()
+                                    price: Price::default(),
                                 };
                                 let hotel_search_res = HotelSearchResult {
                                     hotel_results: vec![hotel_res],
@@ -410,31 +418,32 @@ pub fn ConfirmationPage() -> impl IntoView {
                                     search: Some(search_res),
                                 };
 
-                                SearchListResults::set_search_results(
-                                    Some(
-                                        hotel_search_resp
-                                    )
-                                );
+                                SearchListResults::set_search_results(Some(hotel_search_resp));
 
                                 let book_room_status = booking.book_room_status;
                                 let book_room_status_cloned = book_room_status.clone();
                                 let book_room_status_twice = book_room_status.clone();
+                                let booking_status_cloned_again = book_room_status_cloned.clone();
+                                let booking_status_cloned_again1 = book_room_status_cloned.clone();
+                                let booking_status_cloned_again2 = book_room_status_cloned.clone();
+                                let booking_status_cloned_again3 = book_room_status_cloned.clone();
 
                                 let booking_details = BookRoomResponse {
-                                    status: match book_room_status_twice.unwrap().status {
-                                        crate::canister::backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
-                                        crate::canister::backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
-                                    },
-                                    message: book_room_status.unwrap().message,
-                                    commit_booking: book_room_status_cloned.unwrap().commit_booking.into_iter().map(|b| BookingDetails {
-                                        booking_id: b.booking_id.0,
-                                        booking_ref_no: b.booking_ref_no,
-                                        confirmation_no: b.confirmation_no,
-                                        booking_status: match b.booking_status {
-                                            crate::canister::backend::BookingStatus::Confirmed => "Confirmed".to_string(),
-                                            crate::canister::backend::BookingStatus::BookFailed => "BookFailed".to_string(),
+                                    status: book_room_status
+                                    .as_ref()
+                                    .map_or(BookingStatus::BookFailed, |status| status.clone().commit_booking.booking_status.into()),
+                                    message: book_room_status_cloned.unwrap_or_default().message,
+                                    commit_booking: BookingDetailsContainer {
+                                        booking_details: BookingDetails {
+                                            booking_id: booking_status_cloned_again3.unwrap_or_default().commit_booking.booking_id.0,
+                                            booking_ref_no: booking_status_cloned_again.unwrap_or_default().commit_booking.booking_ref_no,
+                                            confirmation_no: booking_status_cloned_again1.unwrap_or_default().commit_booking.confirmation_no,
+                                            booking_status: match booking_status_cloned_again2.unwrap_or_default().commit_booking.booking_status {
+                                                crate::canister::backend::BookingStatus::Confirmed => "Confirmed".to_string(),
+                                                crate::canister::backend::BookingStatus::BookFailed => "BookFailed".to_string(),
+                                            },
                                         },
-                                    }).collect(),
+                                    }
                                 };
 
                                 confirmation_ctx.booking_details.set(Some(booking_details));

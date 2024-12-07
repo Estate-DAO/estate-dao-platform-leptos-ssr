@@ -12,7 +12,6 @@ use crate::api::payments::ports::CreateInvoiceRequest;
 use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
 use crate::canister::backend::BePaymentApiResponse;
-use crate::canister::backend::BookRoomResponse;
 use crate::canister::backend::HotelDetails;
 use crate::canister::backend::HotelRoomDetails;
 use crate::canister::backend::RoomDetails;
