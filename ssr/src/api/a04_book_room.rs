@@ -128,10 +128,16 @@ pub struct BookRoomResponse {
     pub status: BookingStatus,
 
     #[serde(rename = "Message")]
-    pub message: Option<String>,
+    pub message: String,
 
     #[serde(rename = "CommitBooking")]
-    pub commit_booking: Vec<BookingDetails>,
+    pub commit_booking: BookingDetailsContainer,
+}
+
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+pub struct BookingDetailsContainer {
+    #[serde(rename = "BookingDetails")]
+    pub booking_details: BookingDetails,
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
