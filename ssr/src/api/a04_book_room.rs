@@ -169,10 +169,15 @@ impl ProvabReq for BookRoomRequest {
 }
 
 #[server(BlockRoom)]
-pub async fn book_room(request: BookRoomRequest) -> Result<BookRoomResponse, ServerFnError> {
+pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
     let provab = Provab::default();
 
-    match provab.send(request).await {
+    let request_struct = serde_json::from_str::<BookRoomRequest>(&request)
+        .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
+
+    println!("book_request - {request_struct:?}");
+
+    match provab.send(request_struct).await {
         Ok(response) => Ok(response),
         Err(e) => {
             log!("error: {:?}", e);

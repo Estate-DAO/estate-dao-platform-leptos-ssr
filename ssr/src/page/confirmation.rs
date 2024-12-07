@@ -242,7 +242,9 @@ pub fn ConfirmationPage() -> impl IntoView {
                         app_reference,
                         room_details: vec![room_detail],
                     };
-                    let result = book_room(req).await.ok();
+                    let value_for_serverfn: String = serde_json::to_string(&req).unwrap();
+
+                    let result = book_room(value_for_serverfn).await.ok();
                     log!("BOOK_ROOM_API: {result:?}");
                     conf_res.booking_details.set(result);
                 });
