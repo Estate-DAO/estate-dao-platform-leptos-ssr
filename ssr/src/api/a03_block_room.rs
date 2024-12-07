@@ -63,8 +63,8 @@ impl Default for FailureBlockRoomResponse {
     fn default() -> Self {
         // Provide default values for the fields of FailureBlockRoomResponse
         FailureBlockRoomResponse {
-            status: 0,     // Replace with appropriate default value
-            message: None, // Replace with appropriate default value
+            status: 0,
+            message: Some("generated_from_ impl Default ".into()),
         }
     }
 }
