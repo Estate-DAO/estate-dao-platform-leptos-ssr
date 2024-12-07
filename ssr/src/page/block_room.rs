@@ -11,6 +11,7 @@ use crate::api::payments::nowpayments_get_payment_status;
 use crate::api::payments::ports::CreateInvoiceRequest;
 use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
+use crate::canister::backend::BePaymentApiResponse;
 use crate::canister::backend::BookRoomResponse;
 use crate::canister::backend::HotelDetails;
 use crate::canister::backend::HotelRoomDetails;
@@ -433,13 +434,28 @@ pub fn BlockRoomPage() -> impl IntoView {
                         email,
                     );
                     let booking_id_cloned = booking_id.clone();
+                    let default_payment_response = BePaymentApiResponse {
+                        updated_at: String::default(),
+                        actually_paid: f64::default(),
+                        provider: String::default(),
+                        invoice_id: u64::default(),
+                        order_description: String::default(),
+                        pay_amount: f64::default(),
+                        pay_currency: String::default(),
+                        created_at: String::default(),
+                        payment_status: String::default(),
+                        price_amount: u64::default(),
+                        purchase_id: u64::default(),
+                        order_id: String::default(),
+                        price_currency: String::default(),
+                        payment_id: u64::default(),
+                    };
                     let payment_details = crate::canister::backend::PaymentDetails {
                         payment_status: crate::canister::backend::BackendPaymentStatus::Unpaid(
                             None,
                         ),
                         booking_id,
-                        payment_id: "".to_string(),
-                        provider: payment_method,
+                        payment_api_response: default_payment_response,
                     };
 
                     let booking = crate::canister::backend::Booking {

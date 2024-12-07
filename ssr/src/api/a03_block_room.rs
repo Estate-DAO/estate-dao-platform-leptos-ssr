@@ -59,11 +59,27 @@ pub struct FailureBlockRoomResponse {
     pub message: Option<String>,
 }
 
+impl Default for FailureBlockRoomResponse {
+    fn default() -> Self {
+        // Provide default values for the fields of FailureBlockRoomResponse
+        FailureBlockRoomResponse {
+            status: 0,     // Replace with appropriate default value
+            message: None, // Replace with appropriate default value
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum BlockRoomResponse {
     Success(SuccessBlockRoomResponse),
     Failure(FailureBlockRoomResponse),
+}
+
+impl Default for BlockRoomResponse {
+    fn default() -> Self {
+        BlockRoomResponse::Failure(FailureBlockRoomResponse::default())
+    }
 }
 
 impl SuccessBlockRoomResponse {

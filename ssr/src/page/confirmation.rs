@@ -13,7 +13,7 @@ use crate::{
     app::AppRoutes,
     canister::backend::{
         BackendPaymentStatus::{Paid, Unpaid},
-        PaymentDetails,
+        BePaymentApiResponse, PaymentDetails,
     },
     component::{
         Divider, FilterAndSortBy, GuestSelection, PriceDisplay, SelectedDateRange, StarRating,
@@ -38,6 +38,7 @@ use leptos_use::{
     storage::use_local_storage, use_interval_fn, use_interval_fn_with_options, utils::Pausable,
     UseIntervalFnOptions,
 };
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 #[derive(Params, PartialEq, Clone, Debug)]
 struct NowpaymentsPaymentId {
@@ -222,7 +223,7 @@ pub fn ConfirmationPage() -> impl IntoView {
             let block_room_id = block_room
                 .block_room_results
                 .get()
-                .unwrap()
+                .unwrap_or_default()
                 .get_block_room_id()
                 .unwrap_or_default();
             let block_room_ctx = expect_context::<BlockRoomCtx>();
@@ -290,6 +291,7 @@ pub fn ConfirmationPage() -> impl IntoView {
     create_effect(move |_| {
         let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
         let confirmation_ctx = expect_context::<ConfirmationResults>();
+        let block_room_ctx = expect_context::<BlockRoomResults>();
 
         let app_reference_string = booking_id_signal_read
             .get_untracked()
@@ -303,18 +305,25 @@ pub fn ConfirmationPage() -> impl IntoView {
 
         let (payment_store, set_payment_store, _) = use_payment_store();
 
+        let get_payment_status_response = block_room_ctx
+            .payment_status_response
+            .get()
+            .unwrap_or_default()
+            .into();
+        let payment_api_response =
+            BePaymentApiResponse::from((get_payment_status_response, "NOWPayments".to_string()));
+
         let payment_details = PaymentDetails {
             booking_id: (
                 app_reference_string.unwrap_or_default(),
                 email.unwrap_or_default(),
             ),
             payment_status: Unpaid(None),
-            payment_id: payment_store
-                .get_untracked()
-                .unwrap_or_default()
-                .to_string(),
-            provider: "NOWPayments".to_string(),
+            payment_api_response,
         };
+
+        let payment_details_str =
+            serde_json::to_string(&payment_details).expect("payment details is not valid json");
 
         let block_room = expect_context::<BlockRoomResults>();
         match block_room.payment_status_response.get_untracked() {
@@ -341,11 +350,12 @@ pub fn ConfirmationPage() -> impl IntoView {
                                 app_reference_string_cloned.unwrap_or_default(),
                                 email_cloned.unwrap_or_default(),
                             ),
-                            payment_details,
+                            payment_details_str,
                         )
                         .await
                         {
                             Ok(booking) => {
+                                println!("{:?}", booking);
                                 // let app_reference_string_cloned =
                                 //     app_reference_string_cloned.clone();
                                 let email_cloned = email_cloned_twice.clone();

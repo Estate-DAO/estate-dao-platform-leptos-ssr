@@ -1,5 +1,6 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use crate::canister::backend::BePaymentApiResponse;
 use anyhow::{anyhow, Result};
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use std::fmt::Debug;
@@ -59,13 +60,13 @@ pub struct GetPaymentStatusRequest {
     pub payment_id: u64,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 pub struct GetPaymentStatusResponse {
     pub payment_id: u64,
     pub invoice_id: u64,
     pub payment_status: String,
-    pub pay_address: String,
-    pub payin_extra_id: Option<String>,
+    // pub pay_address: String,
+    // pub payin_extra_id: Option<String>,
     pub price_amount: u64,
     pub price_currency: String,
     pub pay_amount: f64,
@@ -74,15 +75,36 @@ pub struct GetPaymentStatusResponse {
     pub order_id: String,
     pub order_description: String,
     pub purchase_id: u64,
-    pub outcome_amount: f64,
-    pub outcome_currency: String,
-    pub payout_hash: Option<String>,
-    pub payin_hash: Option<String>,
+    // pub outcome_amount: f64,
+    // pub outcome_currency: String,
+    // pub payout_hash: Option<String>,
+    // pub payin_hash: Option<String>,
     pub created_at: String,
     pub updated_at: String,
-    pub burning_percent: Option<String>,
-    #[serde(rename = "type")]
-    pub type_field: String,
+    // pub burning_percent: Option<String>,
+    // #[serde(rename = "type")]
+    // pub type_field: String,
+}
+
+impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
+    fn from((response, provider): (GetPaymentStatusResponse, String)) -> Self {
+        BePaymentApiResponse {
+            updated_at: response.updated_at,
+            actually_paid: response.actually_paid,
+            provider,
+            invoice_id: response.invoice_id,
+            order_description: response.order_description,
+            pay_amount: response.pay_amount,
+            pay_currency: response.pay_currency,
+            created_at: response.created_at,
+            payment_status: response.payment_status,
+            price_amount: response.price_amount,
+            purchase_id: response.purchase_id,
+            order_id: response.order_id,
+            price_currency: response.price_currency,
+            payment_id: response.payment_id,
+        }
+    }
 }
 
 pub trait PaymentGateway {

@@ -7,23 +7,27 @@ use leptos::*;
 #[server(GreetBackend)]
 pub async fn update_payment_details_backend(
     booking_id: (String, String),
-    payment_details: PaymentDetails,
+    payment_details: String,
 ) -> Result<Booking, ServerFnError> {
+    let payment_details_struct = serde_json::from_str::<PaymentDetails>(&payment_details)
+        .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
+
     let adm_cans = admin_canister();
 
     let backend_cans = adm_cans.backend_canister().await;
+    println!("{:#?}", payment_details_struct);
 
     let result = backend_cans
-        .update_payment_details(booking_id, payment_details)
+        .update_payment_details(booking_id, payment_details_struct)
         .await;
 
-    log!("{result:#?}");
+    println!("{result:#?}");
 
     match result {
         Ok(Result1::Ok(booking)) => Ok(booking),
         Ok(Result1::Err(e)) => Err(ServerFnError::ServerError(e)),
         Err(e) => {
-            log!("Failed to update payment details: {:?}", e);
+            println!("Failed to update payment details: {:?}", e);
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }

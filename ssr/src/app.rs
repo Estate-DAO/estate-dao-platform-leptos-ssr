@@ -1,5 +1,5 @@
 use crate::{
-    api::consts::EnvVarConfig,
+    api::{consts::EnvVarConfig, payments::ports::GetPaymentStatusResponse},
     error_template::{AppError, ErrorTemplate},
     page::{BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage, RootPage},
     state::{
@@ -65,7 +65,7 @@ pub fn App() -> impl IntoView {
     provide_context(BlockRoomCtx::default());
     provide_context(BlockRoomResults::default());
 
-    provide_context(ConfirmationResults::default()); // Add this line
+    provide_context(ConfirmationResults::default());
 
     // Provides Query Client for entire app.
     // leptos_query::provide_query_client();

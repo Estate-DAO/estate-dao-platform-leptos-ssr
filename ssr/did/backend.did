@@ -4,6 +4,22 @@ type AdultDetail = record {
   last_name : opt text;
   phone : opt text;
 };
+type BEPaymentApiResponse = record {
+  updated_at : text;
+  actually_paid : float64;
+  provider : text;
+  invoice_id : nat64;
+  order_description : text;
+  pay_amount : float64;
+  pay_currency : text;
+  created_at : text;
+  payment_status : text;
+  price_amount : nat64;
+  purchase_id : nat64;
+  order_id : text;
+  price_currency : text;
+  payment_id : nat64;
+};
 type BackendPaymentStatus = variant { Paid : text; Unpaid : opt text };
 type BookRoomResponse = record {
   status : BookingStatus;
@@ -51,10 +67,9 @@ type HotelRoomDetails = record {
   hotel_details : HotelDetails;
 };
 type PaymentDetails = record {
-  provider : text;
   payment_status : BackendPaymentStatus;
-  payment_id : text;
   booking_id : record { text; text };
+  payment_api_response : BEPaymentApiResponse;
 };
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok : Booking; Err : text };

@@ -101,8 +101,8 @@ impl SearchListResults {
     pub fn get_result_token(&self, hotel_code: String) -> String {
         self.get_hotel_code_results_token_map()
             .get(&hotel_code)
-            .unwrap()
-            .clone()
+            .cloned()
+            .unwrap_or_default()
     }
 
     pub fn hotel_info_request(&self, hotel_code: &str) -> HotelInfoRequest {
