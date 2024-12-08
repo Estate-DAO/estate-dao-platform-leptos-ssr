@@ -6,10 +6,10 @@ source .env
 cargo leptos build --lib-features "local-lib" --bin-features "local-bin" || exit 1
 
 # # LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS
-LEPTOS_SITE_ROOT="target/site"
-PAYMENTS_SKIP_LOCAL="true"
+export LEPTOS_SITE_ROOT="target/site"
+export PAYMENTS_SKIP_LOCAL="true"
 
-./target/debug/estate-fe --features "local-bin"
+./target/debug/estate-fe
 
 # LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS cargo leptos serve
 

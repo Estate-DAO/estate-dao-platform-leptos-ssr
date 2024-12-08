@@ -53,10 +53,8 @@ k256 = { version = "0.13.4", default-features = false, features = [
 stringreader = "0.1.1"
 ic-agent = { version = "0.39.1", features = ["wasm-bindgen", "pem"]}
 ic-base-types = { git = "https://github.com/dfinity/ic", rev = "tags/release-2024-05-29_23-02-base" }
-# dotenv = { version = "0.15.0", optional = true }
-# dotenv_codegen = "0.15.0"
-dotenvy = "0.15.7"
-dotenvy_macro = "0.15.7"
+# dotenvy = "0.15.7"
+# dotenvy_macro = "0.15.7"
 candid = "0.10.10"
 
 flate2 = "1.0.34"
@@ -70,13 +68,6 @@ rand = "0.8.5"
 codee = {version =  "0.2.0", features = ["json_serde_wasm", "json_serde"]}
 futures = "0.3.31"
 colored = {version = "2.1.0"}
-# colored = {version = "2.1.0", optional = true}
-
-# reqwest = { version = "0.12.8", default-features = false, features = ["json", "http2", "gzip", "deflate"] }
-# async-compression = { version = "0.4.14", features = ["gzip"] }
-
-# reqwest = { version = "0.11.22", features = [ "json", "gzip", "deflate"]}
-# chrono = { version = "0.4.38"}
 
 [build-dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -119,20 +110,15 @@ ssr = [
 
     # "reqwest/gzip"
 ]
-
+# setup the localhost url for dev env
 local_api = []
-
 local-lib = ["local_api", "hydrate" ]
-
 local-bin = ["ssr","local_api"]
 
-# # Defines a size-optimized profile for the WASM bundle in release mode
-# [profile.wasm-release]
-# inherits = "release"
-# opt-level = 'z'
-# lto = true
-# codegen-units = 1
-# panic = "abort"
+# release features 
+release-lib = [ "hydrate" ]
+release-bin = ["ssr"]
+
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name

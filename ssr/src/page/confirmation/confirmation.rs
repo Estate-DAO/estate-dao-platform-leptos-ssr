@@ -1,5 +1,5 @@
 use crate::{
-    page::{BookingHandler, Navbar},
+    page::{confirmation::payment_handler::PaymentHandler, BookingHandler, Navbar},
     state::{search_state::SearchCtx, view_state::HotelInfoCtx},
 };
 use chrono::NaiveDate;
@@ -21,7 +21,7 @@ pub fn ConfirmationPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
     // to keep track of steps and reactive udpates
-    provide_context(PaymentBookingStatusUpdates::default());
+    // provide_context(PaymentBookingStatusUpdates::default());
 
     let insert_real_image_or_default = {
         move || {
@@ -68,6 +68,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                     exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
                 </p>
                 <BookingHandler />
+                <PaymentHandler />
             </div>
         </section>
     }

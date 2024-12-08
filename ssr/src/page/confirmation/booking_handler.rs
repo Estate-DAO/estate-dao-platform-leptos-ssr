@@ -15,7 +15,7 @@ use crate::{
 use colored::Colorize;
 use leptos::*;
 
-fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
+pub fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
     let booking_id_signal_read = use_booking_id_store().0;
     let reactive_closure_for_reading = move || booking_id_signal_read.get_untracked();
 
@@ -34,7 +34,7 @@ fn set_to_context(found_booking: backend::Booking) {
     let confirmation_ctx = expect_context::<ConfirmationResults>();
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
 
-    let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
+    // let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
     let date_range = crate::component::SelectedDateRange {
         start: found_booking
@@ -124,6 +124,10 @@ pub fn BookingHandler() -> impl IntoView {
                 let found_booking = found_booking_opt.unwrap();
                 let found_booking_clone = found_booking.clone();
                 set_to_context(found_booking);
+                // iff data is present in backend, check for the payment status
+                payment_booking_step_signals
+                    .p01_fetch_payment_details_from_api
+                    .set(true);
                 Ok(Some(found_booking_clone))
             } else {
                 log::info!("not fetch_from_canister");

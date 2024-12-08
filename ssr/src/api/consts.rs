@@ -19,7 +19,7 @@ pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
-use dotenvy::dotenv;
+// use dotenvy::dotenv;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -27,8 +27,9 @@ use std::env::VarError;
 use thiserror::Error;
 
 pub fn get_payments_url(status: &str) -> String {
+    // todo [UAT] 3 local_api -- enabled behind local-bin -- change CI to release-bin
     cfg_if! {
-        if #[cfg(feature = "local-bin")] {
+        if #[cfg(feature = "local_api")] {
             let base_url = LOCALHOST_DEV;
         } else {
             let base_url = PROD_URL;
@@ -48,6 +49,8 @@ pub struct EnvVarConfig {
     provab_headers: HashMap<String, String>,
     pub nowpayments_api_key: String,
     pub admin_private_key: String,
+    // skip the payment on localhost using environment variable
+    // pub payment_skip_local: String
 }
 
 impl EnvVarConfig {
@@ -63,6 +66,7 @@ impl EnvVarConfig {
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
             ),
+            // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
         value

@@ -16,6 +16,8 @@ use std::collections::HashMap;
 
 use super::view_state::HotelInfoCtx;
 
+//  ==================================================================
+
 #[derive(Clone, Default, Debug)]
 pub struct SearchCtx {
     // invalid_cnt: RwSignal<u32>,
@@ -73,6 +75,8 @@ impl SearchCtx {
     }
 }
 
+//  ==================================================================
+
 #[derive(Debug, Clone, Default)]
 pub struct SearchListResults {
     pub search_result: RwSignal<Option<HotelSearchResponse>>,
@@ -115,6 +119,8 @@ impl SearchListResults {
         HotelRoomRequest { token }
     }
 }
+
+//  ==================================================================
 
 #[derive(Debug, Clone, Default)]
 pub struct HotelInfoResults {
@@ -233,6 +239,8 @@ impl HotelInfoResults {
     }
 }
 
+//  ==================================================================
+
 #[derive(Debug, Clone, Default)]
 pub struct BlockRoomResults {
     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
@@ -309,6 +317,8 @@ impl BlockRoomResults {
         }
     }
 }
+
+//  ==================================================================
 
 #[derive(Debug, Clone, Default)]
 pub struct ConfirmationResults {

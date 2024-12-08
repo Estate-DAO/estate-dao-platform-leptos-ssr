@@ -477,10 +477,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                                 match add_booking_backend(email_cloned, value_for_serverfn).await {
                                     Ok(response) => {
                                         // log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
-                                        let payments_skip_local =
+                                        let payments_skip_in_dev_env =
                                             std::env::var("PAYMENTS_SKIP_LOCAL")
                                                 .unwrap_or("false".to_string());
-                                        if payments_skip_local != "true" {
+                                        if payments_skip_in_dev_env != "true" {
                                             let _ = window().location().assign(&resp.invoice_url);
                                         } else {
                                             // simulate a success redirection
