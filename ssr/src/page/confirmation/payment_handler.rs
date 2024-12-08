@@ -105,14 +105,18 @@ pub fn PaymentHandler() -> impl IntoView {
 
                 // payments_api_called.set(true);
                 // set to context
-                BlockRoomResults::set_payment_results(resp);
+                BlockRoomResults::set_payment_results(resp.clone());
                 // store payment_id in local storage
                 set_payment_store(Some(payment_id));
 
-                // trigger the save_payment_details_to_backend
-                payment_booking_step_signals
-                    .p02_update_payment_details_to_backend
-                    .set(true);
+                if resp.is_some() {
+                    log!("nowpayments_get_payment_status - {resp:?}");
+
+                    // trigger the save_payment_details_to_backend
+                    payment_booking_step_signals
+                        .p02_update_payment_details_to_backend
+                        .set(true);
+                }
             });
         },
         4_000,
