@@ -76,7 +76,7 @@ jobs:
           cargo fmt --check
 
       - name: Build the Leptos project to `musl` output
-        run: cargo leptos build --release
+        run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
           LEPTOS_BIN_TARGET_TRIPLE: x86_64-unknown-linux-musl
           LEPTOS_HASH_FILES: true

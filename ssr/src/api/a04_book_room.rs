@@ -3,6 +3,9 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 // use leptos::ServerFnError;
 use crate::api::Provab;
+use crate::canister::backend::{
+    AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
+};
 use leptos::logging::log;
 use leptos::*;
 
@@ -27,7 +30,9 @@ pub struct RoomDetail {
     pub passenger_details: Vec<PassengerDetail>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Default, Debug, Clone)]
+/// customer serializer is implemented to ensure validation
+/// and override the serde's default behaviour around None values
 pub struct PassengerDetail {
     #[serde(rename = "Title")]
     pub title: String, // Mr,Mrs,Ms possible values
@@ -52,36 +57,92 @@ pub struct PassengerDetail {
     #[serde(rename = "LeadPassenger", default = "default_true")]
     pub lead_passenger: bool,
 
-    #[serde(rename = "Age")]
-    pub children_ages: Option<u32>, // Mandatory only for children, must be <= 18
+    #[serde(rename = "Age", default = "_default_passenger_age")]
+    pub age: u32, //for children, must be <= 18
+}
+
+// impl PartialEq for AdultDetail{
+//     fn eq(&self, other: &Self) -> bool {
+//         self.email == other.email &&
+//         self.first_name == other.first_name &&
+//         self.last_name == other.last_name &&
+//         self.phone == other.phone &&
+//         self.age == other.age
+//     }
+// }
+
+impl From<&UserDetails> for Vec<PassengerDetail> {
+    fn from(user_details: &UserDetails) -> Self {
+        let mut passenger_details = Vec::new();
+
+        // Process adults
+        for (index, adult) in user_details.adults.iter().enumerate() {
+            passenger_details.push(PassengerDetail {
+                title: "Mr".to_string(),
+                first_name: adult.first_name.clone(),
+                middle_name: None,
+                last_name: adult.last_name.clone().unwrap_or_default(),
+                email: adult.email.clone().unwrap_or_default(),
+                pax_type: PaxType::Adult,
+                lead_passenger: index == 0,
+                age: 25,
+            });
+        }
+
+        // Process children
+        for (index, child) in user_details.children.iter().enumerate() {
+            passenger_details.push(PassengerDetail {
+                title: "Mr".to_string(),
+                first_name: child.first_name.clone(),
+                middle_name: None,
+                last_name: child.last_name.clone().unwrap_or_default(),
+                email: "".to_string(),
+                pax_type: PaxType::Child,
+                lead_passenger: false,
+                age: child.age as u32,
+            });
+        }
+
+        passenger_details
+    }
+}
+
+pub fn _default_passenger_age() -> u32 {
+    25
 }
 
 fn default_true() -> bool {
     true
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[repr(u8)]
 pub enum PaxType {
-    #[serde(rename = "Adult")]
+    #[default]
     Adult = 1,
 
-    #[serde(rename = "Child")]
     Child = 2,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub struct BookRoomResponse {
     #[serde(rename = "Status")]
     pub status: BookingStatus,
 
     #[serde(rename = "Message")]
-    pub message: Option<String>,
+    pub message: String,
 
     #[serde(rename = "CommitBooking")]
-    pub commit_booking: Vec<BookingDetails>,
+    pub commit_booking: BookingDetailsContainer,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+pub struct BookingDetailsContainer {
+    #[serde(rename = "BookingDetails")]
+    pub booking_details: BookingDetails,
+}
+
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub struct BookingDetails {
     #[serde(rename = "BookingId")]
     pub booking_id: String,
@@ -96,12 +157,20 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub enum BookingStatus {
     #[serde(rename = "BookFailed")]
     BookFailed = 0,
     #[serde(rename = "Confirmed")]
     Confirmed = 1,
+}
+impl From<crate::canister::backend::BookingStatus> for BookingStatus {
+    fn from(status: crate::canister::backend::BookingStatus) -> Self {
+        match status {
+            crate::canister::backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
+            crate::canister::backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
+        }
+    }
 }
 
 impl ProvabReqMeta for BookRoomRequest {
@@ -116,14 +185,145 @@ impl ProvabReq for BookRoomRequest {
 }
 
 #[server(BlockRoom)]
-pub async fn book_room(request: BookRoomRequest) -> Result<BookRoomResponse, ServerFnError> {
+pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
     let provab = Provab::default();
 
-    match provab.send(request).await {
+    let request_struct = serde_json::from_str::<BookRoomRequest>(&request)
+        .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
+
+    println!("book_request - {request_struct:?}");
+
+    match provab.send(request_struct).await {
         Ok(response) => Ok(response),
         Err(e) => {
             log!("error: {:?}", e);
             Err(ServerFnError::ServerError(e.to_string()))
         }
+    }
+}
+
+// ======================  custom serializer for the PassengerDetail ======================
+use serde::ser::{SerializeStruct, Serializer};
+
+impl Serialize for PassengerDetail {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if self.first_name.len() < 2 || self.first_name.len() >= 50 {
+            return Err(serde::ser::Error::custom(
+                "First name must have at least 2 characters, max 50 characters",
+            ));
+        }
+
+        if self.last_name.len() < 2 || self.last_name.len() >= 50 {
+            return Err(serde::ser::Error::custom(
+                "Last name must have at least 2 characters, max 50 characters",
+            ));
+        }
+
+        let mut state = serializer.serialize_struct("PassengerDetail", 8)?;
+        state.serialize_field("Title", &self.title)?;
+
+        state.serialize_field("FirstName", &self.first_name)?;
+        state.serialize_field(
+            "MiddleName",
+            &self.middle_name.clone().unwrap_or_else(|| "".to_string()),
+        )?;
+
+        state.serialize_field("LastName", &self.last_name)?;
+
+        state.serialize_field("Email", &self.email)?;
+        state.serialize_field("PaxType", &(self.pax_type.clone() as u8).to_string())?;
+        state.serialize_field("LeadPassenger", &self.lead_passenger)?;
+        state.serialize_field("Age", &self.age)?;
+        state.end()
+    }
+}
+
+impl Default for BeBookRoomResponse {
+    fn default() -> Self {
+        BeBookRoomResponse {
+            status: String::default(),
+            commit_booking: crate::canister::backend::BookingDetails::default(),
+            message: String::default(),
+        }
+    }
+}
+
+impl Default for crate::canister::backend::BookingDetails {
+    fn default() -> Self {
+        crate::canister::backend::BookingDetails {
+            booking_ref_no: String::default(),
+            booking_status: crate::canister::backend::BookingStatus::default(),
+            confirmation_no: String::default(),
+            booking_id: (String::default(), String::default()),
+        }
+    }
+}
+
+impl Default for crate::canister::backend::BookingStatus {
+    fn default() -> Self {
+        crate::canister::backend::BookingStatus::BookFailed
+    }
+}
+
+impl FromIterator<AdultDetail> for std::vec::Vec<crate::state::view_state::AdultDetail> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = AdultDetail>,
+    {
+        iter.into_iter()
+            .map(|detail| crate::state::view_state::AdultDetail {
+                first_name: detail.first_name,
+                last_name: detail.last_name,
+                email: detail.email,
+                phone: detail.phone,
+            })
+            .collect()
+    }
+}
+
+impl FromIterator<ChildDetail> for std::vec::Vec<crate::state::view_state::ChildDetail> {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = ChildDetail>,
+    {
+        iter.into_iter()
+            .map(|detail| crate::state::view_state::ChildDetail {
+                first_name: detail.first_name,
+                last_name: detail.last_name,
+                age: Some(detail.age),
+            })
+            .collect()
+    }
+}
+
+impl From<UserDetails> for Vec<crate::state::view_state::AdultDetail> {
+    fn from(user_details: UserDetails) -> Self {
+        user_details
+            .adults
+            .into_iter()
+            .map(|a| AdultDetail {
+                first_name: a.first_name,
+                last_name: a.last_name,
+                email: a.email,
+                phone: a.phone,
+            })
+            .collect()
+    }
+}
+
+impl From<UserDetails> for Vec<crate::state::view_state::ChildDetail> {
+    fn from(user_details: UserDetails) -> Self {
+        user_details
+            .children
+            .into_iter()
+            .map(|c| ChildDetail {
+                first_name: c.first_name,
+                last_name: c.last_name,
+                age: c.age,
+            })
+            .collect()
     }
 }

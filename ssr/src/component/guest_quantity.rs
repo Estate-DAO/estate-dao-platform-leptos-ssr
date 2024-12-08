@@ -1,8 +1,8 @@
 use crate::api::RoomGuest;
-use crate::page::NumberCounter;
+// use crate::page::NumberCounter;
 use crate::utils::pluralize;
 use crate::{
-    component::{Divider, HSettingIcon},
+    component::{Divider, HSettingIcon, NumberCounter},
     state::search_state::SearchCtx,
 };
 use ev::{InputEvent, MouseEvent};
@@ -196,13 +196,23 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                 id="guestsDropdownContent"
                 class="absolute right-0 bg-white rounded-md shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border border-gray-200 px-4"
             >
-                <NumberCounter label="Adults" counter=guest_selection.get().adults class="mt-2" />
+                <NumberCounter
+                    label="Adults"
+                    counter=guest_selection.get().adults
+                    class="mt-2"
+                    on_increment=move || {
+                        guest_selection.get().adults.update(|n| *n += 1);
+                    }
+                />
                 <Divider />
 
                 <NumberCounter
                     label="Children"
                     counter=guest_selection.get().children
                     class="mt-2"
+                    on_increment=move || {
+                        guest_selection.get().children.update(|n| *n += 1);
+                    }
                 />
                 <div class="flex flex-wrap">
                     // Add number input fields for children ages
@@ -232,7 +242,14 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                 </div>
                 <Divider />
 
-                <NumberCounter label="Rooms" counter=guest_selection.get().rooms class="mt-2" />
+                <NumberCounter
+                    label="Rooms"
+                    counter=guest_selection.get().rooms
+                    class="mt-2"
+                    on_increment=move || {
+                        guest_selection.get().rooms.update(|n| *n += 1);
+                    }
+                />
                 // <br />
                 <button
                     type="button"

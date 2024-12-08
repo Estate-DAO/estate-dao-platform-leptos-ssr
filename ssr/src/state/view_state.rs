@@ -9,17 +9,19 @@ use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone)]
 pub struct HotelInfoCtx {
-    pub hotel_code: RwSignal<Option<String>>,
+    pub hotel_code: RwSignal<String>,
     pub selected_hotel_name: RwSignal<String>,
     pub selected_hotel_image: RwSignal<String>,
     pub selected_hotel_location: RwSignal<String>,
 }
 
 impl HotelInfoCtx {
-    pub fn set_selected_hotel_details(&self, name: String, image: String, location: String) {
-        self.selected_hotel_name.set(name);
-        self.selected_hotel_image.set(image);
-        self.selected_hotel_location.set(location);
+    pub fn set_selected_hotel_details(code: String, name: String, image: String, location: String) {
+        let this: Self = expect_context();
+        this.hotel_code.set(code);
+        this.selected_hotel_name.set(name);
+        this.selected_hotel_image.set(image);
+        this.selected_hotel_location.set(location);
     }
 }
 
@@ -64,6 +66,16 @@ impl BlockRoomCtx {
 
         let this: Self = expect_context();
         this.children.set(vec![ChildDetail::default(); count]);
+    }
+
+    pub fn set_adults(adults: Vec<AdultDetail>) {
+        let this: Self = expect_context();
+        this.adults.set(adults);
+    }
+
+    pub fn set_children(children: Vec<ChildDetail>) {
+        let this: Self = expect_context();
+        this.children.set(children);
     }
 
     pub fn set_terms_accepted(value: bool) {
