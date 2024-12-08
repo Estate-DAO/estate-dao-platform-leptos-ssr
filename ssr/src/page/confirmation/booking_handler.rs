@@ -14,7 +14,6 @@ use crate::{
 };
 use colored::Colorize;
 use leptos::*;
-// use crate::cprintln;
 
 fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
     let booking_id_signal_read = use_booking_id_store().0;
@@ -28,7 +27,8 @@ fn read_booking_details_from_local_storage() -> Result<(String, String), String>
 }
 
 fn set_to_context(found_booking: backend::Booking) {
-    // let found_booking_clone = found_booking.clone();
+    // todo [UAT] 2 : set hotel context from backend?? verify once
+
     let block_room_ctx = expect_context::<BlockRoomCtx>();
     let block_room = expect_context::<BlockRoomResults>();
     let confirmation_ctx = expect_context::<ConfirmationResults>();

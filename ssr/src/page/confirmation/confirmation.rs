@@ -51,6 +51,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                 <div class="text-center mb-6">
                     <p class="font-semibold">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
                     <p class="text-gray-600">
+                    // todo [UAT] 2 - store and get these details from canister_backend
                         {move || {
                             let date_range = search_ctx.date_range.get();
                             format!("{} - {}",
