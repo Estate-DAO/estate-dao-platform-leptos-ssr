@@ -3,6 +3,8 @@ use super::ports::{
     PaymentGateway, PaymentGatewayParams,
 };
 use crate::api::consts::EnvVarConfig;
+use crate::cprintln;
+use colored::Colorize;
 use leptos::logging::log;
 use leptos::*;
 use reqwest::{IntoUrl, Method, RequestBuilder};
@@ -39,8 +41,8 @@ impl NowPayments {
             .send()
             .await?;
 
-        println!("nowpayments reponse = {response:#?}");
         let body_string = response.text().await?;
+        cprintln!("green", "nowpayments reponse = {:#?}", body_string);
 
         let jd = &mut serde_json::Deserializer::from_str(&body_string);
         let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)

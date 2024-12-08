@@ -231,9 +231,9 @@ pub fn PaymentHandler() -> impl IntoView {
                         view! {
                             <div>
                                 <div class="payment-status">
-                                    {"Payment Status: "} {status.payment_status.clone()}
+                                    {"Payment Status: "} {status.get_payment_status().clone()}
                                 </div>
-                                {if status.payment_status == "finished" {
+                                {if status.get_payment_status() == "finished" {
                                     view! {
                                         <div class="payment-success">
                                             "Payment completed successfully!"

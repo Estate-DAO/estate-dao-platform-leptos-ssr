@@ -61,7 +61,7 @@ pub struct GetPaymentStatusRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
-pub struct GetPaymentStatusResponse {
+pub struct SuccessGetPaymentStatusResponse {
     pub payment_id: u64,
     pub invoice_id: u64,
     pub payment_status: String,
@@ -86,23 +86,63 @@ pub struct GetPaymentStatusResponse {
     // pub type_field: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FailureGetPaymentStatusResponse {
+    status: bool,
+    #[serde(rename = "statusCode")]
+    status_code: u16,
+    code: String,
+    message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum GetPaymentStatusResponse {
+    Success(SuccessGetPaymentStatusResponse),
+    Failure(FailureGetPaymentStatusResponse),
+}
+
+impl GetPaymentStatusResponse {
+    pub fn get_payment_status(&self) -> String {
+        match self {
+            GetPaymentStatusResponse::Success(success) => success.get_payment_status(),
+            GetPaymentStatusResponse::Failure(failure) => failure.get_payment_status(),
+        }
+    }
+}
+
+impl SuccessGetPaymentStatusResponse {
+    pub fn get_payment_status(&self) -> String {
+        self.payment_status.clone()
+    }
+}
+
+impl FailureGetPaymentStatusResponse {
+    pub fn get_payment_status(&self) -> String {
+        "ApiFailure".into()
+    }
+}
+
 impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
     fn from((response, provider): (GetPaymentStatusResponse, String)) -> Self {
-        BePaymentApiResponse {
-            updated_at: response.updated_at,
-            actually_paid: response.actually_paid,
-            provider,
-            invoice_id: response.invoice_id,
-            order_description: response.order_description,
-            pay_amount: response.pay_amount,
-            pay_currency: response.pay_currency,
-            created_at: response.created_at,
-            payment_status: response.payment_status,
-            price_amount: response.price_amount,
-            purchase_id: response.purchase_id,
-            order_id: response.order_id,
-            price_currency: response.price_currency,
-            payment_id: response.payment_id,
+        match response {
+            GetPaymentStatusResponse::Success(response) => Self {
+                updated_at: response.updated_at,
+                actually_paid: response.actually_paid,
+                provider,
+                invoice_id: response.invoice_id,
+                order_description: response.order_description,
+                pay_amount: response.pay_amount,
+                pay_currency: response.pay_currency,
+                created_at: response.created_at,
+                payment_status: response.payment_status,
+                price_amount: response.price_amount,
+                purchase_id: response.purchase_id,
+                order_id: response.order_id,
+                price_currency: response.price_currency,
+                payment_id: response.payment_id,
+            },
+            GetPaymentStatusResponse::Failure(failed_resp) => Self::default(),
         }
     }
 }
