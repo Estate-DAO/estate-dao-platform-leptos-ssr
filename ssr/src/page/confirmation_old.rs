@@ -49,7 +49,7 @@ struct NowpaymentsPaymentId {
 }
 
 #[component]
-pub fn ConfirmationPage() -> impl IntoView {
+pub fn ConfirmationPageOld() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let search_list_results: SearchListResults = expect_context();
@@ -94,11 +94,11 @@ pub fn ConfirmationPage() -> impl IntoView {
             .get_untracked()
             .and_then(|booking| Some(booking.get_email()));
 
-        log!(
-            "EMAIL >>>{:?}\nAPP_REF >>>{:?}",
-            email,
-            app_reference_string
-        );
+        // log!(
+        //     "EMAIL >>>{:?}\nAPP_REF >>>{:?}",
+        //     email,
+        //     app_reference_string
+        // );
         let email_cloned_twice = email.clone().unwrap();
 
         spawn_local(async move {
@@ -111,7 +111,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                         let found_booking = booking
                             .into_iter()
                             .find(|b| {
-                                log!("FILTERING BOOKINGS NOW");
+                                // log!("FILTERING BOOKINGS NOW");
                                 b.booking_id
                                     == (app_reference_string_cloned.clone(), email_cloned.clone())
                             })
@@ -168,11 +168,11 @@ pub fn ConfirmationPage() -> impl IntoView {
                         // let result = book_room(book_room_request).await; // Call book_room API
                     }
                     None => {
-                        log!("No booking available")
+                        log!("get_user_booking_backend - No booking available in backend")
                     }
                 },
                 Err(e) => {
-                    log!("Error greeting knull {:?}", e);
+                    log!("get_user_booking_backend - Error  {:?}", e);
                 }
             }
         });
@@ -249,10 +249,10 @@ pub fn ConfirmationPage() -> impl IntoView {
                     };
                     let value_for_serverfn: String = serde_json::to_string(&req).unwrap();
 
-                    log!("REQ FOR BOOK ROOM API >>>{:?}", req);
+                    log::warn!("REQ FOR BOOK ROOM API >>>{:?}", req);
 
                     let result = book_room(value_for_serverfn).await.ok();
-                    log!("BOOK_ROOM_API: {result:?}");
+                    log::info!("BOOK_ROOM_API: {result:?}");
                     conf_res.booking_details.set(result);
                 });
             }

@@ -68,6 +68,9 @@ better-panic = "0.3.0"
 wasm-bindgen-futures = "0.4"
 rand = "0.8.5"
 codee = {version =  "0.2.0", features = ["json_serde_wasm", "json_serde"]}
+futures = "0.3.31"
+colored = {version = "2.1.0"}
+# colored = {version = "2.1.0", optional = true}
 
 # reqwest = { version = "0.12.8", default-features = false, features = ["json", "http2", "gzip", "deflate"] }
 # async-compression = { version = "0.4.14", features = ["gzip"] }
@@ -110,6 +113,7 @@ ssr = [
     "leptos-use/use_timestamp",
     "leptos-use/ssr",
     "leptos-use/axum",
+    # "dep:colored"
 
     # "dep:dotenvy"
 

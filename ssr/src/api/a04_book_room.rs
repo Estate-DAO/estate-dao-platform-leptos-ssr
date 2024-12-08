@@ -3,7 +3,9 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 // use leptos::ServerFnError;
 use crate::api::Provab;
-use crate::canister::backend::{AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails};
+use crate::canister::backend::{
+    AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
+};
 use leptos::logging::log;
 use leptos::*;
 
@@ -271,12 +273,14 @@ impl FromIterator<AdultDetail> for std::vec::Vec<crate::state::view_state::Adult
     where
         I: IntoIterator<Item = AdultDetail>,
     {
-        iter.into_iter().map(|detail| crate::state::view_state::AdultDetail {
-            first_name: detail.first_name,
-            last_name: detail.last_name,
-            email: detail.email,
-            phone: detail.phone,
-        }).collect()
+        iter.into_iter()
+            .map(|detail| crate::state::view_state::AdultDetail {
+                first_name: detail.first_name,
+                last_name: detail.last_name,
+                email: detail.email,
+                phone: detail.phone,
+            })
+            .collect()
     }
 }
 
@@ -285,31 +289,41 @@ impl FromIterator<ChildDetail> for std::vec::Vec<crate::state::view_state::Child
     where
         I: IntoIterator<Item = ChildDetail>,
     {
-        iter.into_iter().map(|detail| crate::state::view_state::ChildDetail {
-            first_name: detail.first_name,
-            last_name: detail.last_name,
-            age: Some(detail.age),
-        }).collect()
+        iter.into_iter()
+            .map(|detail| crate::state::view_state::ChildDetail {
+                first_name: detail.first_name,
+                last_name: detail.last_name,
+                age: Some(detail.age),
+            })
+            .collect()
     }
 }
 
 impl From<UserDetails> for Vec<crate::state::view_state::AdultDetail> {
     fn from(user_details: UserDetails) -> Self {
-        user_details.adults.into_iter().map(|a| AdultDetail {
-            first_name: a.first_name,
-            last_name: a.last_name,
-            email: a.email,
-            phone: a.phone,
-        }).collect()
+        user_details
+            .adults
+            .into_iter()
+            .map(|a| AdultDetail {
+                first_name: a.first_name,
+                last_name: a.last_name,
+                email: a.email,
+                phone: a.phone,
+            })
+            .collect()
     }
 }
 
 impl From<UserDetails> for Vec<crate::state::view_state::ChildDetail> {
     fn from(user_details: UserDetails) -> Self {
-        user_details.children.into_iter().map(|c| ChildDetail {
-            first_name: c.first_name,
-            last_name: c.last_name,
-            age: c.age,
-        }).collect()
+        user_details
+            .children
+            .into_iter()
+            .map(|c| ChildDetail {
+                first_name: c.first_name,
+                last_name: c.last_name,
+                age: c.age,
+            })
+            .collect()
     }
 }

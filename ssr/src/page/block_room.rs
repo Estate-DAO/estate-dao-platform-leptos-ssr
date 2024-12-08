@@ -387,7 +387,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                     //     .get_block_room_id()
                     //     .unwrap_or_default();
 
-                    let block_room_id = block_room_results_context_cloned.block_room_id.get().unwrap_or_default();
+                    let block_room_id = block_room_results_context_cloned
+                        .block_room_id
+                        .get()
+                        .unwrap_or_default();
 
                     log!("BHAI BATA DE_____> {:?}", block_room_id);
                     let user_selected_hotel_room_details = HotelRoomDetails {

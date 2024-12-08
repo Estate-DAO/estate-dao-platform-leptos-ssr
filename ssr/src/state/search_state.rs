@@ -237,7 +237,7 @@ impl HotelInfoResults {
 pub struct BlockRoomResults {
     pub block_room_results: RwSignal<Option<BlockRoomResponse>>,
     pub payment_status_response: RwSignal<Option<GetPaymentStatusResponse>>,
-    pub block_room_id: RwSignal<Option<String>>
+    pub block_room_id: RwSignal<Option<String>>,
 }
 
 impl BlockRoomResults {
