@@ -1,7 +1,5 @@
 use crate::{
-    page::{
-        confirm_booking::payment_handler::PaymentHandler, BookRoomHandler, BookingHandler, Navbar,
-    },
+    page::{confirm_booking::payment_handler::PaymentHandler, BookRoomHandler, BookingHandler, Navbar},
     state::{search_state::SearchCtx, view_state::HotelInfoCtx},
 };
 use chrono::NaiveDate;

@@ -37,5 +37,6 @@ pub use types::*;
 pub mod consts;
 
 pub mod payments;
+pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStatusResponse};
 
 pub mod canister;

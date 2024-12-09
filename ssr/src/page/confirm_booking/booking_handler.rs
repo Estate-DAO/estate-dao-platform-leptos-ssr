@@ -4,10 +4,7 @@ use crate::{
         HotelResult, HotelSearchResponse, HotelSearchResult, Price, RoomDetail, Search,
     },
     canister::backend,
-    page::{
-        confirm_booking::confirmation::PaymentBookingStatusUpdates, create_passenger_details,
-        hotel_details,
-    },
+    page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates},
     state::{
         local_storage::use_booking_id_store,
         search_state::{BlockRoomResults, ConfirmationResults, SearchCtx, SearchListResults},
