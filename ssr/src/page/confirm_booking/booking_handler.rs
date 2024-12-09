@@ -2,7 +2,7 @@ use crate::{
     api::{
         book_room, canister::get_user_booking::get_user_booking_backend, BookRoomRequest,
         BookRoomResponse, BookingDetails, BookingDetailsContainer, BookingStatus, HotelResult,
-        HotelSearchResponse, HotelSearchResult, Price, RoomDetail, Search,
+        HotelSearchResponse, HotelSearchResult, Price, RoomDetail, Search, SuccessBookRoomResponse,
     },
     canister::backend,
     component::SelectedDateRange,
@@ -109,7 +109,8 @@ fn set_to_context(booking: backend::Booking) {
     let booking_status_cloned_again2 = book_room_status_cloned.clone();
     let booking_status_cloned_again3 = book_room_status_cloned.clone();
 
-    let booking_details = BookRoomResponse {
+    // todo [UAT] - details from backend maybe of error type too!? Need some logic around here?!
+    let booking_details = BookRoomResponse::Success(SuccessBookRoomResponse {
         status: book_room_status
             .as_ref()
             .map_or(BookingStatus::BookFailed, |status| {
@@ -145,7 +146,7 @@ fn set_to_context(booking: backend::Booking) {
                     .booking_status,
             },
         },
-    };
+    });
 
     confirmation_ctx.booking_details.set(Some(booking_details));
     let booking_guests = booking.guests.clone();

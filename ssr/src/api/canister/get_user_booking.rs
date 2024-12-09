@@ -15,14 +15,5 @@ pub async fn get_user_booking_backend(
 
     log!("{result:#?}");
 
-    // match result {
-    //     Ok(response) => {
-    //         Ok(response)
-    //     }
-    //     Err(e) => {
-    //         log!("Failed to generate user_bookings from backend, {:?}", e);
-    //     }
-    // }
-
     Ok(result)
 }

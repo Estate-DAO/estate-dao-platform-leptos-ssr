@@ -111,15 +111,31 @@ pub enum PaxType {
 
 // todo [UAT] - show the user that booking cannot be done if the Failure happens in API call
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
-pub struct BookRoomResponse {
+pub struct SuccessBookRoomResponse {
     #[serde(rename = "Status")]
     pub status: BookingStatus,
-
+    // pub status: BookingStatus,
     #[serde(rename = "Message")]
     pub message: String,
 
     #[serde(rename = "CommitBooking")]
     pub commit_booking: BookingDetailsContainer,
+}
+
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+pub struct FailureBookRoomResponse {
+    #[serde(rename = "Status")]
+    pub status: u32,
+
+    #[serde(rename = "Message")]
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[serde(untagged)]
+pub enum BookRoomResponse {
+    Success(SuccessBookRoomResponse),
+    Failure(FailureBookRoomResponse),
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]

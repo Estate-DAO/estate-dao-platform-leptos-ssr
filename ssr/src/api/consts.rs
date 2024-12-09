@@ -8,7 +8,7 @@ pub const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
 // pub const AGENT_URL_LOCAL: &str = "https://ic0.app";
 pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
-pub const LOCALHOST_DEV: &str = "http://127.0.0.1:3000";
+pub const LOCALHOST_DEV: &str = "http://localhost:3000";
 pub const PROD_URL: &str = "https://estatefe.fly.dev";
 
 // CONST FOR LOCAL STORAGE
@@ -19,6 +19,7 @@ pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
+use colored::Colorize;
 // use dotenvy::dotenv;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
@@ -35,10 +36,17 @@ pub fn get_payments_url(status: &str) -> String {
             let base_url = PROD_URL;
         }
     }
-    join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string()).unwrap_or_else(|e| {
-        eprintln!("Error joining URL: {}", e);
-        format!("{}?payment={}", base_url, status) // Fallback to simpler construction if joining fails.
-    })
+    let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
+        .unwrap_or_else(|e| {
+            eprintln!("Error joining URL: {}", e);
+            format!("{}?payment={}", base_url, status) // Fallback to simpler construction if joining fails.
+        });
+
+    println!(
+        "{}",
+        format!("get_payments_url - {}", url).bright_green().bold()
+    );
+    url
 }
 
 #[derive(Debug, Clone, Deserialize)]

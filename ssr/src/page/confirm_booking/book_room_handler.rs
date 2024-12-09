@@ -1,5 +1,5 @@
 use crate::api::canister::book_room_details::update_book_room_details_backend;
-use crate::api::BookingDetails;
+use crate::api::{BookingDetails, SuccessBookRoomResponse};
 use crate::{
     api::{
         book_room, canister::get_user_booking::get_user_booking_backend, BookRoomRequest,
@@ -226,19 +226,29 @@ fn create_backend_book_room_response(
     (email, app_reference): (String, String),
     book_room_response: BookRoomResponse,
 ) -> BeBookRoomResponse {
-    let fe_booking_details: BookingDetails = book_room_response.commit_booking.into();
+    match book_room_response {
+        BookRoomResponse::Failure(fe_booking_details_fail) => BeBookRoomResponse {
+            commit_booking: backend::BookingDetails::default(),
+            status: fe_booking_details_fail.status.to_string(),
+            message: fe_booking_details_fail.message,
+        },
+        BookRoomResponse::Success(fe_booking_details_success) => {
+            let fe_booking_details: BookingDetails =
+                fe_booking_details_success.commit_booking.into();
 
-    let be_booking_details = backend::BookingDetails {
-        booking_id: (email, app_reference),
-        travelomatrix_id: fe_booking_details.travelomatrix_id,
-        booking_ref_no: fe_booking_details.booking_ref_no,
-        booking_status: fe_booking_details.booking_status,
-        confirmation_no: fe_booking_details.confirmation_no,
-        api_status: book_room_response.status.clone().into(),
-    };
-    BeBookRoomResponse {
-        commit_booking: be_booking_details,
-        status: book_room_response.status.to_string(),
-        message: book_room_response.message,
+            let be_booking_details = backend::BookingDetails {
+                booking_id: (email, app_reference),
+                travelomatrix_id: fe_booking_details.travelomatrix_id,
+                booking_ref_no: fe_booking_details.booking_ref_no,
+                booking_status: fe_booking_details.booking_status,
+                confirmation_no: fe_booking_details.confirmation_no,
+                api_status: fe_booking_details_success.status.clone().into(),
+            };
+            BeBookRoomResponse {
+                commit_booking: be_booking_details,
+                status: fe_booking_details_success.status.to_string(),
+                message: fe_booking_details_success.message,
+            }
+        }
     }
 }
