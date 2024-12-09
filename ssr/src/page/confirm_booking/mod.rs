@@ -7,4 +7,4 @@ pub use book_room_handler::BookRoomHandler;
 pub use booking_handler::BookingHandler;
 pub use confirmation::ConfirmationPage;
 pub use confirmation::PaymentBookingStatusUpdates;
-// pub use payment_handler::PaymentHandler;
+pub use payment_handler::PaymentHandler;
