@@ -32,8 +32,8 @@ impl BookingId {
 
 pub fn generate_app_reference(email: String) -> Signal<Option<BookingId>> {
     let today = Local::now().format("%d%m").to_string();
-    let rand_num1: u32 = rand::thread_rng().gen_range(100000..999999);
-    let rand_num2: u32 = rand::thread_rng().gen_range(100000..999999);
+    let rand_num1: u32 = rand::thread_rng().gen_range(10000..99999);
+    let rand_num2: u32 = rand::thread_rng().gen_range(10000..99999);
     let app_reference_string = format!("HB{}-{}-{}", today, rand_num1, rand_num2);
     let app_reference = BookingId::new(email, app_reference_string);
     // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");

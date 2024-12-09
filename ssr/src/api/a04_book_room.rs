@@ -1,7 +1,7 @@
 use std::fmt;
 
-use super::{ProvabReq, ProvabReqMeta};
-use crate::api::Provab;
+use super::{ApiClientResult, ProvabReq, ProvabReqMeta};
+use crate::api::{ApiError, Provab};
 use crate::canister::backend::{
     self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
 };
@@ -76,8 +76,9 @@ impl Default for PassengerDetail {
             email: "".to_string(),
             pax_type: PaxType::Adult,
             lead_passenger: false,
-            age: 28,
-            phone_number: "".to_string(),
+            age: 33,
+            // todo [UAT] - don't hardcode the phone number  - use it from the form user fills.
+            phone_number: "9090909090".to_string(),
         }
     }
 }
@@ -159,18 +160,83 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+#[derive(Serialize, PartialEq, Debug, Clone)]
 pub enum BookingStatus {
-    #[serde(rename = "BookFailed")]
+    // #[serde(rename = "BookFailed")]
     BookFailed = 0,
-    #[serde(rename = "Confirmed")]
+    // #[serde(rename = "Confirmed")]
     Confirmed = 1,
 }
+
+impl<'de> Deserialize<'de> for BookingStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = u8::deserialize(deserializer)?;
+        match value {
+            0 => Ok(BookingStatus::BookFailed),
+            1 => Ok(BookingStatus::Confirmed),
+            _ => Err(serde::de::Error::custom("Invalid BookingStatus value")),
+        }
+    }
+}
+
+use colored::Colorize;
+use error_stack::{report, Report, ResultExt};
+use std::io::Read;
 
 impl ProvabReqMeta for BookRoomRequest {
     const METHOD: Method = Method::POST;
     const GZIP: bool = false;
     type Response = BookRoomResponse;
+
+    fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
+        use flate2::read::GzDecoder;
+
+        println!(
+            "{}",
+            format!("deserialize_response- body:String : {body}\n\n\n")
+                .bright_yellow()
+                .bold()
+        );
+        let decompressed_body = if Self::GZIP {
+            let mut d = GzDecoder::new(body.as_bytes());
+            let mut s = String::new();
+            d.read_to_string(&mut s)
+                .map_err(|e| report!(ApiError::DecompressionFailed(e.to_string())))?;
+            s
+        } else {
+            body
+        };
+
+        let json_value: serde_json::Value =
+            serde_json::from_str(&decompressed_body).map_err(|e| {
+                // let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
+                log!("deserialize_response- JsonParseFailed: {:#?}", e);
+                report!(ApiError::JsonParseFailed(e.to_string()))
+            })?;
+
+        if json_value.get("CommitBooking").is_some() {
+            println!(
+                "{}",
+                format!("json_value - {}", json_value).bright_green().bold()
+            );
+
+            let res: SuccessBookRoomResponse = serde_json::from_value(json_value).map_err(|e| {
+                // let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
+                log!("deserialize_response- JsonParseFailed: {:?}", e.to_string());
+                report!(ApiError::JsonParseFailed(e.to_string()))
+            })?;
+            Ok(BookRoomResponse::Success(res))
+        } else {
+            let res: FailureBookRoomResponse = serde_json::from_value(json_value).map_err(|e| {
+                log!("deserialize_response- JsonParseFailed: {:?}", e.to_string());
+                report!(ApiError::JsonParseFailed(e.to_string()))
+            })?;
+            Ok(BookRoomResponse::Failure(res))
+        }
+    }
 }
 
 impl ProvabReq for BookRoomRequest {
@@ -470,5 +536,31 @@ impl From<UserDetails> for Vec<crate::state::view_state::ChildDetail> {
                 age: c.age,
             })
             .collect()
+    }
+}
+
+mod test {
+    use super::*; // Imports from the parent module (a04_book_room)
+
+    #[test]
+    fn test_deserialize_response_success() {
+        let body = r#"{"Status":1,"Message":"","CommitBooking":{"BookingDetails":{"ConfirmationNo":"218-3379918","BookingRefNo":"218-3379918","BookingId":"TM-218-3379918","booking_status":"BOOKING_CONFIRMED"}}}"#.to_string();
+        let result = super::BookRoomRequest::deserialize_response(body);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            super::BookRoomResponse::Success(_) => (),
+            _ => panic!("Expected SuccessBookRoomResponse"),
+        }
+    }
+
+    #[test]
+    fn test_deserialize_response_failure() {
+        let body = r#"{"Status":0,"Message":"Booking Failed"}"#.to_string();
+        let result = super::BookRoomRequest::deserialize_response(body);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            super::BookRoomResponse::Failure(_) => (),
+            _ => panic!("Expected FailureBookRoomResponse"),
+        }
     }
 }
