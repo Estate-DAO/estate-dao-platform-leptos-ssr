@@ -1,5 +1,7 @@
 use crate::{
-    page::{confirmation::payment_handler::PaymentHandler, BookingHandler, Navbar},
+    page::{
+        confirmation::payment_handler::PaymentHandler, BookRoomHandler, BookingHandler, Navbar,
+    },
     state::{search_state::SearchCtx, view_state::HotelInfoCtx},
 };
 use chrono::NaiveDate;
@@ -12,8 +14,8 @@ use leptos::*;
 pub struct PaymentBookingStatusUpdates {
     pub p01_fetch_payment_details_from_api: RwSignal<bool>,
     pub p02_update_payment_details_to_backend: RwSignal<bool>,
-    pub p03_update_booking_details_to_backend: RwSignal<bool>,
-    pub p04_call_book_room_api: RwSignal<bool>,
+    pub p03_call_book_room_api: RwSignal<bool>,
+    pub p04_update_booking_details_to_backend: RwSignal<bool>,
 }
 
 #[component]
@@ -69,6 +71,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                 </p>
                 <BookingHandler />
                 <PaymentHandler />
+                <BookRoomHandler />
             </div>
         </section>
     }

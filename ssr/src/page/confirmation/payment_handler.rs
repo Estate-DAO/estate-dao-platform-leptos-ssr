@@ -235,14 +235,14 @@ pub fn PaymentHandler() -> impl IntoView {
                                 </div>
                                 {if status.get_payment_status() == "finished" {
                                     view! {
-                                        <div class="payment-success">
+                                        <div class="text-green-700 p-2">
                                             "Payment completed successfully!"
                                         </div>
                                     }
                                 } else {
                                     view! {
-                                        <div class="payment-pending">
-                                            "Waiting for payment confirmation..."
+                                        <div class="border border-red-700 p-2">
+                                            "No payment information found. Please contact support."
                                         </div>
                                     }
                                 }}
@@ -251,8 +251,8 @@ pub fn PaymentHandler() -> impl IntoView {
                     }
                     None => {
                         view! {
-                            <div class="payment-error">
-                                "No payment information found. Please contact support."
+                            <div class="border border-blue-800 p-2">
+                                "Waiting for payment confirmation... Please do not close this window."
                             </div>
                         }
                     }

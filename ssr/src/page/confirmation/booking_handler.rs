@@ -1,13 +1,16 @@
 use crate::{
     api::{
         book_room, canister::get_user_booking::get_user_booking_backend, BookRoomRequest,
-        RoomDetail,
+        HotelResult, HotelSearchResponse, HotelSearchResult, Price, RoomDetail, Search,
     },
     canister::backend,
-    page::{confirmation::confirmation::PaymentBookingStatusUpdates, create_passenger_details},
+    page::{
+        confirmation::confirmation::PaymentBookingStatusUpdates, create_passenger_details,
+        hotel_details,
+    },
     state::{
         local_storage::use_booking_id_store,
-        search_state::{BlockRoomResults, ConfirmationResults, SearchCtx},
+        search_state::{BlockRoomResults, ConfirmationResults, SearchCtx, SearchListResults},
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
     utils::app_reference,
@@ -34,8 +37,6 @@ fn set_to_context(found_booking: backend::Booking) {
     let confirmation_ctx = expect_context::<ConfirmationResults>();
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
 
-    // let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
-
     let date_range = crate::component::SelectedDateRange {
         start: found_booking
             .user_selected_hotel_room_details
@@ -48,30 +49,42 @@ fn set_to_context(found_booking: backend::Booking) {
     };
 
     SearchCtx::set_date_range(date_range);
+    let hotel_details = found_booking.user_selected_hotel_room_details.hotel_details;
+    let hotel_details_clone = hotel_details.clone();
     HotelInfoCtx::set_selected_hotel_details(
-        found_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .hotel_code,
-        found_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .hotel_name,
-        found_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .hotel_image,
-        found_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .hotel_location,
+        hotel_details_clone.hotel_code,
+        hotel_details_clone.hotel_name,
+        hotel_details_clone.hotel_image,
+        hotel_details_clone.hotel_location,
     );
-    BlockRoomResults::set_id(Some(
-        found_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .block_room_id,
-    ));
+    BlockRoomResults::set_id(Some(hotel_details.block_room_id));
+
+    // Storing hotel_location is the field given for hotel_category becoz why not
+    let hotel_res = HotelResult {
+        hotel_code: hotel_details.hotel_code,
+        hotel_name: hotel_details.hotel_name,
+        hotel_picture: hotel_details.hotel_image,
+        hotel_category: hotel_details.hotel_location,
+        result_token: hotel_details.hotel_token,
+        star_rating: 0,
+        price: Price::default(),
+    };
+    let hotel_search_res = HotelSearchResult {
+        hotel_results: vec![hotel_res],
+    };
+    let search_res = Search {
+        hotel_search_result: hotel_search_res,
+    };
+    // todo [UAT] - using the default values for status, message here.
+    // currently, we are not using any 'status' or message from any API. hence, this feels okay.
+    // however, if in future these fields are being used, please consider saving this data in backend too!
+    let hotel_search_resp = HotelSearchResponse {
+        status: 0,
+        message: "Default Message".to_string(),
+        search: Some(search_res),
+    };
+
+    SearchListResults::set_search_results(Some(hotel_search_resp));
 }
 
 #[component]
