@@ -245,7 +245,7 @@ pub fn PaymentHandler() -> impl IntoView {
                             .await
                             {
                                 Ok(booking) => {
-                                    println!("{:?}", booking);
+                                    println!("{}", format!("{booking:?}").red().bold());
                                     // let app_reference_string_cloned =
                                     //     app_reference_string_cloned.clone();
                                     // let email_cloned = email_cloned2.clone();
@@ -348,6 +348,8 @@ pub fn PaymentHandler() -> impl IntoView {
 
                                     let payment_details = booking.payment_details;
                                     let payment_status = payment_details.payment_status;
+                                    println!("{}", format!("payment_status - {:?}", payment_status).red().bold() );
+
                                     let payment_api_response = payment_details.payment_api_response;
 
                                     if !np_payment_id.get_untracked().is_some() {
@@ -355,7 +357,9 @@ pub fn PaymentHandler() -> impl IntoView {
                                     }
 
                                     match payment_status {
-                                        Paid(_) => {
+                                        Paid(paid_str) => {
+                                        println!("{}", format!(" Paid paid-_str = {paid_str:?}" ).red().bold() );
+
                                             let response_ctx = SuccessGetPaymentStatusResponse {
                                                 payment_id: np_payment_id.get_untracked().unwrap(),
                                                 invoice_id: payment_api_response.invoice_id,
@@ -384,6 +388,7 @@ pub fn PaymentHandler() -> impl IntoView {
                                     }
 
                                     if status == "finished" {
+                                        println!("{}", format!("setting p03 signal - status - {:?}", status).red().bold() );
                                         payment_booking_step_signals
                                             .p03_call_book_room_api
                                             .set(true);

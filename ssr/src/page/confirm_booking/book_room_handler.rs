@@ -23,6 +23,7 @@ use crate::{
 use candid::types::result;
 use colored::Colorize;
 use leptos::*;
+use leptos::logging::log;
 
 #[component]
 pub fn BookRoomHandler() -> impl IntoView {
@@ -41,8 +42,12 @@ pub fn BookRoomHandler() -> impl IntoView {
         move || payment_booking_step_signals.p03_call_book_room_api.get(),
         move |p03_call_book_room_api| async move {
             if !p03_call_book_room_api {
+                log!("p03_call_book_room_api = {p03_call_book_room_api:?}");
                 return None;
             }
+
+            log!("outside first early return p03_call_book_room_api = {p03_call_book_room_api:?}");
+
             let hotel_info_ctx: HotelInfoCtx = expect_context();
             let search_list_result: SearchListResults = expect_context();
             let block_room: BlockRoomResults = expect_context();
@@ -50,7 +55,7 @@ pub fn BookRoomHandler() -> impl IntoView {
 
             let result_token = search_list_result.get_result_token(hotel_info_ctx.hotel_code.get());
 
-            if block_room.block_room_id.get().is_none() {
+            if block_room.block_room_id.get_untracked().is_none() {
                 println!(
                     "{}",
                     format!(
@@ -63,10 +68,10 @@ pub fn BookRoomHandler() -> impl IntoView {
                 return None;
             }
 
-            let block_room_id = block_room.block_room_id.get().unwrap();
+            let block_room_id = block_room.block_room_id.get_untracked().unwrap();
 
-            let adults = block_room_ctx.adults.get();
-            let children = block_room_ctx.children.get();
+            let adults = block_room_ctx.adults.get_untracked();
+            let children = block_room_ctx.children.get_untracked();
 
             let room_detail = RoomDetail {
                 passenger_details: create_passenger_details(&adults, &children),
@@ -91,6 +96,7 @@ pub fn BookRoomHandler() -> impl IntoView {
             // todo [UAT] - does book_room have a failure response?
             // if yes, model that and make a method 'is_response_success' on BookRoomResponse
             if book_room_result.is_some() {
+                log!("p04_update_booking_details_to_backend - with book_room_result = {book_room_result:#?}");
                 payment_booking_step_signals
                     .p04_update_booking_details_to_backend
                     .set(true);
