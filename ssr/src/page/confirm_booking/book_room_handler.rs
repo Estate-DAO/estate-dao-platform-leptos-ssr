@@ -65,10 +65,12 @@ pub fn BookRoomHandler() -> impl IntoView {
                     .magenta()
                     .bold()
                 );
+                log!("{:?}", block_room.block_room_id.get());
                 return None;
             }
 
             let block_room_id = block_room.block_room_id.get_untracked().unwrap();
+            log!("{block_room_id:?}");
 
             let adults = block_room_ctx.adults.get_untracked();
             let children = block_room_ctx.children.get_untracked();

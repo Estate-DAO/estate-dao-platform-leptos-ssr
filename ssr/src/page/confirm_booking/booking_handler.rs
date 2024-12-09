@@ -158,6 +158,7 @@ fn set_to_context(booking: backend::Booking) {
     let children_clon = children.clone();
     BlockRoomCtx::set_adults(adults);
     BlockRoomCtx::set_children(children);
+    BlockRoomResults::set_id(Some(booking.user_selected_hotel_room_details.hotel_details.block_room_id));
 }
 
 #[component]
