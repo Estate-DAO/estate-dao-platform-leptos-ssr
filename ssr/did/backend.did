@@ -72,8 +72,7 @@ type PaymentDetails = record {
   payment_api_response : BEPaymentApiResponse;
 };
 type Result = variant { Ok : text; Err : text };
-type Result_1 = variant { Ok; Err : text };
-type Result_2 = variant { Ok : Booking; Err : text };
+type Result_1 = variant { Ok : Booking; Err : text };
 type RoomDetails = record {
   room_price : float32;
   room_unique_id : text;
@@ -92,9 +91,9 @@ service : () -> {
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;
   update_book_room_response : (record { text; text }, BEBookRoomResponse) -> (
-      Result_1,
+      Result,
     );
   update_payment_details : (record { text; text }, PaymentDetails) -> (
-      Result_2,
+      Result_1,
     );
 }
