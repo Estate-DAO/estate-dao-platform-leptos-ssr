@@ -109,6 +109,7 @@ pub enum PaxType {
     Child = 2,
 }
 
+// todo [UAT] - show the user that booking cannot be done if the Failure happens in API call
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub struct BookRoomResponse {
     #[serde(rename = "Status")]
