@@ -29,7 +29,7 @@ type BackendPaymentStatus = variant { Paid : text; Unpaid : opt text };
 type Booking = record {
   user_selected_hotel_room_details : HotelRoomDetails;
   guests : UserDetails;
-  booking_id : record { text; text };
+  booking_id : BookingId;
   book_room_status : opt BEBookRoomResponse;
   payment_details : PaymentDetails;
 };
@@ -38,9 +38,10 @@ type BookingDetails = record {
   booking_ref_no : text;
   booking_status : text;
   confirmation_no : text;
-  booking_id : record { text; text };
+  booking_id : BookingId;
   travelomatrix_id : text;
 };
+type BookingId = record { app_reference : text; email : text };
 type BookingStatus = variant { BookFailed; Confirmed };
 type ChildDetail = record {
   age : nat8;
@@ -70,7 +71,7 @@ type HotelRoomDetails = record {
 };
 type PaymentDetails = record {
   payment_status : BackendPaymentStatus;
-  booking_id : record { text; text };
+  booking_id : BookingId;
   payment_api_response : BEPaymentApiResponse;
 };
 type Result = variant { Ok : text; Err : text };
@@ -92,10 +93,6 @@ service : () -> {
   add_booking : (text, Booking) -> (Result);
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;
-  update_book_room_response : (record { text; text }, BEBookRoomResponse) -> (
-      Result,
-    );
-  update_payment_details : (record { text; text }, PaymentDetails) -> (
-      Result_1,
-    );
+  update_book_room_response : (BookingId, BEBookRoomResponse) -> (Result);
+  update_payment_details : (BookingId, PaymentDetails) -> (Result_1);
 }

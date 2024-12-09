@@ -130,8 +130,7 @@ fn set_to_context(booking: backend::Booking) {
                 travelomatrix_id: booking_status_cloned_again3
                     .unwrap_or_default()
                     .commit_booking
-                    .booking_id
-                    .0,
+                    .travelomatrix_id,
                 booking_ref_no: booking_status_cloned_again
                     .unwrap_or_default()
                     .commit_booking
@@ -208,7 +207,10 @@ pub fn BookingHandler() -> impl IntoView {
 
                 let found_booking_opt = bookings
                     .into_iter()
-                    .find(|b| b.booking_id == (app_reference.clone(), email.clone()));
+                    // .find(|b| b.booking_id == (app_reference.clone(), email.clone()));
+                    .find(|b| {
+                        b.booking_id.app_reference == app_reference && b.booking_id.email == email
+                    });
 
                 if found_booking_opt.is_none() {
                     return Err("Booking with given ID not in backend.".to_string());

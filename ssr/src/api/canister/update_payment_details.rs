@@ -1,12 +1,11 @@
-use crate::canister::backend::{Booking, PaymentDetails, Result1};
+use crate::canister::backend::{self, Booking, BookingId, PaymentDetails, Result1};
 use crate::utils::admin::admin_canister;
-use crate::utils::app_reference::BookingId;
 use leptos::logging::log;
 use leptos::*;
 
 #[server(GreetBackend)]
 pub async fn update_payment_details_backend(
-    booking_id: (String, String),
+    booking_id: backend::BookingId,
     payment_details: String,
 ) -> Result<Booking, ServerFnError> {
     let payment_details_struct = serde_json::from_str::<PaymentDetails>(&payment_details)

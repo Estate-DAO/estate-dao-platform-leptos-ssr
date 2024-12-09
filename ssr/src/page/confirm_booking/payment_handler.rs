@@ -177,7 +177,10 @@ pub fn PaymentHandler() -> impl IntoView {
                 let (email, app_reference) = read_booking_details_from_local_storage().unwrap();
 
                 let payment_details = backend::PaymentDetails {
-                    booking_id: (app_reference, email),
+                    booking_id: backend::BookingId {
+                        app_reference,
+                        email,
+                    },
                     payment_status: backend::BackendPaymentStatus::Unpaid(None),
                     payment_api_response: get_payment_status_response_for_backend,
                 };
@@ -197,34 +200,16 @@ pub fn PaymentHandler() -> impl IntoView {
                         let payment_api_response =
                             BePaymentApiResponse::from((payment_resp, "NOWPayments".to_string()));
 
-                        // let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
-                        // let confirmation_ctx = expect_context::<ConfirmationResults>();
-                        // let block_room_ctx = expect_context::<BlockRoomResults>();
-
-                        let app_reference_string = booking_id_signal_read
-                            .get_untracked()
-                            .and_then(|booking| Some(booking.get_app_reference()));
-                        let email = booking_id_signal_read
-                            .get_untracked()
-                            .and_then(|booking| Some(booking.get_email()));
-
-                        if !(app_reference_string.is_some() && email.is_some()) {
-                            log!(
-                                "MISSING FIELD >>>\nApp reference ->{:?}\n Email -> {:?}",
-                                app_reference_string,
-                                email
-                            );
-                            return None;
-                        }
+                        let (email, app_reference_string) =
+                            read_booking_details_from_local_storage().unwrap();
 
                         let payment_api_response_cloned = payment_api_response.clone();
-                        let app_reference_string_cloned = app_reference_string.clone();
-                        let app_reference_string_cloned2 = app_reference_string.clone();
-                        let email_cloned = email.clone();
-                        let email_cloned2 = email.clone();
 
                         let payment_details = PaymentDetails {
-                            booking_id: (app_reference_string.unwrap(), email.unwrap()),
+                            booking_id: backend::BookingId {
+                                app_reference: app_reference_string.clone(),
+                                email: email.clone(),
+                            },
                             // Sending order_id currently with this, change as necessary
                             payment_status: Paid(payment_api_response_cloned.order_id),
                             payment_api_response,
@@ -233,8 +218,10 @@ pub fn PaymentHandler() -> impl IntoView {
                         let payment_details_str = serde_json::to_string(&payment_details)
                             .expect("payment details is not valid json");
 
-                        let booking_id_for_request =
-                            (app_reference_string_cloned.unwrap(), email_cloned.unwrap());
+                        let booking_id_for_request = backend::BookingId {
+                            app_reference: app_reference_string.clone(),
+                            email,
+                        };
 
                         let status_cloned = status.clone();
                         spawn_local(async move {

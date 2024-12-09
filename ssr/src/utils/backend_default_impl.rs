@@ -20,13 +20,22 @@ impl Default for BePaymentApiResponse {
         }
     }
 }
+impl Default for BookingId {
+    fn default() -> Self {
+        Self {
+            app_reference: "".to_string(),
+            email: "".to_string(),
+        }
+    }
+}
 
+use crate::canister::backend::BookingId;
 use crate::canister::backend::PaymentDetails;
 impl Default for PaymentDetails {
     fn default() -> Self {
         Self {
             payment_status: BackendPaymentStatus::Unpaid(None),
-            booking_id: ("".to_string(), "".to_string()),
+            booking_id: BookingId::default(),
             payment_api_response: BePaymentApiResponse::default(),
         }
     }

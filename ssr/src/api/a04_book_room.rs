@@ -362,7 +362,7 @@ impl Default for backend::BookingDetails {
             booking_ref_no: String::default(),
             booking_status: String::default(),
             confirmation_no: String::default(),
-            booking_id: (String::default(), String::default()),
+            booking_id: backend::BookingId::default(),
             travelomatrix_id: String::default(),
             api_status: backend::BookingStatus::default(),
         }

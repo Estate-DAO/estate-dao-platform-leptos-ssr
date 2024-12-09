@@ -11,6 +11,7 @@ use crate::api::payments::nowpayments_get_payment_status;
 use crate::api::payments::ports::CreateInvoiceRequest;
 use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
+use crate::canister::backend;
 use crate::canister::backend::BePaymentApiResponse;
 use crate::canister::backend::HotelDetails;
 use crate::canister::backend::HotelRoomDetails;
@@ -439,13 +440,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let email_cloned_twice = email.clone();
                     let local_booking_id = generate_app_reference(email_cloned_twice);
 
-                    let booking_id = (
-                        local_booking_id
+                    let booking_id = backend::BookingId {
+                        app_reference: local_booking_id
                             .get()
                             .expect("booking id is expected here")
                             .get_app_reference(),
                         email,
-                    );
+                    };
                     let booking_id_cloned = booking_id.clone();
                     let payment_details = crate::canister::backend::PaymentDetails {
                         booking_id,

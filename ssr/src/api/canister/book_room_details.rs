@@ -7,7 +7,7 @@ use leptos::*;
 
 #[server(GreetBackend)]
 pub async fn update_book_room_details_backend(
-    booking_id: (String, String),
+    booking_id: backend::BookingId,
     book_room_details: String,
 ) -> Result<String, ServerFnError> {
     let book_room_details_struct =

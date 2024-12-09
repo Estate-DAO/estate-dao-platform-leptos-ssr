@@ -137,7 +137,10 @@ pub fn BookRoomHandler() -> impl IntoView {
                 return None;
             }
             let (email, app_reference) = read_booking_details_from_local_storage().unwrap();
-            let booking_id = (email.clone(), app_reference.clone());
+            let booking_id = backend::BookingId {
+                email: email.clone(),
+                app_reference: app_reference.clone(),
+            };
 
             let book_room_response = confirmation_results.booking_details.get().unwrap();
 
@@ -237,7 +240,10 @@ fn create_backend_book_room_response(
                 fe_booking_details_success.commit_booking.into();
 
             let be_booking_details = backend::BookingDetails {
-                booking_id: (email, app_reference),
+                booking_id: backend::BookingId {
+                    email,
+                    app_reference,
+                },
                 travelomatrix_id: fe_booking_details.travelomatrix_id,
                 booking_ref_no: fe_booking_details.booking_ref_no,
                 booking_status: fe_booking_details.booking_status,
