@@ -5,7 +5,7 @@ use crate::{
     },
     canister::backend,
     page::{
-        confirmation::{
+        confirm_booking::{
             booking_handler::read_booking_details_from_local_storage,
             confirmation::PaymentBookingStatusUpdates,
         },
@@ -30,6 +30,10 @@ pub fn BookRoomHandler() -> impl IntoView {
     let confirmation_ctx = expect_context::<ConfirmationResults>();
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
+
+    // payment_booking_step_signals
+    //     .p03_call_book_room_api
+    //     .set(true);
 
     let book_room_api_call = create_resource(
         move || payment_booking_step_signals.p03_call_book_room_api.get(),
@@ -90,6 +94,10 @@ pub fn BookRoomHandler() -> impl IntoView {
                     .set(true);
                 Some(book_room_result.clone())
             } else {
+                println!(
+                    "{}",
+                    format!("book_room_api_cal results - {:?}", book_room_result.clone()).magenta()
+                );
                 None
             }
         },

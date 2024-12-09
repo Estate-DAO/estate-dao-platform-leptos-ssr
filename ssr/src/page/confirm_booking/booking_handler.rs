@@ -5,7 +5,7 @@ use crate::{
     },
     canister::backend,
     page::{
-        confirmation::confirmation::PaymentBookingStatusUpdates, create_passenger_details,
+        confirm_booking::confirmation::PaymentBookingStatusUpdates, create_passenger_details,
         hotel_details,
     },
     state::{

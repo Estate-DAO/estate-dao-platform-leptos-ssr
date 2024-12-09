@@ -1,6 +1,6 @@
 use crate::api::payments::ports::GetPaymentStatusResponse;
 use crate::cprintln;
-use crate::page::confirmation::booking_handler::read_booking_details_from_local_storage;
+use crate::page::confirm_booking::booking_handler::read_booking_details_from_local_storage;
 use crate::utils::app_reference;
 use crate::{
     api::payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest},
