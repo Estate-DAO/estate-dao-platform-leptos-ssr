@@ -8,7 +8,7 @@ use crate::canister::backend::{
 use leptos::logging::log;
 use leptos::*;
 use reqwest::Method;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomRequest {
@@ -31,35 +31,55 @@ pub struct RoomDetail {
     pub passenger_details: Vec<PassengerDetail>,
 }
 
-#[derive(Deserialize, Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 /// customer serializer is implemented to ensure validation
 /// and override the serde's default behaviour around None values
 pub struct PassengerDetail {
-    #[serde(rename = "Title")]
+    // #[serde(rename = "Title")]
     pub title: String, // Mr,Mrs,Ms possible values
 
-    #[serde(rename = "FirstName")]
+    // #[serde(rename = "FirstName")]
     // #[serde(validate(min_length = 2, max_length = 50))]
     pub first_name: String,
 
-    #[serde(rename = "MiddleName")]
+    // #[serde(rename = "MiddleName")]
     pub middle_name: Option<String>,
 
-    #[serde(rename = "LastName")]
+    // #[serde(rename = "LastName")]
     // #[serde(validate(min_length = 2, max_length = 50))]
     pub last_name: String,
 
-    #[serde(rename = "Email")]
+    // #[serde(rename = "Email")]
     pub email: String,
 
-    #[serde(rename = "PaxType")]
+    // #[serde(rename = "PaxType")]
     pub pax_type: PaxType,
 
-    #[serde(rename = "LeadPassenger", default = "default_true")]
+    // #[serde(rename = "LeadPassenger", default = "default_true")]
     pub lead_passenger: bool,
 
-    #[serde(rename = "Age", default = "_default_passenger_age")]
+    // #[serde(rename = "Age", default = "_default_passenger_age")]
+    // #[serde( default = "_default_passenger_age")]
     pub age: u32, //for children, must be <= 18
+
+    // #[serde(rename = "Phoneno")]
+    pub phone_number: String,
+}
+
+impl Default for PassengerDetail {
+    fn default() -> Self {
+        Self {
+            title: "Mr".to_string(),
+            first_name: "".to_string(),
+            middle_name: Some("".to_string()),
+            last_name: "".to_string(),
+            email: "".to_string(),
+            pax_type: PaxType::Adult,
+            lead_passenger: false,
+            age: 28,
+            phone_number: "".to_string(),
+        }
+    }
 }
 
 // impl PartialEq for AdultDetail{
@@ -195,7 +215,78 @@ impl Serialize for PassengerDetail {
         state.serialize_field("PaxType", &(self.pax_type.clone() as u8).to_string())?;
         state.serialize_field("LeadPassenger", &self.lead_passenger)?;
         state.serialize_field("Age", &self.age)?;
+        state.serialize_field("Phoneno", &self.phone_number)?;
         state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for PassengerDetail {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct PassengerDetailHelper {
+            #[serde(rename = "Title")]
+            pub title: String,
+
+            #[serde(rename = "FirstName")]
+            pub first_name: String,
+
+            #[serde(rename = "MiddleName")]
+            pub middle_name: Option<String>,
+
+            #[serde(rename = "LastName")]
+            pub last_name: String,
+
+            #[serde(rename = "Email")]
+            pub email: String,
+
+            #[serde(rename = "PaxType")]
+            pub pax_type: String,
+
+            #[serde(rename = "LeadPassenger")]
+            pub lead_passenger: bool,
+
+            #[serde(rename = "Age")]
+            pub age: u32,
+
+            #[serde(rename = "Phoneno")]
+            pub phone_number: String,
+        }
+
+        let helper = PassengerDetailHelper::deserialize(deserializer)?;
+
+        // Validate first and last name length
+        if helper.first_name.len() < 2 || helper.first_name.len() >= 50 {
+            return Err(serde::de::Error::custom(
+                "First name must have at least 2 characters, max 50 characters",
+            ));
+        }
+
+        if helper.last_name.len() < 2 || helper.last_name.len() >= 50 {
+            return Err(serde::de::Error::custom(
+                "Last name must have at least 2 characters, max 50 characters",
+            ));
+        }
+
+        let pax_type = match helper.pax_type.parse::<u8>() {
+            Ok(1) => PaxType::Adult,
+            Ok(2) => PaxType::Child,
+            _ => return Err(serde::de::Error::custom("Invalid PaxType value")),
+        };
+
+        Ok(PassengerDetail {
+            title: helper.title,
+            first_name: helper.first_name,
+            middle_name: helper.middle_name,
+            last_name: helper.last_name,
+            email: helper.email,
+            pax_type,
+            lead_passenger: helper.lead_passenger,
+            age: helper.age,
+            phone_number: helper.phone_number,
+        })
     }
 }
 
@@ -282,6 +373,7 @@ impl From<&UserDetails> for Vec<PassengerDetail> {
                 pax_type: PaxType::Adult,
                 lead_passenger: index == 0,
                 age: 25,
+                phone_number: "".to_string(),
             });
         }
 
@@ -296,6 +388,7 @@ impl From<&UserDetails> for Vec<PassengerDetail> {
                 pax_type: PaxType::Child,
                 lead_passenger: false,
                 age: child.age as u32,
+                phone_number: "".to_string(),
             });
         }
 

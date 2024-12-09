@@ -22,8 +22,8 @@ use crate::{
 };
 use candid::types::result;
 use colored::Colorize;
-use leptos::*;
 use leptos::logging::log;
+use leptos::*;
 
 #[component]
 pub fn BookRoomHandler() -> impl IntoView {
@@ -86,10 +86,12 @@ pub fn BookRoomHandler() -> impl IntoView {
                 app_reference,
                 room_details: vec![room_detail],
             };
+            log::info!("BOOK_ROOM_API / REQ: {req:?}");
+
             let value_for_serverfn: String = serde_json::to_string(&req)
                 .expect("serde_json::to_string for BookRoomRequest did not happen");
 
-            log::warn!("REQ FOR BOOK ROOM API >>>{:?}", req);
+            log::warn!("REQ FOR BOOK ROOM API >>>{:?}", value_for_serverfn);
 
             let book_room_result = book_room(value_for_serverfn).await.ok();
             log::info!("BOOK_ROOM_API: {book_room_result:?}");
@@ -146,6 +148,13 @@ pub fn BookRoomHandler() -> impl IntoView {
 
             let book_room_backend_str = serde_json::to_string(&book_room_backend)
                 .expect("serde_json::to_string for BeBookRoomResponse");
+
+            println!(
+                "{}",
+                format!("book_room_details - {}", book_room_backend_str)
+                    .bright_magenta()
+                    .bold()
+            );
 
             let book_room_backend_saved_status =
                 update_book_room_details_backend(booking_id, book_room_backend_str)

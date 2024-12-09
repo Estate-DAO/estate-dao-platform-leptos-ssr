@@ -348,7 +348,12 @@ pub fn PaymentHandler() -> impl IntoView {
 
                                     let payment_details = booking.payment_details;
                                     let payment_status = payment_details.payment_status;
-                                    println!("{}", format!("payment_status - {:?}", payment_status).red().bold() );
+                                    println!(
+                                        "{}",
+                                        format!("payment_status - {:?}", payment_status)
+                                            .red()
+                                            .bold()
+                                    );
 
                                     let payment_api_response = payment_details.payment_api_response;
 
@@ -358,7 +363,12 @@ pub fn PaymentHandler() -> impl IntoView {
 
                                     match payment_status {
                                         Paid(paid_str) => {
-                                        println!("{}", format!(" Paid paid-_str = {paid_str:?}" ).red().bold() );
+                                            println!(
+                                                "{}",
+                                                format!(" Paid paid-_str = {paid_str:?}")
+                                                    .red()
+                                                    .bold()
+                                            );
 
                                             let response_ctx = SuccessGetPaymentStatusResponse {
                                                 payment_id: np_payment_id.get_untracked().unwrap(),
@@ -388,7 +398,12 @@ pub fn PaymentHandler() -> impl IntoView {
                                     }
 
                                     if status == "finished" {
-                                        println!("{}", format!("setting p03 signal - status - {:?}", status).red().bold() );
+                                        println!(
+                                            "{}",
+                                            format!("setting p03 signal - status - {:?}", status)
+                                                .red()
+                                                .bold()
+                                        );
                                         payment_booking_step_signals
                                             .p03_call_book_room_api
                                             .set(true);
