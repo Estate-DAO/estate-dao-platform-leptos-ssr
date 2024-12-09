@@ -1,7 +1,10 @@
 use crate::{
-    api::consts::EnvVarConfig,
+    api::{consts::EnvVarConfig, payments::ports::GetPaymentStatusResponse},
     error_template::{AppError, ErrorTemplate},
-    page::{BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage, RootPage},
+    page::{
+        BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
+        PaymentBookingStatusUpdates, RootPage,
+    },
     state::{
         search_state::{
             BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
@@ -42,7 +45,7 @@ impl AppRoutes {
             AppRoutes::HotelList => "/hotel-list",
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
-            Self::Confirmation => "/confirmation",
+            AppRoutes::Confirmation => "/confirmation",
         }
     }
 }
@@ -65,7 +68,9 @@ pub fn App() -> impl IntoView {
     provide_context(BlockRoomCtx::default());
     provide_context(BlockRoomResults::default());
 
-    provide_context(ConfirmationResults::default()); // Add this line
+    provide_context(ConfirmationResults::default());
+
+    provide_context(PaymentBookingStatusUpdates::default());
 
     // Provides Query Client for entire app.
     // leptos_query::provide_query_client();

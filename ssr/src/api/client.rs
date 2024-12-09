@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::consts::EnvVarConfig;
 use super::{ApiClientResult, ApiError};
+use colored::Colorize;
 use error_stack::{report, Report, ResultExt};
 use leptos::expect_context;
 use leptos::logging::log;
@@ -22,7 +23,12 @@ pub trait ProvabReqMeta: Sized + Send {
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
         use flate2::read::GzDecoder;
 
-        // log!("deserialize_response- body:String : {body:?}\n\n\n");
+        println!(
+            "{}",
+            format!("deserialize_response- body:String : {body}\n\n\n")
+                .bright_yellow()
+                .bold()
+        );
         let decompressed_body = if Self::GZIP {
             let mut d = GzDecoder::new(body.as_bytes());
             let mut s = String::new();

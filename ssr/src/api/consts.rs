@@ -4,11 +4,50 @@ pub const PROVAB_BASE_URL_PROD: &str =
 pub const PROVAB_BASE_URL_TEST: &str =
     "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
+pub const AGENT_URL_LOCAL: &str = "http://localhost:4943";
+
+// pub const AGENT_URL_LOCAL: &str = "https://ic0.app";
+pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
+pub const LOCALHOST_DEV: &str = "http://localhost:3000";
+pub const PROD_URL: &str = "https://estatefe.fly.dev";
+
+// CONST FOR LOCAL STORAGE
+pub const PAYMENT_ID: &str = "estatedao_payment_id";
+pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
+pub const BOOKING_ID: &str = "estatedao_booking_id";
+pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
+
+use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
+use cfg_if::cfg_if;
+use colored::Colorize;
+// use dotenvy::dotenv;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::env::VarError;
 use thiserror::Error;
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+pub fn get_payments_url(status: &str) -> String {
+    // todo [UAT] 3 local_api -- enabled behind local-bin -- change CI to release-bin
+    cfg_if! {
+        if #[cfg(feature = "local_api")] {
+            let base_url = LOCALHOST_DEV;
+        } else {
+            let base_url = PROD_URL;
+        }
+    }
+    let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
+        .unwrap_or_else(|e| {
+            eprintln!("Error joining URL: {}", e);
+            format!("{}?payment={}", base_url, status) // Fallback to simpler construction if joining fails.
+        });
+
+    println!(
+        "{}",
+        format!("get_payments_url - {}", url).bright_green().bold()
+    );
+    url
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -17,6 +56,9 @@ pub struct EnvVarConfig {
     pub provab_base_url: String,
     provab_headers: HashMap<String, String>,
     pub nowpayments_api_key: String,
+    pub admin_private_key: String,
+    // skip the payment on localhost using environment variable
+    // pub payment_skip_local: String
 }
 
 impl EnvVarConfig {
@@ -29,6 +71,10 @@ impl EnvVarConfig {
             provab_headers: pv_hashmap,
             provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL_TEST).unwrap(),
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
+            admin_private_key: env_or_panic(
+                "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
+            ),
+            // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
         value
@@ -38,8 +84,6 @@ impl EnvVarConfig {
         transform_headers(&self.provab_headers)
     }
 }
-
-use std::env::VarError;
 
 fn env_w_default(key: &str, default: &str) -> Result<String, EstateEnvConfigError> {
     match std::env::var(key) {

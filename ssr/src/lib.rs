@@ -1,5 +1,9 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 pub mod api;
 pub mod app;
+pub mod canister;
 pub mod component;
 pub mod error_template;
 pub mod page;

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use leptos_router::use_navigate;
+use reqwest::Url;
 
 #[macro_export]
 macro_rules! try_or_redirect {
@@ -38,4 +39,16 @@ pub fn failure_redirect<E: Display>(err: E) {
 pub fn go_to_root() {
     let nav = use_navigate();
     nav("/", Default::default());
+}
+
+pub fn join_base_and_path_url(base: &str, path: &str) -> Result<String, String> {
+    // Parse the base URL first
+    let base_url = Url::parse(base).map_err(|e| format!("Invalid base URL: {}", e))?;
+
+    // Use the join method on Url
+    let full_url = base_url
+        .join(path)
+        .map_err(|e| format!("Invalid path: {}", e))?;
+
+    Ok(full_url.to_string())
 }
