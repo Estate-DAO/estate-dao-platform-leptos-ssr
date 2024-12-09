@@ -1,9 +1,10 @@
+use crate::api::BookingDetails;
 use crate::{
     api::{
         book_room, canister::get_user_booking::get_user_booking_backend, BookRoomRequest,
-        RoomDetail,
+        BookRoomResponse, RoomDetail,
     },
-    canister::backend,
+    canister::backend::{self, BeBookRoomResponse},
     page::{
         confirm_booking::{
             booking_handler::read_booking_details_from_local_storage,
@@ -26,8 +27,8 @@ use leptos::*;
 pub fn BookRoomHandler() -> impl IntoView {
     let (booking_id_signal_read, _, _) = use_booking_id_store();
     let block_room_ctx = expect_context::<BlockRoomCtx>();
-    let block_room = expect_context::<BlockRoomResults>();
-    let confirmation_ctx = expect_context::<ConfirmationResults>();
+    let block_room_results = expect_context::<BlockRoomResults>();
+    let confirmation_results = expect_context::<ConfirmationResults>();
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
@@ -103,6 +104,44 @@ pub fn BookRoomHandler() -> impl IntoView {
         },
     );
 
+    let book_room_canister_call = create_resource(
+        move || {
+            payment_booking_step_signals
+                .p04_update_booking_details_to_backend
+                .get()
+        },
+        move |p04_update_booking_details_to_backend| async move {
+            if !p04_update_booking_details_to_backend {
+                println!("{}", format!("p04_update_booking_details_to_backend = {p04_update_booking_details_to_backend:?}").red().bold());
+                return None;
+            }
+            // // if signal has been
+            // if block_room_results.payment_status_response.get().is_none(){
+            //     println!("{}", format!("block_room_results.payment_status_response is None").red().bold());
+
+            //     return None;
+            // }
+
+            // let payment_status_response = block_room_results.payment_status_response.get().unwrap();
+
+            if confirmation_results.booking_details.get().is_none() {
+                println!(
+                    "{}",
+                    format!("confirmation_results.booking_details is None")
+                        .red()
+                        .bold()
+                );
+                return None;
+            }
+            let (email, app_reference) = read_booking_details_from_local_storage().unwrap();
+
+            let book_room_response = confirmation_results.booking_details.get().unwrap();
+
+            create_be_book_room_response((email, app_reference), book_room_response.clone());
+            Some(())
+        },
+    );
+
     view! {
         <div class="bg-gray-100 p-4 border border-emerald-800">
         <Suspense fallback={move || view!{ " Making the booking ... "}}>
@@ -123,5 +162,26 @@ pub fn BookRoomHandler() -> impl IntoView {
         </Suspense>
 
         </div>
+    }
+}
+
+fn create_be_book_room_response(
+    (email, app_reference): (String, String),
+    book_room_response: BookRoomResponse,
+) -> BeBookRoomResponse {
+    let fe_booking_details: BookingDetails = book_room_response.commit_booking.into();
+
+    let be_booking_details = backend::BookingDetails {
+        booking_id: (email, app_reference),
+        travelomatrix_id: fe_booking_details.travelomatrix_id,
+        booking_ref_no: fe_booking_details.booking_ref_no,
+        booking_status: fe_booking_details.booking_status,
+        confirmation_no: fe_booking_details.confirmation_no,
+        api_status: book_room_response.status.clone().into(),
+    };
+    BeBookRoomResponse {
+        commit_booking: be_booking_details,
+        status: book_room_response.status.to_string(),
+        message: book_room_response.message,
     }
 }

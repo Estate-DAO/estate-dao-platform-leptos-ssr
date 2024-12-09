@@ -1,13 +1,14 @@
+use std::fmt;
+
 use super::{ProvabReq, ProvabReqMeta};
-use reqwest::Method;
-use serde::{Deserialize, Serialize};
-// use leptos::ServerFnError;
 use crate::api::Provab;
 use crate::canister::backend::{
-    AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
+    self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
 };
 use leptos::logging::log;
 use leptos::*;
+use reqwest::Method;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomRequest {
@@ -71,42 +72,6 @@ pub struct PassengerDetail {
 //     }
 // }
 
-impl From<&UserDetails> for Vec<PassengerDetail> {
-    fn from(user_details: &UserDetails) -> Self {
-        let mut passenger_details = Vec::new();
-
-        // Process adults
-        for (index, adult) in user_details.adults.iter().enumerate() {
-            passenger_details.push(PassengerDetail {
-                title: "Mr".to_string(),
-                first_name: adult.first_name.clone(),
-                middle_name: None,
-                last_name: adult.last_name.clone().unwrap_or_default(),
-                email: adult.email.clone().unwrap_or_default(),
-                pax_type: PaxType::Adult,
-                lead_passenger: index == 0,
-                age: 25,
-            });
-        }
-
-        // Process children
-        for (index, child) in user_details.children.iter().enumerate() {
-            passenger_details.push(PassengerDetail {
-                title: "Mr".to_string(),
-                first_name: child.first_name.clone(),
-                middle_name: None,
-                last_name: child.last_name.clone().unwrap_or_default(),
-                email: "".to_string(),
-                pax_type: PaxType::Child,
-                lead_passenger: false,
-                age: child.age as u32,
-            });
-        }
-
-        passenger_details
-    }
-}
-
 pub fn _default_passenger_age() -> u32 {
     25
 }
@@ -145,7 +110,7 @@ pub struct BookingDetailsContainer {
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 pub struct BookingDetails {
     #[serde(rename = "BookingId")]
-    pub booking_id: String,
+    pub travelomatrix_id: String,
 
     #[serde(rename = "BookingRefNo")]
     pub booking_ref_no: String,
@@ -164,20 +129,13 @@ pub enum BookingStatus {
     #[serde(rename = "Confirmed")]
     Confirmed = 1,
 }
-impl From<crate::canister::backend::BookingStatus> for BookingStatus {
-    fn from(status: crate::canister::backend::BookingStatus) -> Self {
-        match status {
-            crate::canister::backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
-            crate::canister::backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
-        }
-    }
-}
 
 impl ProvabReqMeta for BookRoomRequest {
     const METHOD: Method = Method::POST;
     const GZIP: bool = false;
     type Response = BookRoomResponse;
 }
+
 impl ProvabReq for BookRoomRequest {
     fn path_suffix() -> &'static str {
         "CommitBooking"
@@ -241,30 +199,106 @@ impl Serialize for PassengerDetail {
     }
 }
 
+impl fmt::Display for BookingStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BookingStatus::Confirmed => write!(f, "Confirmed"),
+            BookingStatus::BookFailed => write!(f, "BookFailed"),
+        }
+    }
+}
+
+impl From<BookingStatus> for backend::BookingStatus {
+    fn from(status: BookingStatus) -> Self {
+        match status {
+            BookingStatus::BookFailed => backend::BookingStatus::BookFailed,
+            BookingStatus::Confirmed => backend::BookingStatus::Confirmed,
+        }
+    }
+}
 impl Default for BeBookRoomResponse {
     fn default() -> Self {
         BeBookRoomResponse {
             status: String::default(),
-            commit_booking: crate::canister::backend::BookingDetails::default(),
+            commit_booking: backend::BookingDetails::default(),
             message: String::default(),
         }
     }
 }
 
-impl Default for crate::canister::backend::BookingDetails {
-    fn default() -> Self {
-        crate::canister::backend::BookingDetails {
-            booking_ref_no: String::default(),
-            booking_status: crate::canister::backend::BookingStatus::default(),
-            confirmation_no: String::default(),
-            booking_id: (String::default(), String::default()),
+impl From<backend::BookingStatus> for BookingStatus {
+    fn from(status: backend::BookingStatus) -> Self {
+        match status {
+            backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
+            backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
         }
     }
 }
 
-impl Default for crate::canister::backend::BookingStatus {
+impl From<BookingDetailsContainer> for BookingDetails {
+    fn from(input: BookingDetailsContainer) -> Self {
+        let value = input.booking_details;
+        Self {
+            travelomatrix_id: value.travelomatrix_id,
+            booking_ref_no: value.booking_ref_no,
+            confirmation_no: value.confirmation_no,
+            booking_status: value.booking_status,
+        }
+    }
+}
+
+impl Default for backend::BookingDetails {
     fn default() -> Self {
-        crate::canister::backend::BookingStatus::BookFailed
+        backend::BookingDetails {
+            booking_ref_no: String::default(),
+            booking_status: String::default(),
+            confirmation_no: String::default(),
+            booking_id: (String::default(), String::default()),
+            travelomatrix_id: String::default(),
+            api_status: backend::BookingStatus::default(),
+        }
+    }
+}
+
+impl Default for backend::BookingStatus {
+    fn default() -> Self {
+        backend::BookingStatus::BookFailed
+    }
+}
+
+impl From<&UserDetails> for Vec<PassengerDetail> {
+    fn from(user_details: &UserDetails) -> Self {
+        let mut passenger_details = Vec::new();
+
+        // Process adults
+        for (index, adult) in user_details.adults.iter().enumerate() {
+            passenger_details.push(PassengerDetail {
+                title: "Mr".to_string(),
+                first_name: adult.first_name.clone(),
+                middle_name: None,
+                last_name: adult.last_name.clone().unwrap_or_default(),
+                email: adult.email.clone().unwrap_or_default(),
+                pax_type: PaxType::Adult,
+                lead_passenger: index == 0,
+                age: 25,
+            });
+        }
+
+        // Process children
+        for (index, child) in user_details.children.iter().enumerate() {
+            passenger_details.push(PassengerDetail {
+                title: "Mr".to_string(),
+                first_name: child.first_name.clone(),
+                middle_name: None,
+                last_name: child.last_name.clone().unwrap_or_default(),
+                email: "".to_string(),
+                pax_type: PaxType::Child,
+                lead_passenger: false,
+                age: child.age as u32,
+            });
+        }
+
+        passenger_details
     }
 }
 

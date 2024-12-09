@@ -34,10 +34,12 @@ type Booking = record {
   payment_details : PaymentDetails;
 };
 type BookingDetails = record {
+  api_status : BookingStatus;
   booking_ref_no : text;
-  booking_status : BookingStatus;
+  booking_status : text;
   confirmation_no : text;
   booking_id : record { text; text };
+  travelomatrix_id : text;
 };
 type BookingStatus = variant { BookFailed; Confirmed };
 type ChildDetail = record {
