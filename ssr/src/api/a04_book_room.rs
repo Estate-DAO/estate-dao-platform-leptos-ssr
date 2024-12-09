@@ -216,21 +216,22 @@ impl From<BookingStatus> for backend::BookingStatus {
         }
     }
 }
-impl Default for BeBookRoomResponse {
-    fn default() -> Self {
-        BeBookRoomResponse {
-            status: String::default(),
-            commit_booking: backend::BookingDetails::default(),
-            message: String::default(),
-        }
-    }
-}
 
 impl From<backend::BookingStatus> for BookingStatus {
     fn from(status: backend::BookingStatus) -> Self {
         match status {
             backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
             backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
+        }
+    }
+}
+
+impl Default for BeBookRoomResponse {
+    fn default() -> Self {
+        BeBookRoomResponse {
+            status: String::default(),
+            commit_booking: backend::BookingDetails::default(),
+            message: String::default(),
         }
     }
 }
