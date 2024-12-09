@@ -1,3 +1,4 @@
+use crate::api::canister::book_room_details::update_book_room_details_backend;
 use crate::api::BookingDetails;
 use crate::{
     api::{
@@ -115,14 +116,6 @@ pub fn BookRoomHandler() -> impl IntoView {
                 println!("{}", format!("p04_update_booking_details_to_backend = {p04_update_booking_details_to_backend:?}").red().bold());
                 return None;
             }
-            // // if signal has been
-            // if block_room_results.payment_status_response.get().is_none(){
-            //     println!("{}", format!("block_room_results.payment_status_response is None").red().bold());
-
-            //     return None;
-            // }
-
-            // let payment_status_response = block_room_results.payment_status_response.get().unwrap();
 
             if confirmation_results.booking_details.get().is_none() {
                 println!(
@@ -134,11 +127,35 @@ pub fn BookRoomHandler() -> impl IntoView {
                 return None;
             }
             let (email, app_reference) = read_booking_details_from_local_storage().unwrap();
+            let booking_id = (email.clone(), app_reference.clone());
 
             let book_room_response = confirmation_results.booking_details.get().unwrap();
 
-            create_be_book_room_response((email, app_reference), book_room_response.clone());
-            Some(())
+            let book_room_backend = create_backend_book_room_response(
+                (email, app_reference),
+                book_room_response.clone(),
+            );
+
+            let book_room_backend_str = serde_json::to_string(&book_room_backend)
+                .expect("serde_json::to_string for BeBookRoomResponse");
+
+            let book_room_backend_saved_status =
+                update_book_room_details_backend(booking_id, book_room_backend_str)
+                    .await
+                    .ok();
+
+            if book_room_backend_saved_status.is_none() {
+                return None;
+            }
+
+            match book_room_backend_saved_status
+                .unwrap()
+                .to_lowercase()
+                .as_str()
+            {
+                "success" => Some("success".to_string()),
+                any_other => Some(any_other.to_string()),
+            }
         },
     );
 
@@ -162,10 +179,33 @@ pub fn BookRoomHandler() -> impl IntoView {
         </Suspense>
 
         </div>
+        <div class="bg-gray-100 p-4 border border-emerald-800">
+        <Suspense fallback={move || view!{ " Making the booking ... "}}>
+        {move ||
+            if let Some(book_room_response) = book_room_canister_call.get(){
+                view!{
+                    <p>
+                    "Booking saved to database!"
+                    {format!("details: {book_room_response:?}")}
+                    </p>
+                }.into_view()
+            }else{
+                view!{
+                    // todo [UAT] = None can be obtained due to any of the follwoing going wrong
+                    // 1. not present in context
+                    // 2. signal not set yet
+                    // 3. could not save to backend
+                    "Could not save booking details to database"
+                }.into_view()
+            }
+        }
+        </Suspense>
+
+        </div>
     }
 }
 
-fn create_be_book_room_response(
+fn create_backend_book_room_response(
     (email, app_reference): (String, String),
     book_room_response: BookRoomResponse,
 ) -> BeBookRoomResponse {
