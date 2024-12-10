@@ -1,4 +1,4 @@
-use crate::api::canister::book_room_details::update_book_room_details_backend;
+use crate::api::canister::book_room_details::{self, update_book_room_details_backend};
 use crate::api::{BookingDetails, SuccessBookRoomResponse};
 use crate::{
     api::{
@@ -93,25 +93,49 @@ pub fn BookRoomHandler() -> impl IntoView {
 
             log::warn!("REQ FOR BOOK ROOM API >>>{:?}", value_for_serverfn);
 
-            let book_room_result = book_room(value_for_serverfn).await.ok();
-            log::info!("BOOK_ROOM_API: {book_room_result:?}");
-            conf_res.booking_details.set(book_room_result.clone());
+            let book_room_result_server = book_room(value_for_serverfn)
+                .await;
+                // .map_err(|e| format!("Failed to fetch book_room_response: ServerFnError =  {}", e))
+                // .ok()?;
+
+                let book_room_result = match book_room_result_server{
+                    Ok(book_room_result) => {
+                        log::info!("{}",format!("book_room_result_server Ok - {:?}",book_room_result.clone()).bright_black().on_cyan());
+                        let book_room_response_struct: SuccessBookRoomResponse = serde_json::from_str(&book_room_result ).unwrap();
+                        log::info!("{}",format!("book_room_result_server SERDE_JSON - {:?}",book_room_response_struct.clone()).bright_black().on_cyan());
+                        BookRoomResponse::Success(book_room_response_struct)
+                    },
+                    Err(e) => {
+                        log::info!("{}",format!("book_room_result_server Err - {}", e.to_string()).bright_black().on_magenta());
+                        return None;
+                    }
+                };
+
+            log::info!("BOOK_ROOM_API / RESP: {book_room_result:?}");
+            conf_res.booking_details.set(Some(book_room_result.clone()));
 
             // todo [UAT] - does book_room have a failure response?
             // if yes, model that and make a method 'is_response_success' on BookRoomResponse
-            if book_room_result.is_some() {
-                log!("p04_update_booking_details_to_backend - with book_room_result = {book_room_result:#?}");
-                payment_booking_step_signals
-                    .p04_update_booking_details_to_backend
-                    .set(true);
-                Some(book_room_result.clone())
-            } else {
-                println!(
-                    "{}",
-                    format!("book_room_api_cal results - {:?}", book_room_result.clone()).magenta()
-                );
-                None
-            }
+            // match book_room_result {
+            //     Some(val) => Some(val),
+            //     // None => None,
+            // };
+            // store_book_room_response.set(book_room_result.clone());
+            // if book_room_result.is_some() {
+            log::info!("p04_update_booking_details_to_backend - with book_room_result = {book_room_result:#?}");
+            payment_booking_step_signals
+                .p04_update_booking_details_to_backend
+                .set(true);
+
+            Some(book_room_result.clone())
+            // } else {
+            //     println!(
+            //         "{}",
+            //         format!("book_room_api_cal results - {:?}", book_room_result.clone()).magenta()
+            //     );
+            //     None
+            // }
+            // })
         },
     );
 

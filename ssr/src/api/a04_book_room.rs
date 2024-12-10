@@ -8,7 +8,8 @@ use crate::canister::backend::{
 use leptos::logging::log;
 use leptos::*;
 use reqwest::Method;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::Deserializer;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BookRoomRequest {
@@ -160,7 +161,8 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive(Serialize, PartialEq, Debug, Clone)]
+#[derive( PartialEq, Debug, Clone)]
+// #[repr(u8)]
 pub enum BookingStatus {
     // #[serde(rename = "BookFailed")]
     BookFailed = 0,
@@ -179,6 +181,20 @@ impl<'de> Deserialize<'de> for BookingStatus {
             1 => Ok(BookingStatus::Confirmed),
             _ => Err(serde::de::Error::custom("Invalid BookingStatus value")),
         }
+    }
+}
+
+impl Serialize for BookingStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let value = match self {
+            BookingStatus::Confirmed => serializer.serialize_u8(1),
+            BookingStatus::BookFailed => serializer.serialize_u8(0),
+        };
+
+        value.map_err(|e| serde::ser::Error::custom(format!("Invalid BookingStatus value: {}", e)))
     }
 }
 
@@ -246,7 +262,8 @@ impl ProvabReq for BookRoomRequest {
 }
 
 #[server(BlockRoom)]
-pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
+pub async fn book_room(request: String) -> Result<String, ServerFnError> {
+    // pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
     let provab = Provab::default();
 
     let request_struct = serde_json::from_str::<BookRoomRequest>(&request)
@@ -255,9 +272,22 @@ pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnErro
     println!("book_request - {request_struct:?}");
 
     match provab.send(request_struct).await {
-        Ok(response) => Ok(response),
+        Ok(response) => {
+            println!(
+                "{}",
+                format!("{:?}", response).white().on_black()
+            );
+            let response_str = serde_json::to_string(&response).unwrap();
+            Ok(response_str)
+        }
         Err(e) => {
-            log!("error: {:?}", e);
+            println!(
+                "{}",
+                format!("error: {:?}", e)
+                    .bright_black()
+                    .bold()
+                    .on_bright_red()
+            );
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }
