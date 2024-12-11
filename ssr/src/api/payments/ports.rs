@@ -1,5 +1,6 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use crate::canister::backend::BePaymentApiResponse;
 use anyhow::{anyhow, Result};
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use std::fmt::Debug;
@@ -41,20 +42,111 @@ pub struct CreateInvoiceResponse {
     pub source: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PaymentStatus {
-    Waiting,
-    Confirming,
-    Confirmed,
-    Sending,
-    PartiallyPaid,
-    Finished,
-    Failed,
-    Refunded,
-    Expired,
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum PaymentStatus {
+//     Waiting,
+//     Confirming,
+//     Confirmed,
+//     Sending,
+//     PartiallyPaid,
+//     Finished,
+//     Failed,
+//     Refunded,
+//     Expired,
+// }
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct GetPaymentStatusRequest {
+    pub payment_id: u64,
 }
 
-// #[async_trait(?Send)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+pub struct SuccessGetPaymentStatusResponse {
+    pub payment_id: u64,
+    pub invoice_id: u64,
+    pub payment_status: String,
+    // pub pay_address: String,
+    // pub payin_extra_id: Option<String>,
+    pub price_amount: u64,
+    pub price_currency: String,
+    pub pay_amount: f64,
+    pub actually_paid: f64,
+    pub pay_currency: String,
+    pub order_id: String,
+    pub order_description: String,
+    pub purchase_id: u64,
+    // pub outcome_amount: f64,
+    // pub outcome_currency: String,
+    // pub payout_hash: Option<String>,
+    // pub payin_hash: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    // pub burning_percent: Option<String>,
+    // #[serde(rename = "type")]
+    // pub type_field: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FailureGetPaymentStatusResponse {
+    status: bool,
+    #[serde(rename = "statusCode")]
+    status_code: u16,
+    code: String,
+    message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum GetPaymentStatusResponse {
+    Success(SuccessGetPaymentStatusResponse),
+    Failure(FailureGetPaymentStatusResponse),
+}
+
+impl GetPaymentStatusResponse {
+    pub fn get_payment_status(&self) -> String {
+        match self {
+            GetPaymentStatusResponse::Success(success) => success.get_payment_status(),
+            GetPaymentStatusResponse::Failure(failure) => failure.get_payment_status(),
+        }
+    }
+}
+
+impl SuccessGetPaymentStatusResponse {
+    pub fn get_payment_status(&self) -> String {
+        self.payment_status.clone()
+    }
+}
+
+impl FailureGetPaymentStatusResponse {
+    pub fn get_payment_status(&self) -> String {
+        "ApiFailure".into()
+    }
+}
+
+impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
+    fn from((response, provider): (GetPaymentStatusResponse, String)) -> Self {
+        match response {
+            GetPaymentStatusResponse::Success(response) => Self {
+                updated_at: response.updated_at,
+                actually_paid: response.actually_paid,
+                provider,
+                invoice_id: response.invoice_id,
+                order_description: response.order_description,
+                pay_amount: response.pay_amount,
+                pay_currency: response.pay_currency,
+                created_at: response.created_at,
+                payment_status: response.payment_status,
+                price_amount: response.price_amount,
+                purchase_id: response.purchase_id,
+                order_id: response.order_id,
+                price_currency: response.price_currency,
+                payment_id: response.payment_id,
+            },
+            GetPaymentStatusResponse::Failure(failed_resp) => Self::default(),
+        }
+    }
+}
+
 pub trait PaymentGateway {
     const METHOD: Method;
 
@@ -63,10 +155,10 @@ pub trait PaymentGateway {
     // fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String>;
 }
 pub trait PaymentGatewayParams {
-    fn path_suffix() -> String;
+    fn path_suffix(&self) -> String;
 
-    fn build_url(base_url: &str) -> Result<Url> {
-        let path_suffix = Self::path_suffix();
+    fn build_url(&self, base_url: &str) -> Result<Url> {
+        let path_suffix = self.path_suffix();
         // Parse the base URL first
         let base = Url::parse(base_url).map_err(|e| anyhow!("Invalid base URL: {}", e))?;
 
