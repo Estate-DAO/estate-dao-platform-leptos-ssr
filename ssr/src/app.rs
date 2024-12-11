@@ -92,7 +92,7 @@ pub fn App() -> impl IntoView {
             href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
             rel="stylesheet"
         />
-        <LeptosQueryDevtools/>
+        <LeptosQueryDevtools />
         // content for this welcome page
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
             <main>
