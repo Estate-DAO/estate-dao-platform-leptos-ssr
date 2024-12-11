@@ -161,7 +161,7 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
-#[derive( PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 // #[repr(u8)]
 pub enum BookingStatus {
     // #[serde(rename = "BookFailed")]
@@ -273,10 +273,7 @@ pub async fn book_room(request: String) -> Result<String, ServerFnError> {
 
     match provab.send(request_struct).await {
         Ok(response) => {
-            println!(
-                "{}",
-                format!("{:?}", response).white().on_black()
-            );
+            println!("{}", format!("{:?}", response).green().on_black());
             let response_str = serde_json::to_string(&response).unwrap();
             Ok(response_str)
         }

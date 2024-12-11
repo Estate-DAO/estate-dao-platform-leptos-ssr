@@ -93,23 +93,45 @@ pub fn BookRoomHandler() -> impl IntoView {
 
             log::warn!("REQ FOR BOOK ROOM API >>>{:?}", value_for_serverfn);
 
-            let book_room_result_server = book_room(value_for_serverfn)
-                .await;
-                // .map_err(|e| format!("Failed to fetch book_room_response: ServerFnError =  {}", e))
-                // .ok()?;
+            let book_room_result_server = book_room(value_for_serverfn).await;
+            // .map_err(|e| format!("Failed to fetch book_room_response: ServerFnError =  {}", e))
+            // .ok()?;
 
-                let book_room_result = match book_room_result_server{
-                    Ok(book_room_result) => {
-                        log::info!("{}",format!("book_room_result_server Ok - {:?}",book_room_result.clone()).bright_black().on_cyan());
-                        let book_room_response_struct: SuccessBookRoomResponse = serde_json::from_str(&book_room_result ).unwrap();
-                        log::info!("{}",format!("book_room_result_server SERDE_JSON - {:?}",book_room_response_struct.clone()).bright_black().on_cyan());
-                        BookRoomResponse::Success(book_room_response_struct)
-                    },
-                    Err(e) => {
-                        log::info!("{}",format!("book_room_result_server Err - {}", e.to_string()).bright_black().on_magenta());
-                        return None;
-                    }
-                };
+            let book_room_result = match book_room_result_server {
+                Ok(book_room_result) => {
+                    log::info!(
+                        "{}",
+                        format!(
+                            "book_room_result_server Ok - {:?}",
+                            book_room_result.clone()
+                        )
+                        .bright_black()
+                        .on_cyan()
+                    );
+                    // TODO [UAT] 39 - don't use unwrap. Try to decode into SuccessBookRoomResponse, FailureBookRoomResponse
+                    let book_room_response_struct: SuccessBookRoomResponse =
+                        serde_json::from_str(&book_room_result).unwrap();
+                    log::info!(
+                        "{}",
+                        format!(
+                            "book_room_result_server SERDE_JSON - {:?}",
+                            book_room_response_struct.clone()
+                        )
+                        .bright_black()
+                        .on_cyan()
+                    );
+                    BookRoomResponse::Success(book_room_response_struct)
+                }
+                Err(e) => {
+                    log::info!(
+                        "{}",
+                        format!("book_room_result_server Err - {}", e.to_string())
+                            .bright_black()
+                            .on_magenta()
+                    );
+                    return None;
+                }
+            };
 
             log::info!("BOOK_ROOM_API / RESP: {book_room_result:?}");
             conf_res.booking_details.set(Some(book_room_result.clone()));
@@ -210,6 +232,7 @@ pub fn BookRoomHandler() -> impl IntoView {
             if let Some(book_room_response) = book_room_api_call.get(){
                 view!{
                     <p>
+                    // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
                     "Booking Made!"
                     {format!("details: {book_room_response:#?}")}
                     </p>
@@ -224,7 +247,7 @@ pub fn BookRoomHandler() -> impl IntoView {
 
         </div>
         <div class="bg-gray-100 p-4 border border-emerald-800">
-        <Suspense fallback={move || view!{ " Making the booking ... "}}>
+        <Suspense fallback={move || view!{ " Saving your precious data ... "}}>
         {move ||
             if let Some(book_room_response) = book_room_canister_call.get(){
                 view!{
