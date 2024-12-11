@@ -222,16 +222,21 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
                                 view! {
                                     <input
                                         type="number"
-                                        min={1}
-                                        max={18}
+                                        min=1
+                                        max=18
                                         class="mt-2 ml-3 p-2 border border-gray-300 w-16"
                                         name=format!("child_age[{}]", i)
-                                        value={move || guest_selection.get().children_ages.get_value_at(i)}
+                                        value=move || {
+                                            guest_selection.get().children_ages.get_value_at(i)
+                                        }
                                         placeholder="Age"
                                         on:input=move |e| {
                                             let age = event_target_value(&e);
                                             log!("{}",age);
-                                            guest_selection.get().children_ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
+                                            guest_selection
+                                                .get()
+                                                .children_ages
+                                                .update_children_ages(i as u32, age.parse().unwrap_or(10));
                                         }
                                     />
                                 }
