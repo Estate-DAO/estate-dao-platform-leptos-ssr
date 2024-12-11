@@ -83,8 +83,7 @@ pub fn Navbar() -> impl IntoView {
                     About us
                 </a>
 
-                <button>
-                </button>
+                <button />
             </div>
         </nav>
     }
@@ -194,22 +193,22 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
             // <!-- Destination input -->
 
             <div class="relative flex-1">
-            <div class="absolute inset-y-0 left-2 text-xl flex items-center">
-            <Icon icon=icondata::BsMap class="text-black" />
-        </div>
+                <div class="absolute inset-y-0 left-2 text-xl flex items-center">
+                    <Icon icon=icondata::BsMap class="text-black" />
+                </div>
 
-        <button
-            class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
-            disabled=disabled
-        >
-            {move || destination_display.get()}
-        </button>
+                <button
+                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
+                    disabled=disabled
+                >
+                    {move || destination_display.get()}
+                </button>
 
-        <Show when=move || !disabled.get()>
-            <div class="absolute inset-0">
-                <DestinationPicker />
-            </div>
-        </Show>
+                <Show when=move || !disabled.get()>
+                    <div class="absolute inset-0">
+                        <DestinationPicker />
+                    </div>
+                </Show>
             </div>
 
             // <!-- Date range picker -->
@@ -250,14 +249,14 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
                     </Show>
                 </div>
             </button>
-            // <button
-            //     on:click=move |_| greet_action.dispatch(())
-            //     class=move || {
-            //         format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
-            //     }
-            // >
-            //     Greet me!
-            // </button>
+        // <button
+        // on:click=move |_| greet_action.dispatch(())
+        // class=move || {
+        // format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
+        // }
+        // >
+        // Greet me!
+        // </button>
         </div>
     }
 }

@@ -35,7 +35,7 @@ pub fn HotelListPage() -> impl IntoView {
             <Navbar />
             <div class="flex flex-col items-center mt-6 p-4">
                 <InputGroup disabled=disabled_input_group />
-                // <FilterAndSortBy />
+            // <FilterAndSortBy />
             </div>
 
             <div class="mx-auto">
@@ -46,26 +46,26 @@ pub fn HotelListPage() -> impl IntoView {
                         fallback=fallback
                     >
                         // <Transition fallback=fallback>
-                            // {move || {
-                            //     search_list_page
-                            //         .search_result
-                            //         .get()
-                            //         .unwrap()
-                            //         .hotel_results()
-                            //         .iter()
-                            //         .map(|hotel_result| {
-                            //             view! {
-                            //                 <HotelCard
-                            //                     img=hotel_result.hotel_picture.clone()
-                            //                     rating=hotel_result.star_rating
-                            //                     hotel_name=hotel_result.hotel_name.clone()
-                            //                     price=hotel_result.price.room_price
-                            //                     hotel_code=hotel_result.hotel_code.clone()
-                            //                 />
-                            //             }
-                            //         })
-                            //         .collect::<Vec<_>>()
-                            // }}
+                        // {move || {
+                        // search_list_page
+                        // .search_result
+                        // .get()
+                        // .unwrap()
+                        // .hotel_results()
+                        // .iter()
+                        // .map(|hotel_result| {
+                        // view! {
+                        // <HotelCard
+                        // img=hotel_result.hotel_picture.clone()
+                        // rating=hotel_result.star_rating
+                        // hotel_name=hotel_result.hotel_name.clone()
+                        // price=hotel_result.price.room_price
+                        // hotel_code=hotel_result.hotel_code.clone()
+                        // />
+                        // }
+                        // })
+                        // .collect::<Vec<_>>()
+                        // }}
 
                         // </Transition>
                         {move || {
@@ -74,13 +74,16 @@ pub fn HotelListPage() -> impl IntoView {
                                 .get()
                                 .unwrap()
                                 .hotel_results();
-
                             if hotel_results.is_empty() {
+
                                 view! {
                                     <div class="flex flex-col items-center justify-center mt-6 p-4 col-span-full min-h-[200px]">
-                                        <p class="text-center">No hotels found for your search criteria.</p>
+                                        <p class="text-center">
+                                            No hotels found for your search criteria.
+                                        </p>
                                     </div>
-                                }.into_view()
+                                }
+                                    .into_view()
                             } else {
                                 hotel_results
                                     .iter()
@@ -161,18 +164,15 @@ pub fn HotelCard(
         }
     });
     view! {
-        <div
-            // href=AppRoutes::HotelDetails.to_string()
-            on:click=move |ev| {
-                ev.prevent_default();
-                // todoing --
-                let hotel_view_info_ctx: HotelInfoCtx = expect_context();
-                hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
-                log!("hotel_code: {}", hotel_code_cloned);
-                search_hotel_room_action.dispatch(());
-                search_hotel_info_action.dispatch(())
-            }
-        >
+        <div // href=AppRoutes::HotelDetails.to_string()
+        on:click=move |ev| {
+            ev.prevent_default();
+            let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+            hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
+            log!("hotel_code: {}", hotel_code_cloned);
+            search_hotel_room_action.dispatch(());
+            search_hotel_info_action.dispatch(())
+        }>
             <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
                 <img class="w-80 h-64 object-cover" src=img alt=hotel_name.clone() />
 
@@ -185,14 +185,12 @@ pub fn HotelCard(
                                 hotel_name.clone()
                             }}
                         </p>
-                        <StarRating rating={move || rating} />
+                        <StarRating rating=move || rating />
                     </div>
 
                     <div class="flex items-center justify-between px-6 pt-2">
                         <PriceDisplay price=price />
-                        <button
-                            class="font-semibold underline underline-offset-2 decoration-solid text-xs"
-                        >
+                        <button class="font-semibold underline underline-offset-2 decoration-solid text-xs">
                             "View details"
                         </button>
                     </div>
