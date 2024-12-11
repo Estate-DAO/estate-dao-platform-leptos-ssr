@@ -1,29 +1,27 @@
-use leptos::*;
-use leptos_router::use_navigate;
-
 use crate::{
-    api::hotel_info,
-    app::AppRoutes,
-    component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
-    state::{
-        search_state::{HotelInfoResults, SearchCtx, SearchListResults},
-        view_state::HotelInfoCtx,
-    },
+    page::{BookRoomHandler, BookingHandler, Navbar, PaymentHandler},
+    state::{search_state::SearchCtx, view_state::HotelInfoCtx},
 };
 use chrono::NaiveDate;
-use leptos::logging::log;
+use leptos::*;
+
+/// prefix p01 is given to variable names to indicate the order
+/// they should be set true in.
+/// since rust variables cannot have names starting from numbers, p01 is used instead of 01
+#[derive(Debug, Clone, Default)]
+pub struct PaymentBookingStatusUpdates {
+    pub p01_fetch_payment_details_from_api: RwSignal<bool>,
+    pub p02_update_payment_details_to_backend: RwSignal<bool>,
+    pub p03_call_book_room_api: RwSignal<bool>,
+    pub p04_update_booking_details_to_backend: RwSignal<bool>,
+}
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
-
-    let format_date = |(year, month, day): (u32, u32, u32)| {
-        NaiveDate::from_ymd_opt(year as i32, month, day)
-            .map(|d| d.format("%a, %b %d").to_string())
-            .unwrap_or_default()
-    };
+    // to keep track of steps and reactive udpates
+    // provide_context(PaymentBookingStatusUpdates::default());
 
     let insert_real_image_or_default = {
         move || {
@@ -53,11 +51,12 @@ pub fn ConfirmationPage() -> impl IntoView {
                 <div class="text-center mb-6">
                     <p class="font-semibold">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
                     <p class="text-gray-600">
+                    // todo [UAT] 2 - store and get these details from canister_backend
                         {move || {
                             let date_range = search_ctx.date_range.get();
                             format!("{} - {}",
-                                format_date(date_range.start),
-                                format_date(date_range.end)
+                                format_date_fn(date_range.start),
+                                format_date_fn(date_range.end)
                             )
                         }}
                     </p>
@@ -68,7 +67,16 @@ pub fn ConfirmationPage() -> impl IntoView {
                     incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud 
                     exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
                 </p>
+                <BookingHandler />
+                <PaymentHandler />
+                <BookRoomHandler />
             </div>
         </section>
     }
+}
+
+fn format_date_fn(date_tuple: (u32, u32, u32)) -> String {
+    NaiveDate::from_ymd_opt(date_tuple.0 as i32, date_tuple.1, date_tuple.2)
+        .map(|d| d.format("%a, %b %d").to_string())
+        .unwrap_or_default()
 }

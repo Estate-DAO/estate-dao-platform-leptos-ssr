@@ -326,10 +326,10 @@ impl From<RoomCounterKeyValue> for RoomCounterKeyValueStatic {
 
 #[derive(PartialEq, Debug, Default, Clone)]
 pub struct SortedRoom {
-    room_type: String,
-    room_unique_id: String,
-    room_count_for_given_type: u32,
-    room_price: f64,
+    pub room_type: String,
+    pub room_unique_id: String,
+    pub room_count_for_given_type: u32,
+    pub room_price: f64,
 }
 
 #[component]
@@ -415,12 +415,12 @@ pub fn PricingBookNow() -> impl IntoView {
     let price = Signal::derive(move || total_room_price.get());
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
-    let total_selected_rooms = create_memo(move |_| {
+    let total_selected_rooms = create_rw_signal(
         room_counters
             .get()
             .values()
-            .fold(0, |acc, counter| acc + counter.key.get())
-    });
+            .fold(0, |acc, counter| acc + counter.key.get()),
+    );
 
     let room_counters_clone = room_counters.clone();
 
@@ -465,28 +465,19 @@ pub fn PricingBookNow() -> impl IntoView {
                             .cloned()
                             .unwrap_or_else(|| RoomCounterKeyValue::new());
 
-                        // Effect to enforce room limit
-                        create_effect(move |_| {
-                            let current_value = base_counter.key.get();
-                            let other_rooms = total_selected_rooms.get() - current_value;
-                            let max_rooms = num_rooms.get();
-
-                            if other_rooms + current_value > max_rooms {
-                                base_counter.key.set(max_rooms - other_rooms);
-                            }
-                        });
-
                         view! {
                             <div class="flex justify-between items-center border-b border-gray-300 py-2">
                                 <span class="font-medium">
                                     {format!("{} - ₹{:.2}/night", room_type,  room_price)}
                                 </span>
                                 <NumberCounterWrapper
-                                label=""
-                                counter=base_counter.key
-                                class="mt-4"
-                                value=room_unique_id
-                                set_value=base_counter.value
+                                    label=""
+                                    counter=base_counter.key
+                                    class="mt-4"
+                                    value=room_unique_id
+                                    set_value=base_counter.value
+                                    max_rooms=num_rooms.get_untracked()
+                                    total_selected_rooms=total_selected_rooms
                                 />
                             </div>
                         }
@@ -498,6 +489,7 @@ pub fn PricingBookNow() -> impl IntoView {
                         price_per_night=price
                         number_of_nights=num_nights
                         room_counters=room_counters_clone
+                        sorted_rooms=sorted_rooms.get()
                     />
                 </div>
             </div>
@@ -510,6 +502,7 @@ pub fn PricingBreakdown(
     #[prop(into)] price_per_night: Signal<f64>,
     #[prop(into)] number_of_nights: Signal<u32>,
     #[prop(into)] room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
+    #[prop(into)] sorted_rooms: Vec<SortedRoom>,
 ) -> impl IntoView {
     let per_night_calc =
         create_memo(move |_| price_per_night.get() * number_of_nights.get() as f64);
@@ -531,6 +524,8 @@ pub fn PricingBreakdown(
             .filter_map(|counter| counter.value.get_untracked())
             .collect();
 
+        let sorted_rooms_clone = sorted_rooms.clone();
+
         async move {
             // Reset previous block room results
             BlockRoomResults::reset();
@@ -540,6 +535,8 @@ pub fn PricingBreakdown(
             hotel_info_results.set_price_per_night(price_per_night.get());
             // hotel_info_results.set_room_counters(room_counters.get());
             hotel_info_results.set_block_room_counters(room_counters.get());
+
+            hotel_info_results.set_sorted_rooms(sorted_rooms_clone);
 
             let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 
@@ -607,41 +604,33 @@ pub fn NumberCounterWrapper(
     value: String,
     /// This signal is used to store RoomUniqueId
     set_value: RwSignal<Option<String>>,
+    max_rooms: u32,
+    total_selected_rooms: RwSignal<u32>,
 ) -> impl IntoView {
     // Sets the value of the signal if the counter is non-zero
     create_effect(move |_| {
         if counter.get() > 0 {
-            log!("base_counter.value: {value:?}");
+            // log!("base_counter.value: {value:?}");
             set_value.set(Some(value.clone()));
         } else {
             set_value.set(None); // Or handle the zero case differently
         }
     });
 
-    view! {
-        <NumberCounter
-            label=label
-            class=class
-            counter=counter
-        />
-    }
-}
-
-#[component]
-pub fn NumberCounter(
-    #[prop(into)] label: String,
-    #[prop(default = "".into() , into)] class: String,
-    counter: RwSignal<u32>,
-) -> impl IntoView {
-    let merged_class = format!("flex items-center justify-between {}", class);
+    let can_increment = move || total_selected_rooms.get() < max_rooms;
+    let can_decrement = move || counter.get() > 0;
 
     view! {
-        <div class=merged_class>
+        <div class=format!("flex items-center justify-between {}", class)>
             <p>{label}</p>
             <div class="flex items-center space-x-1">
                 <button
                     class="ps-2 py-1 text-2xl"
-                    on:click=move |_| counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 })
+                    disabled={ move || !can_decrement()}
+                    on:click=move |_| {
+                        counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
+                        total_selected_rooms.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
+                    }
                 >
                     {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
                 </button>
@@ -657,7 +646,22 @@ pub fn NumberCounter(
                         "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
                     )
                 />
-                <button class="py-1 text-2xl " on:click=move |_| counter.update(|n| *n += 1)>
+                <button
+                    class="py-1 text-2xl"
+                    on:click=move |_| {
+                        if can_increment() {
+                            let new_count = counter.get() + 1;
+                            if new_count + (total_selected_rooms.get() - counter.get()) <= max_rooms {
+                                counter.set(new_count);
+                                total_selected_rooms.update(|n| *n += 1);
+                            } else {
+                                log!("Cannot add more rooms. Maximum rooms reached.");
+                            }
+                        } else {
+                            log!("Cannot add more rooms. Maximum rooms reached.");
+                        }
+                    }
+                >
                     "+"
                 </button>
             </div>

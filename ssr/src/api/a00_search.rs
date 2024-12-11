@@ -19,7 +19,7 @@ pub struct RoomGuest {
     pub child_age: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Price {
     // #[serde(rename = "PublishedPrice")]
     // published_price: f64,
@@ -120,13 +120,13 @@ pub struct HotelResult {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelSearchResult {
     #[serde(rename = "HotelResults")]
-    hotel_results: Vec<HotelResult>,
+    pub hotel_results: Vec<HotelResult>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Search {
     #[serde(rename = "HotelSearchResult")]
-    hotel_search_result: HotelSearchResult,
+    pub hotel_search_result: HotelSearchResult,
     // #[serde(rename = "CityId")]
     // city_id: String,
 }
@@ -171,9 +171,9 @@ impl Default for HotelSearchRequest {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelSearchResponse {
     #[serde(rename = "Status")]
-    status: i32,
+    pub status: i32,
     #[serde(rename = "Message")]
-    message: String,
+    pub message: String,
     #[serde(rename = "Search")]
     pub search: Option<Search>,
 }
