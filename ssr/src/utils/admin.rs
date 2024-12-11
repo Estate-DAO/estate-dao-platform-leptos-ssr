@@ -27,9 +27,7 @@ impl AdminCanisters {
 
     pub async fn backend_canister(&self) -> Backend {
         let agent = self.agent.get_agent().await;
-        // let principal  = agent.get_principal().unwrap();
-        // todo [UAT] - update caller and principal
-        let principal = Principal::from_text("bkyz2-fmaaa-aaaaa-qaaaq-cai").unwrap();
+        let principal = crate::canister::BACKEND_ID;
         println!("{principal:#?}");
         Backend(principal, agent)
     }
