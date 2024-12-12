@@ -456,7 +456,7 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
-                <Show when=move || sorted_rooms_called.get() fallback=SpinnerGray>
+                // <Show when=move || sorted_rooms_called.get() fallback=SpinnerGray>
                     <For
                         each=move || sorted_rooms.get()
                         key=|SortedRoom { room_type, .. }| room_type.clone()
@@ -503,7 +503,7 @@ pub fn PricingBookNow() -> impl IntoView {
                             sorted_rooms=sorted_rooms.get()
                         />
                     </div>
-                </Show>
+                // </Show>
             </div>
         </div>
     }
