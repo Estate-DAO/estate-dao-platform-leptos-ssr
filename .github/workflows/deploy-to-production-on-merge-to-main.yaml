@@ -26,8 +26,7 @@ jobs:
 
       - name: Set secret tokens
         run: |
-          flyctl secrets set NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY --app "estatefe" --stage
-          flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY=${{secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}} --app "estatefe" --stage
+          flyctl secrets set --app "estatefe" --stage NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY=${{secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}} 
         env:
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
