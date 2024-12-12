@@ -990,7 +990,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                     // </div>
                                     <button
                                         // class="ml-2"
-																				class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
+                                                                                class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
                                         on:click=move |_| {
                                             handle_pay_signal.set("NOWPayments".to_owned())
                                         }
