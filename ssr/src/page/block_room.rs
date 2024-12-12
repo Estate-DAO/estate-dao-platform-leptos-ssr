@@ -979,17 +979,18 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                                 // <br />
 
-                                <label
-                                    for="nowpay"
-                                    class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
-                                >
+                                // <label
+                                //     for="nowpay"
+                                //     class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
+                                // >
                                     // <div class="relative mb-8">
                                     // <input type="radio" id="nowpay" name="payment" class="peer hidden" />
                                     // <div class="w-8 h-8 rounded-full border-2 border-gray-400 absolute  peer-checked:border-green-500"></div>
                                     // <div class="w-6 h-6 rounded-full bg-white absolute left-1 top-1 peer-checked:bg-green-500"></div>
                                     // </div>
                                     <button
-                                        class="ml-2"
+                                        // class="ml-2"
+																				class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
                                         on:click=move |_| {
                                             handle_pay_signal.set("NOWPayments".to_owned())
                                         }
@@ -1010,7 +1011,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                             />
                                         </svg>
                                     </button>
-                                </label>
+                                // </label>
                             </div>
                         </div>
                     </Show>
