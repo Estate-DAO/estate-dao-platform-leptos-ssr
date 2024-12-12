@@ -108,27 +108,25 @@ pub fn BookRoomHandler() -> impl IntoView {
                         .bright_black()
                         .on_cyan()
                     );
-                    // TODO [UAT] 39 - don't use unwrap. Try to decode into SuccessBookRoomResponse, FailureBookRoomResponse
-                    let book_room_response_struct: SuccessBookRoomResponse =
-                        serde_json::from_str(&book_room_result).unwrap();
-                    let resp: BookRoomResponse = match serde_json::from_str(&book_room_result) {
-                        Ok(book_room_response_struct) => {
-                            // serde_json::from_str(&book_room_result).unwrap()
-                            book_room_response_struct
-                        }
-                        Err(e) => {
-                            log::error!(
-                                "{}",
-                                format!(
-                                    "Serde failed string to json conversion- {:?}",
-                                    book_room_response_struct.clone()
-                                )
-                                .bright_red()
-                                .on_cyan()
-                            );
-                            return None;
-                        }
-                    };
+                    let resp =
+                        match serde_json::from_str::<SuccessBookRoomResponse>(&book_room_result) {
+                            Ok(book_room_response_struct) => {
+                                // serde_json::from_str(&book_room_result).unwrap()
+                                book_room_response_struct.clone()
+                            }
+                            Err(e) => {
+                                log::error!(
+                                    "{}",
+                                    format!(
+                                        "Serde failed string to json conversion- {:?}",
+                                        &book_room_result.clone()
+                                    )
+                                    .bright_red()
+                                    .on_cyan()
+                                );
+                                return None;
+                            }
+                        };
                     resp
 
                     // log::info!(
@@ -153,8 +151,10 @@ pub fn BookRoomHandler() -> impl IntoView {
                 }
             };
 
-            log::info!("BOOK_ROOM_API / RESP: {book_room_result:?}");
-            conf_res.booking_details.set(Some(book_room_result.clone()));
+            log::info!("BOOK_ROOM_API / RESP: {:?}", book_room_result.clone());
+            conf_res
+                .booking_details
+                .set(Some(BookRoomResponse::Success(book_room_result.clone())));
 
             // todo [UAT] - does book_room have a failure response?
             // if yes, model that and make a method 'is_response_success' on BookRoomResponse
@@ -248,12 +248,12 @@ pub fn BookRoomHandler() -> impl IntoView {
     view! {
         <div class="bg-gray-100 p-4 border border-emerald-800">
             <Suspense fallback=move || {
-                view! { " Making the booking ... " }
+                view! { "Making your booking ..." }
             }>
                 {move || {
                     if let Some(Some(book_room_response)) = book_room_api_call.get() {
                         match book_room_response {
-                            BookRoomResponse::Success(book_room_response) => {
+                            SuccessBookRoomResponse { .. } => {
                                 view! {
                                     <div class="text-green-500">
                                         // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
@@ -263,12 +263,12 @@ pub fn BookRoomHandler() -> impl IntoView {
                                 }
                                     .into_view()
                             }
-                            BookRoomResponse::Failure(book_room_response) => {
+                            any_other => {
                                 view! {
                                     <div class="text-red-500">
                                         // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
                                         "Booking Failed!" <br />
-                                        {format!("details: {book_room_response:#?}")}
+                                        {format!("details: {any_other:#?}")}
                                     </div>
                                 }
                                     .into_view()
@@ -276,7 +276,7 @@ pub fn BookRoomHandler() -> impl IntoView {
                         }
                     } else {
 
-                        view! { "Could not make booking!" }
+                        view! { "Booking not started yet!" }
                             .into_view()
                     }
                 }}
