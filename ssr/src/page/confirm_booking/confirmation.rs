@@ -1,6 +1,5 @@
 use crate::{
-    page::{BookRoomHandler, BookingHandler, Navbar, PaymentHandler},
-    state::{search_state::SearchCtx, view_state::HotelInfoCtx},
+    component::Divider, page::{block_room, confirm_booking::booking_handler::read_booking_details_from_local_storage, BookRoomHandler, BookingHandler, Navbar, PaymentHandler}, state::{search_state::{HotelInfoResults, SearchCtx}, view_state::{BlockRoomCtx, HotelInfoCtx}}
 };
 use chrono::NaiveDate;
 use leptos::*;
@@ -18,6 +17,10 @@ pub fn ConfirmationPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let search_ctx: SearchCtx = expect_context();
     let status_updates: PaymentBookingStatusUpdates = expect_context();
+		let block_room_ctx: BlockRoomCtx = expect_context();
+		let hotel_info_results: HotelInfoResults = expect_context();
+
+		let (email, app_reference) = read_booking_details_from_local_storage().unwrap();
 
     let render_progress_bar = move || {
         let steps = vec![
@@ -29,7 +32,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                 "Making your booking",
                 status_updates.p02_update_payment_details_to_backend,
             ),
-            ("Processing", status_updates.p03_call_book_room_api),
+            ("Payment processing... please wait", status_updates.p03_call_book_room_api),
         ];
 
         view! {
@@ -40,33 +43,24 @@ pub fn ConfirmationPage() -> impl IntoView {
                     .enumerate()
                     .map(|(index, (label, signal))| {
                         let is_active = move || signal.get();
-                        let circle_color = move || {
-                            if is_active() {
-                                "bg-black text-white"
-                            } else {
-                                "bg-gray-300 text-black"
-                            }
-                        };
-                        let line_color = if index > 0 && steps[index - 1].1.get() {
-                            "bg-black"
-                        } else {
-                            "bg-gray-300"
-                        };
+												let circle_classes = move || format!("w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold transition-colors {}", if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
+
+												let previous_signal_active = index > 0 && steps.get(index - 1).map(|(_, prev_signal)| prev_signal.get()).unwrap_or(false);
+												let line_color = move || if previous_signal_active {
+														"bg-black"
+												} else {
+														"bg-gray-300"
+												};
 
                         view! {
                             <div class="flex items-center">
-                                <div
-                                    class="w-8 h-8 rounded-full flex items-center justify-center font-bold transition-colors"
-                                    class=move || circle_color()
-                                >
-                                    {(index + 1).to_string()}
-                                </div>
+															<div class=circle_classes()> 
+																<span class="mt-[123px]">{(index + 1).to_string()}</span>
+																<span class="p-8 text-sm text-gray-600">{label}</span>
+															</div>
                                 {if index < steps.len() - 1 {
                                     view! {
-                                        <div
-                                            class="h-1 w-16 transition-colors"
-                                            class=move || line_color
-                                        />
+                                        <div class=format!("h-1 w-48 transition-colors {}", line_color()) />
                                     }
                                 } else {
                                     view! { <div /> }
@@ -75,14 +69,6 @@ pub fn ConfirmationPage() -> impl IntoView {
                         }
                     })
                     .collect::<Vec<_>>()}<br />
-                <div class="text-center mt-2">
-                    {steps
-                        .into_iter()
-                        .map(|(label, _)| {
-                            view! { <span class="text-sm text-gray-600 mx-4">{label}</span> }
-                        })
-                        .collect::<Vec<_>>()}
-                </div>
             </div>
         }
     };
@@ -92,31 +78,93 @@ pub fn ConfirmationPage() -> impl IntoView {
             <Navbar />
             <div class="flex flex-col items-center justify-center p-8">
                 {render_progress_bar()}
-                <h1 class="text-3xl font-bold mb-6 text-center">
+								<br />
+								<br />
+								<br />
+								<br />
+								<br />
+								<br />
+								<div class="border shadow-md rounded-lg">
+                <b class="text-3xl font-bold mb-6 text-center">
                     "Your booking has been confirmed!"
-                </h1>
-                <div class="text-center mb-6">
-                    <p class="font-semibold text-lg">
-                        {move || hotel_info_ctx.selected_hotel_location.get()}
-                    </p>
-                    <p class="text-gray-600">
-                        {move || {
-                            let date_range = search_ctx.date_range.get();
-                            format!(
-                                "{} - {}",
-                                format_date_fn(date_range.start),
-                                format_date_fn(date_range.end),
-                            )
-                        }}
-                    </p>
-                </div>
-                <div class="max-w-2xl text-center text-gray-600">
-                    <p>
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-                        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-                        exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
-                    </p>
-                </div> <BookingHandler /> <PaymentHandler /> <BookRoomHandler />
+                </b>
+								<Divider />
+								<div class="flex justify-between items-center p-4">
+									<div class="text-left">
+										<p class="text-sm font-medium text-gray-800 font-bold">{move || hotel_info_ctx.selected_hotel_name.get()}</p>
+										<p class="text-sm font-sm text-gray-800">{hotel_info_ctx.selected_hotel_location.get_untracked()}</p>
+										<p class="text-sm font-sm text-gray-800">{move || {
+											let destination = search_ctx.destination.get().unwrap_or_default();
+											format!("{} - {}, {}",
+												destination.country_name,
+												destination.city_id,
+												destination.city
+											)}
+										}
+										</p>
+									</div>
+									
+									<div class="text-right">
+										<p class="text-sm font-medium text-gray-800 font-bold">Reference ID: {app_reference.clone()}</p>
+										<p class="text-sm font-medium text-gray-800 font-bold">Booking ID: {app_reference.clone()}</p>
+									</div>
+								</div>
+								<Divider />
+								<b class="text-2xl font-bold mb-6 text-left">Bookind Details</b>
+								<div class="flex justify-between items-center p-4">
+									<div class="text-left">
+										<div class="flex-col">
+											{move || {
+												let date_range = search_ctx.date_range.get();
+												let guest_count = search_ctx.guests.get();
+												let no_of_adults = guest_count.adults.get();
+												let no_of_child = guest_count.children.get();
+												let adult = block_room_ctx.adults.get();
+												let children = block_room_ctx.children.get();
+												let primary_adult = adult.first().unwrap();
+												let primary_adult_clone = primary_adult.clone();
+												let primary_adult_clone2 = primary_adult.clone();
+												let primary_adult_clone3 = primary_adult.clone();
+
+												view! {
+													<div class="flex text-sm font-sm">
+														<p class="text-gray-800">Check In date:</p>
+														<b>{format_date_fn(date_range.start)}</b>
+													</div>
+													<div class="flex text-sm font-sm">
+														<p class="text-gray-800">Check Out date:</p>
+														<b>{format_date_fn(date_range.end)}</b>
+													</div>
+													<b>Guest Information</b>
+													<b>{format!("{} Adults, {} Children", no_of_adults, no_of_child)}</b>
+													<p>{format!("{} {}", primary_adult.first_name, primary_adult_clone.last_name.unwrap_or_default())}</p>
+													<p>{format!("{}", primary_adult_clone2.email.unwrap_or_default())}</p>
+													<p>{format!("{}", primary_adult_clone3.phone.unwrap_or_default())}</p>
+												}
+											}}
+										</div>
+									</div>
+									
+									<div class="text-right text-sm font-bold">
+										<p class="text-sm font-medium text-gray-800 font-bold">Reference ID: {"ABCD".to_string()}</p>
+										<p class="text-sm font-medium text-gray-800 font-bold">Booking ID: {app_reference}</p>
+										{move || {
+											let sorted_rooms = hotel_info_results.sorted_rooms.get();
+											view! {
+												<>
+													{sorted_rooms.iter().map(|room| view! {
+															<p class="text-sm text-gray-800">{room.room_type.to_string()}</p>
+													}).collect::<Vec<_>>()}
+												</>
+											}
+										}}
+									</div>
+								</div>
+
+								<BookingHandler />
+								<PaymentHandler /> 
+								<BookRoomHandler />
+							</div>
             </div>
         </section>
     }
