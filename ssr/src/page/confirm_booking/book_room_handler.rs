@@ -111,16 +111,36 @@ pub fn BookRoomHandler() -> impl IntoView {
                     // TODO [UAT] 39 - don't use unwrap. Try to decode into SuccessBookRoomResponse, FailureBookRoomResponse
                     let book_room_response_struct: SuccessBookRoomResponse =
                         serde_json::from_str(&book_room_result).unwrap();
-                    log::info!(
-                        "{}",
-                        format!(
-                            "book_room_result_server SERDE_JSON - {:?}",
-                            book_room_response_struct.clone()
-                        )
-                        .bright_black()
-                        .on_cyan()
-                    );
-                    BookRoomResponse::Success(book_room_response_struct)
+                    let resp: BookRoomResponse = match serde_json::from_str(&book_room_result) {
+                        Ok(book_room_response_struct) => {
+                            // serde_json::from_str(&book_room_result).unwrap()
+                            book_room_response_struct
+                        }
+                        Err(e) => {
+                            log::error!(
+                                "{}",
+                                format!(
+                                    "Serde failed string to json conversion- {:?}",
+                                    book_room_response_struct.clone()
+                                )
+                                .bright_red()
+                                .on_cyan()
+                            );
+                            return None;
+                        }
+                    };
+                    resp
+
+                    // log::info!(
+                    //     "{}",
+                    //     format!(
+                    //         "book_room_result_server SERDE_JSON - {:?}",
+                    //         book_room_response_struct.clone()
+                    //     )
+                    //     .bright_black()
+                    //     .on_cyan()
+                    // );
+                    // BookRoomResponse::Success(book_room_response_struct)
                 }
                 Err(e) => {
                     log::info!(
@@ -227,46 +247,67 @@ pub fn BookRoomHandler() -> impl IntoView {
 
     view! {
         <div class="bg-gray-100 p-4 border border-emerald-800">
-        <Suspense fallback={move || view!{ " Making the booking ... "}}>
-        {move ||
-            if let Some(book_room_response) = book_room_api_call.get(){
-                view!{
-                    <p>
-                    // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
-                    "Booking Made!"
-                    {format!("details: {book_room_response:#?}")}
-                    </p>
-                }.into_view()
-            }else{
-                view!{
-                    "Could not make booking..."
-                }.into_view()
-            }
-        }
-        </Suspense>
+            <Suspense fallback=move || {
+                view! { " Making the booking ... " }
+            }>
+                {move || {
+                    if let Some(Some(book_room_response)) = book_room_api_call.get() {
+                        match book_room_response {
+                            BookRoomResponse::Success(book_room_response) => {
+                                view! {
+                                    <div class="text-green-500">
+                                        // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
+                                        "Booking Made!" <br />
+                                        {format!("details: {book_room_response:#?}")}
+                                    </div>
+                                }
+                                    .into_view()
+                            }
+                            BookRoomResponse::Failure(book_room_response) => {
+                                view! {
+                                    <div class="text-red-500">
+                                        // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
+                                        "Booking Failed!" <br />
+                                        {format!("details: {book_room_response:#?}")}
+                                    </div>
+                                }
+                                    .into_view()
+                            }
+                        }
+                    } else {
+
+                        view! { "Could not make booking!" }
+                            .into_view()
+                    }
+                }}
+            </Suspense>
 
         </div>
         <div class="bg-gray-100 p-4 border border-emerald-800">
-        <Suspense fallback={move || view!{ " Saving your precious data ... "}}>
-        {move ||
-            if let Some(book_room_response) = book_room_canister_call.get(){
-                view!{
-                    <p>
-                    "Booking saved to database!"
-                    {format!("details: {book_room_response:?}")}
-                    </p>
-                }.into_view()
-            }else{
-                view!{
-                    // todo [UAT] = None can be obtained due to any of the follwoing going wrong
-                    // 1. not present in context
-                    // 2. signal not set yet
-                    // 3. could not save to backend
-                    "Could not save booking details to database"
-                }.into_view()
-            }
-        }
-        </Suspense>
+            <Suspense fallback=move || {
+                view! { " Saving your precious data ... " }
+            }>
+                {move || {
+                    if let Some(book_room_response) = book_room_canister_call.get() {
+                        view! {
+                            <p>
+                                "Booking saved to database!"
+                                {format!("details: {book_room_response:?}")}
+                            </p>
+                        }
+                            .into_view()
+                    } else {
+                        view! {
+                            // todo [UAT] = None can be obtained due to any of the follwoing going wrong
+                            // 1. not present in context
+                            // 2. signal not set yet
+                            // 3. could not save to backend
+                            "Could not save booking details to database"
+                        }
+                            .into_view()
+                    }
+                }}
+            </Suspense>
 
         </div>
     }

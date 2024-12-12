@@ -1,4 +1,4 @@
-use crate::component::FullScreenSpinnerGray;
+use crate::component::{FullScreenSpinnerGray, SpinnerGray};
 use crate::utils::pluralize;
 use crate::{
     api::block_room,
@@ -354,6 +354,8 @@ pub fn PricingBookNow() -> impl IntoView {
     let room_counters = hotel_info_results.room_counters;
     // let room_counters = create_rw_signal(HashMap::<String, RoomCounterKeyValue>::new());
 
+    let sorted_rooms_called = create_rw_signal(false);
+
     // Create a memo for the processed room data
     let sorted_rooms = create_memo(move |_| {
         // (String, u32, f64) = (RoomUniqueId, Room Count , Room Price)
@@ -388,6 +390,7 @@ pub fn PricingBookNow() -> impl IntoView {
 
         sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type)); // Sort by room_type
         sorted.truncate(5);
+        sorted_rooms_called.set(true);
         sorted
     });
 
@@ -453,45 +456,54 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
-                <For
-                    each=move || sorted_rooms.get()
-                    key=|SortedRoom{room_type, ..}| room_type.clone()
-                    let:room
-                >
-                    {
-                        let SortedRoom{room_type, room_unique_id, room_count_for_given_type, room_price} = room;
-                        let base_counter = room_counters.get()
-                            .get(&room_type)
-                            .cloned()
-                            .unwrap_or_else(|| RoomCounterKeyValue::new());
+                <Show when=move || sorted_rooms_called.get() fallback=SpinnerGray>
+                    <For
+                        each=move || sorted_rooms.get()
+                        key=|SortedRoom { room_type, .. }| room_type.clone()
+                        let:room
+                    >
+                        {
+                            let SortedRoom {
+                                room_type,
+                                room_unique_id,
+                                room_count_for_given_type,
+                                room_price,
+                            } = room;
+                            let base_counter = room_counters
+                                .get()
+                                .get(&room_type)
+                                .cloned()
+                                .unwrap_or_else(|| RoomCounterKeyValue::new());
 
-                        view! {
-                            <div class="flex justify-between items-center border-b border-gray-300 py-2">
-                                <span class="font-medium">
-                                    {format!("{} - ₹{:.2}/night", room_type,  room_price)}
-                                </span>
-                                <NumberCounterWrapper
-                                    label=""
-                                    counter=base_counter.key
-                                    class="mt-4"
-                                    value=room_unique_id
-                                    set_value=base_counter.value
-                                    max_rooms=num_rooms.get_untracked()
-                                    total_selected_rooms=total_selected_rooms
-                                />
-                            </div>
+                            view! {
+                                <div class="flex justify-between items-center border-b border-gray-300 py-2">
+                                    <span class="font-medium">
+                                        // {format!("{} - ₹{:.2}/night", room_type,  room_price)}
+                                        {format!("{} - ${:.2}/night", room_type, room_price)}
+                                    </span>
+                                    <NumberCounterWrapper
+                                        label=""
+                                        counter=base_counter.key
+                                        class="mt-4"
+                                        value=room_unique_id
+                                        set_value=base_counter.value
+                                        max_rooms=num_rooms.get_untracked()
+                                        total_selected_rooms=total_selected_rooms
+                                    />
+                                </div>
+                            }
                         }
-                    }
-                </For>
+                    </For>
 
-                <div>
-                    <PricingBreakdown
-                        price_per_night=price
-                        number_of_nights=num_nights
-                        room_counters=room_counters_clone
-                        sorted_rooms=sorted_rooms.get()
-                    />
-                </div>
+                    <div>
+                        <PricingBreakdown
+                            price_per_night=price
+                            number_of_nights=num_nights
+                            room_counters=room_counters_clone
+                            sorted_rooms=sorted_rooms.get()
+                        />
+                    </div>
+                </Show>
             </div>
         </div>
     }
@@ -626,7 +638,7 @@ pub fn NumberCounterWrapper(
             <div class="flex items-center space-x-1">
                 <button
                     class="ps-2 py-1 text-2xl"
-                    disabled={ move || !can_decrement()}
+                    disabled=move || !can_decrement()
                     on:click=move |_| {
                         counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
                         total_selected_rooms.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
@@ -651,7 +663,8 @@ pub fn NumberCounterWrapper(
                     on:click=move |_| {
                         if can_increment() {
                             let new_count = counter.get() + 1;
-                            if new_count + (total_selected_rooms.get() - counter.get()) <= max_rooms {
+                            if new_count + (total_selected_rooms.get() - counter.get()) <= max_rooms
+                            {
                                 counter.set(new_count);
                                 total_selected_rooms.update(|n| *n += 1);
                             } else {

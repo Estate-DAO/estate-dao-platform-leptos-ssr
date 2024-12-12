@@ -31,10 +31,7 @@ pub fn NumberCounter(
                         "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
                     )
                 />
-                <button
-                    class="py-1 text-2xl"
-                    on:click=move |_| on_increment()
-                >
+                <button class="py-1 text-2xl" on:click=move |_| on_increment()>
                     "+"
                 </button>
             </div>

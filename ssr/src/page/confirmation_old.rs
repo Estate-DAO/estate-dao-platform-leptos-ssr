@@ -497,7 +497,7 @@ pub fn ConfirmationPageOld() -> impl IntoView {
             <div class="flex flex-col items-center justify-center p-8">
                 <img
                     src=insert_real_image_or_default
-                    alt={move || hotel_info_ctx.selected_hotel_name.get()}
+                    alt=move || hotel_info_ctx.selected_hotel_name.get()
                     class="w-96 h-64 rounded-xl object-cover mb-8"
                 />
 
@@ -506,13 +506,16 @@ pub fn ConfirmationPageOld() -> impl IntoView {
                 </h1>
 
                 <div class="text-center mb-6">
-                    <p class="font-semibold">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
+                    <p class="font-semibold">
+                        {move || hotel_info_ctx.selected_hotel_location.get()}
+                    </p>
                     <p class="text-gray-600">
                         {move || {
                             let date_range = search_ctx.date_range.get();
-                            format!("{} - {}",
+                            format!(
+                                "{} - {}",
                                 format_date(date_range.start),
-                                format_date(date_range.end)
+                                format_date(date_range.end),
                             )
                         }}
                     </p>
@@ -524,11 +527,11 @@ pub fn ConfirmationPageOld() -> impl IntoView {
                     exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
                 </p>
 
-                // {move || match booking_status.get() {
-                //     Some(true) => view! { <p>"Booking successful!"</p> }, // Display success message
-                //     Some(false) => view! { <p>"Booking failed or cancelled."</p> }, // Display failure/cancel message
-                //     None => view! { <p>"Checking booking status..."</p> }, // Display pending message
-                // }}
+            // {move || match booking_status.get() {
+            // Some(true) => view! { <p>"Booking successful!"</p> }, // Display success message
+            // Some(false) => view! { <p>"Booking failed or cancelled."</p> }, // Display failure/cancel message
+            // None => view! { <p>"Checking booking status..."</p> }, // Display pending message
+            // }}
             </div>
         </section>
     }

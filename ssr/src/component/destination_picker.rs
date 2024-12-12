@@ -148,28 +148,30 @@ pub fn DestinationPicker() -> impl IntoView {
 fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) -> impl IntoView {
     view! {
         <div class="h-80 custom-scrollbar">
-        {move || {
-            dest_vec
-                .clone()
-                .into_iter()
-                .map(|dest| {
-                    let country = dest.country_name.clone();
-                    let city = dest.city.clone();
-                    view! {
-                        <div
-                            class="cursor-pointer hover:bg-gray-50 p-2 rounded"
-                            on:click=move |_| {
-                                SearchCtx::set_destination(dest.clone());
-                                set_is_open.set(false);
-                            }
-                        >
-                            <span class="text-gray-800">{format!("{}, {}", &city, &country)}</span>
-                        </div>
-                        <Divider />
-                    }
-                })
-                .collect_view()
-        }}
+            {move || {
+                dest_vec
+                    .clone()
+                    .into_iter()
+                    .map(|dest| {
+                        let country = dest.country_name.clone();
+                        let city = dest.city.clone();
+                        view! {
+                            <div
+                                class="cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                on:click=move |_| {
+                                    SearchCtx::set_destination(dest.clone());
+                                    set_is_open.set(false);
+                                }
+                            >
+                                <span class="text-gray-800">
+                                    {format!("{}, {}", &city, &country)}
+                                </span>
+                            </div>
+                            <Divider />
+                        }
+                    })
+                    .collect_view()
+            }}
         </div>
     }
 }
