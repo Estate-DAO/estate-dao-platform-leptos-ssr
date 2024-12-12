@@ -89,7 +89,7 @@ type UserDetails = record {
   children : vec ChildDetail;
   adults : vec AdultDetail;
 };
-service : () -> {
+service : {
   add_booking : (text, Booking) -> (Result);
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;

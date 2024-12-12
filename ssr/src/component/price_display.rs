@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PriceDisplay(
     #[prop(into)] price: Signal<f64>,
-    #[prop(default = "₹".into(), into)] currency: String,
+    #[prop(default = "$".into(), into)] currency: String,
     #[prop(default = "".into(), into)] base_class: String,
     #[prop(default = "font-semibold".into(), into)] price_class: String,
     #[prop(default = "font-light text-sm".into(), into)] subtext_class: String,
@@ -23,7 +23,7 @@ pub fn PriceDisplay(
 
     view! {
         <div class=merged_base_class>
-            <span class=price_class> {move || formatted_price()}</span>
+            <span class=price_class>{move || formatted_price()}</span>
             <Show
                 when=move || !appended_text.clone().is_none()
                 fallback=move || view! { <span class=subtext_class.clone()>" / night"</span> }
