@@ -26,11 +26,10 @@ jobs:
 
       - name: Export secret with single quotes
         run: |
-          PRIVATE_KEY=$(printf '%s\n' "${{ secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY }}" | sed "s/'/'\\\\''/g")
-          PRIVATE_KEY="'$PRIVATE_KEY'"
           
           flyctl secrets set  NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}  --app "estatefe" --stage
-          flyctl secrets set  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY=$PRIVATE_KEY  --app "estatefe" --stage
+          flyctl secrets set  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY"  --app "estatefe" --stage
+          
         env:
           PROVAB_HEADERS: ${{ secrets.PROVAB_HEADERS }}
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
