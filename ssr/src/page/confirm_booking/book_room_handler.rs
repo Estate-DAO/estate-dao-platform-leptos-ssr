@@ -34,10 +34,6 @@ pub fn BookRoomHandler() -> impl IntoView {
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
-    // payment_booking_step_signals
-    //     .p03_call_book_room_api
-    //     .set(true);
-
     let book_room_api_call = create_resource(
         move || payment_booking_step_signals.p03_call_book_room_api.get(),
         move |p03_call_book_room_api| async move {
