@@ -185,100 +185,11 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let confirmation_action = create_action(move |()| {
         let nav = nav.clone(); // Use the cloned version here
-        let adults_data = adults.get();
-        let children_data = children.get();
-        // let hotel_code = hotel_info_ctx.hotel_code.get();
 
         async move {
-            let room_detail = RoomDetail {
-                passenger_details: create_passenger_details(&adults_data, &children_data),
-            };
-            ConfirmationResults::set_room_details(Some(room_detail));
-
-            // Get room_unique_id from HotelRoomResponse
-            // let block_room_id = hotel_info_results
-            //     .room_result
-            //     .get()
-            //     .and_then(|room_response| room_response.room_list.clone())
-            //     .and_then(|room_list| {
-            //         room_list
-            //             .get_hotel_room_result
-            //             .hotel_rooms_details
-            //             .first()
-            //             .cloned()
-            //     })
-            //     .map(|hotel_room_detail| hotel_room_detail.room_unique_id.clone())
-            //     .unwrap_or_default();
-
-            // let token = search_list_results
-            //     .get_hotel_code_results_token_map()
-            //     .get(&hotel_code)
-            //     .cloned()
-            //     .unwrap_or_default();
-
-            // let book_request = BookRoomRequest {
-            //     result_token: token,
-            //     block_room_id,
-            //     app_reference: format!("BOOKING_{}_{}", chrono::Utc::now().timestamp(), hotel_code),
-            //     room_details: vec![room_detail],
-            // };
-
-            // match book_room(book_request).await {
-            //     Ok(response) => {
-            //         match response.status {
-            //             BookingStatus::Confirmed => {
-            //                 // Set the booking details in context
-            //                 ConfirmationResults::set_booking_details(Some(response));
             nav(AppRoutes::Confirmation.to_string(), Default::default());
-            //                 }
-            //                 BookingStatus::BookFailed => {
-            //                     log!("Booking failed: {:?}", response.message);
-            //                 }
-            //             }
-            //         }
-            //         Err(e) => {
-            //             log!("Error booking room: {:?}", e);
-            //         }
-            //     }
         }
     });
-
-    // ================  PAYMENT STATUS signals  ================
-
-    let get_payment_status_action: Action<(), ()> = create_action(move |_| async move {
-        let payment_id = 5991043299_u64;
-        let resp = nowpayments_get_payment_status(GetPaymentStatusRequest { payment_id })
-            .await
-            .ok();
-        BlockRoomResults::set_payment_results(resp);
-    });
-
-    // create_effect(move |_| {
-    //     // Check the URL for a payment status parameter after redirect
-    //     // use_query_params()
-    //     let params = window().location().search().unwrap_or_default();
-    //     let url_params = web_sys::UrlSearchParams::new_with_str(&params)
-    //         .unwrap_or(web_sys::UrlSearchParams::new().unwrap());
-
-    //     if let Some(payment_status) = url_params.get("payment") {
-    //         match payment_status.as_str() {
-    //             "success" => {
-    //                 // Payment successful, trigger booking
-    //                 confirmation_action.dispatch(());
-    //             }
-    //             "cancel" => {
-    //                 // Payment cancelled, handle accordingly (e.g., show a message)
-    //                 log!("Payment cancelled.");
-    //             }
-    //             "partial" => {
-    //                 log!("Payment partially paid.");
-    //             }
-    //             _ => {
-    //                 log!("Unknown payment status: {}", payment_status);
-    //             }
-    //         }
-    //     }
-    // });
 
     // ================  Confirmation Modal signals  ================
 
@@ -315,10 +226,14 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let block_room_id = res.and_then(|resp| resp.get_block_room_id());
                     // log!("BLOCK_ROOM_API: {result:?}");
                     // log!("BLOCK_ROOM_ID: {block_room_id:?}");
+                    let res2 = result.clone();
 
                     BlockRoomResults::set_results(result);
                     BlockRoomResults::set_id(block_room_id);
-                    block_room_called.set(true);
+                    if let Some(_) = res2.clone() {
+                        // if the block_room call fails, we don't want to enable the payment button
+                        block_room_called.set(true);
+                    }
 
                     let res: BlockRoomResults = expect_context();
                     log!("\n LOOK HERE >{:?}", res.block_room_results.get());
@@ -409,13 +324,6 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let hotel_token =
                         search_list_results_cloned.get_result_token(hotel_code_cloned.clone());
 
-                    // let block_room_id = block_room_results_context_cloned
-                    //     .block_room_results
-                    //     .get_untracked()
-                    //     .unwrap()
-                    //     .get_block_room_id()
-                    //     .unwrap_or_default();
-
                     let block_room_id = block_room_results_context_cloned
                         .block_room_id
                         .get()
@@ -494,7 +402,6 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                     log!("block_room page - booking - {:#?}", booking);
 
-                    // async move {
                     spawn_local(async move {
                         let create_invoice_response =
                             nowpayments_create_invoice(invoice_request).await;
@@ -530,33 +437,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                 log!("Error creating invoice: {:?}", e);
                             }
                         }
-
-                        // match invoice_url {
-                        //     Ok(url) => {
-                        //         let _ = window().location().assign(&url);
-                        //         // let payment_status_response = nowpayments.get_payment_status("payment_id?").await;
-
-                        //         // match payment_status_response {
-                        //         //     Ok(status) => {
-                        //         //         if status == PaymentStatus::Finished {
-                        //         //             handle_booking.dispatch(());
-                        //         //         } else {
-                        //         //             log!("Payment not successful: {:?}", status);
-                        //         //             // Optionally, redirect back to the booking page or display an error message
-                        //         //         }
-                        //         //     }
-                        //         //     Err(e) => {
-                        //         //         log!("Error getting payment status: {:?}", e);
-                        //         //         // Handle error, e.g., display an error message
-                        //         //     }
-                        //         // }
-                        //     }
-                        //     Err(e) => {
-                        //         log!("Error creating invoice: {:?}", e);
-                        //     }
-                        // }
                     });
-                    // }
                 }
                 _ => { /* Handle other payment methods */ }
             }
@@ -990,7 +871,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                     // </div>
                                     <button
                                         // class="ml-2"
-                                                                                class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
+                                        class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
                                         on:click=move |_| {
                                             handle_pay_signal.set("NOWPayments".to_owned())
                                         }
