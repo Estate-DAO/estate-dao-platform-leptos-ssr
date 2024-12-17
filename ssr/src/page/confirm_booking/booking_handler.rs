@@ -6,16 +6,18 @@ use crate::{
     },
     canister::backend,
     component::SelectedDateRange,
-    page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates},
+    page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates, SortedRoom},
     state::{
         local_storage::use_booking_id_store,
-        search_state::{BlockRoomResults, ConfirmationResults, SearchCtx, SearchListResults},
+        search_state::{BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults},
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
     utils::app_reference,
 };
 use colored::Colorize;
 use leptos::*;
+use std::collections::HashMap;
+
 
 pub fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
     let booking_id_signal_read = use_booking_id_store().0;
@@ -45,6 +47,7 @@ fn set_to_context(booking: backend::Booking) {
     let block_room = expect_context::<BlockRoomResults>();
     let confirmation_ctx = expect_context::<ConfirmationResults>();
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
+    let hotel_info_results = expect_context::<HotelInfoResults>();
 
     let email_cloned = email.clone();
     let hotel_det_cloned = booking
@@ -164,6 +167,23 @@ fn set_to_context(booking: backend::Booking) {
             .hotel_details
             .block_room_id,
     ));
+    let room_counts: HashMap<String, u32> = booking.user_selected_hotel_room_details.room_details
+        .iter()
+        .fold(HashMap::new(), |mut map, room| {
+            *map.entry(room.room_type_name.clone()).or_insert(0) += 1;
+            map
+        });
+
+    let sorted_rooms: Vec<SortedRoom> = booking.user_selected_hotel_room_details.room_details
+        .into_iter()
+        .map(|room| SortedRoom {
+            room_type: room.room_type_name.clone(),
+            room_unique_id: room.room_unique_id,
+            room_price: room.room_price as f64,
+            room_count_for_given_type: room_counts.get(&room.room_type_name).cloned().unwrap_or(1),
+        })
+        .collect();
+    hotel_info_results.set_sorted_rooms(sorted_rooms);
 }
 
 #[component]
@@ -281,73 +301,73 @@ pub fn BookingHandler() -> impl IntoView {
     //     }
     // });
 
-    view! {
-        <div class="booking-status-container">
-            <Suspense fallback=move || {
-                view! { "Cannot read booking_id from local_storage. Did you clear your cookies?" }
-            }>
-                {move || {
-                    if let Some(booking) = backend_booking_res.get() {
-                        let booking_id_signal_read_data = booking_id_signal_read.get();
+    // view! {
+    //     <div class="booking-status-container">
+    //         <Suspense fallback=move || {
+    //             view! { "Cannot read booking_id from local_storage. Did you clear your cookies?" }
+    //         }>
+    //             {move || {
+    //                 if let Some(booking) = backend_booking_res.get() {
+    //                     let booking_id_signal_read_data = booking_id_signal_read.get();
 
-                        view! {
-                            {format!("booking - {booking:#?}")}
-                            <p>
-                                {format!(
-                                    "booking_id_signal_read_data - {booking_id_signal_read_data:?}",
-                                )}
-                            </p>
-                        }
-                            .into_view()
-                    } else {
-                        let any_else = backend_booking_res.get();
+    //                     view! {
+    //                         {format!("booking - {booking:#?}")}
+    //                         <p>
+    //                             {format!(
+    //                                 "booking_id_signal_read_data - {booking_id_signal_read_data:?}",
+    //                             )}
+    //                         </p>
+    //                     }
+    //                         .into_view()
+    //                 } else {
+    //                     let any_else = backend_booking_res.get();
 
-                        view! { {{ format!("else - {any_else:#?}") }} }
-                            .into_view()
-                    }
-                }}
-            </Suspense>
-        // {move || {
-        // let booking_details = confirmation_ctx.booking_details.get();
-        // let booking_error = confirmation_ctx.booking_error.get();
+    //                     view! { {{ format!("else - {any_else:#?}") }} }
+    //                         .into_view()
+    //                 }
+    //             }}
+    //         </Suspense>
+    //     // {move || {
+    //     // let booking_details = confirmation_ctx.booking_details.get();
+    //     // let booking_error = confirmation_ctx.booking_error.get();
 
-        // match (booking_details, booking_error) {
-        // (Some(details), _) => {
-        // view! {
-        // <div class="booking-success">
-        // <h3>"Booking Confirmed!"</h3>
-        // <div class="booking-details">
-        // <p>{"Booking Reference: "} {details.commit_booking.booking_details.booking_ref_no}</p>
-        // <p>{"Confirmation Number: "} {details.commit_booking.booking_details.confirmation_no}</p>
-        // <p>{"Status: "} {details.commit_booking.booking_details.booking_status}</p>
-        // </div>
-        // </div>
-        // }
-        // },
-        // (None, Some(error)) => {
-        // view! {
-        // <div class="booking-error">
-        // <p>{"Error: "} {error}</p>
-        // </div>
-        // }
-        // },
-        // (None, None) => {
-        // if confirmation_ctx.payment_confirmed.get() {
-        // view! {
-        // <div class="booking-pending">
-        // "Processing your booking..."
-        // </div>
-        // }
-        // } else {
-        // view! {
-        // <div class="booking-waiting">
-        // "Waiting for payment confirmation..."
-        // </div>
-        // }
-        // }
-        // }
-        // }
-        // }}
-        </div>
-    }
+    //     // match (booking_details, booking_error) {
+    //     // (Some(details), _) => {
+    //     // view! {
+    //     // <div class="booking-success">
+    //     // <h3>"Booking Confirmed!"</h3>
+    //     // <div class="booking-details">
+    //     // <p>{"Booking Reference: "} {details.commit_booking.booking_details.booking_ref_no}</p>
+    //     // <p>{"Confirmation Number: "} {details.commit_booking.booking_details.confirmation_no}</p>
+    //     // <p>{"Status: "} {details.commit_booking.booking_details.booking_status}</p>
+    //     // </div>
+    //     // </div>
+    //     // }
+    //     // },
+    //     // (None, Some(error)) => {
+    //     // view! {
+    //     // <div class="booking-error">
+    //     // <p>{"Error: "} {error}</p>
+    //     // </div>
+    //     // }
+    //     // },
+    //     // (None, None) => {
+    //     // if confirmation_ctx.payment_confirmed.get() {
+    //     // view! {
+    //     // <div class="booking-pending">
+    //     // "Processing your booking..."
+    //     // </div>
+    //     // }
+    //     // } else {
+    //     // view! {
+    //     // <div class="booking-waiting">
+    //     // "Waiting for payment confirmation..."
+    //     // </div>
+    //     // }
+    //     // }
+    //     // }
+    //     // }
+    //     // }}
+    //     </div>
+    // }
 }
