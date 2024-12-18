@@ -9,7 +9,9 @@ use crate::{
     page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates, SortedRoom},
     state::{
         local_storage::use_booking_id_store,
-        search_state::{BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults},
+        search_state::{
+            BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
+        },
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
     utils::app_reference,
@@ -17,7 +19,6 @@ use crate::{
 use colored::Colorize;
 use leptos::*;
 use std::collections::HashMap;
-
 
 pub fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
     let booking_id_signal_read = use_booking_id_store().0;
@@ -167,14 +168,18 @@ fn set_to_context(booking: backend::Booking) {
             .hotel_details
             .block_room_id,
     ));
-    let room_counts: HashMap<String, u32> = booking.user_selected_hotel_room_details.room_details
+    let room_counts: HashMap<String, u32> = booking
+        .user_selected_hotel_room_details
+        .room_details
         .iter()
         .fold(HashMap::new(), |mut map, room| {
             *map.entry(room.room_type_name.clone()).or_insert(0) += 1;
             map
         });
 
-    let sorted_rooms: Vec<SortedRoom> = booking.user_selected_hotel_room_details.room_details
+    let sorted_rooms: Vec<SortedRoom> = booking
+        .user_selected_hotel_room_details
+        .room_details
         .into_iter()
         .map(|room| SortedRoom {
             room_type: room.room_type_name.clone(),

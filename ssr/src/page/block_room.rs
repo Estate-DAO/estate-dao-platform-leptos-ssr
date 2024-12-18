@@ -350,7 +350,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                             hotel_token,
                         },
                     };
-                    log!("BOOKING 1st PARAM >>>>>>>>>>>>>>>>\n{:?}", user_selected_hotel_room_details);
+                    log!(
+                        "BOOKING 1st PARAM >>>>>>>>>>>>>>>>\n{:?}",
+                        user_selected_hotel_room_details
+                    );
 
                     let adults: Vec<crate::canister::backend::AdultDetail> = block_room_ctx
                         .adults
@@ -918,7 +921,10 @@ pub fn create_passenger_details(
         passengers.push(PassengerDetail {
             title: "Mr".to_string(), // todo Add logic for title selection
             first_name: adult.first_name.clone(),
-            last_name: adult.last_name.clone().unwrap_or_else(|| "Not found".to_string()),
+            last_name: adult
+                .last_name
+                .clone()
+                .unwrap_or_else(|| "Not found".to_string()),
             email: if i == 0 {
                 adult.email.clone().unwrap_or_default()
             } else {
@@ -936,7 +942,10 @@ pub fn create_passenger_details(
         passengers.push(PassengerDetail {
             title: "".to_string(),
             first_name: child.first_name.clone(),
-            last_name: child.last_name.clone().unwrap_or_else(|| "Not found".to_string()),
+            last_name: child
+                .last_name
+                .clone()
+                .unwrap_or_else(|| "Not found".to_string()),
             email: String::new(),
             pax_type: PaxType::Child,
             lead_passenger: false,
