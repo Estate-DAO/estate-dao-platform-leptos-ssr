@@ -417,64 +417,64 @@ pub fn PaymentHandler() -> impl IntoView {
         },
     );
 
-    view! {
-        <div class="bg-gray-100 p-4 border border-emerald-800">
-            <Suspense fallback=move || {
-                view! { " Getting Payment Status " }
-            }>
+    // view! {
+    //     <div class="bg-gray-100 p-4 border border-emerald-800">
+    //         <Suspense fallback=move || {
+    //             view! { " Getting Payment Status " }
+    //         }>
 
-                {move || {
-                    let payment_status = block_room_results.payment_status_response.get();
-                    match payment_status {
-                        Some(status) => {
-                            view! {
-                                <div>
-                                    <div class="payment-status">
-                                        {"Payment Status: "} {status.get_payment_status().clone()}
-                                    </div>
-                                    {if status.get_payment_status() == "finished" {
-                                        view! {
-                                            <div class="text-green-700 p-2">
-                                                "Payment completed successfully!"
-                                            </div>
-                                        }
-                                    } else {
-                                        view! {
-                                            <div class="border border-red-700 p-2">
-                                                "No payment information found. Please contact support."
-                                            </div>
-                                        }
-                                    }}
-                                </div>
-                            }
-                        }
-                        None => {
-                            view! {
-                                <div class="border border-blue-800 p-2">
-                                    "Waiting for payment confirmation... Please do not close this window."
-                                </div>
-                            }
-                        }
-                    }
-                }}
-            </Suspense>
+    //             {move || {
+    //                 let payment_status = block_room_results.payment_status_response.get();
+    //                 match payment_status {
+    //                     Some(status) => {
+    //                         view! {
+    //                             <div>
+    //                                 <div class="payment-status">
+    //                                     {"Payment Status: "} {status.get_payment_status().clone()}
+    //                                 </div>
+    //                                 {if status.get_payment_status() == "finished" {
+    //                                     view! {
+    //                                         <div class="text-green-700 p-2">
+    //                                             "Payment completed successfully!"
+    //                                         </div>
+    //                                     }
+    //                                 } else {
+    //                                     view! {
+    //                                         <div class="border border-red-700 p-2">
+    //                                             "No payment information found. Please contact support."
+    //                                         </div>
+    //                                     }
+    //                                 }}
+    //                             </div>
+    //                         }
+    //                     }
+    //                     None => {
+    //                         view! {
+    //                             <div class="border border-blue-800 p-2">
+    //                                 "Waiting for payment confirmation... Please do not close this window."
+    //                             </div>
+    //                         }
+    //                     }
+    //                 }
+    //             }}
+    //         </Suspense>
 
-        // <div class="bg-gray-100 p-4 border border-emerald-800">
-        // <Suspense  fallback={move || view!{ " Getting Payment Status "}}>
-        // {move ||
-        // if let Some(payment_status) = update_payment_details_to_backend.get(){
+    //     // <div class="bg-gray-100 p-4 border border-emerald-800">
+    //     // <Suspense  fallback={move || view!{ " Getting Payment Status "}}>
+    //     // {move ||
+    //     // if let Some(payment_status) = update_payment_details_to_backend.get(){
 
-        // view!{
-        // {format!("Payment status = {payment_status:?}")}
-        // }.into_view()
-        // }else{
-        // view!{
-        // "Did not retrieve payments status yet."
-        // }.into_view()
-        // }
-        // }
-        // </Suspense>
-        // </div>
-        </div>
-    }
+    //     // view!{
+    //     // {format!("Payment status = {payment_status:?}")}
+    //     // }.into_view()
+    //     // }else{
+    //     // view!{
+    //     // "Did not retrieve payments status yet."
+    //     // }.into_view()
+    //     // }
+    //     // }
+    //     // </Suspense>
+    //     // </div>
+    //     </div>
+    // }
 }

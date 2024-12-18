@@ -396,6 +396,20 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Create a memo for total price calculation
     let total_room_price = create_memo(move |_| {
+        let storage = sorted_rooms
+        .get()
+        .into_iter()
+        .filter(|SortedRoom { room_type, .. }| {
+            room_counters
+                .get()
+                .get(room_type.as_str())
+                .map(|sig| sig.key.get())
+                .unwrap_or(0)
+                > 0
+        })
+        .collect::<Vec<_>>();
+        hotel_info_results.set_sorted_rooms(storage);
+
         sorted_rooms.get().iter().fold(
             0.0,
             |acc,
@@ -547,8 +561,9 @@ pub fn PricingBreakdown(
             hotel_info_results.set_price_per_night(price_per_night.get());
             // hotel_info_results.set_room_counters(room_counters.get());
             hotel_info_results.set_block_room_counters(room_counters.get());
-
-            hotel_info_results.set_sorted_rooms(sorted_rooms_clone);
+            // log!("Sorted ROOMS <<<<<<<>>>>>>>>>>>>>>>>\n{:?}", sorted_rooms_clone);
+            // hotel_info_results.set_sorted_rooms(sorted_rooms_clone);
+            log!("Sorted ROOMS FROM CONTEXT <<<<<<<>>>>>>>>>>>>>>>>\n{:?}", hotel_info_results.sorted_rooms.get());
 
             let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 

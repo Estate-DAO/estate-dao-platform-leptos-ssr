@@ -12,6 +12,7 @@ use crate::{
 };
 use chrono::NaiveDate;
 use leptos::*;
+use log::log;
 
 #[derive(Debug, Clone, Default)]
 pub struct PaymentBookingStatusUpdates {
@@ -76,31 +77,31 @@ pub fn ConfirmationPage() -> impl IntoView {
         ];
 
         view! {
-            <div class="flex items-center justify-center space-x-4 my-8">
+            <div class="flex items-center justify-center my-8">
                 {move || {
-                                        steps
+                    steps
                     .clone()
                     .into_iter()
                     .enumerate()
                     .map(|(index, (label, signal))| {
                         let is_active = move || signal.get();
-                                                let circle_classes = move || format!("w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold transition-colors {}", if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
+                        let circle_classes = move || format!("w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold transition-colors {}", if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
 
-                                                let line_color = move || if is_active() {
-                                                        "bg-black"
-                                                } else {
-                                                        "bg-gray-300"
-                                                };
+                        let line_color = move || if is_active() {
+                                "bg-black"
+                        } else {
+                                "bg-gray-300"
+                        };
 
                         view! {
                             <div class="flex items-center">
-                                                            <div class=circle_classes()>
-                                                                <span class="mt-[123px]">{(index + 1).to_string()}</span>
-                                                                <span class="p-8 text-sm text-gray-600">{move || label.get()}</span>
-                                                            </div>
+                                <div class=circle_classes()>
+                                    <span class="mt-[123px]">{(index + 1).to_string()}</span>
+                                    <span class="p-8 text-sm text-gray-600">{move || label.get()}</span>
+                                </div>
                                 {if index < steps.len() - 1 {
                                     view! {
-                                        <div class=format!("h-1 w-48 transition-colors {}", line_color()) />
+                                        <div class=format!("h-1 w-96 transition-colors {}", line_color()) />
                                     }
                                 } else {
                                     view! { <div /> }
@@ -109,7 +110,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                         }
                     })
                     .collect::<Vec<_>>()}
-                                    }
+                }
             </div>
         }
     };
@@ -119,120 +120,123 @@ pub fn ConfirmationPage() -> impl IntoView {
             <Navbar />
             <div class="flex flex-col items-center justify-center p-8">
                 {render_progress_bar()}
-                                <br />
-                                <br />
-                                <br />
-                                <br />
-                                <br />
-                                <br />
-                                <BookingHandler />
-                                <PaymentHandler />
-                                <BookRoomHandler />
-                            <Show when= move ||(payment_booking_step_signals.p04_update_booking_details_to_backend.get()) fallback=SpinnerGray>
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <br />
+                <BookingHandler />
+                <PaymentHandler />
+                <BookRoomHandler />
+                <Show when= move ||(payment_booking_step_signals.p04_update_booking_details_to_backend.get()) fallback=SpinnerGray>
 
-                                <div class="border shadow-md rounded-lg">
-                <b class="text-3xl font-bold mb-6 text-center">
-                    "Your booking has been confirmed!"
-                </b>
-                                <Divider />
-                                <div class="flex justify-between items-center p-4">
-                                    <div class="text-left">
-                                        <p class="text-sm font-medium text-gray-800 font-bold">{move || hotel_info_ctx.selected_hotel_name.get()}</p>
-                                        <p class="text-sm font-sm text-gray-800">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
-                                        <p class="text-sm font-sm text-gray-800">{move || {
-                                            let destination = search_ctx.destination.get().unwrap_or_default();
-                                            format!("{} - {}, {}",
-                                                destination.country_name,
-                                                destination.city_id,
-                                                destination.city
-                                            )}
+                    <div class="border shadow-lg rounded-lg w-3/4 px-4">
+                        <div class="text-center text-2xl font-bold pt-4">
+                            Your booking has been confirmed!
+                        </div>
+                        <Divider />
+                        <div class="flex justify-between items-center p-4">
+                            <div class="text-left">
+                                <b class="text-lg font-bold mb-6 text-left">{move || hotel_info_ctx.selected_hotel_name.get()}</b>
+                                <p class="text-sm font-sm text-gray-800">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
+                                <p class="text-sm font-sm text-gray-800">{move || {
+                                    let destination = search_ctx.destination.get().unwrap_or_default();
+                                    format!("{} - {}, {}",
+                                        destination.country_name,
+                                        destination.city_id,
+                                        destination.city
+                                    )}
+                                }
+                                </p>
+                            </div>
+
+                            <div class="text-right">
+                            {move || {
+                                    match confirmation_ctx.booking_details.get() {
+                                        Some(details) => match details {
+                                            BookRoomResponse::Success(booking) => {
+                                                view!{
+                                                    <div class="text-lg font-medium font-semibold">
+                                                        <p>Reference ID: {booking.commit_booking.booking_details.booking_ref_no}</p>
+                                                        <p>Booking ID: {booking.commit_booking.booking_details.travelomatrix_id}</p>
+                                                    </div>
+                                                }
+                                            }
+                                            BookRoomResponse::Failure(booking) => {
+                                                view!{
+                                                    <div class="text-red-500">
+                                                        Booking failed!
+                                                    </div>
+                                                }
+                                            }
                                         }
-                                        </p>
-                                    </div>
-
-                                    <div class="text-right">
-                                    {move || {
-                                            match confirmation_ctx.booking_details.get() {
-                                                Some(details) => match details {
-                                                    BookRoomResponse::Success(booking) => {
-                                                        view!{
-                                                            <div class="text-sm font-medium text-gray-800 font-bold">
-                                                                <p>Reference ID: {booking.commit_booking.booking_details.booking_ref_no}</p>
-                                                                <p>Booking ID: {booking.commit_booking.booking_details.travelomatrix_id}</p>
-                                                            </div>
-                                                        }
-                                                    }
-                                                    BookRoomResponse::Failure(booking) => {
-                                                        view!{
-                                                            <div class="text-red-500">
-                                                                Booking failed!
-                                                            </div>
-                                                        }
-                                                    }
-                                                }
-                                                None => {
-                                                    view!{
-                                                        <div class="text-gray-500">
-                                                            Fetching Booking, Please wait...
-                                                        </div>
-                                                    }
-                                                }
+                                        None => {
+                                            view!{
+                                                <div class="text-gray-500">
+                                                    Fetching Booking, Please wait...
+                                                </div>
                                             }
                                         }
                                     }
-                                    </div>
-                                </div>
-                                <Divider />
-                                <b class="text-2xl font-bold mb-6 text-left">Bookind Details</b>
-                                <div class="flex justify-between items-center p-4">
-                                    <div class="text-left">
-                                        <div class="flex-col">
-                                            {move || {
-                                                let date_range = search_ctx.date_range.get();
-                                                let guest_count = search_ctx.guests.get();
-                                                let no_of_adults = guest_count.adults.get();
-                                                let no_of_child = guest_count.children.get();
-                                                let adult = block_room_ctx.adults.get();
-                                                let children = block_room_ctx.children.get();
-                                                // let primary_adult = confirmation_ctx.room_details.get().unwrap().passenger_details.first().cloned().unwrap_or_default();
-                                                // let primary_adult_clone = primary_adult.clone();
-                                                // let primary_adult_clone2 = primary_adult.clone();
-                                                // let primary_adult_clone3 = primary_adult.clone();
+                                }
+                            }
+                            </div>
+                        </div>
+                        <Divider />
+                        <b class="text-lg font-bold mb-6 text-left">Bookind Details</b>
+                        <div class="flex justify-between items-center p-4">
+                            <div class="text-left">
+                                <div class="flex-col">
+                                    {move || {
+                                        let date_range = search_ctx.date_range.get();
+                                        let adults = block_room_ctx.adults.get();
+                                        let children = block_room_ctx.children.get();
+                                        let no_of_adults = adults.len();
+                                        let no_of_child = children.len();
+                                        let primary_adult = adults.first().cloned().unwrap_or_default();
+                                        let primary_adult_clone = primary_adult.clone();
+                                        let primary_adult_clone2 = primary_adult.clone();
+                                        let primary_adult_clone3 = primary_adult.clone();
 
-                                                view! {
-                                                    <div class="flex text-sm font-sm">
-                                                        <p class="text-gray-800">Check In date:</p>
-                                                        <b>{format_date_fn(date_range.start)}</b>
-                                                    </div>
-                                                    <div class="flex text-sm font-sm">
-                                                        <p class="text-gray-800">Check Out date:</p>
-                                                        <b>{format_date_fn(date_range.end)}</b>
-                                                    </div>
-                                                    <b>Guest Information</b>
-                                                    <b>{format!("{} Adults, {} Children", no_of_adults, no_of_child)}</b>
-                                                    // <p>{format!("{} {}", primary_adult.first_name, primary_adult_clone.last_name)}</p>
-                                                    // <p>{format!("{}", primary_adult_clone2.email)}</p>
-                                                    // <p>{format!("{}", primary_adult_clone3.phone_number)}</p>
-                                                }
-                                            }}
-                                        </div>
-                                    </div>
+                                        view! {
+                                            <div class="flex text-sm font-sm">
+                                                <p class="text-gray-800">Check In date:</p>
+                                                <b>{format_date_fn(date_range.start)}</b>
+                                            </div>
+                                            <div class="flex text-sm font-sm">
+                                                <p class="text-gray-800">Check Out date:</p>
+                                                <b>{format_date_fn(date_range.end)}</b>
+                                            </div>
+                                            <b>Guest Information</b>
+                                            <br />
+                                            <b>{format!("{} Adults, {} Children", no_of_adults, no_of_child)}</b>
+                                            <p>{format!("{} {}", primary_adult.first_name, primary_adult_clone.last_name.unwrap_or_default())}</p>
+                                            <p>{format!("{}", primary_adult_clone2.email.unwrap_or_default())}</p>
+                                            <p>{format!("{}", primary_adult_clone3.phone.unwrap_or_default())}</p>
+                                        }
+                                    }}
+                                </div>
+                            </div>
 
-                                    <div class="text-right text-sm font-bold">
-                                        {move || {
-                                            let sorted_rooms = hotel_info_results.sorted_rooms.get();
-                                            view! {
-                                                <>
-                                                    {sorted_rooms.iter().map(|room| view! {
-                                                            <p class="text-sm text-gray-800">{room.room_type.to_string()}</p>
-                                                    }).collect::<Vec<_>>()}
-                                                </>
-                                            }
-                                        }}
-                                    </div>
-                                </div>
-                                </div>
-                            </Show>
+                            <div class="text-right text-xs font-semibold">
+                                {move || {
+                                    let sorted_rooms = hotel_info_results.sorted_rooms.get();
+                                    view! {
+                                        <>
+                                            {sorted_rooms.iter().map(|room| view! {
+                                                    <p class="text-sm text-gray-800">{format!("{}", room.room_type.to_string())}</p>
+                                            }).collect::<Vec<_>>()}
+                                        </>
+                                    }
+                                }}
+                            </div>
+                        </div>
+                        <div class="text-center font-sm font-bold pb-4">
+                            Please take a screenshot for your reference
+                        </div>
+                    </div>
+                </Show>
             </div>
         </section>
     }

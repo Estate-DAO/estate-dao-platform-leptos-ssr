@@ -164,6 +164,8 @@ pub fn BlockRoomPage() -> impl IntoView {
         // Set the value of is_form_valid based on validation results
         is_form_valid
             .set(primary_adult_valid && other_adults_valid && children_valid && terms_valid);
+
+        log!("{:?}", hotel_info_results.sorted_rooms.get());
     };
 
     // Call the validation function whenever inputs change
@@ -202,6 +204,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     let _block_room_call = create_resource(show_modal, move |modal_value| {
         let hotel_info_results = expect_context::<HotelInfoResults>();
         let room_counters = hotel_info_results.block_room_counters.get_untracked();
+        block_room_called.set(false);
         // log!("block_room.rs -- component room_coutners value - \n {room_counters:#?}");
         async move {
             if modal_value {
@@ -227,7 +230,6 @@ pub fn BlockRoomPage() -> impl IntoView {
                     // log!("BLOCK_ROOM_API: {result:?}");
                     // log!("BLOCK_ROOM_ID: {block_room_id:?}");
                     let res2 = result.clone();
-
                     BlockRoomResults::set_results(result);
                     BlockRoomResults::set_id(block_room_id);
                     if let Some(_) = res2.clone() {
@@ -297,6 +299,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                     // todo: [UAT]  feedback - select only those room which are selected by the user!!
                     let sorted_rooms = hotel_info_results.sorted_rooms.get();
+                    log!("SORTED-----ROOM?>>>>>>>>>>>>>>>\n{:?}", sorted_rooms);
 
                     let room_details = sorted_rooms
                         .into_iter()
@@ -347,6 +350,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                             hotel_token,
                         },
                     };
+                    log!("BOOKING 1st PARAM >>>>>>>>>>>>>>>>\n{:?}", user_selected_hotel_room_details);
 
                     let adults: Vec<crate::canister::backend::AdultDetail> = block_room_ctx
                         .adults
@@ -914,7 +918,7 @@ pub fn create_passenger_details(
         passengers.push(PassengerDetail {
             title: "Mr".to_string(), // todo Add logic for title selection
             first_name: adult.first_name.clone(),
-            last_name: adult.last_name.clone().unwrap_or_default(),
+            last_name: adult.last_name.clone().unwrap_or_else(|| "Not found".to_string()),
             email: if i == 0 {
                 adult.email.clone().unwrap_or_default()
             } else {
@@ -932,7 +936,7 @@ pub fn create_passenger_details(
         passengers.push(PassengerDetail {
             title: "".to_string(),
             first_name: child.first_name.clone(),
-            last_name: child.last_name.clone().unwrap_or_default(),
+            last_name: child.last_name.clone().unwrap_or_else(|| "Not found".to_string()),
             email: String::new(),
             pax_type: PaxType::Child,
             lead_passenger: false,
