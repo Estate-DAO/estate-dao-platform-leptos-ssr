@@ -27,7 +27,8 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Create new app with fly
-        run: flyctl apps create --name "nofeebooking" 
+        run: flyctl apps create --name "nofeebooking" --org estate-dao-769
+
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
 
