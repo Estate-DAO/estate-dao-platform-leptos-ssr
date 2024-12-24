@@ -110,14 +110,21 @@ ssr = [
 
     # "reqwest/gzip"
 ]
+
 # setup the localhost url for dev env
 local_api = []
 local-lib = ["local_api", "hydrate" ]
 local-bin = ["ssr","local_api"]
 
 # release features 
-release-lib = [ "hydrate" ]
-release-bin = ["ssr"]
+stage-consts = []
+release-lib = ["stage-consts", "hydrate" ]
+release-bin = ["stage-consts","ssr"]
+
+# release features 
+prod-consts = []
+release-lib-prod = [ "prod-consts","hydrate" ]
+release-bin-prod = ["prod-consts","ssr"]
 
 
 [package.metadata.leptos]

@@ -1,4 +1,4 @@
-name: Deploy to Fly on push to main
+name: Deploy to Fly staging on push to main
 on:
   workflow_dispatch:
   push:
@@ -37,7 +37,7 @@ jobs:
           ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}}
       
       - name: Deploy a docker container to Fly.io
-        run: flyctl deploy --remote-only -c fly-prod.toml
+        run: flyctl deploy --remote-only -c fly-staging.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
 
