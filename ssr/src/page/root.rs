@@ -75,16 +75,16 @@ pub fn Navbar() -> impl IntoView {
                     />
                 </a>
             </div>
-            <div class="flex space-x-8">
-                <a href="#" class="text-gray-700 hover:text-gray-900">
-                    Whitepaper
-                </a>
-                <a href="#" class="text-gray-700 hover:text-gray-900">
-                    About us
-                </a>
+            // <div class="flex space-x-8">
+                // <a href="#" class="text-gray-700 hover:text-gray-900">
+                //     Whitepaper
+                // </a>
+                // <a href="#" class="text-gray-700 hover:text-gray-900">
+                //     About us
+                // </a>
 
-                <button />
-            </div>
+                // <button />
+            // </div>
         </nav>
     }
 }

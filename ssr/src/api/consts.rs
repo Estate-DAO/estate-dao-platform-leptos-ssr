@@ -1,21 +1,50 @@
-pub const PROVAB_BASE_URL_PROD: &str =
-    "https://prod.services.travelomatix.com/webservices/index.php/hotel_v3/service";
-
-pub const PROVAB_BASE_URL_TEST: &str =
-    "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
-
-pub const AGENT_URL_LOCAL: &str = "http://localhost:4943";
-
-// pub const AGENT_URL_LOCAL: &str = "https://ic0.app";
-pub const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
-pub const LOCALHOST_DEV: &str = "http://localhost:3000";
-pub const PROD_URL: &str = "https://estatefe.fly.dev";
-
 // CONST FOR LOCAL STORAGE
 pub const PAYMENT_ID: &str = "estatedao_payment_id";
 pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
 pub const BOOKING_ID: &str = "estatedao_booking_id";
 pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
+
+// PROVAB_BASE_URL
+const PROVAB_PROD_OLD_PROXY: &str =
+    "https://abctravel.elixirpinging.xyz/prod/webservices/index.php/hotel_v3/service";
+
+const PROVAB_TEST_OLD_PROXY: &str =
+    "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
+
+const PROVAB_PROD_ESTATEFLY_PROXY: &str =
+    "http://estate-static-ip-egress-proxy.internal:8080/produrl";
+
+const PROVAB_TEST_ESTATEFLY_PROXY: &str =
+    "http://estate-static-ip-egress-proxy.internal:8080/testurl";
+
+// APP_URL
+const LOCALHOST_APP_URL: &str = "http://localhost:3000";
+const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
+const PROD_APP_URL: &str = "https://nofeebooking.fly.dev";
+
+// common consts
+const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
+
+// const for local environment
+const AGENT_URL_LOCAL: &str = "http://localhost:4943";
+
+cfg_if! {
+    if #[cfg(feature = "local_api")] {
+        pub const APP_URL: &str = LOCALHOST_APP_URL;
+        pub const AGENT_URL: &str = AGENT_URL_LOCAL;
+        pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+    }
+    else  if #[cfg(feature = "prod-consts")] {
+        pub const APP_URL: &str = PROD_APP_URL;
+        pub const AGENT_URL: &str = AGENT_URL_REMOTE;
+        pub const PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
+    }
+    else {
+        pub const APP_URL: &str = STAGING_APP_URL;
+        pub const AGENT_URL: &str = AGENT_URL_REMOTE;
+        pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+    }
+}
 
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
@@ -28,14 +57,7 @@ use std::env::VarError;
 use thiserror::Error;
 
 pub fn get_payments_url(status: &str) -> String {
-    // todo [UAT] 3 local_api -- enabled behind local-bin -- change CI to release-bin
-    cfg_if! {
-        if #[cfg(feature = "local_api")] {
-            let base_url = LOCALHOST_DEV;
-        } else {
-            let base_url = PROD_URL;
-        }
-    }
+    let base_url = APP_URL;
     let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
         .unwrap_or_else(|e| {
             eprintln!("Error joining URL: {}", e);
@@ -69,7 +91,7 @@ impl EnvVarConfig {
 
         let value = Self {
             provab_headers: pv_hashmap,
-            provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL_TEST).unwrap(),
+            provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL).unwrap(),
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
@@ -77,6 +99,7 @@ impl EnvVarConfig {
             // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
+        println!("{value:#?}");
         value
     }
 
@@ -111,7 +134,7 @@ fn env_or_panic(key: &str) -> String {
 }
 
 fn provab_base_url_default() -> String {
-    PROVAB_BASE_URL_TEST.to_string()
+    PROVAB_BASE_URL.to_string()
 }
 
 pub fn transform_headers(headers: &HashMap<String, String>) -> HeaderMap {
