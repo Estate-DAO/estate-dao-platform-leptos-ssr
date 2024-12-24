@@ -21,7 +21,11 @@ jobs:
       packages: read
       contents: write
     
+    
     steps:
+      
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
       - name: Create new app with fly
         run: flyctl apps create --name "nofeebooking" 
         env:
