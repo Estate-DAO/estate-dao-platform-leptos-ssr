@@ -12,10 +12,10 @@ const PROVAB_TEST_OLD_PROXY: &str =
     "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
 const PROVAB_PROD_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8080/produrl/webservices/index.php/hotel_v3/service";
+    "http://estate-static-ip-egress-proxy.internal:8080/produrl";
 
 const PROVAB_TEST_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8080/testurl/webservices/index.php/hotel_v3/service";
+    "http://estate-static-ip-egress-proxy.internal:8080/testurl";
 
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";
@@ -97,6 +97,7 @@ pub struct EnvVarConfig {
 
 impl EnvVarConfig {
     pub fn try_from_env() -> Self {
+        log_other_consts();
         let provab_headers = env_or_panic("PROVAB_HEADERS");
 
         let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
@@ -120,6 +121,11 @@ impl EnvVarConfig {
     }
 }
 
+fn log_other_consts() {
+    log!("APP_URL: {}", APP_URL);
+    log!("AGENT_URL: {}", AGENT_URL);
+    log!("AGENT_URL: {}", AGENT_URL);
+}
 fn parse_provab_headers(provab_headers: &str) -> HashMap<String, String> {
     if provab_headers.starts_with('{') {
         // log!("got provab_headers - {{");
