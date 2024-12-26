@@ -55,6 +55,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::env::VarError;
 use thiserror::Error;
+use log::{info, warn};
 
 pub fn get_payments_url(status: &str) -> String {
     let base_url = APP_URL;
@@ -97,7 +98,7 @@ pub struct EnvVarConfig {
 impl EnvVarConfig {
     pub fn try_from_env() -> Self {
         let provab_headers = env_or_panic("PROVAB_HEADERS");
-
+        info!("PROVAB HEADERS read into the app {}",provab_headers);
         let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();
 
         let value = Self {
