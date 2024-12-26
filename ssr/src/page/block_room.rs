@@ -4,7 +4,7 @@
 use crate::api::_default_passenger_age;
 use crate::api::block_room;
 use crate::api::canister::add_booking::add_booking_backend;
-use crate::api::consts::get_payments_url;
+use crate::api::consts::{get_payments_url, get_price_amount_based_on_env};
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::nowpayments_get_payment_status;
@@ -284,8 +284,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                 }
                 "NOWPayments" => {
                     let invoice_request = CreateInvoiceRequest {
-                        price_amount: 20_u32,
-                        // price_amount: total_price.get() as u32,
+                        price_amount: get_price_amount_based_on_env(total_price.get() as u32),
                         price_currency: "USD".to_string(),
                         order_id: "order_watever".to_string(),
                         order_description: "Hotel Room Booking".to_string(),

@@ -71,6 +71,17 @@ pub fn get_payments_url(status: &str) -> String {
     url
 }
 
+pub fn get_price_amount_based_on_env(price: u32) -> u32 {
+    cfg_if::cfg_if! {
+          if #[cfg(feature = "prod-consts")] {
+            price
+        }
+        else {
+            20_u32
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct EnvVarConfig {
