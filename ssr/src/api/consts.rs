@@ -50,6 +50,7 @@ use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
 // use dotenvy::dotenv;
+use log::{info, warn};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -97,7 +98,7 @@ pub struct EnvVarConfig {
 impl EnvVarConfig {
     pub fn try_from_env() -> Self {
         let provab_headers = env_or_panic("PROVAB_HEADERS");
-
+        info!("PROVAB HEADERS read into the app {}", provab_headers);
         let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();
 
         let value = Self {
