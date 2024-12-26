@@ -99,7 +99,7 @@ impl EnvVarConfig {
     pub fn try_from_env() -> Self {
         let provab_headers = env_or_panic("PROVAB_HEADERS");
         log!("PROVAB HEADERS read into the app {}", provab_headers);
-        let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();
+        let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
 
         let value = Self {
             provab_headers: pv_hashmap,
@@ -117,6 +117,19 @@ impl EnvVarConfig {
 
     pub fn get_headers(&self) -> HeaderMap {
         transform_headers(&self.provab_headers)
+    }
+}
+
+fn parse_provab_headers(provab_headers: &str) -> HashMap<String, String> {
+    if provab_headers.starts_with('{') {
+        log!("got provab_headers - {{");
+        serde_json::from_str(provab_headers).unwrap()
+    } else {
+        let trimmed_headers = provab_headers
+            .trim_start_matches('\'')
+            .trim_end_matches('\'');
+        log!("need to trim provab_headers - ' ");
+        serde_json::from_str(trimmed_headers).unwrap()
     }
 }
 
