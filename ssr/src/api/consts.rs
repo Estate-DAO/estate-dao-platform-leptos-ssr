@@ -18,7 +18,7 @@ const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
 
 const PROVAB_TEST_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal/testurl/webservices/index.php/hotel_v3/service";
+    "http://estate-static-ip-egress-proxy.internal:8081/webservices/index.php/hotel_v3/service";
 
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";
@@ -40,7 +40,9 @@ cfg_if! {
     else  if #[cfg(feature = "prod-consts")] {
         pub const APP_URL: &str = PROD_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        pub const PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
+        // pub const PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
+        pub const PROVAB_BASE_URL: &str = PROVAB_TEST_ESTATEFLY_PROXY;
+
     }
     else {
         pub const APP_URL: &str = STAGING_APP_URL;
