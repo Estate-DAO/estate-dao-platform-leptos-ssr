@@ -17,7 +17,6 @@ const PROVAB_TEST_OLD_PROXY: &str =
 const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
 
-
 const PROVAB_TEST_ESTATEFLY_PROXY: &str =
     "http://estate-static-ip-egress-proxy.internal/testurl/webservices/index.php/hotel_v3/service";
 
