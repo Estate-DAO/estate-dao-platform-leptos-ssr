@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Run cargo fmt to format all Rust code in the repository
+cargo fmt --all
+
+# Check if formatting introduced changes
+if git diff --cached --name-only --diff-filter=ACM | grep '\.rs$' > /dev/null; then
+  echo "Formatting issues detected. Please review and stage changes before committing."
+  exit 1
+fi
