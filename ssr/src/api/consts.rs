@@ -12,10 +12,10 @@ const PROVAB_TEST_OLD_PROXY: &str =
     "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
 const PROVAB_PROD_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8080/produrl";
+    "http://estate-static-ip-egress-proxy.internal/produrl/webservices/index.php/hotel_v3/service";
 
 const PROVAB_TEST_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8080/testurl";
+    "http://estate-static-ip-egress-proxy.internal/testurl/webservices/index.php/hotel_v3/service";
 
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";
