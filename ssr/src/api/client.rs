@@ -23,7 +23,7 @@ pub trait ProvabReqMeta: Sized + Send {
     fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
         use flate2::read::GzDecoder;
 
-        println!(
+        log!(
             "{}",
             format!("deserialize_response- body:String : {body}\n\n\n")
                 .bright_yellow()
@@ -73,7 +73,7 @@ pub trait ProvabReq: ProvabReqMeta {
 
     fn headers() -> HeaderMap {
         // get_headers_from_env()
-        // log!("headers(): BEFORE");
+        log!("headers(): BEFORE");
 
         let env_var_config: EnvVarConfig = expect_context();
 
