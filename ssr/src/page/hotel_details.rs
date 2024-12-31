@@ -61,6 +61,7 @@ pub fn ShowHotelInfoValues() -> impl IntoView {
 fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
     amenities
         .into_iter()
+        .take(8)
         .map(|text| Amenity {
             icon: icondata::IoWifiSharp,
             text: text.clone(),
@@ -269,11 +270,11 @@ pub fn HotelImages() -> impl IntoView {
                                     alt="Destination"
                                     class="object-cover h-full w-full rounded-xl"
                                 />
-                                <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
-                                    <span class="text-white text-lg font-semibold py-16 px-16">
-                                        See all photos
-                                    </span>
-                                </div>
+                                // <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
+                                //     <span class="text-white text-lg font-semibold py-16 px-16">
+                                //         See all photos
+                                //     </span>
+                                // </div>
                             </div>
                         </div>
                     </div>
