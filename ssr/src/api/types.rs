@@ -2,7 +2,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error("Response Status not 200")]
+    #[error("Response Status not 200 - {0}")]
     ResponseNotOK(String),
 
     #[error("Provab response error")]

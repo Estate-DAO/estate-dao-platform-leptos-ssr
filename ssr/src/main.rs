@@ -72,6 +72,8 @@ cfg_if! {
     #[tokio::main]
     async fn main() {
         better_panic::install();
+        // A minimal tracing middleware for request logging.
+        tracing_subscriber::fmt::init();
 
         // Setting get_configuration(None) means we'll be using cargo-leptos's env values
         // For deployment these variables are:
@@ -88,6 +90,14 @@ cfg_if! {
         .build()
         .await;
 
+        let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
+            |request: &axum::extract::Request<_>| {
+                let uri = request.uri().to_string();
+                tracing::info_span!("http_request", method = ?request.method(), uri)
+            },
+        );
+
+
         // build our application with a route
         let app = Router::new()
             .route(
@@ -96,6 +106,7 @@ cfg_if! {
             )
             .leptos_routes_with_handler(routes, get(leptos_routes_handler))
             .fallback(file_and_error_handler)
+            .layer(trace_layer)
             .with_state(res);
 
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

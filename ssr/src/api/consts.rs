@@ -11,11 +11,14 @@ const PROVAB_PROD_OLD_PROXY: &str =
 const PROVAB_TEST_OLD_PROXY: &str =
     "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
 
+// const PROVAB_PROD_ESTATEFLY_PROXY: &str =
+//     "http://estate-static-ip-egress-proxy.internal/produrl/webservices/index.php/hotel_v3/service";
+
 const PROVAB_PROD_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8080/produrl/webservices/index.php/hotel_v3/service";
+    "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
 
 const PROVAB_TEST_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8080/testurl/webservices/index.php/hotel_v3/service";
+    "http://estate-static-ip-egress-proxy.internal:8081/webservices/index.php/hotel_v3/service";
 
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";
@@ -38,11 +41,14 @@ cfg_if! {
         pub const APP_URL: &str = PROD_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
+        // pub const PROVAB_BASE_URL: &str = PROVAB_TEST_ESTATEFLY_PROXY;
     }
     else {
         pub const APP_URL: &str = STAGING_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+        // pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+        pub const PROVAB_BASE_URL: &str = PROVAB_PROD_OLD_PROXY;
+
     }
 }
 
@@ -50,6 +56,7 @@ use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
 // use dotenvy::dotenv;
+use leptos::logging::log;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -71,6 +78,17 @@ pub fn get_payments_url(status: &str) -> String {
     url
 }
 
+pub fn get_price_amount_based_on_env(price: u32) -> u32 {
+    cfg_if::cfg_if! {
+          if #[cfg(feature = "prod-consts")] {
+            price
+        }
+        else {
+            20_u32
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct EnvVarConfig {
@@ -85,9 +103,10 @@ pub struct EnvVarConfig {
 
 impl EnvVarConfig {
     pub fn try_from_env() -> Self {
+        log_other_consts();
         let provab_headers = env_or_panic("PROVAB_HEADERS");
 
-        let pv_hashmap: HashMap<String, String> = serde_json::from_str(&provab_headers).unwrap();
+        let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
 
         let value = Self {
             provab_headers: pv_hashmap,
@@ -105,6 +124,24 @@ impl EnvVarConfig {
 
     pub fn get_headers(&self) -> HeaderMap {
         transform_headers(&self.provab_headers)
+    }
+}
+
+fn log_other_consts() {
+    log!("APP_URL: {}", APP_URL);
+    log!("AGENT_URL: {}", AGENT_URL);
+    log!("AGENT_URL: {}", AGENT_URL);
+}
+fn parse_provab_headers(provab_headers: &str) -> HashMap<String, String> {
+    if provab_headers.starts_with('{') {
+        // log!("got provab_headers - {{");
+        serde_json::from_str(provab_headers).unwrap()
+    } else {
+        let trimmed_headers = provab_headers
+            .trim_start_matches('\'')
+            .trim_end_matches('\'');
+        // log!("need to trim provab_headers - ' ");
+        serde_json::from_str(trimmed_headers).unwrap()
     }
 }
 
