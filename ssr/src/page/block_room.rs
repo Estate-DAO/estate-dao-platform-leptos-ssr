@@ -833,7 +833,16 @@ pub fn BlockRoomPage() -> impl IntoView {
                     class="fixed inset-0 bg-black opacity-50"
                     on:click=move |_| show_modal.set(false)
                 />
-                <div class="w-1/2 max-w-[60rem] bg-white rounded-lg p-8 z-50 shadow-xl">
+                <div class="w-1/2 max-w-[60rem] bg-white rounded-lg p-8 z-50 shadow-xl relative">
+                    <button
+                        class="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                        on:click=move |_| show_modal.set(false)
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                     <div class="flex justify-between">
                         <h2 class="mb-4 text-xl font-bold">
                             "$"{move || room_price.get() as u64}"/" "night"
@@ -877,7 +886,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                     // </div>
                                     <button
                                         // class="ml-2"
-                                        class="payment-button border-2 rounded-full p-3 flex items-center cursor-pointer relative border-gray-500"
+                                        class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
                                         on:click=move |_| {
                                             handle_pay_signal.set("NOWPayments".to_owned())
                                         }
@@ -898,6 +907,15 @@ pub fn BlockRoomPage() -> impl IntoView {
                                             />
                                         </svg>
                                     </button>
+
+                                    <p class="text-sm mt-4 mb-6 text-gray-600">
+                                    Note: Full payment required. Partial payments are not supported and will not secure your reservation.
+                                </p>
+
+                                <div class="text-center text-sm mt-8 border-t pt-4">
+                                    <p>Do not close this tab until your payment is fully processed</p>
+                                    <p>to avoid issues with your booking.</p>
+                                </div>
                                 // </label>
                             </div>
                         </div>
