@@ -42,12 +42,13 @@ cfg_if! {
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
         // pub const PROVAB_BASE_URL: &str = PROVAB_TEST_ESTATEFLY_PROXY;
-
     }
     else {
         pub const APP_URL: &str = STAGING_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+        // pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+        pub const PROVAB_BASE_URL: &str = PROVAB_PROD_OLD_PROXY;
+
     }
 }
 
