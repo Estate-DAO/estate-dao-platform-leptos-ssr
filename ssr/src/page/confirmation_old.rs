@@ -19,7 +19,7 @@ use crate::{
     component::{
         Divider, FilterAndSortBy, GuestSelection, PriceDisplay, SelectedDateRange, StarRating,
     },
-    page::{create_passenger_details, InputGroup, Navbar},
+    page::{create_passenger_details, InputGroup},
     state::{
         local_storage::{use_booking_id_store, use_payment_store},
         search_state::{

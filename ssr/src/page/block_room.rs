@@ -18,7 +18,7 @@ use crate::canister::backend::HotelRoomDetails;
 use crate::canister::backend::RoomDetails;
 use crate::canister::backend::UserDetails;
 use crate::component::SkeletonCards;
-use crate::component::SpinnerGray;
+use crate::component::{Navbar, SpinnerGray};
 // use crate::page::call_server_fn::call_add_booking_server_fn;
 use crate::state::search_state::BlockRoomResults;
 use crate::state::search_state::HotelInfoResults;
@@ -39,7 +39,7 @@ use crate::{
     api::{book_room, BookRoomRequest, BookingStatus, PassengerDetail, PaxType, RoomDetail},
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
+    page::InputGroup,
     state::{
         search_state::{ConfirmationResults, SearchCtx, SearchListResults},
         view_state::HotelInfoCtx,

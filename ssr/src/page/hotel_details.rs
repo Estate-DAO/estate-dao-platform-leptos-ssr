@@ -1,10 +1,10 @@
-use crate::component::{FullScreenSpinnerGray, SpinnerGray};
+use crate::component::{FullScreenSpinnerGray, Navbar, SpinnerGray};
 use crate::utils::pluralize;
 use crate::{
     api::block_room,
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
+    page::InputGroup,
     state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
     state::view_state::HotelInfoCtx,
 };
