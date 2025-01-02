@@ -473,6 +473,7 @@ fn MostPopular() -> impl IntoView {
                                     .unwrap_or_default()
                                     .clone()
                                     .into_iter()
+                                    .take(3)
                                     .map(|dest| {
                                         let country_name = dest.country_name.clone();
                                         let city_name = dest.city_name.clone();
@@ -494,11 +495,11 @@ fn MostPopular() -> impl IntoView {
                                                 <img
                                                     src=img_url
                                                     alt=format!("{}, {}", city_name, country_name)
-                                                    class="w-full object-cover w-96 h-3/4"
+                                                    class="w-full object-cover h-3/4"
                                                 />
                                                 <div class="p-4 bg-white">
                                                     <p class="text-lg font-semibold">{city_name}</p>
-                                                    <p class="text-sm text-gray-600">{country_name}</p>
+                                                    <p class="text-sm text-gray-600 pb-2">{country_name}</p>
                                                 </div>
                                             </div>
                                         }
