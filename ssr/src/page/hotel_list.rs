@@ -2,13 +2,13 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::api::get_room;
-use crate::component::SkeletonCards;
+use crate::component::{Navbar, SkeletonCards};
 use crate::state::search_state::HotelInfoResults;
 use crate::{
     api::hotel_info,
     app::AppRoutes,
     component::{FilterAndSortBy, PriceDisplay, StarRating},
-    page::{InputGroup, Navbar},
+    page::InputGroup,
     state::{search_state::SearchListResults, view_state::HotelInfoCtx},
 };
 use leptos::logging::log;

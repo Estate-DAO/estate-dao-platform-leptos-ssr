@@ -2,13 +2,11 @@
 use leptos::*;
 use leptos_icons::*;
 // use leptos_use::use_timestamp;
+use crate::state::search_state::SearchCtx;
+use crate::utils::date::*;
 use chrono::NaiveDate;
 use leptos::logging::log;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
-
-use crate::utils::date::*;
-
-use crate::state::search_state::SearchCtx;
 
 /// year,  month, day
 /// Struct is stored in the global search state - SearchCtx and accessed from there

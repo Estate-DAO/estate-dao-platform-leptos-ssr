@@ -1,9 +1,9 @@
 use crate::{
     api::BookRoomResponse,
-    component::{Divider, SpinnerFit, SpinnerGray},
+    component::{Divider, Navbar, SpinnerFit, SpinnerGray},
     page::{
         block_room, confirm_booking::booking_handler::read_booking_details_from_local_storage,
-        BookRoomHandler, BookingHandler, Navbar, PaymentHandler,
+        BookRoomHandler, BookingHandler, PaymentHandler,
     },
     state::{
         search_state::{ConfirmationResults, HotelInfoResults, SearchCtx},
