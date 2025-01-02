@@ -1,4 +1,3 @@
-use chrono::Datelike;
 // use console_log::log;
 use leptos::*;
 use leptos_icons::*;
@@ -6,6 +5,8 @@ use leptos_icons::*;
 use chrono::NaiveDate;
 use leptos::logging::log;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
+
+use crate::utils::date::*;
 
 use crate::state::search_state::SearchCtx;
 
@@ -59,13 +60,6 @@ impl SelectedDateRange {
 
         format!("{} - {}", format_date(self.start), format_date(self.end))
     }
-}
-
-fn get_year_month(timestamp: f64) -> (u32, u32) {
-    let secs = (timestamp / 1000_f64).floor() as i64;
-    let naive = chrono::NaiveDateTime::from_timestamp_opt(secs, 0).unwrap();
-    let datetime: chrono::DateTime<chrono::Utc> = chrono::DateTime::from_utc(naive, chrono::Utc);
-    (datetime.year() as u32, datetime.month())
 }
 
 #[component]
@@ -156,24 +150,6 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
             </Show>
         </div>
     }
-}
-
-fn prev_date(year: u32, month: u32) -> (u32, u32) {
-    let value = if month == 1 {
-        (year - 1, 12)
-    } else {
-        (year, month - 1)
-    };
-    value
-}
-
-fn next_date(year: u32, month: u32) -> (u32, u32) {
-    let value = if month == 12 {
-        (year + 1, 1)
-    } else {
-        (year, month + 1)
-    };
-    value
 }
 
 #[component]
@@ -322,25 +298,6 @@ fn class_signal(
             ""
         },
     )
-}
-
-fn is_date_in_range(
-    start: (u32, u32, u32),
-    end: (u32, u32, u32),
-    year: u32,
-    month: u32,
-    day_num: u32,
-) -> bool {
-    if start == (0, 0, 0) || end == (0, 0, 0) {
-        false
-    } else {
-        let current_date = (year, month, day_num);
-        current_date > start && current_date < end
-    }
-}
-
-fn is_leap_year(year: u32) -> bool {
-    (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
 
 fn calculate_starting_day_of_month(year_month: Signal<(u32, u32)>, result: RwSignal<u32>) -> u32 {

@@ -45,3 +45,6 @@ pub use date_time_range_picker::*;
 
 mod number_counter;
 pub use number_counter::*;
+
+mod footer;
+pub use footer::*;

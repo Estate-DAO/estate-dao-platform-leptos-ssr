@@ -22,7 +22,7 @@ pub struct GuestSelection {
 impl Default for GuestSelection {
     fn default() -> Self {
         Self {
-            adults: RwSignal::new(0),
+            adults: RwSignal::new(2),
             children: RwSignal::new(0),
             rooms: RwSignal::new(1), // Set default value for rooms to 1
             children_ages: ChildrenAges::default(),
