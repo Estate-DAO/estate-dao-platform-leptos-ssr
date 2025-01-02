@@ -764,7 +764,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                         <br />
                         <h2 class="text-2xl font-bold">"Cancellation Policy"</h2>
                         <div class="cancellation-policy mt-6 text-sm text-gray-600">
-                            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse felis massa, dignissim eu luctus vel, interdum facilisis orci."
+                            "Property once booked cannot be cancelled. Confirm the details before making payment."
                             <a href="#" class="text-blue-500 hover:underline">
                                 "Read more"
                             </a>.
