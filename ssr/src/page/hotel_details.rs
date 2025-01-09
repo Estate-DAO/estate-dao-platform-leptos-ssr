@@ -1,4 +1,4 @@
-use crate::component::{FullScreenSpinnerGray, Navbar, SpinnerGray};
+use crate::component::{FullScreenSpinnerGray, Navbar, SkeletonPricing, SpinnerGray};
 use crate::utils::pluralize;
 use crate::{
     api::block_room,
@@ -353,18 +353,14 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Create RwSignal for room counters map
     let room_counters = hotel_info_results.room_counters;
-    // let room_counters = create_rw_signal(HashMap::<String, RoomCounterKeyValue>::new());
-
-    let sorted_rooms_called = create_rw_signal(false);
 
     // Create a memo for the processed room data
-    let sorted_rooms = create_memo(move |_| {
+    let sorted_rooms: Memo<Vec<SortedRoom>> = create_memo(move |_| {
         // (String, u32, f64) = (RoomUniqueId, Room Count , Room Price)
         let mut room_count_map: HashMap<String, (String, u32, f64)> = HashMap::new();
 
         for room in room_details.get() {
             let room_type = room.room_type_name.to_string(); // Convert to owned String
-
             let entry = room_count_map
                 .entry(room_type.clone())
                 .or_insert(("".to_string(), 0, 0.0));
@@ -381,6 +377,7 @@ pub fn PricingBookNow() -> impl IntoView {
 
         let mut sorted: Vec<SortedRoom> = room_count_map
             .into_iter()
+            .take(5)
             .map(|(k, v)| SortedRoom {
                 room_type: k,
                 room_unique_id: v.0,
@@ -390,10 +387,10 @@ pub fn PricingBookNow() -> impl IntoView {
             .collect();
 
         sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type)); // Sort by room_type
-        sorted.truncate(5);
-        sorted_rooms_called.set(true);
         sorted
     });
+
+    let sorted_rooms_called = move || sorted_rooms.get().len() > 1;
 
     // Create a memo for total price calculation
     let total_room_price = create_memo(move |_| {
@@ -443,7 +440,7 @@ pub fn PricingBookNow() -> impl IntoView {
     let room_counters_clone = room_counters.clone();
 
     view! {
-        <div class="flex flex-col space-y-4 shadow-lg p-4 rounded-xl border border-gray-200 p-8">
+        <div class="flex flex-col space-y-4 shadow-lg rounded-xl border border-gray-200 p-8">
             <Show when=move || (price.get() > 0.0)>
                 <PriceDisplay price=price price_class="text-2xl font-semibold" />
             </Show>
@@ -471,7 +468,8 @@ pub fn PricingBookNow() -> impl IntoView {
 
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
-                // <Show when=move || sorted_rooms_called.get() fallback=SpinnerGray>
+
+                <Show when=move || sorted_rooms_called() fallback=SkeletonPricing>
                     <For
                         each=move || sorted_rooms.get()
                         key=|SortedRoom { room_type, .. }| room_type.clone()
@@ -518,7 +516,7 @@ pub fn PricingBookNow() -> impl IntoView {
                             sorted_rooms=sorted_rooms.get()
                         />
                     </div>
-                // </Show>
+                </Show>
             </div>
         </div>
     }

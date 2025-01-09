@@ -45,3 +45,13 @@ pub fn SkeletonCards() -> impl IntoView {
         </div>
     }
 }
+
+#[component]
+pub fn SkeletonPricing() -> impl IntoView {
+    view! {
+        <div class="w-full h-16 bg-gray-200 rounded-md shadow-lg animate-pulse">
+            <div class="h-6 bg-gray-300 rounded mt-2 mx-2"></div>
+            <div class="h-4 bg-gray-300 rounded mt-2 mx-2"></div>
+        </div>
+    }
+}
