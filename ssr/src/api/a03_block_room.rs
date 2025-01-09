@@ -6,6 +6,15 @@ use leptos::*;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 macro_rules! delegate_method {
     ($enum_var:expr, $method:ident) => {
         match $enum_var {
@@ -16,6 +25,7 @@ macro_rules! delegate_method {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct BlockRoomRequest {
     #[serde(rename = "ResultToken")]
     pub token: String,
@@ -24,6 +34,7 @@ pub struct BlockRoomRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct BlockRoomResult {
     #[serde(rename = "IsPriceChanged")]
     pub is_price_changed: bool,
@@ -39,6 +50,7 @@ pub struct BlockRoomResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct SuccessBlockRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
@@ -51,6 +63,7 @@ pub struct SuccessBlockRoomResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FailureBlockRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
@@ -70,6 +83,7 @@ impl Default for FailureBlockRoomResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(untagged)]
 pub enum BlockRoomResponse {
     Success(SuccessBlockRoomResponse),
@@ -137,12 +151,14 @@ impl HotelRoomDetail {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct BlockRoomContainer {
     #[serde(rename = "BlockRoomResult")]
     pub block_room_result: BlockRoomResult,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelRoomDetail {
     // #[serde(rename = "RoomUniqueId")]
     // pub room_unique_id: String,
@@ -167,6 +183,7 @@ pub struct HotelRoomDetail {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct Price {
     // #[serde(rename = "PublishedPrice")]
     // published_price: f64,

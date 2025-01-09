@@ -7,6 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+fake = {version =  "3.1.0", features = ["derive"], optional = true}
 cfg-if = "1.0.0"
 console_log = "1"
 log = "0.4"
@@ -109,16 +110,19 @@ ssr = [
     "leptos-use/ssr",
     "leptos-use/axum",
     # "dep:colored"
-
     # "dep:dotenvy"
-
     # "reqwest/gzip"
 ]
 
 # setup the localhost url for dev env
-local_api = []
-local-lib = ["local_api", "hydrate" ]
-local-bin = ["ssr","local_api"]
+local-consts = []
+local-lib = ["local-consts", "hydrate" ]
+local-bin = ["ssr","local-consts"]
+
+# mocking features 
+mock-provab = ["dep:fake"]
+local-lib-with-mock = ["local-lib", "mock-provab"]
+local-bin-with-mock = ["local-bin", "mock-provab"]
 
 # release features 
 stage-consts = []
