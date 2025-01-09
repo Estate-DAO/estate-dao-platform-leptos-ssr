@@ -2,12 +2,23 @@ use super::{ProvabReq, ProvabReqMeta};
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelBookingDetailRequest {
     app_reference: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelBookingDetailResponse {
     status: bool,
     message: String,
@@ -15,6 +26,7 @@ pub struct HotelBookingDetailResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 // booking_id from previous API endpoint
 pub struct BookingIds(Vec<String>);
 

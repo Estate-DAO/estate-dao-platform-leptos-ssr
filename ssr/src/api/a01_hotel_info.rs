@@ -7,42 +7,52 @@ use serde::{Deserialize, Serialize};
 
 use super::{ProvabReq, ProvabReqMeta};
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HotelDetailsLevel2 {
-    checkin: String,
-    checkout: String,
+    pub checkin: String,
+    pub checkout: String,
     #[serde(rename = "HotelName")]
-    hotel_name: String,
+    pub hotel_name: String,
     #[serde(rename = "HotelCode")]
-    hotel_code: String,
+    pub hotel_code: String,
     #[serde(rename = "StarRating")]
-    star_rating: i32,
+    pub star_rating: i32,
     #[serde(rename = "Description")]
-    description: String,
+    pub description: String,
     // #[serde(rename = "Attractions")]
     // attractions: Vec<String>,
     // #[serde(rename = "HotelPolicy")]
     // hotel_policy: String,
     #[serde(rename = "HotelFacilities")]
-    hotel_facilities: Vec<String>,
+    pub hotel_facilities: Vec<String>,
     #[serde(rename = "Address")]
-    address: String,
+    pub address: String,
     // #[serde(rename = "Latitude")]
     // latitude: f64,
     // #[serde(rename = "Longitude")]
     // longitude: f64,
     #[serde(rename = "Images")]
-    images: Vec<String>,
-    first_room_details: FirstRoomDetails,
+    pub images: Vec<String>,
+    pub first_room_details: FirstRoomDetails,
     // first_rm_cancel_date: String,
     // cancel_date: String,
     #[serde(rename = "Amenities")]
-    amenities: Vec<String>,
+    pub amenities: Vec<String>,
     // trip_adv_url: String,
     // trip_rating: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FirstRoomDetails {
     #[serde(rename = "Price")]
     price: Price,
@@ -55,6 +65,7 @@ pub struct FirstRoomDetails {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct Price {
     #[serde(rename = "PublishedPrice")]
     published_price: f64,
@@ -93,6 +104,7 @@ pub struct Price {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct CancellationPolicy {
     #[serde(rename = "Charge")]
     charge: f64,
@@ -107,6 +119,7 @@ pub struct CancellationPolicy {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomData {
     #[serde(rename = "RoomUniqueId")]
     room_unique_id: String,
@@ -117,18 +130,21 @@ pub struct RoomData {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelDetailsLevel1 {
     #[serde(rename = "HotelInfoResult")]
     hotel_info_result: HotelInfoResult,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelInfoResult {
     #[serde(rename = "HotelDetails")]
     hotel_details: HotelDetailsLevel2,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelInfoRequest {
     #[serde(rename = "ResultToken")]
     pub token: String,
@@ -138,11 +154,11 @@ pub struct HotelInfoRequest {
 // #[display("Status: {}, Message: {}", status, message)]
 pub struct HotelInfoResponse {
     #[serde(rename = "Status")]
-    status: i32,
+    pub status: i32,
     #[serde(rename = "Message")]
-    message: String,
+    pub message: String,
     #[serde(rename = "HotelDetails")]
-    hotel_details: Option<HotelDetailsLevel1>,
+    pub hotel_details: Option<HotelDetailsLevel1>,
 }
 
 impl HotelInfoResponse {
