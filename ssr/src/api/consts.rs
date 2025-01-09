@@ -23,7 +23,7 @@ const PROVAB_TEST_ESTATEFLY_PROXY: &str =
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";
 const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
-const PROD_APP_URL: &str = "https://nofeebooking.fly.dev";
+const PROD_APP_URL: &str = "https://nofeebooking.com";
 
 // common consts
 const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
