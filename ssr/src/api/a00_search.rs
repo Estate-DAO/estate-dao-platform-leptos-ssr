@@ -255,7 +255,7 @@ pub async fn search_hotel(
     match provab.send(request).await {
         Ok(response) => Ok(response),
         Err(e) => {
-            log!("server_fn_error: {}", e.to_string());
+            log!("server_fn_error: SEARCH_HOTEL_API - {}", e.to_string());
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }
