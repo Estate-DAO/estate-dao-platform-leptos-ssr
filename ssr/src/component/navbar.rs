@@ -8,7 +8,7 @@ pub fn Navbar() -> impl IntoView {
                 // <Icon icon=EstateDaoIcon />
                 <a href="/">
                     <img
-                        src="/img/estate_dao_logo_transparent.webp"
+                        src="/img/nofeebooking.webp"
                         alt="Icon"
                         class="h-8 w-full"
                     />

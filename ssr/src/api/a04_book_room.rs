@@ -11,7 +11,17 @@ use reqwest::Method;
 use serde::Deserializer;
 use serde::{Deserialize, Serialize};
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct BookRoomRequest {
     #[serde(rename = "ResultToken")]
     pub result_token: String,
@@ -27,12 +37,14 @@ pub struct BookRoomRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomDetail {
     #[serde(rename = "PassengerDetails")]
     pub passenger_details: Vec<PassengerDetail>,
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 /// customer serializer is implemented to ensure validation
 /// and override the serde's default behaviour around None values
 pub struct PassengerDetail {
@@ -103,6 +115,7 @@ fn default_true() -> bool {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[repr(u8)]
 pub enum PaxType {
     #[default]
@@ -113,6 +126,7 @@ pub enum PaxType {
 
 // todo [UAT] - show the user that booking cannot be done if the Failure happens in API call
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct SuccessBookRoomResponse {
     #[serde(rename = "Status")]
     pub status: BookingStatus,
@@ -125,6 +139,7 @@ pub struct SuccessBookRoomResponse {
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FailureBookRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
@@ -134,6 +149,7 @@ pub struct FailureBookRoomResponse {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(untagged)]
 pub enum BookRoomResponse {
     Success(SuccessBookRoomResponse),
@@ -141,12 +157,14 @@ pub enum BookRoomResponse {
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct BookingDetailsContainer {
     #[serde(rename = "BookingDetails")]
     pub booking_details: BookingDetails,
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct BookingDetails {
     #[serde(rename = "BookingId")]
     pub travelomatrix_id: String,
@@ -162,6 +180,7 @@ pub struct BookingDetails {
 }
 
 #[derive(PartialEq, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 // #[repr(u8)]
 pub enum BookingStatus {
     // #[serde(rename = "BookFailed")]
@@ -336,6 +355,7 @@ impl<'de> Deserialize<'de> for PassengerDetail {
         D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
+        #[cfg_attr(feature = "mock-provab", derive(Dummy))]
         struct PassengerDetailHelper {
             #[serde(rename = "Title")]
             pub title: String,

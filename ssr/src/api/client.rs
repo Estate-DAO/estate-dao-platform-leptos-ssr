@@ -12,9 +12,23 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::io::Read;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 pub trait ProvabReqMeta: Sized + Send {
     const METHOD: Method;
     const GZIP: bool = true;
+
+    #[cfg(feature = "mock-provab")]
+    type Response: DeserializeOwned + Debug + Dummy<Faker>;
+
+    #[cfg(not(feature = "mock-provab"))]
     type Response: DeserializeOwned + Debug;
 
     /// Deserialize the response from the API
@@ -25,9 +39,12 @@ pub trait ProvabReqMeta: Sized + Send {
 
         log!(
             "{}",
-            format!("deserialize_response- body:String : {body}\n\n\n")
-                .bright_yellow()
-                .bold()
+            format!(
+                "deserialize_response- body:String : {}\n\n\n",
+                body.chars().take(40).collect::<String>()
+            )
+            .bright_yellow()
+            .bold()
         );
         let decompressed_body = if Self::GZIP {
             let mut d = GzDecoder::new(body.as_bytes());
@@ -181,9 +198,16 @@ impl Provab {
         &self,
         req: Req,
     ) -> ApiClientResult<Req::Response> {
-        let reqb = self.req_builder(Req::METHOD, Req::path());
-        // log!("reqb - send: {reqb:?}");
-        self.send_json(req, reqb).await
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "mock-provab")] {
+                let resp: Req::Response = Faker.fake();
+                Ok(resp)
+            } else {
+                let reqb = self.req_builder(Req::METHOD, Req::path());
+                // log!("reqb - send: {reqb:?}");
+                self.send_json(req, reqb).await
+            }
+        }
     }
 }
 fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {

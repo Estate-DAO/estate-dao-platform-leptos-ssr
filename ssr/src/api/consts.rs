@@ -32,7 +32,7 @@ const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app"
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
 cfg_if! {
-    if #[cfg(feature = "local_api")] {
+    if #[cfg(feature = "local-consts")] {
         pub const APP_URL: &str = LOCALHOST_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
         pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;

@@ -9,7 +9,17 @@ use crate::{component::SelectedDateRange, state::search_state::SearchCtx};
 use leptos::logging::log;
 use std::collections::HashMap;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomGuest {
     #[serde(rename = "NoOfAdults")]
     pub no_of_adults: u32,
@@ -20,6 +30,7 @@ pub struct RoomGuest {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct Price {
     // #[serde(rename = "PublishedPrice")]
     // published_price: f64,
@@ -54,7 +65,7 @@ pub struct Price {
     // #[serde(rename = "GSTPrice")]
     // gst_price: f64,
     #[serde(rename = "CurrencyCode")]
-    currency_code: String,
+    pub currency_code: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -118,6 +129,7 @@ pub struct HotelResult {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelSearchResult {
     #[serde(rename = "HotelResults")]
     pub hotel_results: Vec<HotelResult>,
@@ -132,6 +144,7 @@ pub struct Search {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelSearchRequest {
     #[serde(rename = "CheckInDate")]
     check_in_date: String,
@@ -242,7 +255,7 @@ pub async fn search_hotel(
     match provab.send(request).await {
         Ok(response) => Ok(response),
         Err(e) => {
-            log!("server_fn_error: {}", e.to_string());
+            log!("server_fn_error: SEARCH_HOTEL_API - {}", e.to_string());
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }

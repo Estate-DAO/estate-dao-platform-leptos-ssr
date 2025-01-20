@@ -12,19 +12,31 @@ use reqwest::Method;
 
 use serde::{Deserialize, Serialize};
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelRoomRequest {
     #[serde(rename = "ResultToken")]
     pub token: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomList {
     #[serde(rename = "GetHotelRoomResult")]
     pub get_hotel_room_result: GetHotelRoomResult,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct GetHotelRoomResult {
     #[serde(rename = "HotelRoomsDetails")]
     pub hotel_rooms_details: Vec<HotelRoomDetail>,
@@ -33,6 +45,7 @@ pub struct GetHotelRoomResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelRoomDetail {
     #[serde(rename = "RoomUniqueId")]
     pub room_unique_id: String,
@@ -87,6 +100,8 @@ pub struct HotelRoomDetail {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+
 pub struct Price {
     // #[serde(rename = "PublishedPrice")]
     // published_price: f64,
@@ -135,6 +150,8 @@ pub struct Price {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+
 pub struct CancellationPolicy {
     #[serde(rename = "Charge")]
     charge: f32,
@@ -149,6 +166,7 @@ pub struct CancellationPolicy {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomCombinations {
     #[serde(rename = "InfoSource")]
     info_source: String,
@@ -159,12 +177,14 @@ pub struct RoomCombinations {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomCombination {
     #[serde(rename = "RoomIndex")]
     room_index: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
@@ -211,6 +231,9 @@ impl ProvabReqMeta for HotelRoomRequest {
 #[server(GetRoom)]
 pub async fn get_room(request: HotelRoomRequest) -> Result<HotelRoomResponse, ServerFnError> {
     let provab = Provab::default();
+
+    // Add 15 second sleep
+    // tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
     match provab.send(request).await {
         Ok(response) => Ok(response),

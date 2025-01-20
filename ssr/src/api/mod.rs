@@ -32,6 +32,12 @@ pub use client::*;
 // }
 // }
 
+cfg_if! {
+    if #[cfg(feature = "mock-provab")]{
+        pub mod mock;
+    }
+}
+
 mod types;
 pub use types::*;
 
