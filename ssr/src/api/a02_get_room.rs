@@ -184,7 +184,6 @@ pub struct RoomCombination {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
