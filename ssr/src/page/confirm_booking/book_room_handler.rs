@@ -125,17 +125,6 @@ pub fn BookRoomHandler() -> impl IntoView {
                             }
                         };
                     resp
-
-                    // log::info!(
-                    //     "{}",
-                    //     format!(
-                    //         "book_room_result_server SERDE_JSON - {:?}",
-                    //         book_room_response_struct.clone()
-                    //     )
-                    //     .bright_black()
-                    //     .on_cyan()
-                    // );
-                    // BookRoomResponse::Success(book_room_response_struct)
                 }
                 Err(e) => {
                     log::info!(
@@ -153,28 +142,14 @@ pub fn BookRoomHandler() -> impl IntoView {
                 .booking_details
                 .set(Some(BookRoomResponse::Success(book_room_result.clone())));
 
-            // todo [UAT] - does book_room have a failure response?
-            // if yes, model that and make a method 'is_response_success' on BookRoomResponse
-            // match book_room_result {
-            //     Some(val) => Some(val),
-            //     // None => None,
-            // };
-            // store_book_room_response.set(book_room_result.clone());
-            // if book_room_result.is_some() {
+
             log::info!("p04_update_booking_details_to_backend - with book_room_result = {book_room_result:#?}");
             payment_booking_step_signals
                 .p04_update_booking_details_to_backend
                 .set(true);
 
             Some(book_room_result.clone())
-            // } else {
-            //     println!(
-            //         "{}",
-            //         format!("book_room_api_cal results - {:?}", book_room_result.clone()).magenta()
-            //     );
-            //     None
-            // }
-            // })
+
         },
     );
 
@@ -241,73 +216,6 @@ pub fn BookRoomHandler() -> impl IntoView {
             }
         },
     );
-
-    // view! {
-    //     <div class="bg-gray-100 p-4 border border-emerald-800">
-    //         <Suspense fallback=move || {
-    //             view! { "Making your booking ..." }
-    //         }>
-    //             {move || {
-    //                 if let Some(Some(book_room_response)) = book_room_api_call.get() {
-    //                     match book_room_response {
-    //                         SuccessBookRoomResponse { .. } => {
-    //                             view! {
-    //                                 <div class="text-green-500">
-    //                                     // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
-    //                                     "Booking Made!" <br />
-    //                                     {format!("details: {book_room_response:#?}")}
-    //                                 </div>
-    //                             }
-    //                                 .into_view()
-    //                         }
-    //                         any_other => {
-    //                             view! {
-    //                                 <div class="text-red-500">
-    //                                     // TODO [UAT] 39 - if else - SuccessBookRoomResponse, FailureBookRoomResponse
-    //                                     "Booking Failed!" <br />
-    //                                     {format!("details: {any_other:#?}")}
-    //                                 </div>
-    //                             }
-    //                                 .into_view()
-    //                         }
-    //                     }
-    //                 } else {
-
-    //                     view! { "Booking not started yet!" }
-    //                         .into_view()
-    //                 }
-    //             }}
-    //         </Suspense>
-
-    //     </div>
-    //     <div class="bg-gray-100 p-4 border border-emerald-800">
-    //         <Suspense fallback=move || {
-    //             view! { " Saving your precious data ... " }
-    //         }>
-    //             {move || {
-    //                 if let Some(book_room_response) = book_room_canister_call.get() {
-    //                     view! {
-    //                         <p>
-    //                             "Booking saved to database!"
-    //                             {format!("details: {book_room_response:?}")}
-    //                         </p>
-    //                     }
-    //                         .into_view()
-    //                 } else {
-    //                     view! {
-    //                         // todo [UAT] = None can be obtained due to any of the follwoing going wrong
-    //                         // 1. not present in context
-    //                         // 2. signal not set yet
-    //                         // 3. could not save to backend
-    //                         "Could not save booking details to database"
-    //                     }
-    //                         .into_view()
-    //                 }
-    //             }}
-    //         </Suspense>
-
-    //     </div>
-    // }
 }
 
 fn create_backend_book_room_response(

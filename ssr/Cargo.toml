@@ -20,7 +20,8 @@ leptos_router = { version = "0.6", features = ["nightly"] }
 leptos_icons = "0.3.1"
 icondata = "0.4.0"
 icondata_core = "0.1.0"
-tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+tokio-stream = "0.1"
 tower = { version = "0.4", features = ["util"], optional = true }
 tower-http = { version = "0.5", features = ["fs","trace"], optional = true }
 tower-layer = {version =  "0.3.2", optional = true}
@@ -35,6 +36,7 @@ axum-extra = { version = "0.9.3", optional = true, features = [
     "cookie",
     "cookie-signed",
     "cookie-private",
+    "typed-header"
 ] }
 simple_logger = "5.0.0"
 web-sys = "0.3.70"
@@ -48,6 +50,7 @@ accounting = "0.2.0"
 reqwest = { version = "0.12.8", default-features = false, features = [
     "json",
     "http2",
+    "stream"
 ] }
 k256 = { version = "0.13.4", default-features = false, features = [
     "std",
@@ -71,6 +74,11 @@ rand = "0.8.5"
 codee = {version =  "0.2.0", features = ["json_serde_wasm", "json_serde"]}
 futures = "0.3.31"
 colored = {version = "2.1.0"}
+headers = "0.4"
+gloo-net = "0.6.0"
+lazy_static = "1.5.0"
+once_cell = "1.20.2"
+
 
 [build-dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -78,6 +86,10 @@ candid_parser = "0.1.1"
 serde_json = "1.0.110"
 convert_case = "0.6.0"
 anyhow = "1.0.86"
+
+[dev-dependencies]
+eventsource-stream = "0.2"
+reqwest-eventsource = "0.6"
 
 
 [features]

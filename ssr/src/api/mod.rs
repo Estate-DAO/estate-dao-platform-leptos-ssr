@@ -47,3 +47,6 @@ pub mod payments;
 pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStatusResponse};
 
 pub mod canister;
+
+pub mod sse_payments;
+pub use sse_payments::*;

@@ -1,8 +1,6 @@
 use crate::{
     api::{
-        book_room, canister::get_user_booking::get_user_booking_backend, BookRoomRequest,
-        BookRoomResponse, BookingDetails, BookingDetailsContainer, BookingStatus, HotelResult,
-        HotelSearchResponse, HotelSearchResult, Price, RoomDetail, Search, SuccessBookRoomResponse,
+        book_room, canister::get_user_booking::get_user_booking_backend, init_booking_state, sse_payments, BookRoomRequest, BookRoomResponse, BookingDetails, BookingDetailsContainer, BookingStatus, HotelResult, HotelSearchResponse, HotelSearchResult, Price, RoomDetail, Search, SuccessBookRoomResponse
     },
     canister::backend,
     component::SelectedDateRange,
@@ -18,7 +16,17 @@ use crate::{
 };
 use colored::Colorize;
 use leptos::*;
+use leptos::logging::log;
+use leptos_query::{QueryOptions, QueryScope, ResourceOption};
 use std::collections::HashMap;
+use leptos_router::*;
+use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
+
+#[allow(non_snake_case)]
+#[derive(Params, PartialEq, Clone, Debug)]
+struct NowpaymentsPaymentId {
+    NP_id: u64,
+}
 
 pub fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
     let booking_id_signal_read = use_booking_id_store().0;
@@ -31,7 +39,7 @@ pub fn read_booking_details_from_local_storage() -> Result<(String, String), Str
     Ok((email, app_reference))
 }
 
-fn set_to_context(booking: backend::Booking) {
+pub fn set_to_context(booking: backend::Booking) {
     // todo [UAT] 2 : set hotel context from backend?? verify once
     let (email, app_reference) = match read_booking_details_from_local_storage() {
         Ok(details) => details,
@@ -200,7 +208,23 @@ pub fn BookingHandler() -> impl IntoView {
     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
 
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
+    
+    let np_id_query_map = use_query::<NowpaymentsPaymentId>();
 
+    let np_payment_id = create_memo(move |_| {
+        // let np_payment_id = Signal::derive(move || {
+        let print_query_map = np_id_query_map.get();
+
+        log!("print_query_map - {print_query_map:?}");
+
+        let val = np_id_query_map
+            .get()
+            .ok()
+            .and_then(|id| Some(id.NP_id.clone()));
+        log!("np_payment_id: {val:?}");
+        val
+    });
+    
     let backend_booking_res = create_resource(
         move || booking_id_signal_read.get(),
         move |booking_id_signal_read| async move {
@@ -243,11 +267,16 @@ pub fn BookingHandler() -> impl IntoView {
 
                 let found_booking = found_booking_opt.unwrap();
                 let found_booking_clone = found_booking.clone();
-                set_to_context(found_booking);
-                // iff data is present in backend, check for the payment status
-                payment_booking_step_signals
-                    .p01_fetch_payment_details_from_api
-                    .set(true);
+                // set_to_context(found_booking);
+                // // iff data is present in backend, check for the payment status
+                // payment_booking_step_signals
+                //     .p01_fetch_payment_details_from_api
+                //     .set(true);
+                
+                let payment_id = np_payment_id.get_untracked().unwrap();
+                let (email, app_reference_string) =
+                    read_booking_details_from_local_storage().unwrap();
+                let _ = sse_payments::init_booking_state(found_booking, payment_id, email, app_reference_string).await;
                 Ok(Some(found_booking_clone))
             } else {
                 log::info!("not fetch_from_canister");

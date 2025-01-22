@@ -22,7 +22,7 @@ cfg_if! {
             // pub cloudflare: gob_cloudflare::CloudflareAuth,
             // pub kv: KVStoreImpl,
             pub routes: Vec<RouteListing>,
-            pub env_var_config: EnvVarConfig
+            pub env_var_config: EnvVarConfig,
             // pub cookie_key: Key,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,
