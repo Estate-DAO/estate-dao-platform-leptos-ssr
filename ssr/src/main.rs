@@ -2,7 +2,7 @@
 #![allow(unused_imports)]
 
 use cfg_if::cfg_if;
-use estate_fe::{api::consts::EnvVarConfig, init::AppStateBuilder, utils::admin::AdminCanisters};
+use estate_fe::{api::{consts::EnvVarConfig, get_server_count}, init::AppStateBuilder, utils::admin::AdminCanisters};
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::{
@@ -14,7 +14,7 @@ cfg_if! {
             Router
         };
         
-        use axum_extra::TypedHeader;
+        // use axum_extra::TypedHeader;
         use futures::stream::{self, Stream};
         use std::{convert::Infallible, path::PathBuf, time::Duration};
         use tokio_stream::StreamExt as _;
@@ -75,27 +75,8 @@ cfg_if! {
             handler(req).await.into_response()
         }
         
-        // #[get("/api/events")]
-        // async fn events() -> impl Responder {
-        //     use crate::counters::ssr_imports::*;
-        //     use futures::StreamExt;
-        
-        //     let stream = futures::stream::once(async {
-        //         crate::counters::get_server_count().await.unwrap_or(0)
-        //     })
-        //     .chain(COUNT_CHANNEL.clone())
-        //     .map(|value| {
-        //         Ok(web::Bytes::from(format!(
-        //             "event: message\ndata: {value}\n\n"
-        //         ))) as Result<web::Bytes>
-        //     });
-        //     HttpResponse::Ok()
-        //         .insert_header(("Content-Type", "text/event-stream"))
-        //         .streaming(stream)
-        // }
-        
         async fn sse_handler(
-            State(state): State<Arc<AppState>>,
+            State(state): State<AppState>,
         ) -> Sse<impl Stream<Item = Result<Event, axum::BoxError>>> {
             let mut count_rx = state.count_tx.subscribe();
         
@@ -133,7 +114,7 @@ cfg_if! {
 									
 			let (count_tx, _) = broadcast::channel(16);
 	
-	        let res = AppStateBuilder::new(leptos_options, routes.clone())
+	        let res = AppStateBuilder::new(leptos_options, routes.clone(), count_tx)
 	        .build()
 	        .await;
 	

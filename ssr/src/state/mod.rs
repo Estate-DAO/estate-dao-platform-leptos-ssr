@@ -6,11 +6,13 @@ use cfg_if::cfg_if;
 
 use crate::api::consts::EnvVarConfig;
 
+
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::extract::FromRef;
         use leptos::LeptosOptions;
         use leptos_router::RouteListing;
+        use tokio::sync::broadcast;
 
         #[derive(FromRef, Clone)]
         pub struct AppState {
@@ -23,6 +25,7 @@ cfg_if! {
             // pub kv: KVStoreImpl,
             pub routes: Vec<RouteListing>,
             pub env_var_config: EnvVarConfig,
+            pub count_tx: broadcast::Sender<i32>, // Add this field
             // pub cookie_key: Key,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,

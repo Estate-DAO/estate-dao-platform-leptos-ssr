@@ -67,7 +67,7 @@ pub fn ConfirmationPage() -> impl IntoView {
     };
 
     #[cfg(feature = "ssr")]
-    let (events_sig, _) = create_signal(None::<0>);
+    let (events_sig, _) = create_signal(None::<i32>);
 
     let p01_sig_val = Signal::derive(move || {
         let status = move || events_sig.get().unwrap_or_default();
@@ -169,7 +169,6 @@ pub fn ConfirmationPage() -> impl IntoView {
         move || events_sig.get(),
         move |events_sig| async move {
             if events_sig.unwrap_or_default() > 2 {
-                println!("booking_id_signal_read in create_resource - {booking_id_signal_read:?}");
 
                 let details_from_local_storage = match read_booking_details_from_local_storage() {
                     Ok(details) => Some(details),
@@ -208,7 +207,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                     }
 
                     let found_booking = found_booking_opt.unwrap();
-                    set_to_context(found_booking);
+                    set_to_context(found_booking.clone());
 
                     Ok(Some(found_booking))
                 } else {
