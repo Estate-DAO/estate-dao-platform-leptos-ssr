@@ -219,8 +219,8 @@ impl ProvabReq for HotelSearchRequest {
 
 impl ProvabReqMeta for HotelSearchRequest {
     const METHOD: Method = Method::POST;
-    const GZIP: bool = false;
-    // const GZIP: bool = true;
+    const GZIP: bool = true;
+    // const GZIP: bool = false;
     type Response = HotelSearchResponse;
 }
 

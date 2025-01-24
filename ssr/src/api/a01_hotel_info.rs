@@ -223,7 +223,7 @@ impl ProvabReq for HotelInfoRequest {
 
 impl ProvabReqMeta for HotelInfoRequest {
     const METHOD: Method = Method::POST;
-    const GZIP: bool = false;
+    const GZIP: bool = true;
     type Response = HotelInfoResponse;
 }
 

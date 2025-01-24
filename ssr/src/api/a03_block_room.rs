@@ -229,7 +229,7 @@ impl ProvabReq for BlockRoomRequest {
 
 impl ProvabReqMeta for BlockRoomRequest {
     const METHOD: Method = Method::POST;
-    const GZIP: bool = false;
+    const GZIP: bool = true;
     type Response = BlockRoomResponse;
 }
 

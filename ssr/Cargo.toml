@@ -48,6 +48,7 @@ accounting = "0.2.0"
 reqwest = { version = "0.12.8", default-features = false, features = [
     "json",
     "http2",
+    "gzip","deflate"
 ] }
 k256 = { version = "0.13.4", default-features = false, features = [
     "std",
@@ -71,6 +72,7 @@ rand = "0.8.5"
 codee = {version =  "0.2.0", features = ["json_serde_wasm", "json_serde"]}
 futures = "0.3.31"
 colored = {version = "2.1.0"}
+async-trait = "0.1.85"
 
 [build-dependencies]
 serde = { version = "1.0", features = ["derive"] }
