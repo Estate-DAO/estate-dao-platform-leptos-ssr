@@ -6,7 +6,8 @@ pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 
 // PROVAB_BASE_URL
 const PROVAB_PROD_OLD_PROXY: &str =
-    "https://abctravel.elixirpinging.xyz/prod/webservices/index.php/hotel_v3/service";
+    // "https://abctravel.elixirpinging.xyz/prod/webservices/index.php/hotel_v3/service";
+    "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
 const PROVAB_TEST_OLD_PROXY: &str =
     // "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
