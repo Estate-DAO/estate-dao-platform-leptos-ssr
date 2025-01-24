@@ -9,7 +9,9 @@ const PROVAB_PROD_OLD_PROXY: &str =
     "https://abctravel.elixirpinging.xyz/prod/webservices/index.php/hotel_v3/service";
 
 const PROVAB_TEST_OLD_PROXY: &str =
-    "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
+    // "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
+    // "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
+    "http://5.75.246.9:8001/test/webservices/index.php/hotel_v3/service";
 
 // const PROVAB_PROD_ESTATEFLY_PROXY: &str =
 //     "http://estate-static-ip-egress-proxy.internal/produrl/webservices/index.php/hotel_v3/service";
@@ -118,7 +120,7 @@ impl EnvVarConfig {
             // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
-        println!("{value:#?}");
+        // println!("{value:#?}");
         value
     }
 
