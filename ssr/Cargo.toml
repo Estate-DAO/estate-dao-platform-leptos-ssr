@@ -91,6 +91,7 @@ hydrate = [
     "leptos_query_devtools/csr",
     "reqwest/native-tls",
     "leptos-use/use_timestamp",
+    # "dep:reqwest"
     # "dep:dotenv"
     # , "reqwest/gzip"
 ]
@@ -114,6 +115,7 @@ ssr = [
     # "dep:colored"
     # "dep:dotenvy"
     # "reqwest/gzip"
+    # "dep:reqwest"
 ]
 
 # setup the localhost url for dev env

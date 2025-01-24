@@ -158,7 +158,6 @@ impl Default for Provab {
         Self {
             client: reqwest::Client::builder()
                 // .gzip(true)
-                // .deflate(true)
                 .build()
                 .unwrap(),
             // base_url: Arc::new(get_provab_base_url_from_env().parse().unwrap()),
@@ -190,8 +189,20 @@ impl Provab {
         &self,
         reqb: RequestBuilder,
     ) -> ApiClientResult<Req::Response> {
-        let response = reqb
-            .send()
+        let request = reqb
+            .build()
+            .map_err(|e| report!(ApiError::RequestFailed(e)))?;
+        // Print the headers before sending the request
+        // print_request_headers(&request)?;
+
+        // let response = reqb
+        //     .send()
+        //     .await
+        //     .map_err(|e| report!(ApiError::RequestFailed(e)))?;
+
+        let response = self
+            .client
+            .execute(request)
             .await
             .map_err(|e| report!(ApiError::RequestFailed(e)))?;
 
@@ -263,10 +274,33 @@ impl Provab {
     }
 }
 fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
+    // Create a HeaderMap to store custom headers
+    let mut headers = HeaderMap::new();
+
+    // Insert headers with specific casing
+    headers.insert(
+        http::HeaderName::from_bytes(b"Accept-Encoding").unwrap(),
+        http::HeaderValue::from_str("gzip, deflate").unwrap(),
+    );
+
+    reqb.headers(headers)
     // let headers = reqb.headers_ref().unwrap();
     // if !headers.contains_key("Accept-Encoding") && !headers.contains_key("Range") {
-    reqb.header("Accept-Encoding", "gzip, deflate")
+    // reqb.header("Accept-Encoding", "gzip, deflate")
     // } else {
     //     reqb
     // }
+}
+
+/// Function to print the headers of a reqwest::Request
+fn print_request_headers(request: &reqwest::Request) -> ApiClientResult<()> {
+    println!("----- Request Headers -----");
+    for (key, value) in request.headers().iter() {
+        // Convert HeaderName and HeaderValue to strings for better readability
+        let key_str = key.as_str();
+        let value_str = value.to_str().unwrap_or("<Invalid UTF-8>");
+        println!("{}: {}", key_str, value_str);
+    }
+    println!("---------------------------\n");
+    Ok(())
 }
