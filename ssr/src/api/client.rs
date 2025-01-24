@@ -7,7 +7,7 @@ use error_stack::{report, Report, ResultExt};
 use leptos::expect_context;
 use leptos::logging::log;
 use reqwest::header::HeaderMap;
-use reqwest::{IntoUrl, Method, RequestBuilder, Url};
+use reqwest::{IntoUrl, Method, RequestBuilder, Response, Url};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::io::Read;
@@ -18,6 +18,40 @@ cfg_if::cfg_if! {
         use fake::{Dummy, Fake, Faker};
         use rand::rngs::StdRng;
         use rand::SeedableRng;
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum DeserializableInput {
+    Text(String),
+    Bytes(Vec<u8>),
+}
+
+impl DeserializableInput {
+    pub fn take(self, num: usize) -> Self {
+        match self {
+            Self::Text(body_string) => Self::Text(body_string.chars().take(num).collect()),
+            Self::Bytes(body_bytes) => Self::Bytes(body_bytes.into_iter().take(num).collect()),
+        }
+    }
+
+    pub fn to_string(self) -> String {
+        match self {
+            Self::Text(body_string) => body_string,
+            Self::Bytes(body_bytes) => {
+                match String::from_utf8(body_bytes) {
+                    Ok(string) => {
+                        println!("DeserializableInput - Bytes(Vec<u8>):");
+                        string
+                    }
+                    Err(e) => {
+                        println!("DeserializableInput - Bytes - could not convert - : {}", e);
+                        // return empty string for now. since this is debug only.
+                        String::new()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -34,28 +68,39 @@ pub trait ProvabReqMeta: Sized + Send {
     /// Deserialize the response from the API
     /// The default implementation that assumes the response is JSON encoded [crate::CfSuccessRes]
     /// and extracts the `result` field
-    fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
-        use flate2::read::GzDecoder;
-
+    fn deserialize_response(
+        response_bytes_or_string: DeserializableInput,
+    ) -> ApiClientResult<Self::Response> {
         log!(
             "{}",
             format!(
-                "deserialize_response- body:String : {}\n\n\n",
-                body.chars().take(40).collect::<String>()
+                "gzip = {} , response_bytes_or_string : {}\n\n\n",
+                Self::GZIP,
+                response_bytes_or_string.clone().take(50).to_string()
             )
             .bright_yellow()
             .bold()
         );
-        let decompressed_body = if Self::GZIP {
-            let mut d = GzDecoder::new(body.as_bytes());
-            let mut s = String::new();
-            d.read_to_string(&mut s).map_err(|e| {
-                // log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
-                report!(ApiError::DecompressionFailed(e.to_string()))
-            })?;
-            s
-        } else {
-            body
+
+        let decompressed_body = match response_bytes_or_string {
+            DeserializableInput::Bytes(body_bytes) => {
+                // use flate2::read::GzDecoder;
+
+                // let mut d = GzDecoder::new(&body_bytes[..]);
+
+                // let mut s = String::new();
+                // d.read_to_string(&mut s).map_err(|e| {
+                //     log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
+                //     report!(ApiError::DecompressionFailed(e.to_string()))
+                // })?;
+                // s
+                String::from_utf8(body_bytes).map_err(|e| {
+                    report!(ApiError::DecompressionFailed(String::from(
+                        "Could not convert from bytes to string"
+                    )))
+                })?
+            }
+            DeserializableInput::Text(body_string) => body_string,
         };
 
         let jd = &mut serde_json::Deserializer::from_str(&decompressed_body);
@@ -113,6 +158,7 @@ impl Default for Provab {
         Self {
             client: reqwest::Client::builder()
                 // .gzip(true)
+                // .deflate(true)
                 .build()
                 .unwrap(),
             // base_url: Arc::new(get_provab_base_url_from_env().parse().unwrap()),
@@ -137,11 +183,7 @@ impl Provab {
         // g: Option<&Credentials>,
     ) -> RequestBuilder {
         let reqb = self.client.request(method, url);
-        // if let Some(creds) = auth {
-        // reqb.bearer_auth(&creds.token)
-        // } else {
         reqb
-        // }
     }
 
     async fn send_inner<Req: ProvabReqMeta>(
@@ -154,21 +196,31 @@ impl Provab {
             .map_err(|e| report!(ApiError::RequestFailed(e)))?;
 
         if !response.status().is_success() {
-            response.text().await.map_or_else(
+            return response.text().await.map_or_else(
                 |er| {
                     Err(ApiError::ResponseError).attach_printable_lazy(|| format!("Error: {er:?}"))
                 },
                 |t| Err(report!(ApiError::ResponseNotOK(t))),
-            )
-        } else {
-            let res = Req::deserialize_response(
-                response
-                    .text()
-                    .await
-                    .map_err(|_e| report!(ApiError::ResponseError))?,
-            )?;
-            Ok(res)
+            );
         }
+
+        let input = if Req::GZIP {
+            let body_bytes = response
+                .bytes()
+                .await
+                .map_err(|_e| report!(ApiError::ResponseError))?;
+            DeserializableInput::Bytes(body_bytes.into())
+        } else {
+            let body_string = response
+                .text()
+                .await
+                .map_err(|_e| report!(ApiError::ResponseError))?;
+            DeserializableInput::Text(body_string)
+        };
+
+        let res = Req::deserialize_response(input)?;
+
+        Ok(res)
     }
 
     async fn send_json<Req: ProvabReq + ProvabReqMeta + Serialize>(
@@ -213,17 +265,8 @@ impl Provab {
 fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
     // let headers = reqb.headers_ref().unwrap();
     // if !headers.contains_key("Accept-Encoding") && !headers.contains_key("Range") {
-    reqb.header("Accept-Encoding", "gzip")
+    reqb.header("Accept-Encoding", "gzip, deflate")
     // } else {
     //     reqb
     // }
 }
-
-// fn handle_gzip_response(mut response: reqwest::Response) -> reqwest::Response {
-//     if response.headers().get("Content-Encoding") == Some(&"gzip".parse().unwrap()) {
-//         response.headers_mut().remove("Content-Encoding");
-//         response.headers_mut().remove("Content-Length");
-//         // Assume response body is automatically decompressed by reqwest
-//     }
-//     response
-// }

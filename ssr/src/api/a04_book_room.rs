@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{ApiClientResult, ProvabReq, ProvabReqMeta};
+use super::{ApiClientResult, DeserializableInput, ProvabReq, ProvabReqMeta};
 use crate::api::{ApiError, Provab};
 use crate::canister::backend::{
     self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
@@ -223,26 +223,34 @@ use std::io::Read;
 
 impl ProvabReqMeta for BookRoomRequest {
     const METHOD: Method = Method::POST;
-    const GZIP: bool = false;
+    const GZIP: bool = true;
     type Response = BookRoomResponse;
 
-    fn deserialize_response(body: String) -> ApiClientResult<Self::Response> {
-        use flate2::read::GzDecoder;
-
-        println!(
+    // todo refactor the gzip response into its own function
+    fn deserialize_response(
+        response_bytes_or_string: DeserializableInput,
+    ) -> ApiClientResult<Self::Response> {
+        //   taken as it is from client.rs - default trait impl
+        log!(
             "{}",
-            format!("deserialize_response- body:String : {body}\n\n\n")
-                .bright_yellow()
-                .bold()
+            format!(
+                "gzip = {} , response_bytes_or_string : {}\n\n\n",
+                Self::GZIP,
+                response_bytes_or_string.clone().take(50).to_string()
+            )
+            .bright_yellow()
+            .bold()
         );
-        let decompressed_body = if Self::GZIP {
-            let mut d = GzDecoder::new(body.as_bytes());
-            let mut s = String::new();
-            d.read_to_string(&mut s)
-                .map_err(|e| report!(ApiError::DecompressionFailed(e.to_string())))?;
-            s
-        } else {
-            body
+
+        let decompressed_body = match response_bytes_or_string {
+            DeserializableInput::Bytes(body_bytes) => {
+                String::from_utf8(body_bytes).map_err(|e| {
+                    report!(ApiError::DecompressionFailed(String::from(
+                        "Could not convert from bytes to string"
+                    )))
+                })?
+            }
+            DeserializableInput::Text(body_string) => body_string,
         };
 
         let json_value: serde_json::Value =

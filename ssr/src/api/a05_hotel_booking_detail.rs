@@ -32,7 +32,7 @@ pub struct BookingIds(Vec<String>);
 
 impl ProvabReqMeta for HotelBookingDetailRequest {
     const METHOD: Method = Method::POST;
-    const GZIP: bool = false;
+    const GZIP: bool = true;
     type Response = HotelBookingDetailResponse;
 }
 impl ProvabReq for HotelBookingDetailRequest {
