@@ -83,6 +83,7 @@ anyhow = "1.0.86"
 
 
 [features]
+
 hydrate = [
     "leptos/hydrate",
     "leptos_meta/hydrate",
@@ -119,9 +120,13 @@ ssr = [
 ]
 
 # setup the localhost url for dev env
+debug_log = []
+
 local-consts = []
-local-lib = ["local-consts", "hydrate" ]
-local-bin = ["ssr","local-consts"]
+# local-lib = ["local-consts", "hydrate"]
+# local-bin = ["ssr","local-consts"]
+local-lib = ["local-consts", "hydrate", "debug_log" ]
+local-bin = ["ssr","local-consts","debug_log"]
 
 # mocking features 
 mock-provab = ["dep:fake"]

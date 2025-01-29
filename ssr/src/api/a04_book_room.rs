@@ -5,7 +5,8 @@ use crate::api::{ApiError, Provab};
 use crate::canister::backend::{
     self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
 };
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 use reqwest::Method;
 use serde::Deserializer;

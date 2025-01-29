@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;

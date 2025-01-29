@@ -5,7 +5,8 @@ use crate::{
     component::{Divider, HSettingIcon},
     state::search_state::SearchCtx,
 };
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos_icons::*;
 use std::time::Duration;
 

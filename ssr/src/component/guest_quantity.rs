@@ -6,7 +6,8 @@ use crate::{
     state::search_state::SearchCtx,
 };
 use ev::{InputEvent, MouseEvent};
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 use leptos_icons::*;
 use std::ops::Index;

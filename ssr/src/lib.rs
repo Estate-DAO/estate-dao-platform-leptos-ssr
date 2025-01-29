@@ -6,6 +6,7 @@ pub mod app;
 pub mod canister;
 pub mod component;
 pub mod error_template;
+pub mod logging;
 pub mod page;
 pub mod state;
 pub mod utils;

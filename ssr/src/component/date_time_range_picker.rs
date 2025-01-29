@@ -5,7 +5,8 @@ use leptos_icons::*;
 use crate::state::search_state::SearchCtx;
 use crate::utils::date::*;
 use chrono::NaiveDate;
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
 
 /// year,  month, day

@@ -5,10 +5,12 @@ use crate::{
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::InputGroup,
+    state::room_state::{RoomQueryParams, RoomState},
     state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
     state::view_state::HotelInfoCtx,
 };
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::use_navigate;
@@ -71,16 +73,14 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
-    let rating = 4;
+    // let room_state_url_map = RoomState::init();
+    // let hotel_info_results: HotelInfoResults = expect_context();
+    // create_effect(move |_| {
+    //     // Sync room state from URL to hotel info when component mounts
+    //     room_state_url_map.sync_to_hotel_info(&hotel_info_results);
+    // });
 
     let hotel_info_results: HotelInfoResults = expect_context();
-
-    create_effect(move |_| {
-        log!(
-            "hotel_info_results: {:?}",
-            hotel_info_results.search_result.get()
-        );
-    });
 
     let address_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {

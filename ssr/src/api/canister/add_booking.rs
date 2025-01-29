@@ -6,7 +6,8 @@ use crate::state::search_state::{
     BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
 };
 use crate::utils::admin::admin_canister;
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 
 #[server]

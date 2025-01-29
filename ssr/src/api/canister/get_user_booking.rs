@@ -1,6 +1,7 @@
 use crate::canister::backend::Booking;
 use crate::utils::admin::admin_canister;
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 
 #[server(GreetBackend)]

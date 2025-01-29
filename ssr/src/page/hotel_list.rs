@@ -3,6 +3,7 @@ use leptos_router::use_navigate;
 
 use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
+use crate::log;
 use crate::state::search_state::HotelInfoResults;
 use crate::{
     api::hotel_info,
@@ -11,7 +12,6 @@ use crate::{
     page::InputGroup,
     state::{search_state::SearchListResults, view_state::HotelInfoCtx},
 };
-use leptos::logging::log;
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {

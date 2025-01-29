@@ -2,7 +2,8 @@ use crate::canister::backend::{self, Result_};
 use crate::utils::admin::admin_canister;
 use crate::utils::app_reference::BookingId;
 use colored::Colorize;
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use leptos::*;
 
 #[server(GreetBackend)]

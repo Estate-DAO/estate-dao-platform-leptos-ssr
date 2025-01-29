@@ -6,7 +6,8 @@ use super::{ProvabReq, ProvabReqMeta};
 use crate::api::Provab;
 use crate::component::{Destination, GuestSelection};
 use crate::{component::SelectedDateRange, state::search_state::SearchCtx};
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::log;
 use std::collections::HashMap;
 
 cfg_if::cfg_if! {
