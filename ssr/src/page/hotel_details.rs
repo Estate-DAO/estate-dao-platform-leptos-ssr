@@ -12,7 +12,7 @@ use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::use_navigate;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone)]
 struct Amenity {
@@ -344,20 +344,28 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Create a memo for room details
     let room_details = create_memo(move |_| {
+        log!("[pricing_component_not_loading] Creating room_details memo");
         let details = hotel_info_results_clone
             .get_hotel_room_details()
             .unwrap_or_default();
-        log!("Room details: {:?}", details);
+        log!(
+            "[pricing_component_not_loading] Room details memo value: {:?}",
+            details
+        );
         details
     });
 
-    // Create a memo for the processed room data
-    let sorted_rooms: RwSignal<Vec<SortedRoom>> = RwSignal::new({
-        // let sorted_rooms = RwSignal::new(move || {
+    // Create a signal for the processed room data
+    let sorted_rooms = create_rw_signal(Vec::new());
+
+    // Effect to update sorted_rooms when room_details changes
+    create_effect(move |_| {
+        log!("[pricing_component_not_loading] Creating sorted_rooms effect");
         let mut room_count_map: HashMap<String, (String, u32, f64)> = HashMap::new();
+        let mut room_types_to_init = HashSet::new();
 
         for room in room_details.get() {
-            let room_type = room.room_type_name.to_string(); // Convert to owned String
+            let room_type = room.room_type_name.to_string();
             let entry = room_count_map
                 .entry(room_type.clone())
                 .or_insert(("".to_string(), 0, 0.0));
@@ -365,11 +373,22 @@ pub fn PricingBookNow() -> impl IntoView {
             entry.1 += 1;
             entry.2 = room.price.offered_price as f64;
 
-            // Initialize room counter if it doesn't exist
             if hotel_info_results.get_room_count(&room_type).is_none() {
-                hotel_info_results.update_room_count(room_type.clone(), 0);
-                hotel_info_results.update_room_unique_id(room_type.clone(), None);
+                room_types_to_init.insert(room_type);
             }
+        }
+
+        if !room_types_to_init.is_empty() {
+            let mut counters = hotel_info_results.room_counters.get();
+            for room_type in room_types_to_init {
+                log!(
+                    "[pricing_component_not_loading] Batch initializing room counter for type: {}",
+                    room_type
+                );
+                let counter = RoomCounterKeyValue::default();
+                counters.insert(room_type, counter);
+            }
+            hotel_info_results.room_counters.set(counters);
         }
 
         let mut sorted: Vec<SortedRoom> = room_count_map
@@ -384,13 +403,18 @@ pub fn PricingBookNow() -> impl IntoView {
             .collect();
 
         sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type));
-        sorted
+        log!(
+            "[pricing_component_not_loading] Sorted rooms effect value: {:?}",
+            sorted
+        );
+        sorted_rooms.set(sorted);
     });
 
-    let sorted_rooms_called = move || sorted_rooms.get().len() > 1;
+    let sorted_rooms_called = move || sorted_rooms.get().len() > 0;
 
+    let hotel_info_results: HotelInfoResults = expect_context();
     // Create a memo for total price calculation
-    let total_room_price = move || {
+    let total_room_price = create_memo(move |_| {
         let storage = sorted_rooms
             .get()
             .into_iter()
@@ -398,9 +422,9 @@ pub fn PricingBookNow() -> impl IntoView {
                 hotel_info_results.get_room_count(&room_type).unwrap_or(0) > 0
             })
             .collect::<Vec<_>>();
-        hotel_info_results.set_sorted_rooms(storage);
+        hotel_info_results.set_sorted_rooms(storage.clone());
 
-        sorted_rooms.get().iter().fold(
+        storage.iter().fold(
             0.0,
             |acc,
              SortedRoom {
@@ -413,9 +437,9 @@ pub fn PricingBookNow() -> impl IntoView {
                 acc + (room_price * counter as f64)
             },
         )
-    };
+    });
 
-    let price = Signal::derive(move || total_room_price());
+    let price = Signal::derive(move || total_room_price.get());
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
     let total_selected_rooms = create_rw_signal(0);
@@ -471,7 +495,7 @@ pub fn PricingBookNow() -> impl IntoView {
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
 
-                <Show when=move || sorted_rooms_called() fallback=SkeletonPricing>
+                <Show when=sorted_rooms_called fallback=SkeletonPricing>
                     <For
                         each=move || sorted_rooms.get()
                         key=|SortedRoom { room_type, .. }| room_type.clone()
@@ -587,7 +611,7 @@ pub fn PricingBreakdown(
             // log!("Sorted ROOMS <<<<<<<>>>>>>>>>>>>>>>>\n{:?}", sorted_rooms_clone);
             // hotel_info_results.set_sorted_rooms(sorted_rooms_clone);
             log!(
-                "Sorted ROOMS FROM CONTEXT <<<<<<<>>>>>>>>>>>>>>>>\n{:?}",
+                "[pricing_component_not_loading] Sorted ROOMS FROM CONTEXT: {:?}",
                 hotel_info_results.sorted_rooms.get()
             );
 
@@ -596,7 +620,7 @@ pub fn PricingBreakdown(
             // Call server function inside action
             spawn_local(async move {
                 let result = block_room(block_room_request).await.ok();
-                log!("BLOCK_ROOM_API: {result:?}");
+                log!("[pricing_component_not_loading] BLOCK_ROOM_API: {result:?}");
                 BlockRoomResults::set_results(result);
             });
 
@@ -720,10 +744,10 @@ pub fn NumberCounterWrapper(
                                 total_selected_rooms.update(|n| *n += 1);
                                 // hotel_info_results.update_room_count(room_type.clone(), new_count);
                             } else {
-                                log!("Cannot add more rooms. Maximum rooms reached.");
+                                log!("[pricing_component_not_loading] Cannot add more rooms. Maximum rooms reached.");
                             }
                         } else {
-                            log!("Cannot add more rooms. Maximum rooms reached.");
+                            log!("[pricing_component_not_loading] Cannot add more rooms. Maximum rooms reached.");
                         }
                     }
                 >

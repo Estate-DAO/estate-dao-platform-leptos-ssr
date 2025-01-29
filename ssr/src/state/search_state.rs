@@ -149,24 +149,39 @@ impl HotelInfoResults {
     }
 
     pub fn set_room_results(hotel_room_response: Option<HotelRoomResponse>) {
-        Self::from_leptos_context()
-            .room_result
-            .set(hotel_room_response);
+        let self_val = Self::from_leptos_context();
+        log!(
+            "[pricing_component_not_loading] Setting room results: {:?}",
+            hotel_room_response.is_some()
+        );
+        if let Some(response) = &hotel_room_response {
+            log!(
+                "[pricing_component_not_loading] Room response details: {:?}",
+                response.get_hotel_room_details()
+            );
+        }
+        self_val.room_result.set(hotel_room_response);
     }
 
-    // pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
-    //     // Assuming room_result is of type Option<HotelRoomResponse>
-    //     if let Some(hotel_room_response) = self.room_result.get() {
-    //         // Assuming hotel_room_response has a method that returns Vec<HotelRoomDetail>
-    //         hotel_room_response.get_hotel_room_details() // This should return Vec<HotelRoomDetail>
-    //     } else {
-    //         None
-    //     }
-    // }
     pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
-        self.room_result
-            .get()
-            .and_then(|response| response.get_hotel_room_details())
+        log!(
+            "[pricing_component_not_loading] get_hotel_room_details -> room_result exists: {:?}",
+            self.room_result.get().is_some()
+        );
+        let result = self.room_result.get().and_then(|response| {
+            log!("[pricing_component_not_loading] get_hotel_room_details -> mapping response");
+            let details = response.get_hotel_room_details();
+            log!(
+                "[pricing_component_not_loading] get_hotel_room_details -> details: {:?}",
+                details
+            );
+            details
+        });
+        log!(
+            "[pricing_component_not_loading] get_hotel_room_details -> returned: {:?}",
+            result.is_some()
+        );
+        result
     }
 
     pub fn set_price_per_night(&self, per_night_calc: f64) {
