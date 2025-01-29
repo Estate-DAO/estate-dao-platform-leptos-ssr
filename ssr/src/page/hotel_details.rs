@@ -286,8 +286,8 @@ pub fn HotelImages() -> impl IntoView {
 
 #[derive(Debug, Clone)]
 pub struct RoomCounterKeyValue {
-    // counter room
-    key: RwSignal<u32>,
+    // number of rooms
+    pub key: RwSignal<u32>,
     /// room_unique_id
     pub value: RwSignal<Option<String>>,
 }
@@ -351,12 +351,9 @@ pub fn PricingBookNow() -> impl IntoView {
         details
     });
 
-    // Create RwSignal for room counters map
-    let room_counters = hotel_info_results.room_counters;
-
     // Create a memo for the processed room data
-    let sorted_rooms: Memo<Vec<SortedRoom>> = create_memo(move |_| {
-        // (String, u32, f64) = (RoomUniqueId, Room Count , Room Price)
+    let sorted_rooms: RwSignal<Vec<SortedRoom>> = RwSignal::new({
+        // let sorted_rooms = RwSignal::new(move || {
         let mut room_count_map: HashMap<String, (String, u32, f64)> = HashMap::new();
 
         for room in room_details.get() {
@@ -364,15 +361,15 @@ pub fn PricingBookNow() -> impl IntoView {
             let entry = room_count_map
                 .entry(room_type.clone())
                 .or_insert(("".to_string(), 0, 0.0));
-            entry.0 = room.room_unique_id;
+            entry.0 = room.room_unique_id.clone();
             entry.1 += 1;
             entry.2 = room.price.offered_price as f64;
 
-            room_counters.update(|counters| {
-                if !counters.contains_key(&room_type) {
-                    counters.insert(room_type, RoomCounterKeyValue::new());
-                }
-            });
+            // Initialize room counter if it doesn't exist
+            if hotel_info_results.get_room_count(&room_type).is_none() {
+                hotel_info_results.update_room_count(room_type.clone(), 0);
+                hotel_info_results.update_room_unique_id(room_type.clone(), None);
+            }
         }
 
         let mut sorted: Vec<SortedRoom> = room_count_map
@@ -386,24 +383,19 @@ pub fn PricingBookNow() -> impl IntoView {
             })
             .collect();
 
-        sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type)); // Sort by room_type
+        sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type));
         sorted
     });
 
     let sorted_rooms_called = move || sorted_rooms.get().len() > 1;
 
     // Create a memo for total price calculation
-    let total_room_price = create_memo(move |_| {
+    let total_room_price = move || {
         let storage = sorted_rooms
             .get()
             .into_iter()
             .filter(|SortedRoom { room_type, .. }| {
-                room_counters
-                    .get()
-                    .get(room_type.as_str())
-                    .map(|sig| sig.key.get())
-                    .unwrap_or(0)
-                    > 0
+                hotel_info_results.get_room_count(&room_type).unwrap_or(0) > 0
             })
             .collect::<Vec<_>>();
         hotel_info_results.set_sorted_rooms(storage);
@@ -413,32 +405,42 @@ pub fn PricingBookNow() -> impl IntoView {
             |acc,
              SortedRoom {
                  room_type,
-                 room_unique_id,
-                 room_count_for_given_type,
+                 room_unique_id: _,
+                 room_count_for_given_type: _,
                  room_price,
              }| {
-                let counter = room_counters
-                    .get()
-                    .get(room_type.as_str()) // Change: use as_str() to get a string slice
-                    .map(|sig| sig.key.get())
-                    .unwrap_or(0);
+                let counter = hotel_info_results.get_room_count(&room_type).unwrap_or(0);
                 acc + (room_price * counter as f64)
             },
         )
-    });
+    };
 
-    let price = Signal::derive(move || total_room_price.get());
+    let price = Signal::derive(move || total_room_price());
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
-    let total_selected_rooms = create_rw_signal(
-        room_counters
+    let total_selected_rooms = create_rw_signal(0);
+
+    // update total_selected_rooms
+    let hotel_info_results: HotelInfoResults = expect_context();
+    // Update total selected rooms based on all room counts
+    create_effect(move |_| {
+        let total = sorted_rooms
             .get()
-            .values()
-            .fold(0, |acc, counter| acc + counter.key.get()),
-    );
+            .iter()
+            .map(|room| {
+                hotel_info_results
+                    .get_room_count(&room.room_type)
+                    .unwrap_or(0)
+            })
+            .sum();
+        total_selected_rooms.set(total);
+    });
+
+    // room_counters
+    let hotel_info_results: HotelInfoResults = expect_context();
+    let room_counters = hotel_info_results.room_counters;
 
     let room_counters_clone = room_counters.clone();
-
     view! {
         <div class="flex flex-col space-y-4 shadow-lg rounded-xl border border-gray-200 p-8">
             <Show when=move || (price.get() > 0.0)>
@@ -479,29 +481,51 @@ pub fn PricingBookNow() -> impl IntoView {
                             let SortedRoom {
                                 room_type,
                                 room_unique_id,
-                                room_count_for_given_type,
+                                room_count_for_given_type: _,
                                 room_price,
                             } = room;
-                            let base_counter = room_counters
-                                .get()
-                                .get(&room_type)
-                                .cloned()
-                                .unwrap_or_else(|| RoomCounterKeyValue::new());
+
+                            let hotel_info_results: HotelInfoResults = expect_context();
+                            let base_counter = hotel_info_results.get_room_count(&room_type);
+                            let base_unique_id = hotel_info_results.get_room_unique_id(&room_type);
+
+                            let counter = create_rw_signal(base_counter.unwrap_or(0));
+                            let value_signal = create_rw_signal(base_unique_id);
+
+                            // Clone values for the first effect
+                            let hotel_info_results1 = hotel_info_results.clone();
+                            let room_type1 = room_type.clone();
+
+                            // Update the hotel_info_results whenever the counter changes
+                            create_effect(move |_| {
+                                let count = counter.get();
+                                hotel_info_results1.update_room_count(room_type1.clone(), count);
+                            });
+
+                            // Clone values for the second effect
+                            let hotel_info_results2 = hotel_info_results.clone();
+                            let room_type2 = room_type.clone();
+
+                            // Update the hotel_info_results whenever the unique_id changes
+                            create_effect(move |_| {
+                                let unique_id = value_signal.get();
+                                hotel_info_results2.update_room_unique_id(room_type2.clone(), unique_id);
+                            });
 
                             view! {
                                 <div class="flex justify-between items-center border-b border-gray-300 py-2">
                                     <span class="font-medium">
-                                        // {format!("{} - ₹{:.2}/night", room_type,  room_price)}
                                         {format!("{} - ${:.2}/night", room_type, room_price)}
                                     </span>
                                     <NumberCounterWrapper
                                         label=""
-                                        counter=base_counter.key
+                                        counter=counter
                                         class="mt-4"
                                         value=room_unique_id
-                                        set_value=base_counter.value
+                                        set_value=value_signal
                                         max_rooms=num_rooms.get_untracked()
                                         total_selected_rooms=total_selected_rooms
+                                        room_type=room_type
                                     />
                                 </div>
                             }
@@ -635,19 +659,25 @@ pub fn NumberCounterWrapper(
     set_value: RwSignal<Option<String>>,
     max_rooms: u32,
     total_selected_rooms: RwSignal<u32>,
+    room_type: String,
 ) -> impl IntoView {
+    let hotel_info_results: HotelInfoResults = expect_context();
+
+    let room_type_clone = room_type.clone();
     // Sets the value of the signal if the counter is non-zero
     create_effect(move |_| {
         if counter.get() > 0 {
-            // log!("base_counter.value: {value:?}");
-            set_value.set(Some(value.clone()));
+            hotel_info_results.update_room_unique_id(room_type_clone.clone(), Some(value.clone()));
         } else {
-            set_value.set(None); // Or handle the zero case differently
+            hotel_info_results.update_room_unique_id(room_type_clone.clone(), None);
         }
     });
 
     let can_increment = move || total_selected_rooms.get() < max_rooms;
     let can_decrement = move || counter.get() > 0;
+
+    // previous value of HotelInfoResults is moved in create_effect, so this is needed
+    // let hotel_info_results: HotelInfoResults = expect_context();
 
     view! {
         <div class=format!("flex items-center justify-between {}", class)>
@@ -657,8 +687,11 @@ pub fn NumberCounterWrapper(
                     class="ps-2 py-1 text-2xl"
                     disabled=move || !can_decrement()
                     on:click=move |_| {
-                        counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
-                        total_selected_rooms.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
+                        if can_decrement() {
+                            counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
+                            total_selected_rooms.update(|n| *n = if *n > 0 { *n - 1 } else { 0 });
+                            // hotel_info_results.update_room_count(room_type.clone(), counter.get());
+                        }
                     }
                 >
                     {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
@@ -668,7 +701,9 @@ pub fn NumberCounterWrapper(
                     prop:value=move || counter.get().to_string()
                     on:input=move |ev| {
                         let value = event_target_value(&ev).parse().unwrap_or(0);
-                        counter.set(value.max(0));
+                        let new_value = value.max(0);
+                        counter.set(new_value);
+                        // hotel_info_results.update_room_count(room_type.clone(), new_value);
                     }
                     class=format!(
                         "{} text-center w-6",
@@ -680,10 +715,10 @@ pub fn NumberCounterWrapper(
                     on:click=move |_| {
                         if can_increment() {
                             let new_count = counter.get() + 1;
-                            if new_count + (total_selected_rooms.get() - counter.get()) <= max_rooms
-                            {
+                            if new_count + (total_selected_rooms.get() - counter.get()) <= max_rooms {
                                 counter.set(new_count);
                                 total_selected_rooms.update(|n| *n += 1);
+                                // hotel_info_results.update_room_count(room_type.clone(), new_count);
                             } else {
                                 log!("Cannot add more rooms. Maximum rooms reached.");
                             }

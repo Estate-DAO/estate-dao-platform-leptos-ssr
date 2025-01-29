@@ -179,6 +179,73 @@ impl HotelInfoResults {
         Self::from_leptos_context().room_counters.set(room_counters);
     }
 
+    pub fn get_room_count(&self, room_type: &str) -> Option<u32> {
+        self.room_counters
+            .get()
+            .get(room_type)
+            .map(|counter| counter.key.get())
+    }
+
+    pub fn get_room_unique_id(&self, room_type: &str) -> Option<String> {
+        self.room_counters
+            .get()
+            .get(room_type)
+            .and_then(|counter| counter.value.get())
+    }
+
+    pub fn update_room_count(&self, room_type: String, count: u32) {
+        if let Some(counter) = self.room_counters.get().get(&room_type) {
+            counter.key.set(count);
+        } else {
+            let mut counters = self.room_counters.get();
+            let mut new_counter = RoomCounterKeyValue::default();
+            new_counter.key.set(count);
+            counters.insert(room_type, new_counter);
+            self.room_counters.set(counters);
+        }
+    }
+
+    pub fn update_room_unique_id(&self, room_type: String, unique_id: Option<String>) {
+        if let Some(counter) = self.room_counters.get().get(&room_type) {
+            counter.value.set(unique_id);
+        } else {
+            let mut counters = self.room_counters.get();
+            let mut new_counter = RoomCounterKeyValue::default();
+            new_counter.value.set(unique_id);
+            counters.insert(room_type, new_counter);
+            self.room_counters.set(counters);
+        }
+    }
+
+    pub fn increment_room_count(&self, room_type: String) -> bool {
+        if let Some(counter) = self.room_counters.get().get(&room_type) {
+            let current = counter.key.get();
+            counter.key.set(current + 1);
+            true
+        } else {
+            let mut counters = self.room_counters.get();
+            let mut new_counter = RoomCounterKeyValue::default();
+            new_counter.key.set(1);
+            counters.insert(room_type, new_counter);
+            self.room_counters.set(counters);
+            true
+        }
+    }
+
+    pub fn decrement_room_count(&self, room_type: String) -> bool {
+        if let Some(counter) = self.room_counters.get().get(&room_type) {
+            let current = counter.key.get();
+            if current > 0 {
+                counter.key.set(current - 1);
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
     pub fn set_sorted_rooms(&self, sorted_rooms: Vec<SortedRoom>) {
         Self::from_leptos_context().sorted_rooms.set(sorted_rooms);
     }

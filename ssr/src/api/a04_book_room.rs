@@ -236,7 +236,7 @@ impl ProvabReqMeta for BookRoomRequest {
             format!(
                 "gzip = {} , response_bytes_or_string : {}\n\n\n",
                 Self::GZIP,
-                response_bytes_or_string.clone().take(50).to_string()
+                response_bytes_or_string.clone().take(500).to_string()
             )
             .bright_yellow()
             .bold()
@@ -600,7 +600,7 @@ mod test {
     #[test]
     fn test_deserialize_response_success() {
         let body = r#"{"Status":1,"Message":"","CommitBooking":{"BookingDetails":{"ConfirmationNo":"218-3379918","BookingRefNo":"218-3379918","BookingId":"TM-218-3379918","booking_status":"BOOKING_CONFIRMED"}}}"#.to_string();
-        let result = super::BookRoomRequest::deserialize_response(body);
+        let result = super::BookRoomRequest::deserialize_response(DeserializableInput::Text(body));
         assert!(result.is_ok());
         match result.unwrap() {
             super::BookRoomResponse::Success(_) => (),
@@ -611,7 +611,7 @@ mod test {
     #[test]
     fn test_deserialize_response_failure() {
         let body = r#"{"Status":0,"Message":"Booking Failed"}"#.to_string();
-        let result = super::BookRoomRequest::deserialize_response(body);
+        let result = super::BookRoomRequest::deserialize_response(DeserializableInput::Text(body));
         assert!(result.is_ok());
         match result.unwrap() {
             super::BookRoomResponse::Failure(_) => (),

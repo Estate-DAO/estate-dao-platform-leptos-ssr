@@ -163,11 +163,14 @@ pub fn HotelCard(
             });
         }
     });
+
+    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+
     view! {
         <div // href=AppRoutes::HotelDetails.to_string()
         on:click=move |ev| {
             ev.prevent_default();
-            let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+            // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);
             search_hotel_room_action.dispatch(());

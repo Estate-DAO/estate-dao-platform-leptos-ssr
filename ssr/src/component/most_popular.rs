@@ -44,8 +44,8 @@ impl From<City> for Destination {
     }
 }
 
-#[server(GetCityList)]
-pub async fn read_destinations_from_file(file_path: String) -> Result<Vec<City>, ServerFnError> {
+#[server(GetCityListForMostPopular)]
+pub async fn read_cities_from_file(file_path: String) -> Result<Vec<City>, ServerFnError> {
     let file = std::fs::File::open(file_path.as_str())?;
     let reader = std::io::BufReader::new(file);
     let result: Vec<City> = serde_json::from_reader(reader)?;
@@ -59,7 +59,7 @@ fn destinations_query() -> QueryScope<bool, Option<Vec<City>>> {
     leptos_query::create_query(
         |_| async move {
             // log!("will call read_destinations_from_file in async move");
-            read_destinations_from_file("city.json".into()).await.ok()
+            read_cities_from_file("city.json".into()).await.ok()
         },
         QueryOptions {
             default_value: None,
