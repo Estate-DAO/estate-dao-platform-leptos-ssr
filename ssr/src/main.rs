@@ -2,7 +2,11 @@
 #![allow(unused_imports)]
 
 use cfg_if::cfg_if;
-use estate_fe::{api::consts::EnvVarConfig, init::AppStateBuilder, utils::admin::AdminCanisters};
+use estate_fe::{
+    api::consts::EnvVarConfig,
+    init::AppStateBuilder,
+    utils::{admin::AdminCanisters, sort_json::sort_json},
+};
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -22,6 +26,13 @@ cfg_if! {
         use estate_fe::app::*;
         use estate_fe::fallback::file_and_error_handler;
         use estate_fe::state::AppState;
+        use axum::{ routing::post, http::{StatusCode, HeaderMap} };
+        use axum::body::Bytes;
+        use serde_json::Value;
+        use hmac::{Hmac, Mac};
+        use sha2::Sha512;
+        use tracing::{info, error};
+        type HmacSha512 = Hmac<Sha512>;
 
 
         pub async fn server_fn_handler(
@@ -69,6 +80,61 @@ cfg_if! {
         }
 
 
+
+        // todo see scratchpad_me.md for more security hardening
+        async fn nowpayments_webhook(
+            State(state): State<AppState>,
+            headers: HeaderMap,
+            body: Bytes,
+        ) -> (StatusCode, &'static str) {
+            // 1. Extract signature from headers
+            let signature = match headers.get("x-nowpayments-sig") {
+                Some(sig) => sig,
+                None => {
+                    error!("Missing x-nowpayments-sig header");
+                    return (StatusCode::BAD_REQUEST, "Signature missing");
+                }
+            };
+            let signature = match signature.to_str() {
+                Ok(s) => s,
+                Err(_) => {
+                    error!("Invalid signature header format");
+                    return (StatusCode::BAD_REQUEST, "Invalid signature format");
+                }
+            };
+
+            // 2. Parse JSON body
+            let payload: Value = match serde_json::from_slice(&body) {
+                Ok(val) => val,
+                Err(e) => {
+                    error!("Failed to parse JSON body: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "JSON parsing error");
+                }
+            };
+
+            // 3. Sort JSON object
+            let sorted_payload = sort_json(&payload);
+            let payload_str = serde_json::to_string(&sorted_payload)
+                .unwrap_or_default();
+
+            // 4. Compute HMAC-SHA512 signature
+            let mut mac = HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes())
+                .expect("HMAC key creation failed");
+            mac.update(payload_str.as_bytes());
+            let computed_hmac = mac.finalize().into_bytes();
+            let computed_hex = hex::encode(computed_hmac);
+
+            // 5. Compare signatures
+            if computed_hex.eq(signature) {
+                info!("NowPayments webhook signature verified successfully");
+                (StatusCode::OK, "OK")
+            } else {
+                error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
+                (StatusCode::BAD_REQUEST, "Invalid signature")
+            }
+        }
+
+
     #[tokio::main]
     async fn main() {
         better_panic::install();
@@ -104,6 +170,7 @@ cfg_if! {
                 "/api/*fn_name",
                 get(server_fn_handler).post(server_fn_handler),
             )
+            .route("/ipn/webhook", post(nowpayments_webhook))
             .leptos_routes_with_handler(routes, get(leptos_routes_handler))
             .fallback(file_and_error_handler)
             .layer(trace_layer)

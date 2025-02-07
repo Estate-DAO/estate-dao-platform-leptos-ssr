@@ -101,8 +101,8 @@ pub struct EnvVarConfig {
     provab_headers: HashMap<String, String>,
     pub nowpayments_api_key: String,
     pub admin_private_key: String,
-    // skip the payment on localhost using environment variable
-    // pub payment_skip_local: String
+    pub ipn_secret: String, // skip the payment on localhost using environment variable
+                            // pub payment_skip_local: String
 }
 
 impl EnvVarConfig {
@@ -119,7 +119,7 @@ impl EnvVarConfig {
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
             ),
-            // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
+            ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
         // println!("{value:#?}");
