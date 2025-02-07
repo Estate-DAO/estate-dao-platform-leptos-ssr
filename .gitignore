@@ -29,3 +29,8 @@ patches/*
 .env.fly
 hash.txt
 *.pem
+.windsurfrules
+scratchpad.md
+scratchpad_me.md
+search.txt
+*.diff
