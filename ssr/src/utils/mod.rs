@@ -7,6 +7,7 @@ pub mod ic;
 pub mod icon;
 pub mod parent_resource;
 pub mod route;
+pub mod sort_json;
 
 pub use backend_default_impl::*;
 pub use colored_print::*;
