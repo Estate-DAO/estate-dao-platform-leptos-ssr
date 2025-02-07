@@ -119,7 +119,9 @@ impl EnvVarConfig {
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
             ),
-            ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
+            // todo add secret when available in gh actions
+            ipn_secret: env_w_default("NOWPAYMENTS_IPN_SECRET", "dummy-secret-for-now").unwrap(),
+            // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
         // println!("{value:#?}");
