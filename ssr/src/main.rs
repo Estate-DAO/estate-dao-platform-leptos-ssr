@@ -33,8 +33,16 @@ cfg_if! {
         use sha2::Sha512;
         use tracing::{info, error};
         type HmacSha512 = Hmac<Sha512>;
+        use std::net::IpAddr;
+        use axum::extract::ConnectInfo;
 
-
+        // Define whitelist (could be a lazy_static or const once computed)
+        static NOWPAYMENTS_ALLOWED_IPS: &[&str] = &[
+            "51.89.194.21",
+            "51.75.77.69",
+            "138.201.172.58",
+            "65.21.158.36",
+        ];
         pub async fn server_fn_handler(
             State(app_state): State<AppState>,
             path: Path<String>,
@@ -83,10 +91,19 @@ cfg_if! {
 
         // todo see scratchpad_me.md for more security hardening
         async fn nowpayments_webhook(
+            ConnectInfo(remote_addr): ConnectInfo<std::net::SocketAddr>,
             State(state): State<AppState>,
             headers: HeaderMap,
             body: Bytes,
         ) -> (StatusCode, &'static str) {
+            let client_ip = remote_addr.ip();
+            // Only allow if in whitelist
+            let allowed = NOWPAYMENTS_ALLOWED_IPS.iter().any(|&ip| client_ip == ip.parse::<IpAddr>().unwrap());
+
+            if !allowed {
+                tracing::warn!("Rejected webhook from unauthorized IP: {}", client_ip);
+                return (StatusCode::FORBIDDEN, "Forbidden");
+            }
             // 1. Extract signature from headers
             let signature = match headers.get("x-nowpayments-sig") {
                 Some(sig) => sig,
@@ -132,6 +149,12 @@ cfg_if! {
                 error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
                 (StatusCode::BAD_REQUEST, "Invalid signature")
             }
+            //
+            // if mac.verify_slice(provided_signature_bytes).is_err() {
+            //     // Signature didn't match (constant-time check internally)
+            //     tracing::error!("Invalid webhook signature");
+            //     return StatusCode::BAD_REQUEST;
+            // }
         }
 
 
