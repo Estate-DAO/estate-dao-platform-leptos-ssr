@@ -5,6 +5,15 @@ use anyhow::{anyhow, Result};
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use std::fmt::Debug;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CreateInvoiceRequest {
     pub price_amount: u32,
@@ -61,6 +70,7 @@ pub struct GetPaymentStatusRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct SuccessGetPaymentStatusResponse {
     pub payment_id: u64,
     pub invoice_id: u64,
@@ -87,6 +97,7 @@ pub struct SuccessGetPaymentStatusResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FailureGetPaymentStatusResponse {
     status: bool,
     #[serde(rename = "statusCode")]

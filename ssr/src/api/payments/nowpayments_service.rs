@@ -122,7 +122,10 @@ pub async fn nowpayments_get_payment_status(
     let nowpayments = NowPayments::default();
     println!("{:#?}", request);
     match nowpayments.send(request).await {
-        Ok(response) => Ok(response),
+        Ok(response) => {
+            // expect_context for counter_tx
+            Ok(response)
+        }
         Err(e) => Err(ServerFnError::ServerError(e.to_string())),
     }
 }
