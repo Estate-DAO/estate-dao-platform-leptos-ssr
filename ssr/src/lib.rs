@@ -15,6 +15,7 @@ cfg_if::cfg_if! {
     if #[cfg(feature =   "ssr")]{
         pub mod fallback;
         pub mod init;
+        pub mod ssr_booking;
     }
 }
 

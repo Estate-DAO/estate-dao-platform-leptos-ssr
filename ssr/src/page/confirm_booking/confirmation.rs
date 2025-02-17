@@ -39,7 +39,7 @@ pub fn ConfirmationPage() -> impl IntoView {
     let p01_sig_val = Signal::derive(move || {
         let status = move || status_updates.p01_fetch_payment_details_from_api.get();
         if status() {
-            "Payment confirmation successfull"
+            "Payment confirmation successful"
         } else {
             "Confirming your payment"
         }

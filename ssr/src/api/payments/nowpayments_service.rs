@@ -25,7 +25,7 @@ impl NowPayments {
         }
     }
 
-    async fn send<Req: PaymentGateway + PaymentGatewayParams + Serialize>(
+    pub async fn send<Req: PaymentGateway + PaymentGatewayParams + Serialize>(
         &self,
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
