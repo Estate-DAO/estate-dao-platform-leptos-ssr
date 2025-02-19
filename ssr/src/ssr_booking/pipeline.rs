@@ -3,6 +3,7 @@ use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
 use crate::utils::uuidv7;
 use async_trait::async_trait;
 use chrono::Utc;
+use tokio::time::{sleep, Duration};
 use tracing::{debug, error, info};
 
 use super::{SSRBookingPipelineStep, ServerSideBookingEvent};
@@ -148,5 +149,7 @@ pub async fn process_pipeline(
         n.notify(end_event).await;
     }
 
+    // this is only for local testing purpose of concurrency of the pipeline.
+    // tokio::time::sleep(Duration::from_millis(4000)).await;
     Ok(current_event)
 }

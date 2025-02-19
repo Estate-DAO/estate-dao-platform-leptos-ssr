@@ -1,6 +1,8 @@
 pub mod mock_handler;
 pub mod payment_handler;
 pub mod pipeline;
+pub mod pipeline_lock;
+pub use pipeline_lock::PipelineLockManager;
 
 mod pipeline_integration_test;
 

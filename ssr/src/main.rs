@@ -7,7 +7,7 @@ use estate_fe::{
     init::AppStateBuilder,
     ssr_booking::{
         mock_handler::MockStep, payment_handler::GetPaymentStatusFromPaymentProvider,
-        pipeline::process_pipeline, SSRBookingPipelineStep,
+        pipeline::process_pipeline, pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
     utils::{admin::AdminCanisters, notifier::Notifier, sort_json::sort_json},
 };
@@ -44,13 +44,6 @@ cfg_if! {
         use tokio::sync::broadcast;
         use std::sync::Arc;
         use estate_fe::ssr_booking::ServerSideBookingEvent;
-
-
-        // Define the Notifier, PipelineStep, GetPaymentStatusFromPaymentProvider, CreateBookingCallForTravelProvider, and ServerSideBookingEvent types
-        // These types are not defined in the provided code, so you need to define them or import them from another module
-        // For example:
-        // use estate_fe::pipeline::{Notifier, PipelineStep, GetPaymentStatusFromPaymentProvider, CreateBookingCallForTravelProvider, ServerSideBookingEvent};
-        // use estate_fe::pipeline::process_pipeline;
 
         pub async fn server_fn_handler(
             State(app_state): State<AppState>,
@@ -96,7 +89,6 @@ cfg_if! {
             handler(req).await.into_response()
         }
 
-
         // async fn sse_handler(
         //     State(state): State<AppState>,
         // ) -> Sse<impl Stream<Item = Result<Event, axum::BoxError>>> {
@@ -117,7 +109,45 @@ cfg_if! {
         // }
 
 
-        // todo see scratchpad_me.md for more security hardening
+        async fn start_ssr_booking_processing_pipeline(payload: &Value, state: &AppState) {
+            let payment_id = payload["payment_id"].as_str();
+            let order_id = payload["order_id"].as_str().unwrap_or_default();
+
+            if !state.pipeline_lock_manager.try_acquire_lock(payment_id, order_id) {
+                debug!("Pipeline already running for payment_id: {:?}, order_id: {}", payment_id, order_id);
+                return;
+            }
+
+            let notifier = Notifier::with_bus();
+            let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
+            let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
+
+            let event = ServerSideBookingEvent {
+                payment_id: payment_id.map(String::from),
+                booking_id: order_id.to_string(),
+                user_email: payload["order_description"].as_str()
+                    .unwrap_or_default()
+                    .to_string(),
+            };
+
+            debug!("ServerSideBookingEvent = {:?}", event);
+
+            let lock_manager = state.pipeline_lock_manager.clone();
+            let payment_id = payment_id.map(String::from);
+            let order_id = order_id.to_string();
+
+            tokio::spawn(async move {
+                let result = process_pipeline(event, &[payment_status_step, mock_step], Some(&notifier)).await;
+
+                lock_manager.release_lock(payment_id.as_deref(), &order_id);
+
+                match result {
+                    Ok(_) => debug!("Pipeline processed successfully"),
+                    Err(e) => error!("Pipeline processing failed: {:?}", e),
+                }
+            });
+        }
+
         async fn nowpayments_webhook(
             ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
             State(state): State<AppState>,
@@ -158,8 +188,8 @@ cfg_if! {
             let payload_str = serde_json::to_string(&sorted_payload)
                         .unwrap_or_default();
 
-            start_ssr_booking_processing_pipeline(&payload).await;
-            // debug!("Computing HMAC-SHA512 signature for sorted payload: {}", payload_str);
+            start_ssr_booking_processing_pipeline(&payload, &state).await;
+              // debug!("Computing HMAC-SHA512 signature for sorted payload: {}", payload_str);
 
             // 4. Compute HMAC-SHA512 signature
             // let mut mac = HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes())
@@ -185,58 +215,19 @@ cfg_if! {
             (StatusCode::OK, "ok")
         }
 
-        async fn start_ssr_booking_processing_pipeline(payload: &Value) {
-            // Create a Notifier with event bus
-            let notifier = Notifier::with_bus();
-
-            // Create pipeline steps
-            let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
-            // let booking_call_step = SSRBookingPipelineStep::BookingCall(CreateBookingCallForTravelProvider);
-            let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
-
-            // Create ServerSideBookingEvent from payload
-            let event = ServerSideBookingEvent {
-                payment_id: payload["payment_id"].as_str().map(String::from),
-                booking_id: payload["order_id"].as_str()
-                    .unwrap_or_default()
-                    .to_string(),
-                user_email: payload["order_description"].as_str()
-                    .unwrap_or_default()
-                    .to_string(),
-            };
-
-            debug!("ServerSideBookingEvent =  {:?}", event);
-
-
-            // Process pipeline asynchronously
-            tokio::spawn(async move {
-                match process_pipeline(event, &[payment_status_step, mock_step], Some(&notifier)).await {
-                    Ok(_) => debug!("Pipeline processed successfully"),
-                    Err(e) => error!("Pipeline processing failed: {:?}", e),
-                }
-            });
-        }
-
         #[tokio::main]
         async fn main() {
             better_panic::install();
-            // A minimal tracing middleware for request logging.
             tracing_subscriber::fmt::init();
 
-            // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-            // For deployment these variables are:
-            // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-            // Alternately a file can be specified such as Some("Cargo.toml")
-            // The file would need to be included with the executable when moved to deployment
             let conf = get_configuration(None).await.unwrap();
             let leptos_options = conf.leptos_options;
             let addr = leptos_options.site_addr;
-            // let routes = generate_route_list(App);
             let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
 
-            let (count_tx, count_rx) = broadcast::channel(100);
+            // let (count_tx, count_rx) = broadcast::channel(100);
 
-            let res = AppStateBuilder::new(leptos_options, routes.clone(), count_tx)
+            let res = AppStateBuilder::new(leptos_options, routes.clone())
             .build()
             .await;
 
@@ -247,15 +238,12 @@ cfg_if! {
                 },
             );
 
-
-            // build our application with a route
             let app = Router::new()
                 .route(
                     "/api/*fn_name",
                     get(server_fn_handler).post(server_fn_handler),
                 )
                 .route("/ipn/webhook", post(nowpayments_webhook))
-                // .route("/sse/events", get(sse_handler))
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(trace_layer)
@@ -263,10 +251,6 @@ cfg_if! {
 
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
             logging::log!("listening on http://{}", &addr);
-
-            // tokio::spawn(async move {
-            //     count_rx function
-            // });
 
             axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
                 .await
