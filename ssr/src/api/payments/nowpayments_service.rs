@@ -10,6 +10,15 @@ use leptos::*;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "mock-provab")] {
+        // fake imports
+        use fake::{Dummy, Fake, Faker};
+        use rand::rngs::StdRng;
+        use rand::SeedableRng;
+    }
+}
+
 pub struct NowPayments {
     pub api_key: String,
     pub api_host: String,
@@ -29,31 +38,39 @@ impl NowPayments {
         &self,
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
-        let url = req.build_url(&self.api_host)?;
-        println!("nowpayments url = {url:#?}");
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "mock-provab")] {
+                let resp: Req::PaymentGatewayResponse = Faker.fake();
+                log!("Faker Response {:?}", resp);
+                Ok(resp)
+            } else {
+                let url = req.build_url(&self.api_host)?;
+                println!("nowpayments url = {url:#?}");
 
-        let response = self
-            .client
-            .clone()
-            .request(Req::METHOD, url)
-            .header("x-api-key", &self.api_key)
-            .json(&req)
-            .send()
-            .await?;
+                let response = self
+                    .client
+                    .clone()
+                    .request(Req::METHOD, url)
+                    .header("x-api-key", &self.api_key)
+                    .json(&req)
+                    .send()
+                    .await?;
 
-        let body_string = response.text().await?;
-        cprintln!("green", "nowpayments reponse = {:#?}", body_string);
+                let body_string = response.text().await?;
+                cprintln!("green", "nowpayments reponse = {:#?}", body_string);
 
-        let jd = &mut serde_json::Deserializer::from_str(&body_string);
-        let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
-            .map_err(|e| {
-                let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
-                log!("deserialize_response- JsonParseFailed: {:?}", total_error);
-                e
-            })?;
+                let jd = &mut serde_json::Deserializer::from_str(&body_string);
+                let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
+                    .map_err(|e| {
+                        let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
+                        log!("deserialize_response- JsonParseFailed: {:?}", total_error);
+                        e
+                    })?;
 
-        println!("nowpayments reponse = {response_struct:#?}");
-        Ok(response_struct)
+                println!("nowpayments reponse = {response_struct:#?}");
+                Ok(response_struct)
+            }
+        }
     }
 }
 

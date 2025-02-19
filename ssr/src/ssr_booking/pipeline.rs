@@ -150,6 +150,7 @@ pub async fn process_pipeline(
     }
 
     // this is only for local testing purpose of concurrency of the pipeline.
-    // tokio::time::sleep(Duration::from_millis(4000)).await;
+    #[cfg(feature = "mock-pipeline")]
+    tokio::time::sleep(Duration::from_millis(4000)).await;
     Ok(current_event)
 }

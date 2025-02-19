@@ -29,6 +29,7 @@ pub struct CreateInvoiceRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct CreateInvoiceResponse {
     pub id: String,
     pub token_id: String,
@@ -108,6 +109,7 @@ pub struct FailureGetPaymentStatusResponse {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub enum GetPaymentStatusResponse {
     Success(SuccessGetPaymentStatusResponse),
     Failure(FailureGetPaymentStatusResponse),
@@ -161,6 +163,10 @@ impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
 pub trait PaymentGateway {
     const METHOD: Method;
 
+    #[cfg(feature = "mock-provab")]
+    type PaymentGatewayResponse: DeserializeOwned + Debug + Dummy<Faker>;
+
+    #[cfg(not(feature = "mock-provab"))]
     type PaymentGatewayResponse: DeserializeOwned + Debug;
 
     // fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String>;

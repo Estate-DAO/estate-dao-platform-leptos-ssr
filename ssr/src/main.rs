@@ -70,7 +70,7 @@ cfg_if! {
                 app_state.leptos_options.clone(),
                 app_state.routes.clone(),
                 move || {
-                    // provide_context(app_state.canisters.clone());
+                                        // provide_context(app_state.canisters.clone());
                     // #[cfg(feature = "backend-admin")]
                     // provide_context(app_state.admin_canisters.clone());
                     // #[cfg(feature = "cloudflare")]
@@ -112,6 +112,7 @@ cfg_if! {
         async fn start_ssr_booking_processing_pipeline(payload: &Value, state: &AppState) {
             let payment_id = payload["payment_id"].as_str();
             let order_id = payload["order_id"].as_str().unwrap_or_default();
+            // let order_description = payload["order_description"].as_str().unwrap_or_default().to_string();
 
             if !state.pipeline_lock_manager.try_acquire_lock(payment_id, order_id) {
                 debug!("Pipeline already running for payment_id: {:?}, order_id: {}", payment_id, order_id);
@@ -125,9 +126,8 @@ cfg_if! {
             let event = ServerSideBookingEvent {
                 payment_id: payment_id.map(String::from),
                 booking_id: order_id.to_string(),
-                user_email: payload["order_description"].as_str()
-                    .unwrap_or_default()
-                    .to_string(),
+                user_email: String::new(),
+                payment_status: None,
             };
 
             debug!("ServerSideBookingEvent = {:?}", event);
@@ -157,7 +157,6 @@ cfg_if! {
             debug!("Received NowPayments webhook request from {}", remote_addr);
             // todo see scratchpad_me.md for more security hardening
 
-            // 1. Extract signature from headers
             let signature = match headers.get("x-nowpayments-sig") {
                 Some(sig) => sig,
                 None => {
@@ -173,7 +172,6 @@ cfg_if! {
                 }
             };
 
-            // 2. Parse JSON body
             let payload: Value = match serde_json::from_slice(&body) {
                 Ok(val) => val,
                 Err(e) => {
@@ -183,7 +181,6 @@ cfg_if! {
             };
             info!("Parsed JSON payload: {:?}", payload);
 
-            // 3. Sort JSON object
             let sorted_payload = sort_json(&payload);
             let payload_str = serde_json::to_string(&sorted_payload)
                         .unwrap_or_default();

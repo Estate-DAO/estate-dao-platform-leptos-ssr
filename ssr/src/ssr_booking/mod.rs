@@ -23,6 +23,7 @@ pub struct ServerSideBookingEvent {
     pub payment_id: Option<String>,
     pub booking_id: String,
     pub user_email: String,
+    pub payment_status: Option<String>,
 }
 
 // --------------------------
