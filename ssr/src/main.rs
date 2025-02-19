@@ -5,18 +5,22 @@ use cfg_if::cfg_if;
 use estate_fe::{
     api::consts::EnvVarConfig,
     init::AppStateBuilder,
-    utils::{admin::AdminCanisters, sort_json::sort_json},
+    ssr_booking::{
+        mock_handler::MockStep, payment_handler::GetPaymentStatusFromPaymentProvider,
+        pipeline::process_pipeline, SSRBookingPipelineStep,
+    },
+    utils::{admin::AdminCanisters, notifier::Notifier, sort_json::sort_json},
 };
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::{
             body::Body as AxumBody,
-            extract::{Path, State},
+            extract::{Path, State,ConnectInfo},
             http::Request,
-            response::{IntoResponse, Response},
+            response::{IntoResponse, Response, sse::{Event, Sse, KeepAlive}},
         };
-        use axum::{routing::get, Router};
+        use axum::{routing::get, Router, routing::post};
 
         use leptos::*;
         use leptos::{get_configuration, logging::log, provide_context};
@@ -26,23 +30,28 @@ cfg_if! {
         use estate_fe::app::*;
         use estate_fe::fallback::file_and_error_handler;
         use estate_fe::state::AppState;
-        use axum::{ routing::post, http::{StatusCode, HeaderMap} };
+        use axum::{http::{StatusCode, HeaderMap} };
         use axum::body::Bytes;
         use serde_json::Value;
         use hmac::{Hmac, Mac};
         use sha2::Sha512;
-        use tracing::{info, error};
+        use tracing::{info, error, debug};
         type HmacSha512 = Hmac<Sha512>;
-        use std::net::IpAddr;
-        use axum::extract::ConnectInfo;
+        use std::net::{IpAddr, SocketAddr};
+        use futures::stream::{self, Stream};
+        use std::{convert::Infallible, path::PathBuf, time::Duration};
+        use tokio_stream::StreamExt as _;
+        use tokio::sync::broadcast;
+        use std::sync::Arc;
+        use estate_fe::ssr_booking::ServerSideBookingEvent;
 
-        // Define whitelist (could be a lazy_static or const once computed)
-        static NOWPAYMENTS_ALLOWED_IPS: &[&str] = &[
-            "51.89.194.21",
-            "51.75.77.69",
-            "138.201.172.58",
-            "65.21.158.36",
-        ];
+
+        // Define the Notifier, PipelineStep, GetPaymentStatusFromPaymentProvider, CreateBookingCallForTravelProvider, and ServerSideBookingEvent types
+        // These types are not defined in the provided code, so you need to define them or import them from another module
+        // For example:
+        // use estate_fe::pipeline::{Notifier, PipelineStep, GetPaymentStatusFromPaymentProvider, CreateBookingCallForTravelProvider, ServerSideBookingEvent};
+        // use estate_fe::pipeline::process_pipeline;
+
         pub async fn server_fn_handler(
             State(app_state): State<AppState>,
             path: Path<String>,
@@ -88,22 +97,36 @@ cfg_if! {
         }
 
 
+        // async fn sse_handler(
+        //     State(state): State<AppState>,
+        // ) -> Sse<impl Stream<Item = Result<Event, axum::BoxError>>> {
+        //     let mut count_rx = state.count_tx.subscribe();
+
+        //     let stream = async_stream::stream! {
+        //         // Send the initial count
+        //         let initial_count = get_server_count().await.unwrap_or(0);
+        //         yield Ok(Event::default().data(initial_count.to_string()));
+
+        //         // Listen for count updates
+        //         while let Ok(count) = count_rx.recv().await {
+        //             yield Ok(Event::default().data(count.to_string()));
+        //         }
+        //     };
+
+        //     Sse::new(stream).keep_alive(KeepAlive::default())
+        // }
+
 
         // todo see scratchpad_me.md for more security hardening
         async fn nowpayments_webhook(
-            ConnectInfo(remote_addr): ConnectInfo<std::net::SocketAddr>,
+            ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
             State(state): State<AppState>,
             headers: HeaderMap,
             body: Bytes,
         ) -> (StatusCode, &'static str) {
-            let client_ip = remote_addr.ip();
-            // Only allow if in whitelist
-            let allowed = NOWPAYMENTS_ALLOWED_IPS.iter().any(|&ip| client_ip == ip.parse::<IpAddr>().unwrap());
+            debug!("Received NowPayments webhook request from {}", remote_addr);
+            // todo see scratchpad_me.md for more security hardening
 
-            if !allowed {
-                tracing::warn!("Rejected webhook from unauthorized IP: {}", client_ip);
-                return (StatusCode::FORBIDDEN, "Forbidden");
-            }
             // 1. Extract signature from headers
             let signature = match headers.get("x-nowpayments-sig") {
                 Some(sig) => sig,
@@ -128,84 +151,128 @@ cfg_if! {
                     return (StatusCode::INTERNAL_SERVER_ERROR, "JSON parsing error");
                 }
             };
+            info!("Parsed JSON payload: {:?}", payload);
 
             // 3. Sort JSON object
             let sorted_payload = sort_json(&payload);
             let payload_str = serde_json::to_string(&sorted_payload)
-                .unwrap_or_default();
+                        .unwrap_or_default();
+
+            start_ssr_booking_processing_pipeline(&payload).await;
+            // debug!("Computing HMAC-SHA512 signature for sorted payload: {}", payload_str);
 
             // 4. Compute HMAC-SHA512 signature
-            let mut mac = HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes())
-                .expect("HMAC key creation failed");
-            mac.update(payload_str.as_bytes());
-            let computed_hmac = mac.finalize().into_bytes();
-            let computed_hex = hex::encode(computed_hmac);
+            // let mut mac = HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes())
+            //             .expect("HMAC key creation failed");
+            // mac.update(payload_str.as_bytes());
+            // let computed_hmac = mac.finalize().into_bytes();
+            // let computed_hex = hex::encode(computed_hmac);
 
             // 5. Compare signatures
-            if computed_hex.eq(signature) {
-                info!("NowPayments webhook signature verified successfully");
-                (StatusCode::OK, "OK")
-            } else {
-                error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
-                (StatusCode::BAD_REQUEST, "Invalid signature")
-            }
+            // if computed_hex.eq(signature) {
+            //     info!("NowPayments webhook signature verified successfully");
+            //     (StatusCode::OK, "OK")
+            // } else {
+            //     error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
+            //     (StatusCode::BAD_REQUEST, "Invalid signature")
+            // }
             //
             // if mac.verify_slice(provided_signature_bytes).is_err() {
             //     // Signature didn't match (constant-time check internally)
             //     tracing::error!("Invalid webhook signature");
             //     return StatusCode::BAD_REQUEST;
             // }
+            (StatusCode::OK, "ok")
         }
 
+        async fn start_ssr_booking_processing_pipeline(payload: &Value) {
+            // Create a Notifier with event bus
+            let notifier = Notifier::with_bus();
 
-    #[tokio::main]
-    async fn main() {
-        better_panic::install();
-        // A minimal tracing middleware for request logging.
-        tracing_subscriber::fmt::init();
+            // Create pipeline steps
+            let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
+            // let booking_call_step = SSRBookingPipelineStep::BookingCall(CreateBookingCallForTravelProvider);
+            let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
-        // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-        // For deployment these variables are:
-        // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-        // Alternately a file can be specified such as Some("Cargo.toml")
-        // The file would need to be included with the executable when moved to deployment
-        let conf = get_configuration(None).await.unwrap();
-        let leptos_options = conf.leptos_options;
-        let addr = leptos_options.site_addr;
-        // let routes = generate_route_list(App);
-        let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
+            // Create ServerSideBookingEvent from payload
+            let event = ServerSideBookingEvent {
+                payment_id: payload["payment_id"].as_str().map(String::from),
+                booking_id: payload["order_id"].as_str()
+                    .unwrap_or_default()
+                    .to_string(),
+                user_email: payload["order_description"].as_str()
+                    .unwrap_or_default()
+                    .to_string(),
+            };
 
-        let res = AppStateBuilder::new(leptos_options, routes.clone())
-        .build()
-        .await;
-
-        let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
-            |request: &axum::extract::Request<_>| {
-                let uri = request.uri().to_string();
-                tracing::info_span!("http_request", method = ?request.method(), uri)
-            },
-        );
+            debug!("ServerSideBookingEvent =  {:?}", event);
 
 
-        // build our application with a route
-        let app = Router::new()
-            .route(
-                "/api/*fn_name",
-                get(server_fn_handler).post(server_fn_handler),
-            )
-            .route("/ipn/webhook", post(nowpayments_webhook))
-            .leptos_routes_with_handler(routes, get(leptos_routes_handler))
-            .fallback(file_and_error_handler)
-            .layer(trace_layer)
-            .with_state(res);
+            // Process pipeline asynchronously
+            tokio::spawn(async move {
+                match process_pipeline(event, &[payment_status_step, mock_step], Some(&notifier)).await {
+                    Ok(_) => debug!("Pipeline processed successfully"),
+                    Err(e) => error!("Pipeline processing failed: {:?}", e),
+                }
+            });
+        }
 
-        let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-        logging::log!("listening on http://{}", &addr);
-        axum::serve(listener, app.into_make_service())
-            .await
-            .unwrap();
+        #[tokio::main]
+        async fn main() {
+            better_panic::install();
+            // A minimal tracing middleware for request logging.
+            tracing_subscriber::fmt::init();
 
-    }
+            // Setting get_configuration(None) means we'll be using cargo-leptos's env values
+            // For deployment these variables are:
+            // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
+            // Alternately a file can be specified such as Some("Cargo.toml")
+            // The file would need to be included with the executable when moved to deployment
+            let conf = get_configuration(None).await.unwrap();
+            let leptos_options = conf.leptos_options;
+            let addr = leptos_options.site_addr;
+            // let routes = generate_route_list(App);
+            let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
+
+            let (count_tx, count_rx) = broadcast::channel(100);
+
+            let res = AppStateBuilder::new(leptos_options, routes.clone(), count_tx)
+            .build()
+            .await;
+
+            let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
+                |request: &axum::extract::Request<_>| {
+                    let uri = request.uri().to_string();
+                    tracing::info_span!("http_request", method = ?request.method(), uri)
+                },
+            );
+
+
+            // build our application with a route
+            let app = Router::new()
+                .route(
+                    "/api/*fn_name",
+                    get(server_fn_handler).post(server_fn_handler),
+                )
+                .route("/ipn/webhook", post(nowpayments_webhook))
+                // .route("/sse/events", get(sse_handler))
+                .leptos_routes_with_handler(routes, get(leptos_routes_handler))
+                .fallback(file_and_error_handler)
+                .layer(trace_layer)
+                .with_state(res);
+
+            let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+            logging::log!("listening on http://{}", &addr);
+
+            // tokio::spawn(async move {
+            //     count_rx function
+            // });
+
+            axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+                .await
+                .unwrap();
+
+        }
 
     }
 }

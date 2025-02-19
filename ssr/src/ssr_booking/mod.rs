@@ -28,23 +28,23 @@ pub struct ServerSideBookingEvent {
 // --------------------------
 
 #[derive(Debug, Clone)]
-pub enum PipelineStep {
+pub enum SSRBookingPipelineStep {
     PaymentStatus(GetPaymentStatusFromPaymentProvider),
     // BookingCall(CreateBookingCallForTravelProvider),
     /// for testing purposes
     Mock(MockStep),
 }
 
-impl PipelineStep {
+impl SSRBookingPipelineStep {
     /// Delegates validation to the inner type.
     pub async fn validate(
         &self,
         event: &ServerSideBookingEvent,
     ) -> Result<PipelineDecision, String> {
         match self {
-            PipelineStep::PaymentStatus(step) => step.validate(event).await,
-            // PipelineStep::BookingCall(step) => step.validate(event).await,
-            PipelineStep::Mock(step) => step.validate(event).await,
+            SSRBookingPipelineStep::PaymentStatus(step) => step.validate(event).await,
+            // SSRBookingPipelineStep::BookingCall(step) => step.validate(event).await,
+            SSRBookingPipelineStep::Mock(step) => step.validate(event).await,
         }
     }
 
@@ -55,13 +55,13 @@ impl PipelineStep {
         event: ServerSideBookingEvent,
     ) -> Result<ServerSideBookingEvent, String> {
         match self {
-            PipelineStep::PaymentStatus(_) => {
+            SSRBookingPipelineStep::PaymentStatus(_) => {
                 GetPaymentStatusFromPaymentProvider::execute(event).await
             }
             // PipelineStep::BookingCall(_) => {
             //     CreateBookingCallForTravelProvider::execute(event).await
             // }
-            PipelineStep::Mock(step) => {
+            SSRBookingPipelineStep::Mock(step) => {
                 step.executed.store(true, Ordering::SeqCst);
                 Ok(event)
             }
@@ -69,12 +69,14 @@ impl PipelineStep {
     }
 }
 
-impl fmt::Display for &PipelineStep {
+impl fmt::Display for &SSRBookingPipelineStep {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PipelineStep::PaymentStatus(_) => write!(f, "GetPaymentStatusFromPaymentProvider"),
-            // PipelineStep::BookingCall(_) => write!(f, "CreateBookingCallForTravelProvider"),
-            PipelineStep::Mock(_) => write!(f, "MockStep"),
+            SSRBookingPipelineStep::PaymentStatus(_) => {
+                write!(f, "GetPaymentStatusFromPaymentProvider")
+            }
+            // SSRBookingPipelineStep::BookingCall(_) => write!(f, "CreateBookingCallForTravelProvider"),
+            SSRBookingPipelineStep::Mock(_) => write!(f, "MockStep"),
         }
     }
 }

@@ -3,8 +3,9 @@ use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
 use crate::utils::uuidv7;
 use async_trait::async_trait;
 use chrono::Utc;
+use tracing::{debug, error, info};
 
-use super::{PipelineStep, ServerSideBookingEvent};
+use super::{SSRBookingPipelineStep, ServerSideBookingEvent};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PipelineDecision {
@@ -36,13 +37,14 @@ pub trait PipelineExecutor: Send + Sync {
 /// Process the pipeline of steps in order, optionally publishing events via `notifier`.
 pub async fn process_pipeline(
     event: ServerSideBookingEvent,
-    steps: &[PipelineStep],
+    steps: &[SSRBookingPipelineStep],
     notifier: Option<&Notifier>,
 ) -> Result<ServerSideBookingEvent, String> {
     let mut current_event = event;
 
     // Generate a correlation_id for this pipeline run.
     let correlation_id = uuidv7::create();
+    info!("process_pipeline - correlation_id = {}", correlation_id);
 
     // 1. Publish OnPipelineStart
     if let Some(n) = notifier {
@@ -61,6 +63,7 @@ pub async fn process_pipeline(
     for step in steps {
         // For logging or event purposes, let's define a step name
         let step_name = step.to_string();
+        info!("process_pipeline - step_name = {}", step_name);
 
         // We first validate
         let decision = step.validate(&current_event).await?;
