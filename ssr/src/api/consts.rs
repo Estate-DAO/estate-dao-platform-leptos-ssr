@@ -125,7 +125,7 @@ impl EnvVarConfig {
             // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
-        // println!("{value:#?}");
+        println!("{}", value.provab_base_url);
         value
     }
 
