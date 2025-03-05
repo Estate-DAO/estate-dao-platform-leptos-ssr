@@ -21,8 +21,8 @@ const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     // "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
     "http://estate-static-ip-egress-proxy.internal:8001/prod/webservices/index.php/hotel_v3/service";
 
-const PROVAB_TEST_ESTATEFLY_PROXY: &str =
-    "http://estate-static-ip-egress-proxy.internal:8081/webservices/index.php/hotel_v3/service";
+// const PROVAB_TEST_ESTATEFLY_PROXY: &str =
+//     "http://estate-static-ip-egress-proxy.internal:8001/webservices/index.php/hotel_v3/service";
 
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";

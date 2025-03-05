@@ -168,8 +168,8 @@ release-bin = ["stage-consts","ssr"]
 
 # release features 
 prod-consts = []
-release-lib-prod = [ "prod-consts","hydrate" ]
-release-bin-prod = ["prod-consts","ssr"]
+release-lib-prod = [ "prod-consts","hydrate", "debug_log" ]
+release-bin-prod = ["prod-consts","ssr", "debug_log"]
 
 
 [package.metadata.leptos]
