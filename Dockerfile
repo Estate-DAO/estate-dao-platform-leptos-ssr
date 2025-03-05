@@ -1,7 +1,9 @@
 
 
 # FROM debian:bullseye-slim as runner
-FROM scratch
+# FROM scratch
+
+FROM debian:bookworm-slim as runner
 
 WORKDIR /app
 

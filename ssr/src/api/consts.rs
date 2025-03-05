@@ -19,8 +19,8 @@ const PROVAB_TEST_OLD_PROXY: &str =
 
 const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     // "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
-    // "http://estate-static-ip-egress-proxy.internal/prod/webservices/index.php/hotel_v3/service";
-    "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
+    "http://estate-static-ip-egress-proxy.internal/prod/webservices/index.php/hotel_v3/service";
+// "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
 // const PROVAB_TEST_ESTATEFLY_PROXY: &str =
 //     "http://estate-static-ip-egress-proxy.internal:8001/webservices/index.php/hotel_v3/service";
