@@ -19,8 +19,8 @@ const PROVAB_TEST_OLD_PROXY: &str =
 
 const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     // "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
-    "http://estate-static-ip-egress-proxy.internal/prod/webservices/index.php/hotel_v3/service";
-// "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
+    // "http://estate-static-ip-egress-proxy.internal/prod/webservices/index.php/hotel_v3/service";
+    "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
 // const PROVAB_TEST_ESTATEFLY_PROXY: &str =
 //     "http://estate-static-ip-egress-proxy.internal:8001/webservices/index.php/hotel_v3/service";
@@ -40,20 +40,19 @@ cfg_if! {
     if #[cfg(feature = "local-consts")] {
         pub const APP_URL: &str = LOCALHOST_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
-        pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+        pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
     }
     else  if #[cfg(feature = "prod-consts")] {
         pub const APP_URL: &str = PROD_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        pub const PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
-        // pub const PROVAB_BASE_URL: &str = PROVAB_TEST_ESTATEFLY_PROXY;
+        pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
+        // pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_TEST_ESTATEFLY_PROXY;
     }
     else {
         pub const APP_URL: &str = STAGING_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        // pub const PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
-        pub const PROVAB_BASE_URL: &str = PROVAB_PROD_OLD_PROXY;
-
+        // pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
+        pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_PROD_OLD_PROXY;
     }
 }
 
