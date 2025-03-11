@@ -139,9 +139,22 @@ pub fn HotelCard(
             // Get the token for this hotel
             let token = search_list_page.get_result_token(hotel_code.clone());
             
+            // Get hotel name for better UX
+            let hotel_name = search_list_page
+                .search_result
+                .get_untracked()
+                .as_ref()
+                .and_then(|result| {
+                    result.hotel_results().iter()
+                        .find(|hotel| hotel.hotel_code == hotel_code)
+                        .map(|hotel| hotel.hotel_name.clone())
+                })
+                .unwrap_or_default();
+            
             // Create navigation options with query parameters
             let mut options = NavigateOptions::default();
-            options.query = Some(format!("hotel_code={}&token={}", hotel_code, token));
+            options.query = Some(format!("hotel_code={}&token={}&name={}", 
+                hotel_code, token, urlencoding::encode(&hotel_name)));
             
             // Navigate to hotel details page with query parameters
             nav(AppRoutes::HotelDetails.to_string(), options);
