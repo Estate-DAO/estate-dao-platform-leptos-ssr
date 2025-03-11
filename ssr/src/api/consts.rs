@@ -4,26 +4,15 @@ pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
 pub const BOOKING_ID: &str = "estatedao_booking_id";
 pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 
-// PROVAB_BASE_URL
-const PROVAB_PROD_OLD_PROXY: &str =
-    // "https://abctravel.elixirpinging.xyz/prod/webservices/index.php/hotel_v3/service";
+// PROVAB_BASE_URL options
+pub const PROVAB_PROD_OLD_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
-const PROVAB_TEST_OLD_PROXY: &str =
-    // "https://abctravel.elixirpinging.xyz/webservices/index.php/hotel_v3/service";
-    // "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
+pub const PROVAB_TEST_OLD_PROXY: &str =
     "http://5.75.246.9:8001/test/webservices/index.php/hotel_v3/service";
 
-// const PROVAB_PROD_ESTATEFLY_PROXY: &str =
-//     "http://estate-static-ip-egress-proxy.internal/produrl/webservices/index.php/hotel_v3/service";
-
-const PROVAB_PROD_ESTATEFLY_PROXY: &str =
-    // "http://estate-static-ip-egress-proxy.internal:8080/webservices/index.php/hotel_v3/service";
-    // "http://estate-static-ip-egress-proxy.internal/prod/webservices/index.php/hotel_v3/service";
+pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
-
-// const PROVAB_TEST_ESTATEFLY_PROXY: &str =
-//     "http://estate-static-ip-egress-proxy.internal:8001/webservices/index.php/hotel_v3/service";
 
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3000";
@@ -40,19 +29,29 @@ cfg_if! {
     if #[cfg(feature = "local-consts")] {
         pub const APP_URL: &str = LOCALHOST_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
-        pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
     }
-    else  if #[cfg(feature = "prod-consts")] {
+    else if #[cfg(feature = "prod-consts")] {
         pub const APP_URL: &str = PROD_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_PROD_ESTATEFLY_PROXY;
-        // pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_TEST_ESTATEFLY_PROXY;
     }
     else {
         pub const APP_URL: &str = STAGING_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
-        // pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_TEST_OLD_PROXY;
-        pub const DEFAULT_PROVAB_BASE_URL: &str = PROVAB_PROD_OLD_PROXY;
+    }
+}
+
+// Get the default PROVAB_BASE_URL based on the current environment
+pub fn get_default_provab_base_url() -> &'static str {
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "local-consts")] {
+            PROVAB_TEST_OLD_PROXY
+        }
+        else if #[cfg(feature = "prod-consts")] {
+            PROVAB_PROD_ESTATEFLY_PROXY
+        }
+        else {
+            PROVAB_PROD_OLD_PROXY
+        }
     }
 }
 
@@ -178,7 +177,7 @@ fn env_or_panic(key: &str) -> String {
 }
 
 fn provab_base_url_default() -> String {
-    PROVAB_BASE_URL.to_string()
+    get_default_provab_base_url().to_string()
 }
 
 pub fn transform_headers(headers: &HashMap<String, String>) -> HeaderMap {
