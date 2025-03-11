@@ -1,14 +1,15 @@
 use crate::component::{FullScreenSpinnerGray, Navbar, SkeletonPricing, SpinnerGray};
 use crate::utils::pluralize;
 use crate::{
-    api::block_room,
+    api::{block_room, get_room, hotel_info},
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::InputGroup,
     // state::room_state::{RoomQueryParams, RoomState},
-    state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
+    state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx, HotelInfoRequest, HotelRoomRequest},
     state::view_state::HotelInfoCtx,
 };
+use leptos_router::use_query_map;
 // use leptos::logging::log;
 use crate::log;
 use leptos::*;
@@ -73,14 +74,48 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
-    // let room_state_url_map = RoomState::init();
-    // let hotel_info_results: HotelInfoResults = expect_context();
-    // create_effect(move |_| {
-    //     // Sync room state from URL to hotel info when component mounts
-    //     room_state_url_map.sync_to_hotel_info(&hotel_info_results);
-    // });
-
     let hotel_info_results: HotelInfoResults = expect_context();
+    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    
+    // Get query parameters from URL
+    let query = use_query_map();
+    let loading = create_rw_signal(true);
+    
+    // Create resource to fetch hotel info and room data on component mount
+    let hotel_data = create_resource(
+        || (),
+        move |_| async move {
+            let query_map = query.get();
+            
+            // Extract hotel_code and token from query parameters
+            let hotel_code = query_map.get("hotel_code").cloned().unwrap_or_default();
+            let token = query_map.get("token").cloned().unwrap_or_default();
+            
+            if hotel_code.is_empty() || token.is_empty() {
+                log!("Missing query parameters: hotel_code or token");
+                loading.set(false);
+                return false;
+            }
+            
+            // Set hotel code in context
+            hotel_view_info_ctx.hotel_code.set(hotel_code.clone());
+            
+            // Create requests
+            let hotel_info_request = HotelInfoRequest { token: token.clone() };
+            let hotel_room_request = HotelRoomRequest { token: token.clone() };
+            
+            // Fetch hotel info
+            let info_result = hotel_info(hotel_info_request).await.ok();
+            HotelInfoResults::set_info_results(info_result);
+            
+            // Fetch room data
+            let room_result = get_room(hotel_room_request).await.ok();
+            HotelInfoResults::set_room_results(room_result);
+            
+            loading.set(false);
+            true
+        }
+    );
 
     let address_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
@@ -148,7 +183,10 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 <InputGroup />
             // <FilterAndSortBy />
             </div>
-            <Show when=loaded fallback=FullScreenSpinnerGray>
+            <Show 
+                when=move || !loading.get() && hotel_info_results.search_result.get().is_some() 
+                fallback=FullScreenSpinnerGray
+            >
                 <div class="max-w-4xl mx-auto py-8">
                     <div class="flex flex-col">
                         {move || view! { <StarRating rating=star_rating_signal /> }}

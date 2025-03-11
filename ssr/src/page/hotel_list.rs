@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_router::use_navigate;
+use leptos_router::{use_navigate, NavigateOptions};
 
 use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
@@ -136,36 +136,20 @@ pub fn HotelCard(
             // Clear state before navigation to prevent state accumulation
             HotelInfoResults::reset();
             
-            // Get hotel info request
-            let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
-            log!("{hotel_info_request:?}");
-
-            // Call server function inside action
-            spawn_local(async move {
-                let result = hotel_info(hotel_info_request).await.ok();
-                log!("SEARCH_HOTEL_API: {result:?}");
-                HotelInfoResults::set_info_results(result);
-                
-                // Navigate after data is loaded to ensure clean state transition
-                nav(AppRoutes::HotelDetails.to_string(), Default::default());
-            });
+            // Get the token for this hotel
+            let token = search_list_page.get_result_token(hotel_code.clone());
+            
+            // Create navigation options with query parameters
+            let mut options = NavigateOptions::default();
+            options.query = Some(format!("hotel_code={}&token={}", hotel_code, token));
+            
+            // Navigate to hotel details page with query parameters
+            nav(AppRoutes::HotelDetails.to_string(), options);
         }
     });
 
-    let hotel_code_2_cloned = hotel_code_cloned.clone();
-    let search_hotel_room_action = create_action(move |_| {
-        let search_list_page = search_list_page_clone.clone();
-        let hotel_code = hotel_code_2_cloned.clone();
-        async move {
-            let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
-            // call server function inside action
-            spawn_local(async move {
-                let result = get_room(hotel_room_request).await.ok();
-                log!("SEARCH_ROOM_API: {result:?}");
-                HotelInfoResults::set_room_results(result);
-            });
-        }
-    });
+    // We no longer need a separate action for room data
+    // It will be fetched on the hotel details page
 
     // Create cleanup effect when component is unmounted
     on_cleanup(|| {
@@ -185,8 +169,7 @@ pub fn HotelCard(
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);
             
-            // Dispatch actions to fetch data
-            search_hotel_room_action.dispatch(());
+            // Only dispatch the navigation action
             search_hotel_info_action.dispatch(())
         }>
             <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
