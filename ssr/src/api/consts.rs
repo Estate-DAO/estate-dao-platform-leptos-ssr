@@ -112,9 +112,22 @@ impl EnvVarConfig {
 
         let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
 
+        // Get PROVAB_BASE_URL from environment or use the default
+        let provab_base_url = match std::env::var("PROVAB_BASE_URL") {
+            Ok(url) => {
+                log!("Using PROVAB_BASE_URL from environment: {}", url);
+                url
+            },
+            Err(_) => {
+                let default_url = get_default_provab_base_url().to_string();
+                log!("PROVAB_BASE_URL not found in environment, using default: {}", default_url);
+                default_url
+            }
+        };
+
         let value = Self {
             provab_headers: pv_hashmap,
-            provab_base_url: env_w_default("PROVAB_BASE_URL", PROVAB_BASE_URL).unwrap(),
+            provab_base_url,
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
@@ -124,7 +137,7 @@ impl EnvVarConfig {
             // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
-        println!("{}", value.provab_base_url);
+        println!("Using PROVAB_BASE_URL: {}", value.provab_base_url);
         value
     }
 
