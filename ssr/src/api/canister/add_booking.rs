@@ -10,7 +10,6 @@ use crate::utils::admin::admin_canister;
 use crate::log;
 use leptos::*;
 
-//  look at the file ssr/src/api/canister/book_room_details.rs, and split this in two! AI!
 #[server]
 pub async fn add_booking_backend(email: String, booking: String) -> Result<String, ServerFnError> {
     // log!("\n booking args {:?}", booking);
@@ -18,10 +17,22 @@ pub async fn add_booking_backend(email: String, booking: String) -> Result<Strin
         .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
     // log!("\n booking_struct{:#?}", booking_struct);
 
+    call_add_booking_backend(email, booking_struct)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))
+}
+
+pub async fn call_add_booking_backend(
+    email: String,
+    booking_struct: Booking,
+) -> Result<String, String> {
     let adm_cans = admin_canister();
     let backend_cans = adm_cans.backend_canister().await;
 
-    let result = backend_cans.add_booking(email, booking_struct).await;
+    let result = backend_cans
+        .add_booking(email, booking_struct)
+        .await
+        .map_err(|e| e.to_string())?;
 
     log!("{result:?}");
 
