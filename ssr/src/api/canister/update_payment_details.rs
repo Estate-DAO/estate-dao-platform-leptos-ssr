@@ -3,7 +3,6 @@ use crate::utils::admin::admin_canister;
 use leptos::logging::log;
 use leptos::*;
 
-// write the following function in idiomatic rust with await.map_err AI!
 #[server(GreetBackend)]
 pub async fn update_payment_details_backend(
     booking_id: backend::BookingId,
@@ -12,12 +11,9 @@ pub async fn update_payment_details_backend(
     let payment_details_struct = serde_json::from_str::<PaymentDetails>(&payment_details)
         .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
 
-    let result = call_update_payment_details_backend(booking_id, payment_details_struct).await;
-
-    match result {
-        Ok(booking) => Ok(booking),
-        Err(e) => Err(ServerFnError::ServerError(e)),
-    }
+    call_update_payment_details_backend(booking_id, payment_details_struct)
+        .await
+        .map_err(ServerFnError::ServerError)
 }
 
 
