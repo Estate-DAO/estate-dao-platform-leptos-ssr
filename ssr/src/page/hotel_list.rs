@@ -16,16 +16,15 @@ use crate::{
 #[component]
 pub fn HotelListPage() -> impl IntoView {
     let search_list_page: SearchListResults = expect_context();
-    
-    // Clear hotel info results when this component mounts
-    // to prevent state accumulation during navigation
-    create_effect(move |_| {
-        HotelInfoResults::reset();
-        log!("HotelInfoResults reset on HotelListPage mount");
-    });
 
     let disabled_input_group: Signal<bool> = Signal::derive(move || {
         let val = search_list_page.search_result.get().is_none();
+        // let val = search_list_page.search_result.get().is_some();
+        // log!("disabled ig - {}", val);
+        // log!(
+        //     "search_list_page.search_result.get(): {:?}",
+        //     search_list_page.search_result.get()
+        // );
         val
     });
 
@@ -133,41 +132,25 @@ pub fn HotelCard(
         log!("from action -- {search_list_page:?}");
         log!("from action -- {hotel_code:?}");
         async move {
-            // Clear state before navigation to prevent state accumulation
+            //  move to the hotel info page
+            nav(AppRoutes::HotelDetails.to_string(), Default::default());
+
             HotelInfoResults::reset();
-            
-            // Get the token for this hotel
-            let token = search_list_page.get_result_token(hotel_code.clone());
-            
-            // Get hotel name for better UX
-            let hotel_name = search_list_page
-                .search_result
-                .get_untracked()
-                .as_ref()
-                .and_then(|result| {
-                    result.hotel_results().iter()
-                        .find(|hotel| hotel.hotel_code == hotel_code)
-                        .map(|hotel| hotel.hotel_name.clone())
-                })
-                .unwrap_or_default();
-            
-            // Create navigation options with query parameters
-            let mut options = NavigateOptions::default();
-            options.query = Some(format!("hotel_code={}&token={}&name={}", 
-                hotel_code, token, urlencoding::encode(&hotel_name)));
-            
-            // Navigate to hotel details page with query parameters
-            nav(AppRoutes::HotelDetails.to_string(), options);
+
+            let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
+            log!("{hotel_info_request:?}");
+
+            // call server function inside action
+            spawn_local(async move {
+                let result = hotel_info(hotel_info_request).await.ok();
+                log!("SEARCH_HOTEL_API: {result:?}");
+                HotelInfoResults::set_info_results(result);
+            });
         }
     });
 
     // We no longer need a separate action for room data
     // It will be fetched on the hotel details page
-
-    // Create cleanup effect when component is unmounted
-    on_cleanup(|| {
-        log!("Cleaning up HotelCard component state");
-    });
 
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
@@ -175,14 +158,10 @@ pub fn HotelCard(
         <div // href=AppRoutes::HotelDetails.to_string()
         on:click=move |ev| {
             ev.prevent_default();
-            // Clear any existing state first
-            HotelInfoResults::reset();
-            
-            // Set the hotel code in context
+            // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);
-            
-            // Only dispatch the navigation action
+            search_hotel_room_action.dispatch(());
             search_hotel_info_action.dispatch(())
         }>
             <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
