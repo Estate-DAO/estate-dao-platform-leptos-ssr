@@ -6,7 +6,6 @@ use colored::Colorize;
 use crate::log;
 use leptos::*;
 
-// see the file, ssr/src/api/canister/update_payment_details.rs, and break the following function into two as done there. ai!
 #[server(GreetBackend)]
 pub async fn update_book_room_details_backend(
     booking_id: backend::BookingId,
@@ -17,6 +16,15 @@ pub async fn update_book_room_details_backend(
             ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}"))
         })?;
 
+    call_update_book_room_details_backend(booking_id, book_room_details_struct)
+        .await
+        .map_err(ServerFnError::ServerError)
+}
+
+pub async fn call_update_book_room_details_backend(
+    booking_id: backend::BookingId,
+    book_room_details_struct: backend::BeBookRoomResponse,
+) -> Result<String, String> {
     let adm_cans = admin_canister();
 
     let backend_cans = adm_cans.backend_canister().await;
@@ -24,12 +32,13 @@ pub async fn update_book_room_details_backend(
 
     let result = backend_cans
         .update_book_room_response(booking_id, book_room_details_struct)
-        .await?;
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("{}", format!("{:#?}", result).bright_purple().bold());
 
     match result {
         Result_::Ok(save_status) => Ok(save_status),
-        Result_::Err(e) => Err(ServerFnError::ServerError(e)),
+        Result_::Err(e) => Err(e),
     }
 }
