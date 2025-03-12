@@ -10,6 +10,7 @@ use crate::utils::admin::admin_canister;
 use crate::log;
 use leptos::*;
 
+//  look at the file ssr/src/api/canister/book_room_details.rs, and split this in two! AI!
 #[server]
 pub async fn add_booking_backend(email: String, booking: String) -> Result<String, ServerFnError> {
     // log!("\n booking args {:?}", booking);
