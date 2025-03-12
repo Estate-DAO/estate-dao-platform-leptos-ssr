@@ -1,15 +1,14 @@
 use crate::component::{FullScreenSpinnerGray, Navbar, SkeletonPricing, SpinnerGray};
 use crate::utils::pluralize;
 use crate::{
-    api::{block_room, get_room, hotel_info},
+    api::block_room,
     app::AppRoutes,
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::InputGroup,
     // state::room_state::{RoomQueryParams, RoomState},
-    state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx, HotelInfoRequest, HotelRoomRequest},
+    state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
     state::view_state::HotelInfoCtx,
 };
-use leptos_router::{use_query_map, use_navigate, NavigateOptions};
 // use leptos::logging::log;
 use crate::log;
 use leptos::*;
@@ -74,96 +73,14 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
+    // let room_state_url_map = RoomState::init();
+    // let hotel_info_results: HotelInfoResults = expect_context();
+    // create_effect(move |_| {
+    //     // Sync room state from URL to hotel info when component mounts
+    //     room_state_url_map.sync_to_hotel_info(&hotel_info_results);
+    // });
+
     let hotel_info_results: HotelInfoResults = expect_context();
-    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
-    let navigate = use_navigate();
-    
-    // Get query parameters from URL
-    let query = use_query_map();
-    let loading = create_rw_signal(true);
-    let error = create_rw_signal(false);
-    let error_message = create_rw_signal("".to_string());
-    
-    // Create resource to fetch hotel info and room data on component mount
-    let hotel_data = create_resource(
-        || (),
-        move |_| async move {
-            // Reset any previous state
-            HotelInfoResults::reset();
-            
-            let query_map = query.get();
-            
-            // Extract hotel_code and token from query parameters
-            let hotel_code = query_map.get("hotel_code").cloned().unwrap_or_default();
-            let token = query_map.get("token").cloned().unwrap_or_default();
-            let hotel_name = query_map.get("name")
-                .cloned()
-                .map(|n| urlencoding::decode(&n).unwrap_or(n).into_owned())
-                .unwrap_or_default();
-            
-            if hotel_code.is_empty() || token.is_empty() {
-                log!("Missing query parameters: hotel_code or token");
-                error.set(true);
-                error_message.set("Missing required parameters. Please go back to search results.".to_string());
-                loading.set(false);
-                return false;
-            }
-            
-            // Set hotel code in context
-            hotel_view_info_ctx.hotel_code.set(hotel_code.clone());
-            
-            // Create requests
-            let hotel_info_request = HotelInfoRequest { token: token.clone() };
-            let hotel_room_request = HotelRoomRequest { token: token.clone() };
-            
-            // Fetch hotel info with retry logic
-            let mut info_result = None;
-            let mut retry_count = 0;
-            while info_result.is_none() && retry_count < 2 {
-                info_result = hotel_info(hotel_info_request.clone()).await.ok();
-                if info_result.is_none() {
-                    retry_count += 1;
-                    log!("Retrying hotel info request, attempt {}", retry_count);
-                    // Small delay before retry
-                    leptos::time::set_timeout(std::time::Duration::from_millis(500), move || {});
-                }
-            }
-            
-            if info_result.is_none() {
-                error.set(true);
-                error_message.set("Failed to load hotel information. Please try again.".to_string());
-                loading.set(false);
-                return false;
-            }
-            
-            HotelInfoResults::set_info_results(info_result);
-            
-            // Fetch room data with retry logic
-            let mut room_result = None;
-            let mut retry_count = 0;
-            while room_result.is_none() && retry_count < 2 {
-                room_result = get_room(hotel_room_request.clone()).await.ok();
-                if room_result.is_none() {
-                    retry_count += 1;
-                    log!("Retrying room data request, attempt {}", retry_count);
-                    // Small delay before retry
-                    leptos::time::set_timeout(std::time::Duration::from_millis(500), move || {});
-                }
-            }
-            
-            if room_result.is_none() {
-                error.set(true);
-                error_message.set("Failed to load room information. Please try again.".to_string());
-                loading.set(false);
-                return false;
-            }
-            
-            HotelInfoResults::set_room_results(room_result);
-            
-            loading.set(false);
-            true
-        }
-    );
 
     let address_signal = move || {
         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
@@ -231,32 +148,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 <InputGroup />
             // <FilterAndSortBy />
             </div>
-            
-            // Error state
-            <Show when=move || error.get()>
-                <div class="max-w-4xl mx-auto py-8 text-center">
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
-                        <h2 class="text-xl font-semibold text-red-700 mb-2">Error Loading Hotel Details</h2>
-                        <p class="text-red-600 mb-4">{move || error_message.get()}</p>
-                        <button 
-                            class="bg-blue-600 text-white py-2 px-4 rounded-full hover:bg-blue-800"
-                            on:click=move |_| {
-                                let mut options = NavigateOptions::default();
-                                options.replace = true;
-                                navigate(AppRoutes::HotelList.to_string(), options);
-                            }
-                        >
-                            "Return to Hotel List"
-                        </button>
-                    </div>
-                </div>
-            </Show>
-            
-            // Loading state
-            <Show 
-                when=move || !loading.get() && !error.get() && hotel_info_results.search_result.get().is_some() 
-                fallback=FullScreenSpinnerGray
-            >
+            <Show when=loaded fallback=FullScreenSpinnerGray>
                 <div class="max-w-4xl mx-auto py-8">
                     <div class="flex flex-col">
                         {move || view! { <StarRating rating=star_rating_signal /> }}
@@ -711,14 +603,14 @@ pub fn PricingBreakdown(
         async move {
             // Show loading state
             loading_state.set(true);
-            
+
             // Reset previous block room results
             BlockRoomResults::reset();
 
             // Create block room request using HotelInfoResults
             hotel_info_results.set_price_per_night(price_per_night.get());
             hotel_info_results.set_block_room_counters(room_counters.get());
-            
+
             log!(
                 "[pricing_component_not_loading] Sorted ROOMS FROM CONTEXT: {:?}",
                 hotel_info_results.sorted_rooms.get()
@@ -729,7 +621,7 @@ pub fn PricingBreakdown(
             // Call server function
             let result = block_room(block_room_request).await.ok();
             log!("[pricing_component_not_loading] BLOCK_ROOM_API: {result:?}");
-            
+
             if result.is_none() {
                 // Show error message if the API call failed
                 error.set(true);
@@ -737,10 +629,10 @@ pub fn PricingBreakdown(
                 loading_state.set(false);
                 return;
             }
-            
+
             // Set results and navigate
             BlockRoomResults::set_results(result);
-            
+
             // Navigate to block room page
             nav(AppRoutes::BlockRoom.to_string(), Default::default());
         }

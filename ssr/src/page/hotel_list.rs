@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_router::{use_navigate, NavigateOptions};
+use leptos_router::use_navigate;
 
 use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
@@ -137,20 +137,36 @@ pub fn HotelCard(
 
             HotelInfoResults::reset();
 
+            // Get hotel info request
             let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
             log!("{hotel_info_request:?}");
 
-            // call server function inside action
+            // Call server function inside action
             spawn_local(async move {
                 let result = hotel_info(hotel_info_request).await.ok();
                 log!("SEARCH_HOTEL_API: {result:?}");
                 HotelInfoResults::set_info_results(result);
+
+                // Navigate after data is loaded to ensure clean state transition
+                nav(AppRoutes::HotelDetails.to_string(), Default::default());
             });
         }
     });
 
-    // We no longer need a separate action for room data
-    // It will be fetched on the hotel details page
+    let hotel_code_2_cloned = hotel_code_cloned.clone();
+    let search_hotel_room_action = create_action(move |_| {
+        let search_list_page = search_list_page_clone.clone();
+        let hotel_code = hotel_code_2_cloned.clone();
+        async move {
+            let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
+            // call server function inside action
+            spawn_local(async move {
+                let result = get_room(hotel_room_request).await.ok();
+                log!("SEARCH_ROOM_API: {result:?}");
+                HotelInfoResults::set_room_results(result);
+            });
+        }
+    });
 
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
@@ -161,6 +177,8 @@ pub fn HotelCard(
             // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);
+
+            // Dispatch actions to fetch data
             search_hotel_room_action.dispatch(());
             search_hotel_info_action.dispatch(())
         }>
