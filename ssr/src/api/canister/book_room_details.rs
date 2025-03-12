@@ -6,6 +6,7 @@ use colored::Colorize;
 use crate::log;
 use leptos::*;
 
+// see the file, ssr/src/api/canister/update_payment_details.rs, and break the following function into two as done there. ai!
 #[server(GreetBackend)]
 pub async fn update_book_room_details_backend(
     booking_id: backend::BookingId,
