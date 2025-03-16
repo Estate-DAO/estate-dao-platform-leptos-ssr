@@ -391,6 +391,7 @@ pub fn PricingBookNow() -> impl IntoView {
             hotel_info_results.room_counters.set(counters);
         }
 
+        // TODO (room-api): we are only taking top 5 rooms returned by API right now. This logic might change in the future
         let mut sorted: Vec<SortedRoom> = room_count_map
             .into_iter()
             .take(5)
@@ -583,6 +584,7 @@ pub fn PricingBreakdown(
     let row_format_class = "flex justify-between";
 
     let navigate = use_navigate();
+    let loading = create_rw_signal(true);
 
     // let hotel_info_results: HotelInfoResults = expect_context();
     // let hotel_info_ctx: HotelInfoCtx = expect_context();
@@ -622,13 +624,13 @@ pub fn PricingBreakdown(
             let result = block_room(block_room_request).await.ok();
             log!("[pricing_component_not_loading] BLOCK_ROOM_API: {result:?}");
 
-            if result.is_none() {
-                // Show error message if the API call failed
-                error.set(true);
-                error_message.set("Failed to block room. Please try again.".to_string());
-                loading_state.set(false);
-                return;
-            }
+            // if result.is_none() {
+            //     // Show error message if the API call failed
+            //     error.set(true);
+            //     error_message.set("Failed to block room. Please try again.".to_string());
+            //     loading_state.set(false);
+            //     return;
+            // }
 
             // Set results and navigate
             BlockRoomResults::set_results(result);

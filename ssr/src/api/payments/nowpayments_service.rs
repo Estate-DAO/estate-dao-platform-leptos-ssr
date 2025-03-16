@@ -5,7 +5,8 @@ use super::ports::{
 use crate::api::consts::EnvVarConfig;
 use crate::cprintln;
 use colored::Colorize;
-use leptos::logging::log;
+// use leptos::logging::log;
+use crate::{error, log, warn};
 use leptos::*;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
@@ -45,7 +46,7 @@ impl NowPayments {
                 Ok(resp)
             } else {
                 let url = req.build_url(&self.api_host)?;
-                println!("nowpayments url = {url:#?}");
+                log!("nowpayments url = {url:#?}");
 
                 let response = self
                     .client
@@ -57,17 +58,17 @@ impl NowPayments {
                     .await?;
 
                 let body_string = response.text().await?;
-                cprintln!("green", "nowpayments reponse = {:#?}", body_string);
+                log!("nowpayments reponse = {:#?}", body_string);
 
                 let jd = &mut serde_json::Deserializer::from_str(&body_string);
                 let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
                     .map_err(|e| {
                         let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
-                        log!("deserialize_response- JsonParseFailed: {:?}", total_error);
+                        error!("deserialize_response- JsonParseFailed: {:?}", total_error);
                         e
                     })?;
 
-                println!("nowpayments reponse = {response_struct:#?}");
+                log!("nowpayments reponse = {response_struct:#?}");
                 Ok(response_struct)
             }
         }
