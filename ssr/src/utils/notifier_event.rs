@@ -36,18 +36,18 @@ pub struct NotifierEvent {
     // this could be pipeline_id
     pub correlation_id: Uuid,
     pub timestamp: DateTime<Utc>,
-    pub booking_id: String,
+    pub order_id: String,
     pub step_name: Option<String>, // None for pipeline-level events.
     pub event_type: NotifierEventType,
 }
 
 impl NotifierEvent {
-    pub fn new_step_start(booking_id: String, step_name: String, corr_id: Uuid) -> Self {
+    pub fn new_step_start(order_id: String, step_name: String, corr_id: Uuid) -> Self {
         Self {
             event_id: uuidv7::create(),
             correlation_id: corr_id,
             timestamp: Utc::now(),
-            booking_id,
+            order_id,
             step_name: Some(step_name),
             event_type: NotifierEventType::OnStepStart,
         }
@@ -55,13 +55,13 @@ impl NotifierEvent {
 
     /// Constructs a topic string based on the event details.
     ///
-    /// The format is: "booking:{booking_id}:step:{step_name}:{event_type}"
+    /// The format is: "booking:{order_id}:step:{step_name}:{event_type}"
     /// If step_name is None, a placeholder (*) is used.
     pub fn topic(&self) -> String {
         let step = self.step_name.as_deref().unwrap_or("*");
         format!(
             "booking:{}:step:{}:{}",
-            self.booking_id,
+            self.order_id,
             step,
             format_event_type(&self.event_type)
         )

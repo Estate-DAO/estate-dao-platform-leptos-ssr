@@ -207,12 +207,18 @@ impl Provab {
             .await
             .map_err(|e| report!(ApiError::RequestFailed(e)))?;
 
-        if !response.status().is_success() {
+        let response_status = response.status();
+        if !response_status.is_success() {
             return response.text().await.map_or_else(
                 |er| {
                     Err(ApiError::ResponseError).attach_printable_lazy(|| format!("Error: {er:?}"))
                 },
-                |t| Err(report!(ApiError::ResponseNotOK(t))),
+                |t| {
+                    Err(report!(ApiError::ResponseNotOK(format!(
+                        "received status - {}, error- {t}",
+                        response_status
+                    ))))
+                },
             );
         }
 

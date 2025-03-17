@@ -53,7 +53,7 @@ pub async fn process_pipeline(
             event_id: uuidv7::create(),
             correlation_id: correlation_id.clone(),
             timestamp: Utc::now(),
-            booking_id: current_event.booking_id.clone(),
+            order_id: current_event.order_id.clone(),
             step_name: None,
             event_type: NotifierEventType::OnPipelineStart,
         };
@@ -77,7 +77,7 @@ pub async fn process_pipeline(
                         event_id: uuidv7::create(),
                         correlation_id: correlation_id.clone(),
                         timestamp: Utc::now(),
-                        booking_id: current_event.booking_id.clone(),
+                        order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnPipelineAbort,
                     };
@@ -93,7 +93,7 @@ pub async fn process_pipeline(
                         event_id: uuidv7::create(),
                         correlation_id: correlation_id.clone(),
                         timestamp: Utc::now(),
-                        booking_id: current_event.booking_id.clone(),
+                        order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnStepSkipped,
                     };
@@ -110,7 +110,7 @@ pub async fn process_pipeline(
                         event_id: uuidv7::create(),
                         correlation_id: correlation_id.clone(),
                         timestamp: Utc::now(),
-                        booking_id: current_event.booking_id.clone(),
+                        order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnStepStart,
                     };
@@ -126,7 +126,7 @@ pub async fn process_pipeline(
                         event_id: uuidv7::create(),
                         correlation_id: correlation_id.clone(),
                         timestamp: Utc::now(),
-                        booking_id: current_event.booking_id.clone(),
+                        order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnStepCompleted,
                     };
@@ -142,7 +142,7 @@ pub async fn process_pipeline(
             event_id: uuidv7::create(),
             correlation_id,
             timestamp: Utc::now(),
-            booking_id: current_event.booking_id.clone(),
+            order_id: current_event.order_id.clone(),
             step_name: None,
             event_type: NotifierEventType::OnPipelineEnd,
         };
@@ -152,5 +152,6 @@ pub async fn process_pipeline(
     // this is only for local testing purpose of concurrency of the pipeline.
     #[cfg(feature = "mock-pipeline")]
     tokio::time::sleep(Duration::from_millis(4000)).await;
+
     Ok(current_event)
 }

@@ -68,7 +68,7 @@ mod notifier_tests {
         let received = received_event.payload;
 
         // Compare individual fields
-        assert_eq!(received.booking_id, event.booking_id);
+        assert_eq!(received.order_id, event.order_id);
         assert_eq!(received.step_name, event.step_name);
         assert_eq!(received.correlation_id, event.correlation_id);
         assert_eq!(received.event_type, event.event_type);

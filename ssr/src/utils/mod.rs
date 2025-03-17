@@ -1,6 +1,7 @@
 pub mod admin;
 pub mod app_reference;
 pub mod backend_default_impl;
+pub mod booking_id;
 mod colored_print;
 pub mod date;
 pub mod ic;

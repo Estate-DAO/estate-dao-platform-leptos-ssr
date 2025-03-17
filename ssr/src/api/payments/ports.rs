@@ -155,7 +155,12 @@ impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
                 price_currency: response.price_currency,
                 payment_id: response.payment_id,
             },
-            GetPaymentStatusResponse::Failure(failed_resp) => Self::default(),
+            GetPaymentStatusResponse::Failure(failed_resp) => {
+                let mut default_response = Self::default();
+                default_response.payment_status = format!("FAILED: {}", failed_resp.message);
+                default_response.provider = provider;
+                default_response
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+pub mod booking_handler;
 pub mod mock_handler;
 pub mod payment_handler;
 pub mod pipeline;
@@ -21,9 +22,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 #[derive(Debug, Clone)]
 pub struct ServerSideBookingEvent {
     pub payment_id: Option<String>,
-    pub booking_id: String,
+    pub provider: String,
+    // pub booking_id: String,
+    /// order id received from payment provider -> can be used to derive app_reference
+    pub order_id: String,
     pub user_email: String,
     pub payment_status: Option<String>,
+    pub backend_payment_status: Option<String>,
 }
 
 // --------------------------

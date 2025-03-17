@@ -125,9 +125,11 @@ cfg_if! {
 
             let event = ServerSideBookingEvent {
                 payment_id: payment_id.map(String::from),
-                booking_id: order_id.to_string(),
+                order_id: order_id.to_string(),
+                provider: "nowpayments".to_string(),
                 user_email: String::new(),
                 payment_status: None,
+                backend_payment_status: Some(String::from("started_processing")),
             };
 
             debug!("ServerSideBookingEvent = {:?}", event);
