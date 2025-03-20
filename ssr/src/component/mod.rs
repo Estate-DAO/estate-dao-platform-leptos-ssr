@@ -49,6 +49,9 @@ pub use number_counter::*;
 mod footer;
 pub use footer::*;
 
+mod error_popup;
+pub use error_popup::*;
+
 mod most_popular;
 pub use most_popular::*;
 

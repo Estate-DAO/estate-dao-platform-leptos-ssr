@@ -12,6 +12,7 @@ pub const PROVAB_TEST_OLD_PROXY: &str =
     "http://5.75.246.9:8001/test/webservices/index.php/hotel_v3/service";
 
 pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
+    // "http://estate-static-ip-egress-proxy.internal/prod/webservices/index.php/hotel_v3/service";
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
 // APP_URL
@@ -117,10 +118,13 @@ impl EnvVarConfig {
             Ok(url) => {
                 log!("Using PROVAB_BASE_URL from environment: {}", url);
                 url
-            },
+            }
             Err(_) => {
                 let default_url = get_default_provab_base_url().to_string();
-                log!("PROVAB_BASE_URL not found in environment, using default: {}", default_url);
+                log!(
+                    "PROVAB_BASE_URL not found in environment, using default: {}",
+                    default_url
+                );
                 default_url
             }
         };

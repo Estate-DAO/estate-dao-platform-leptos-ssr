@@ -42,11 +42,11 @@ impl DeserializableInput {
             Self::Bytes(body_bytes) => {
                 match String::from_utf8(body_bytes) {
                     Ok(string) => {
-                        println!("DeserializableInput - Bytes(Vec<u8>):");
+                        log!("DeserializableInput - Bytes(Vec<u8>): \n{}", string);
                         string
                     }
                     Err(e) => {
-                        println!("DeserializableInput - Bytes - could not convert - : {}", e);
+                        log!("DeserializableInput - Bytes - could not convert - : {}", e);
                         // return empty string for now. since this is debug only.
                         String::new()
                     }
@@ -61,10 +61,10 @@ pub trait ProvabReqMeta: Sized + Send {
     const GZIP: bool = true;
 
     #[cfg(feature = "mock-provab")]
-    type Response: DeserializeOwned + Debug + Dummy<Faker>;
+    type Response: DeserializeOwned + Debug + Dummy<Faker> + Send;
 
     #[cfg(not(feature = "mock-provab"))]
-    type Response: DeserializeOwned + Debug;
+    type Response: DeserializeOwned + Debug + Send;
 
     /// Deserialize the response from the API
     /// The default implementation that assumes the response is JSON encoded [crate::CfSuccessRes]
@@ -77,7 +77,7 @@ pub trait ProvabReqMeta: Sized + Send {
             format!(
                 "gzip = {} , response_bytes_or_string : {}\n\n\n",
                 Self::GZIP,
-                response_bytes_or_string.clone().take(50).to_string()
+                response_bytes_or_string.clone().to_string()
             )
             .bright_yellow()
             .bold()
@@ -117,7 +117,7 @@ pub trait ProvabReqMeta: Sized + Send {
     }
 }
 
-pub trait ProvabReq: ProvabReqMeta {
+pub trait ProvabReq: ProvabReqMeta + Debug {
     fn base_path() -> String {
         // get_provab_base_url_from_env().to_owned()
         // log!("base_path() BEFORE");
@@ -246,6 +246,8 @@ impl Provab {
         req: Req,
         reqb: RequestBuilder,
     ) -> ApiClientResult<Req::Response> {
+        log_json_payload(&req);
+
         let reqb = if Req::METHOD == Method::GET {
             reqb.query(&req)
         } else {
@@ -310,4 +312,20 @@ fn print_request_headers(request: &reqwest::Request) -> ApiClientResult<()> {
     }
     println!("---------------------------\n");
     Ok(())
+}
+
+fn log_json_payload<T: Serialize + Debug>(req: &T) {
+    match serde_json::to_string_pretty(req) {
+        Ok(json) => log!(
+            "{}",
+            format!("json_payload = {} ", &json).bright_cyan().bold()
+        ),
+
+        Err(e) => log!(
+            "{}",
+            format!("Failed to serialize JSON payload: {:?}", e)
+                .bright_red()
+                .bold()
+        ),
+    }
 }

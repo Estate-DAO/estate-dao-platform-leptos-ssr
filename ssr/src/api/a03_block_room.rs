@@ -236,13 +236,8 @@ impl ProvabReqMeta for BlockRoomRequest {
 
 #[server(BlockRoom)]
 pub async fn block_room(request: BlockRoomRequest) -> Result<BlockRoomResponse, ServerFnError> {
-    let provab = Provab::default();
+    let retry_count = 3;
 
-    match provab.send(request).await {
-        Ok(response) => Ok(response),
-        Err(e) => {
-            log!("error: {:?}", e);
-            Err(ServerFnError::ServerError(e.to_string()))
-        }
-    }
+    use crate::api::RetryableRequest;
+    request.retry_with_backoff(retry_count).await
 }

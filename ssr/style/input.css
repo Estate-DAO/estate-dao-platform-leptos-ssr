@@ -72,6 +72,35 @@
       .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
         background: #6b7280;
       } */
+      
+      /* Error Popup Styles */
+    .error-popup-container {
+        @apply fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50;
+    }
+   
+    .error-popup {
+        @apply bg-white rounded-lg shadow-lg max-w-md w-full mx-4 overflow-hidden;
+    }
+    
+    .error-popup-header {
+        @apply flex justify-between items-center p-4 bg-red-600 text-white;
+    }
+    
+    .error-popup-close {
+        @apply text-white text-2xl font-bold hover:text-gray-200 focus:outline-none;
+    }
+    
+    .error-popup-body {
+        @apply p-4 text-gray-700;
+    }
+    
+    .error-popup-footer {
+        @apply p-4 bg-gray-100 flex justify-end;
+    }
+    
+    .error-popup-button {
+        @apply px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none;
+    }
 }
 
 @media (min-height:820px) and (max-height:899px){

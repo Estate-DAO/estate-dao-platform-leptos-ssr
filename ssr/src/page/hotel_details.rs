@@ -6,8 +6,11 @@ use crate::{
     component::{Divider, FilterAndSortBy, PriceDisplay, StarRating},
     page::InputGroup,
     // state::room_state::{RoomQueryParams, RoomState},
-    state::search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
-    state::view_state::HotelInfoCtx,
+    state::{
+        api_error_state::{ApiErrorState, ApiErrorType},
+        search_state::{BlockRoomResults, HotelInfoResults, SearchCtx},
+        view_state::HotelInfoCtx,
+    },
 };
 // use leptos::logging::log;
 use crate::log;
@@ -624,13 +627,22 @@ pub fn PricingBreakdown(
             let result = block_room(block_room_request).await.ok();
             log!("[pricing_component_not_loading] BLOCK_ROOM_API: {result:?}");
 
-            // if result.is_none() {
-            //     // Show error message if the API call failed
-            //     error.set(true);
-            //     error_message.set("Failed to block room. Please try again.".to_string());
-            //     loading_state.set(false);
-            //     return;
-            // }
+            // Handle error if the API call failed
+            if result.is_none() {
+                // Get the API error state
+                let api_error_state = ApiErrorState::from_leptos_context();
+
+                // Set error message
+                api_error_state.set_error(
+                    ApiErrorType::BlockRoom,
+                    "Selected room is already booked. Please choose another room.".to_string(),
+                );
+
+                // Update loading state
+                loading_state.set(false);
+                BlockRoomResults::reset();
+                return;
+            }
 
             // Set results and navigate
             BlockRoomResults::set_results(result);

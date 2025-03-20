@@ -15,6 +15,9 @@ pub use a02_get_room::{get_room, HotelRoomDetail, HotelRoomRequest, HotelRoomRes
 mod a03_block_room;
 pub use a03_block_room::{block_room, BlockRoomRequest, BlockRoomResponse};
 
+mod retry;
+pub use retry::RetryableRequest;
+
 mod a04_book_room;
 pub use a04_book_room::{
     book_room, BookRoomRequest, BookRoomResponse, BookingDetails, BookingDetailsContainer,

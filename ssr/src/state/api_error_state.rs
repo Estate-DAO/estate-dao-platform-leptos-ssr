@@ -1,0 +1,81 @@
+use crate::api::ApiError;
+use leptos::*;
+use std::fmt;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ApiErrorType {
+    BlockRoom,
+    BookRoom,
+    HotelSearch,
+    HotelInfo,
+    HotelRoom,
+    Payment,
+    Generic,
+}
+
+impl fmt::Display for ApiErrorType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ApiErrorType::BlockRoom => write!(f, "Block Room"),
+            ApiErrorType::BookRoom => write!(f, "Book Room"),
+            ApiErrorType::HotelSearch => write!(f, "Hotel Search"),
+            ApiErrorType::HotelInfo => write!(f, "Hotel Information"),
+            ApiErrorType::HotelRoom => write!(f, "Hotel Room"),
+            ApiErrorType::Payment => write!(f, "Payment"),
+            ApiErrorType::Generic => write!(f, "API"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ApiErrorState {
+    pub has_error: RwSignal<bool>,
+    pub error_type: RwSignal<Option<ApiErrorType>>,
+    pub error_message: RwSignal<String>,
+    pub show_popup: RwSignal<bool>,
+}
+
+impl ApiErrorState {
+    pub fn from_leptos_context() -> Self {
+        expect_context()
+    }
+
+    pub fn reset() {
+        let this = Self::from_leptos_context();
+        this.has_error.set(false);
+        this.error_type.set(None);
+        this.error_message.set(String::new());
+        this.show_popup.set(false);
+    }
+
+    pub fn set_error(&self, error_type: ApiErrorType, message: String) {
+        self.has_error.set(true);
+        self.error_type.set(Some(error_type));
+        self.error_message.set(message);
+        self.show_popup.set(true);
+    }
+
+    pub fn set_error_from_api_error(&self, error_type: ApiErrorType, error: &ApiError) {
+        let message = error.to_string();
+        self.set_error(error_type, message);
+    }
+
+    pub fn clear_error(&self) {
+        self.has_error.set(false);
+        self.error_type.set(None);
+        self.error_message.set(String::new());
+        self.show_popup.set(false);
+    }
+
+    pub fn dismiss_popup(&self) {
+        self.show_popup.set(false);
+    }
+
+    pub fn has_error_of_type(&self, error_type: ApiErrorType) -> bool {
+        if let Some(current_type) = self.error_type.get() {
+            self.has_error.get() && current_type == error_type
+        } else {
+            false
+        }
+    }
+}

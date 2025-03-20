@@ -1,11 +1,13 @@
 use crate::{
     api::{consts::EnvVarConfig, payments::ports::GetPaymentStatusResponse},
+    component::ErrorPopup,
     error_template::{AppError, ErrorTemplate},
     page::{
         BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
         PaymentBookingStatusUpdates, RootPage,
     },
     state::{
+        api_error_state::ApiErrorState,
         search_state::{
             BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
         },
@@ -71,6 +73,8 @@ pub fn App() -> impl IntoView {
     provide_context(ConfirmationResults::default());
 
     provide_context(PaymentBookingStatusUpdates::default());
+
+    provide_context(ApiErrorState::default());
 
     // Provides Query Client for entire app.
     // leptos_query::provide_query_client();

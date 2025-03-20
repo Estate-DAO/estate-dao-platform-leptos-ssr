@@ -16,7 +16,6 @@ pub async fn update_payment_details_backend(
         .map_err(ServerFnError::ServerError)
 }
 
-
 pub async fn call_update_payment_details_backend(
     booking_id: backend::BookingId,
     payment_details_struct: PaymentDetails,
