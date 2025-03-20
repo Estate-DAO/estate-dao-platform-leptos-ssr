@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
+use super::a03_block_room::BlockRoomResponse;
 use super::consts::EnvVarConfig;
+use super::mock::mock_utils::{self, MockableResponse};
 use super::{ApiClientResult, ApiError};
 use colored::Colorize;
 use error_stack::{report, Report, ResultExt};
 use leptos::expect_context;
 // use leptos::logging::log;
+use crate::api::mock::mock_utils::MockResponseGenerator;
 use crate::log;
 use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Response, Url};
@@ -61,7 +64,7 @@ pub trait ProvabReqMeta: Sized + Send {
     const GZIP: bool = true;
 
     #[cfg(feature = "mock-provab")]
-    type Response: DeserializeOwned + Debug + Dummy<Faker> + Send;
+    type Response: DeserializeOwned + Debug + MockableResponse + Send;
 
     #[cfg(not(feature = "mock-provab"))]
     type Response: DeserializeOwned + Debug + Send;
@@ -136,7 +139,7 @@ pub trait ProvabReq: ProvabReqMeta + Debug {
 
     fn headers() -> HeaderMap {
         // get_headers_from_env()
-        log!("headers(): BEFORE");
+        // log!("headers(): BEFORE");
 
         let env_var_config: EnvVarConfig = expect_context();
 
@@ -266,17 +269,18 @@ impl Provab {
         self.send_inner::<Req>(reqb).await
     }
 
-    pub async fn send<Req: ProvabReq + ProvabReqMeta + Serialize>(
-        &self,
-        req: Req,
-    ) -> ApiClientResult<Req::Response> {
+    /// Send a request and return the response
+    pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
+    where
+        Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
+        Req::Response: MockableResponse + Send + 'static,
+    {
         cfg_if::cfg_if! {
             if #[cfg(feature = "mock-provab")] {
-                let resp: Req::Response = Faker.fake();
-                Ok(resp)
+                Ok(Req::Response::generate_mock_response(0.5))
             } else {
+                // Real request implementation here
                 let reqb = self.req_builder(Req::METHOD, Req::path());
-                // log!("reqb - send: {reqb:?}");
                 self.send_json(req, reqb).await
             }
         }

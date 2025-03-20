@@ -12,7 +12,7 @@ use tokio;
 
 /// Trait for implementing retry functionality for API requests
 #[async_trait]
-pub trait RetryableRequest: ProvabReq + Serialize + Clone {
+pub trait RetryableRequest: ProvabReq + Serialize + Clone + 'static {
     #[cfg(feature = "ssr")]
     /// Retry the API call with exponential backoff
     async fn retry_with_backoff(self, retry_count: u8) -> Result<Self::Response, ServerFnError> {
@@ -66,10 +66,12 @@ pub trait RetryableRequest: ProvabReq + Serialize + Clone {
 
     #[cfg(not(feature = "ssr"))]
     async fn retry_with_backoff(self, retry_count: u8) -> Result<Self::Response, ServerFnError> {
-        // Err(ServerFnError::ServerError("Environment Not supported".to_string()))
-        Ok(Self::Response::default())
+        Err(ServerFnError::ServerError(
+            "Environment Not supported".to_string(),
+        ))
+        // Ok(Response)
     }
 }
 
 // Implement RetryableRequest for any type that implements ProvabReq
-impl<T> RetryableRequest for T where T: ProvabReq + Serialize + Clone {}
+impl<T> RetryableRequest for T where T: ProvabReq + Serialize + Clone + 'static {}

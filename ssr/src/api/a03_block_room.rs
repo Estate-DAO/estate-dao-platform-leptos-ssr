@@ -84,7 +84,6 @@ impl Default for FailureBlockRoomResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(untagged)]
 pub enum BlockRoomResponse {
     Success(SuccessBlockRoomResponse),

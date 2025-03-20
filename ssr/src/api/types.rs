@@ -13,12 +13,18 @@ pub enum ApiError {
 
     #[error("HTTP request failed - {0}")]
     RequestFailed(#[from] reqwest::Error),
+
     #[error("JSON parsing failed `{0}`")]
     JsonParseFailed(String),
+
     #[error("Invalid header Value")]
     InvalidHeaderValue(#[from] reqwest::header::InvalidHeaderValue),
+
     #[error("Invalid header Name")]
     InvalidHeaderName(#[from] reqwest::header::InvalidHeaderName),
+
+    #[error("Other error: {0}")]
+    Other(String),
 }
 
 pub type ApiClientResult<T> = error_stack::Result<T, ApiError>;
