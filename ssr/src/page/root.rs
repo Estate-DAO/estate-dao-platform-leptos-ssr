@@ -31,7 +31,7 @@ pub fn RootPage() -> impl IntoView {
                 <HeroSection />
                 <MostPopular />
             </div>
-            <Footer />
+            // <Footer />
         </main>
     }
 }
@@ -56,7 +56,14 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <div class="flex items-end px-6 py-3 bg-white rounded-xl max-w-fit w-full ">
                         "We're the first decentralized booking platform powered by ICP."
-                        <span class="font-semibold text-blue-500 ml-4 inline">"Learn more"</span>
+                        <a
+                            href="https://internetcomputer.org/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="font-semibold text-blue-500 ml-4 inline"
+                        >
+                            "Learn more about ICP "
+                        </a>
                         <Icon
                             class="w-6 h-6 font-semibold inline ml-2 text-blue-500"
                             icon=icondata::CgArrowRight
