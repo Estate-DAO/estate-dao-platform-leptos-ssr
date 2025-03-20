@@ -87,7 +87,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
 
         // sets the document title
-        <Title text="Nofeebooking" />
+        <Title text="NoFeeBooking" />
 
         // import Figtree font
         <Link rel="preconnect" href="https://fonts.googleapis.com" />
