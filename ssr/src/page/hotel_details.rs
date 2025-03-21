@@ -598,6 +598,7 @@ pub fn PricingBreakdown(
 
     // let hotel_info_results: HotelInfoResults = expect_context();
     // let hotel_info_ctx: HotelInfoCtx = expect_context();
+    let is_booking = create_rw_signal(false);
 
     let block_room_action = create_action(move |_| {
         let nav = navigate.clone();
@@ -654,6 +655,7 @@ pub fn PricingBreakdown(
             // Set results and navigate
             BlockRoomResults::set_results(result);
 
+            is_booking.set(false);
             // Navigate to block room page
             nav(AppRoutes::BlockRoom.to_string(), Default::default());
         }
@@ -692,10 +694,30 @@ pub fn PricingBreakdown(
                     "Cryptocurrency payments accepted!"
                 </div>
                 <button
-                    class="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-800"
-                    on:click=move |_| block_room_action.dispatch(())
+                    class={move || {
+                        let base = "w-full py-3 rounded-full";
+                        if is_booking.get() {
+                            format!("{base} bg-blue-400 cursor-not-allowed")
+                        } else {
+                            format!("{base} bg-blue-600 hover:bg-blue-800")
+                        }
+                    }}
+                    disabled=move || is_booking.get()
+                    on:click=move |_| {
+                        is_booking.set(true);
+                        block_room_action.dispatch(())
+                    }
                 >
-                    "Book Now"
+                    {move || if is_booking.get() {
+                        view! {
+                            <span class="inline-flex items-center  text-white ">
+                                <span class="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                                "Booking..."
+                            </span>
+                        }
+                    } else {
+                        view! { <span class="text-white"> "Book Now" </span> }
+                    }}
                 </button>
             </div>
         </div>
