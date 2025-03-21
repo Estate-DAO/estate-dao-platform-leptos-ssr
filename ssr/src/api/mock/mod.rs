@@ -1,4 +1,3 @@
-pub mod mock_utils;
 // pub use mock_utils::*;
 
 cfg_if::cfg_if! {
@@ -17,5 +16,7 @@ cfg_if::cfg_if! {
 
         mod a03_block_room;
         pub use a03_block_room::*;
+        pub mod mock_utils;
+
     }
 }

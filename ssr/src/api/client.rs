@@ -2,13 +2,12 @@ use std::sync::Arc;
 
 use super::a03_block_room::BlockRoomResponse;
 use super::consts::EnvVarConfig;
-use super::mock::mock_utils::{self, MockableResponse};
 use super::{ApiClientResult, ApiError};
 use colored::Colorize;
 use error_stack::{report, Report, ResultExt};
 use leptos::expect_context;
 // use leptos::logging::log;
-use crate::api::mock::mock_utils::MockResponseGenerator;
+
 use crate::log;
 use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Response, Url};
@@ -16,12 +15,18 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::io::Read;
 
+#[cfg(feature = "ssr")]
+use tokio;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-provab")] {
         // fake imports
         use fake::{Dummy, Fake, Faker};
         use rand::rngs::StdRng;
         use rand::SeedableRng;
+
+        use crate::api::mock::mock_utils::MockableResponse;
+        use crate::api::mock::mock_utils::MockResponseGenerator;
     }
 }
 
@@ -269,23 +274,35 @@ impl Provab {
         self.send_inner::<Req>(reqb).await
     }
 
-    /// Send a request and return the response
+    #[cfg(feature = "mock-provab")]
+    /// Send a request and return the response - mocked
     pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
     where
         Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
         Req::Response: MockableResponse + Send + 'static,
     {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "mock-provab")] {
-                Ok(Req::Response::generate_mock_response(0.5))
-            } else {
-                // Real request implementation here
-                let reqb = self.req_builder(Req::METHOD, Req::path());
-                self.send_json(req, reqb).await
-            }
-        }
+        // sleep by 3 seconds before response
+
+        use std::time::Duration;
+        #[cfg(feature = "ssr")]
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        Ok(Req::Response::generate_mock_response(0.5))
+    }
+
+    #[cfg(not(feature = "mock-provab"))]
+    /// Send a request and return the response
+    pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
+    where
+        Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
+        Req::Response: Send + 'static,
+    {
+        // Real request implementation here
+        let reqb = self.req_builder(Req::METHOD, Req::path());
+        self.send_json(req, reqb).await
     }
 }
+
 fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
     // Create a HeaderMap to store custom headers
     let mut headers = HeaderMap::new();
