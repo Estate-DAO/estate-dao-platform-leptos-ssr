@@ -263,6 +263,10 @@ impl Provab {
         };
         let reqb = reqb.headers(Req::custom_headers());
 
+        // TODO: in production, set headers to live. (via environment variables?)
+        #[cfg(any(feature = "prod-consts", feature = "stage-consts"))]
+        let reqb = set_live_headers(reqb);
+
         let reqb = if Req::GZIP {
             set_gzip_accept_encoding(reqb)
         } else {
@@ -320,6 +324,19 @@ fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
     // } else {
     //     reqb
     // }
+}
+
+fn set_live_headers(reqb: RequestBuilder) -> RequestBuilder {
+    // Create a HeaderMap to store custom headers
+    let mut headers = HeaderMap::new();
+
+    // Insert headers with specific casing
+    headers.insert(
+        http::HeaderName::from_bytes(b"x-System").unwrap(),
+        http::HeaderValue::from_str("live").unwrap(),
+    );
+
+    reqb.headers(headers)
 }
 
 /// Function to print the headers of a reqwest::Request
