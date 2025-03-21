@@ -347,14 +347,17 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Create a memo for room details
     let room_details = create_memo(move |_| {
-        log!("[pricing_component_not_loading] Creating room_details memo");
+        let trigger = hotel_info_results_clone.search_result.track();
+        log!("[diagnosis] [1a] search_result version: {:?}", trigger);
+        log!("[diagnosis] [1] Creating room_details memo");
         let details = hotel_info_results_clone
             .get_hotel_room_details()
             .unwrap_or_default();
         log!(
-            "[pricing_component_not_loading] Room details memo value: {:?}",
-            details
+            "[diagnosis] [2] Raw API response: {:?}",
+            hotel_info_results_clone.search_result.get()
         );
+        log!("[diagnosis] [3] Processed details: {:?}", details);
         details
     });
 
@@ -363,7 +366,14 @@ pub fn PricingBookNow() -> impl IntoView {
 
     // Effect to update sorted_rooms when room_details changes
     create_effect(move |_| {
-        log!("[pricing_component_not_loading] Creating sorted_rooms effect");
+        log!(
+            "[diagnosis] [4] HotelInfoResults changed: {:?}",
+            hotel_info_results.search_result.get().is_some()
+        );
+        log!(
+            "[diagnosis] [5] Room details changed: {:?}",
+            room_details.get()
+        );
         let mut room_count_map: HashMap<String, (String, u32, f64)> = HashMap::new();
         let mut room_types_to_init = HashSet::new();
 
@@ -407,10 +417,7 @@ pub fn PricingBookNow() -> impl IntoView {
             .collect();
 
         sorted.sort_by(|a, b| a.room_type.cmp(&b.room_type));
-        log!(
-            "[pricing_component_not_loading] Sorted rooms effect value: {:?}",
-            sorted
-        );
+        log!("[diagnosis] [6] Sorted rooms effect value: {:?}", sorted);
         sorted_rooms.set(sorted);
     });
 
