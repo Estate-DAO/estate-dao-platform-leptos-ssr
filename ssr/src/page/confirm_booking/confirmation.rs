@@ -140,6 +140,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                             <div class="text-left">
                                 <b class="text-lg font-bold mb-6 text-left">{move || hotel_info_ctx.selected_hotel_name.get()}</b>
                                 <p class="text-sm font-sm text-gray-800">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
+                                // todo: show this data from backend struct. this is wrong.
                                 <p class="text-sm font-sm text-gray-800">{move || {
                                     let destination = search_ctx.destination.get().unwrap_or_default();
                                     format!("{} - {}, {}",
@@ -184,7 +185,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                             </div>
                         </div>
                         <Divider />
-                        <b class="text-lg font-bold mb-6 text-left">Bookind Details</b>
+                        <b class="text-lg font-bold mb-6 text-left">Booking Details</b>
                         <div class="flex justify-between items-center p-4">
                             <div class="text-left">
                                 <div class="flex-col">

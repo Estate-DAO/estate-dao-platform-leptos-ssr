@@ -2,8 +2,27 @@ pub mod api_error_state;
 pub mod local_storage;
 pub mod search_state;
 pub mod view_state;
+// pub mod pricing_book_now;
+
+pub trait GlobalStateForLeptos: Clone + Default + 'static + Sized {
+    fn get() -> Self {
+        let this = use_context::<Self>();
+        match this {
+            Some(x) => x,
+            None => {
+                Self::set_global();
+                Self::default()
+            }
+        }
+    }
+
+    fn set_global() {
+        provide_context(Self::default());
+    }
+}
 
 use cfg_if::cfg_if;
+use leptos::{provide_context, use_context};
 
 use crate::api::consts::EnvVarConfig;
 
