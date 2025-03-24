@@ -13,6 +13,7 @@ use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
 use crate::canister::backend;
 use crate::canister::backend::BePaymentApiResponse;
+use crate::canister::backend::BookingId;
 use crate::canister::backend::HotelDetails;
 use crate::canister::backend::HotelRoomDetails;
 use crate::canister::backend::RoomDetails;
@@ -26,6 +27,7 @@ use crate::state::search_state::{
 };
 use crate::state::view_state::{AdultDetail, BlockRoomCtx, ChildDetail, HotelInfoCtx};
 use crate::utils::app_reference::generate_app_reference;
+use crate::utils::booking_id::PaymentIdentifiers;
 use crate::utils::pluralize;
 use leptos::*;
 use leptos_icons::*;
@@ -234,6 +236,8 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                 // Call server function inside action
                 spawn_local(async move {
+                    // TODO(temporary-fix): temporarily disable second call to block room
+
                     let result = block_room(block_room_request).await.ok();
                     let res = result.clone();
                     let block_room_id = res.and_then(|resp| resp.get_block_room_id());
@@ -295,10 +299,26 @@ pub fn BlockRoomPage() -> impl IntoView {
                     todo!();
                 }
                 "NOWPayments" => {
+                    let email = adults
+                        .get()
+                        .first()
+                        .and_then(|adult| adult.email.clone())
+                        .unwrap_or_default();
+
+                    // Generate app_reference and store in local storage
+                    let app_reference = generate_app_reference(email.clone());
+
+                    // Create invoice request with order_id
                     let invoice_request = CreateInvoiceRequest {
                         price_amount: get_price_amount_based_on_env(total_price.get() as u32),
                         price_currency: "USD".to_string(),
-                        order_id: "order_watever".to_string(),
+                        order_id: PaymentIdentifiers::order_id_from_app_reference(
+                            &app_reference
+                                .get()
+                                .map(|b| b.get_app_reference())
+                                .unwrap_or_default(),
+                            &email,
+                        ),
                         order_description: "Hotel Room Booking".to_string(),
                         ipn_callback_url: "https://nowpayments.io".to_string(),
                         success_url: get_payments_url("success"),
@@ -307,6 +327,12 @@ pub fn BlockRoomPage() -> impl IntoView {
                         is_fixed_rate: false,
                         is_fee_paid_by_user: false,
                     };
+
+                    // Log payment request for debugging
+                    log!(
+                        "Creating payment request with order_id: {}",
+                        invoice_request.order_id
+                    );
 
                     // todo: [UAT]  feedback - select only those room which are selected by the user!!
                     let sorted_rooms = hotel_info_results.sorted_rooms.get();

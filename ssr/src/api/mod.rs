@@ -28,6 +28,7 @@ pub use a04_book_room::{
 mod a05_hotel_booking_detail;
 pub use a05_hotel_booking_detail::{HotelBookingDetailRequest, HotelBookingDetailResponse};
 
+// pub mod tower_client;
 // cfg_if! {
 //     if #[cfg(feature = "ssr")] {
 mod client;
@@ -37,7 +38,7 @@ pub use client::*;
 
 cfg_if! {
     if #[cfg(feature = "mock-provab")]{
-        pub mod mock;
+pub mod mock;
     }
 }
 
