@@ -141,6 +141,13 @@ impl HotelInfoResults {
     pub fn reset() {
         Self::from_leptos_context().search_result.set(None);
         Self::from_leptos_context().room_result.set(None);
+        Self::from_leptos_context()
+            .room_counters
+            .set(HashMap::new());
+        Self::from_leptos_context()
+            .block_room_counters
+            .set(HashMap::new());
+        Self::from_leptos_context().sorted_rooms.set(Vec::new());
     }
 
     pub fn set_info_results(hotel_info_response: Option<HotelInfoResponse>) {
@@ -199,14 +206,14 @@ impl HotelInfoResults {
         self.room_counters
             .get()
             .get(room_type)
-            .map(|counter| counter.key.get())
+            .map(|counter| counter.key.get_untracked())
     }
 
     pub fn get_room_unique_id(&self, room_type: &str) -> Option<String> {
         self.room_counters
             .get()
             .get(room_type)
-            .and_then(|counter| counter.value.get())
+            .and_then(|counter| counter.value.get_untracked())
     }
 
     pub fn update_room_count(&self, room_type: String, count: u32) {

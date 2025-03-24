@@ -15,6 +15,8 @@ use crate::{
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
+    // ensure that context is clear. no pending signals
+    HotelInfoResults::reset();
     let search_list_page: SearchListResults = expect_context();
 
     let disabled_input_group: Signal<bool> = Signal::derive(move || {
@@ -177,6 +179,9 @@ pub fn HotelCard(
             // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);
+
+            // make sure to reset the context before calling
+            HotelInfoResults::reset();
 
             // Dispatch actions to fetch data
             search_hotel_room_action.dispatch(());

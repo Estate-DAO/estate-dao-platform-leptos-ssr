@@ -1,12 +1,13 @@
 use crate::{
-    api::{HotelSearchRequest, HotelSearchResponse},
+    api::{HotelRoomResponse, HotelSearchRequest, HotelSearchResponse},
     component::{GuestSelection, SelectedDateRange},
+    state::search_state::HotelInfoResults,
 };
 // use leptos::logging::log;
 use crate::log;
 use leptos::RwSignal;
 use leptos::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Default, Clone)]
 pub struct HotelInfoCtx {
