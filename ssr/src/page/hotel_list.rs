@@ -36,7 +36,7 @@ pub fn HotelListPage() -> impl IntoView {
         <section class="relative h-screen">
             <Navbar />
             <div class="flex flex-col items-center mt-6 p-4">
-                <InputGroup disabled=disabled_input_group />
+                <InputGroup given_disabled=disabled_input_group />
             // <FilterAndSortBy />
             </div>
 

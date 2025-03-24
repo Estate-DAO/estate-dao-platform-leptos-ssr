@@ -79,7 +79,18 @@ pub fn HeroSection() -> impl IntoView {
 }
 
 #[component]
-pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl IntoView {
+pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> impl IntoView {
+    // TODO (search-button): we want to disable the button for 5 seconds before user can click on it again.
+    // button with counter component
+
+    let local_disabled = create_rw_signal(false);
+    let disabled = create_memo(move |_|
+        // let disabled = Signal::derive(move ||
+        {
+        let val = given_disabled.get() || local_disabled.get();
+        log!("search_bar_disabled - {}", val);
+        val
+        });
     // -------------------------------------
     // BACKGROUND CLASSES FOR DISABLED STATE
     // -------------------------------------
@@ -120,14 +131,14 @@ pub fn InputGroup(#[prop(optional, into)] disabled: MaybeSignal<bool>) -> impl I
 
     let navigate = use_navigate();
     let search_action = create_action(move |_| {
+        SearchListResults::reset();
         let nav = navigate.clone();
         let search_ctx = search_ctx.clone();
+        local_disabled.set(true);
         async move {
             log!("Search button clicked");
             //  move to the hotel listing page
             nav(AppRoutes::HotelList.to_string(), Default::default());
-
-            SearchListResults::reset();
 
             // call server function inside action
             spawn_local(async move {
