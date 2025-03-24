@@ -119,10 +119,20 @@ pub fn PaymentHandler() -> impl IntoView {
                 if resp.is_some() {
                     log!("nowpayments_get_payment_status - {resp:?}");
 
-                    // trigger the save_payment_details_to_backend
-                    payment_booking_step_signals
-                        .p02_update_payment_details_to_backend
-                        .set(true);
+                    // Check if payment status is finished
+                    if let Some(payment_status) =
+                        resp.as_ref().and_then(|r| Some(r.get_payment_status()))
+                    {
+                        log!("Payment status: {}", payment_status);
+
+                        if payment_status == "finished" {
+                            // Only set p02 signal when payment is finished
+                            payment_booking_step_signals
+                                .p02_update_payment_details_to_backend
+                                .set(true);
+                        }
+                        // For other statuses, we continue polling
+                    }
                 }
             });
         },
