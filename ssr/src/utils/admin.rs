@@ -28,7 +28,7 @@ impl AdminCanisters {
     pub async fn backend_canister(&self) -> Backend {
         let agent = self.agent.get_agent().await;
         let principal = crate::canister::BACKEND_ID;
-        println!("{principal:#?}");
+        // println!("{principal:#?}");
         Backend(principal, agent)
     }
 }

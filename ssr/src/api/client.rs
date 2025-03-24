@@ -50,7 +50,7 @@ impl DeserializableInput {
             Self::Bytes(body_bytes) => {
                 match String::from_utf8(body_bytes) {
                     Ok(string) => {
-                        log!("DeserializableInput - Bytes(Vec<u8>): \n{}", string);
+                        // log!("DeserializableInput - Bytes(Vec<u8>): \n{}", string);
                         string
                     }
                     Err(e) => {
@@ -341,14 +341,21 @@ fn set_live_headers(reqb: RequestBuilder) -> RequestBuilder {
 
 /// Function to print the headers of a reqwest::Request
 fn print_request_headers(request: &reqwest::Request) -> ApiClientResult<()> {
-    println!("----- Request Headers -----");
-    for (key, value) in request.headers().iter() {
-        // Convert HeaderName and HeaderValue to strings for better readability
-        let key_str = key.as_str();
-        let value_str = value.to_str().unwrap_or("<Invalid UTF-8>");
-        println!("{}: {}", key_str, value_str);
-    }
-    println!("---------------------------\n");
+    let headers_str = request
+        .headers()
+        .iter()
+        .map(|(key, value)| {
+            let key_str = key.as_str();
+            let value_str = value.to_str().unwrap_or("<Invalid UTF-8>");
+            format!("{}: {}", key_str, value_str)
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    println!(
+        "----- Request Headers -----\n{}\n-----------------------",
+        headers_str
+    );
     Ok(())
 }
 
