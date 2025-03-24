@@ -28,7 +28,11 @@ impl AdminCanisters {
     pub async fn backend_canister(&self) -> Backend {
         let agent = self.agent.get_agent().await;
         let principal = crate::canister::BACKEND_ID;
-        // println!("{principal:#?}");
+        #[cfg(feature = "debug_log")]
+        {
+            let agent_principal = agent.get_principal().expect("Failed to get principal");
+            println!("agent_principal - {:#?}", agent_principal.to_text());
+        }
         Backend(principal, agent)
     }
 }

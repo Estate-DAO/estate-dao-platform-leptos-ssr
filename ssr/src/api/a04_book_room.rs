@@ -127,7 +127,7 @@ pub enum PaxType {
 
 // todo [UAT] - show the user that booking cannot be done if the Failure happens in API call
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+// #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct SuccessBookRoomResponse {
     #[serde(rename = "Status")]
     pub status: BookingStatus,
@@ -140,7 +140,7 @@ pub struct SuccessBookRoomResponse {
 }
 
 #[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+// #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FailureBookRoomResponse {
     #[serde(rename = "Status")]
     pub status: u32,
@@ -150,7 +150,7 @@ pub struct FailureBookRoomResponse {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+// #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(untagged)]
 pub enum BookRoomResponse {
     Success(SuccessBookRoomResponse),
@@ -232,16 +232,16 @@ impl ProvabReqMeta for BookRoomRequest {
         response_bytes_or_string: DeserializableInput,
     ) -> ApiClientResult<Self::Response> {
         //   taken as it is from client.rs - default trait impl
-        log!(
-            "{}",
-            format!(
-                "gzip = {} , response_bytes_or_string : {}\n\n\n",
-                Self::GZIP,
-                response_bytes_or_string.clone().take(500).to_string()
-            )
-            .bright_yellow()
-            .bold()
-        );
+        // log!(
+        //     "{}",
+        //     format!(
+        //         "gzip = {} , response_bytes_or_string : {}\n\n\n",
+        //         Self::GZIP,
+        //         response_bytes_or_string.clone().take(500).to_string()
+        //     )
+        //     .bright_yellow()
+        //     .bold()
+        // );
 
         let decompressed_body = match response_bytes_or_string {
             DeserializableInput::Bytes(body_bytes) => {

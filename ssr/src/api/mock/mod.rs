@@ -18,5 +18,10 @@ cfg_if::cfg_if! {
         pub use a03_block_room::*;
         pub mod mock_utils;
 
+        mod get_payment_status;
+        pub use get_payment_status::*;
+
+        mod a04_book_room;
+        pub use a04_book_room::*;
     }
 }

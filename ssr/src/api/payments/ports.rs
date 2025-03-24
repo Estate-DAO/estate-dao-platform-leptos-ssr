@@ -71,7 +71,6 @@ pub struct GetPaymentStatusRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Default)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct SuccessGetPaymentStatusResponse {
     pub payment_id: u64,
     pub invoice_id: u64,
