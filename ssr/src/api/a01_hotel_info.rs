@@ -4,7 +4,7 @@ use crate::log;
 use leptos::ServerFnError;
 use leptos::*;
 use reqwest::Method;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use super::{ProvabReq, ProvabReqMeta};
 
@@ -34,6 +34,7 @@ pub struct HotelDetailsLevel2 {
     // #[serde(rename = "HotelPolicy")]
     // hotel_policy: String,
     #[serde(rename = "HotelFacilities")]
+    #[serde(deserialize_with = "deserialize_optional_string_vec")]
     pub hotel_facilities: Vec<String>,
     #[serde(rename = "Address")]
     pub address: String,
@@ -47,9 +48,25 @@ pub struct HotelDetailsLevel2 {
     // first_rm_cancel_date: String,
     // cancel_date: String,
     #[serde(rename = "Amenities")]
+    #[serde(deserialize_with = "deserialize_optional_string_vec")]
     pub amenities: Vec<String>,
     // trip_adv_url: String,
     // trip_rating: String,
+}
+
+/// this is used to deserialize
+// [null] or []
+fn deserialize_optional_string_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt_vec: Option<Vec<Option<String>>> = Deserialize::deserialize(deserializer)?;
+
+    Ok(opt_vec
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|item| item)
+        .collect())
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
