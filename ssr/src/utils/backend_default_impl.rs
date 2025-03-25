@@ -47,3 +47,22 @@ impl Default for BackendPaymentStatus {
         BackendPaymentStatus::Unpaid(None)
     }
 }
+
+impl BackendPaymentStatus {
+    // todo: log actual status / reason
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::Paid(status) => String::from("finished"),
+            Self::Unpaid(reason) => String::from("unpaid"),
+        }
+    }
+}
+//  pub enum BackendPaymentStatus { Paid(String), Unpaid(Option<String>) }
+// #[derive(CandidType, serde::Deserialize, serde::Serialize, Debug, Clone)]
+// pub struct Booking {
+//   pub user_selected_hotel_room_details: HotelRoomDetails,
+//   pub guests: UserDetails,
+//   pub booking_id: BookingId,
+//   pub book_room_status: Option<BeBookRoomResponse>,
+//   pub payment_details: PaymentDetails,
+// }

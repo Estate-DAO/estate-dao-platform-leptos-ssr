@@ -5,6 +5,7 @@ use crate::canister::backend::{BePaymentApiResponse, PaymentDetails};
 use crate::component::SelectedDateRange;
 use crate::cprintln;
 use crate::page::confirm_booking::booking_handler::read_booking_details_from_local_storage;
+use crate::state::confirmation_results_state::{self, ConfirmationResultsState};
 use crate::utils::app_reference;
 use crate::{
     api::payments::{nowpayments_get_payment_status, ports::GetPaymentStatusRequest},
@@ -38,10 +39,11 @@ pub fn PaymentHandler() -> impl IntoView {
     let (booking_id_signal_read, _, _) = use_booking_id_store();
     let (payment_store, set_payment_store, _) = use_payment_store();
 
-    let block_room_results: BlockRoomResults = expect_context();
+    // let block_room_results: BlockRoomResults = expect_context();
     let confirmation_results: ConfirmationResults = expect_context();
 
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
+    // let confirmation_results_state: ConfirmationResultsState = expect_context();
 
     // ========= get payments id from query param and store in local storage ==========
 
@@ -112,7 +114,8 @@ pub fn PaymentHandler() -> impl IntoView {
 
                 // payments_api_called.set(true);
                 // set to context
-                BlockRoomResults::set_payment_results(resp.clone());
+                ConfirmationResultsState::set_payment_results_from_api(resp.clone());
+                // BlockRoomResults::set_payment_results(resp.clone());
                 // store payment_id in local storage
                 set_payment_store(Some(payment_id));
 
@@ -123,7 +126,10 @@ pub fn PaymentHandler() -> impl IntoView {
                     if let Some(payment_status) =
                         resp.as_ref().and_then(|r| Some(r.get_payment_status()))
                     {
-                        log!("Payment status: {}", payment_status);
+                        log!(
+                            "nowpayments_get_payment_status - Payment status: {}",
+                            payment_status
+                        );
 
                         if payment_status == "finished" {
                             // Only set p02 signal when payment is finished
@@ -171,320 +177,102 @@ pub fn PaymentHandler() -> impl IntoView {
                 return None;
             }
 
+            if !ConfirmationResultsState::payment_status_from_api_is_finished_check() {
+                log!(
+                    "early return - update_payment_details_to_backend - {:?}",
+                    ConfirmationResultsState::get_payment_status()
+                );
+                return None;
+            }
+
             // unwrap is safe - if the payment_status_response is not available, early return happens.
             if let Some(get_payment_status_response) =
-                block_room_results.payment_status_response.get()
+                ConfirmationResultsState::payment_status_response_from_api()
             {
                 let get_payment_status_response_clone = get_payment_status_response.clone();
-                log!("get_payment_status_response_clone - {get_payment_status_response_clone:#?}");
+                log!("update_payment_details_to_backend- get_payment_status_response_clone - {get_payment_status_response_clone:#?}");
 
-                let get_payment_status_response_for_backend = backend::BePaymentApiResponse::from(
-                    (get_payment_status_response, "NOWPayments".to_string()),
-                );
-
+                // if ConfirmationResultsState::payment_status_from_backend_is_finished_check(){
+                //     return None
+                // }
                 // unwrap is safe because these details must be present in the first step aka getting booking details from backend.
                 // and first step will set the signal p01_fetch_payment_details_from_api to true
                 let (email, app_reference) = read_booking_details_from_local_storage().unwrap();
 
-                let payment_details = backend::PaymentDetails {
+                let payment_api_response = BePaymentApiResponse::from((
+                    get_payment_status_response_clone.clone(),
+                    "NOWPayments".to_string(),
+                ));
+
+                log!("update_payment_details_to_backend - BePaymentApiResponse - {payment_api_response:#?}");
+                let (email, app_reference_string) =
+                    read_booking_details_from_local_storage().unwrap();
+
+                let payment_api_response_cloned = payment_api_response.clone();
+
+                let payment_details = PaymentDetails {
                     booking_id: backend::BookingId {
-                        app_reference,
-                        email,
+                        app_reference: app_reference_string.clone(),
+                        email: email.clone(),
                     },
-                    payment_status: backend::BackendPaymentStatus::Unpaid(None),
-                    payment_api_response: get_payment_status_response_for_backend,
+                    // Sending order_id currently with this, change as necessary
+                    payment_status: Paid(payment_api_response_cloned.order_id),
+                    payment_api_response,
                 };
 
                 let payment_details_str = serde_json::to_string(&payment_details)
-                    .expect("payment details is cannot be serialized using serde_json");
+                    .expect("payment details is not valid json");
 
-                // log!(" get_payment_status_response_clone.payment_status - {}",  get_payment_status_response_clone.payment_status);
+                let booking_id_for_request = backend::BookingId {
+                    app_reference: app_reference_string.clone(),
+                    email,
+                };
 
-                match get_payment_status_response_clone.get_payment_status() {
-                    // TODO [UAT] : logic for other statuses too (other than finished)
-                    status if status == "finished" => {
-                        log!("payment status finished");
+                let payment_status_from_api = get_payment_status_response.get_payment_status();
 
-                        let payment_resp = get_payment_status_response_clone;
+                log!("update_payment_details_to_backend - payment_status_from_api - {payment_status_from_api:#?}");
 
-                        let payment_api_response =
-                            BePaymentApiResponse::from((payment_resp, "NOWPayments".to_string()));
+                spawn_local(async move {
+                    match update_payment_details_backend(
+                        booking_id_for_request,
+                        payment_details_str,
+                    )
+                    .await
+                    {
+                        Ok(booking) => {
+                            ConfirmationResultsState::set_booking_details(Some(booking.clone()));
+                            println!("{}", format!("{booking:?}").red().bold());
 
-                        let (email, app_reference_string) =
-                            read_booking_details_from_local_storage().unwrap();
-
-                        let payment_api_response_cloned = payment_api_response.clone();
-
-                        let payment_details = PaymentDetails {
-                            booking_id: backend::BookingId {
-                                app_reference: app_reference_string.clone(),
-                                email: email.clone(),
-                            },
-                            // Sending order_id currently with this, change as necessary
-                            payment_status: Paid(payment_api_response_cloned.order_id),
-                            payment_api_response,
-                        };
-
-                        let payment_details_str = serde_json::to_string(&payment_details)
-                            .expect("payment details is not valid json");
-
-                        let booking_id_for_request = backend::BookingId {
-                            app_reference: app_reference_string.clone(),
-                            email,
-                        };
-
-                        let status_cloned = status.clone();
-                        spawn_local(async move {
-                            match update_payment_details_backend(
-                                booking_id_for_request,
-                                payment_details_str,
-                            )
-                            .await
-                            {
-                                Ok(booking) => {
-                                    println!("{}", format!("{booking:?}").red().bold());
-                                    // let app_reference_string_cloned =
-                                    //     app_reference_string_cloned.clone();
-                                    // let email_cloned = email_cloned2.clone();
-                                    // let hotel_det_cloned = booking
-                                    //     .user_selected_hotel_room_details
-                                    //     .hotel_details
-                                    //     .clone();
-
-                                    // let date_range = SelectedDateRange {
-                                    //     start: booking
-                                    //         .user_selected_hotel_room_details
-                                    //         .date_range
-                                    //         .start,
-                                    //     end: booking.user_selected_hotel_room_details.date_range.end,
-                                    // };
-
-                                    // SearchCtx::set_date_range(date_range);
-                                    // HotelInfoCtx::set_selected_hotel_details(
-                                    //     booking
-                                    //         .user_selected_hotel_room_details
-                                    //         .hotel_details
-                                    //         .hotel_code,
-                                    //     booking
-                                    //         .user_selected_hotel_room_details
-                                    //         .hotel_details
-                                    //         .hotel_name,
-                                    //     booking
-                                    //         .user_selected_hotel_room_details
-                                    //         .hotel_details
-                                    //         .hotel_image,
-                                    //     booking
-                                    //         .user_selected_hotel_room_details
-                                    //         .hotel_details
-                                    //         .hotel_location,
-                                    // );
-
-                                    // // Storing hotel_location is the field given for hotel_category becoz why not
-                                    // let hotel_res = HotelResult {
-                                    //     hotel_code: hotel_det_cloned.hotel_code,
-                                    //     hotel_name: hotel_det_cloned.hotel_name,
-                                    //     hotel_picture: hotel_det_cloned.hotel_image,
-                                    //     hotel_category: hotel_det_cloned.hotel_location,
-                                    //     result_token: hotel_det_cloned.hotel_token,
-                                    //     star_rating: 0,
-                                    //     price: Price::default(),
-                                    // };
-                                    // let hotel_search_res = HotelSearchResult {
-                                    //     hotel_results: vec![hotel_res],
-                                    // };
-                                    // let search_res = Search {
-                                    //     hotel_search_result: hotel_search_res,
-                                    // };
-                                    // let hotel_search_resp = HotelSearchResponse {
-                                    //     status: 0,
-                                    //     message: "Default Message".to_string(),
-                                    //     search: Some(search_res),
-                                    // };
-
-                                    // SearchListResults::set_search_results(Some(hotel_search_resp));
-
-                                    // let book_room_status = booking.book_room_status;
-                                    // let book_room_status_cloned = book_room_status.clone();
-                                    // let book_room_status_twice = book_room_status.clone();
-                                    // let booking_status_cloned_again = book_room_status_cloned.clone();
-                                    // let booking_status_cloned_again1 = book_room_status_cloned.clone();
-                                    // let booking_status_cloned_again2 = book_room_status_cloned.clone();
-                                    // let booking_status_cloned_again3 = book_room_status_cloned.clone();
-
-                                    // let booking_details = BookRoomResponse {
-                                    //     status: book_room_status
-                                    //     .as_ref()
-                                    //     .map_or(BookingStatus::BookFailed, |status| status.clone().commit_booking.booking_status.into()),
-                                    //     message: book_room_status_cloned.unwrap_or_default().message,
-                                    //     commit_booking: BookingDetailsContainer {
-                                    //         booking_details: BookingDetails {
-                                    //             booking_id: booking_status_cloned_again3.unwrap_or_default().commit_booking.booking_id.0,
-                                    //             booking_ref_no: booking_status_cloned_again.unwrap_or_default().commit_booking.booking_ref_no,
-                                    //             confirmation_no: booking_status_cloned_again1.unwrap_or_default().commit_booking.confirmation_no,
-                                    //             booking_status: match booking_status_cloned_again2.unwrap_or_default().commit_booking.booking_status {
-                                    //                 crate::canister::backend::BookingStatus::Confirmed => "Confirmed".to_string(),
-                                    //                 crate::canister::backend::BookingStatus::BookFailed => "BookFailed".to_string(),
-                                    //             },
-                                    //         },
-                                    //     }
-                                    // };
-
-                                    // confirmation_ctx.booking_details.set(Some(booking_details));
-                                    // let booking_guests = booking.guests.clone();
-                                    // let booking_guests2 = booking.guests.clone();
-
-                                    // let adults: Vec<crate::state::view_state::AdultDetail> = booking_guests.into();
-                                    // let children: Vec<crate::state::view_state::ChildDetail> = booking_guests2.into();
-
-                                    // let adults_clon = adults.clone();
-                                    // let children_clon = children.clone();
-                                    // BlockRoomCtx::set_adults(adults);
-                                    // BlockRoomCtx::set_children(children);
-
-                                    // Payment Details not being stored. Can use the calculated value above if wanna populate it anywhere.
-
-                                    let payment_details = booking.payment_details;
-                                    let payment_status = payment_details.payment_status;
-                                    println!(
-                                        "{}",
-                                        format!("payment_status - {:?}", payment_status)
-                                            .red()
-                                            .bold()
-                                    );
-
-                                    let payment_api_response = payment_details.payment_api_response;
-
-                                    if !np_payment_id.get_untracked().is_some() {
-                                        return;
-                                    }
-
-                                    match payment_status {
-                                        Paid(paid_str) => {
-                                            println!(
-                                                "{}",
-                                                format!(" Paid paid-_str = {paid_str:?}")
-                                                    .red()
-                                                    .bold()
-                                            );
-
-                                            let response_ctx = SuccessGetPaymentStatusResponse {
-                                                payment_id: np_payment_id.get_untracked().unwrap(),
-                                                invoice_id: payment_api_response.invoice_id,
-                                                payment_status: payment_api_response.payment_status,
-                                                price_amount: payment_api_response.price_amount,
-                                                price_currency: payment_api_response.price_currency,
-                                                pay_amount: payment_api_response.pay_amount,
-                                                actually_paid: payment_api_response.actually_paid,
-                                                pay_currency: payment_api_response.pay_currency,
-                                                order_id: payment_api_response.order_id,
-                                                order_description: payment_api_response
-                                                    .order_description,
-                                                purchase_id: payment_api_response.purchase_id,
-                                                created_at: payment_api_response.created_at,
-                                                updated_at: payment_api_response.updated_at,
-                                            };
-                                            let payment_api_response_for_ctx =
-                                                GetPaymentStatusResponse::Success(response_ctx);
-                                            BlockRoomResults::set_payment_results(Some(
-                                                payment_api_response_for_ctx,
-                                            ));
-                                        }
-                                        _ => {
-                                            log!("context remains unchanged")
-                                        }
-                                    }
-
-                                    if status == "finished" {
-                                        println!(
-                                            "{}",
-                                            format!("setting p03 signal - status - {:?}", status)
-                                                .red()
-                                                .bold()
-                                        );
-                                        payment_booking_step_signals
-                                            .p03_call_book_room_api
-                                            .set(true);
-                                    } else {
-                                        // retry handler
-                                        todo!();
-                                    }
-                                }
-                                Err(e) => {
-                                    log!("Error greeting knull {:?}", e);
-                                }
+                            if !np_payment_id.get_untracked().is_some() {
+                                return;
                             }
-                        });
-                        Some(status_cloned.to_string())
+
+                            // if status == "finished" {
+                            //     println!(
+                            //         "{}",
+                            //         format!("setting p03 signal - status - {:?}", status)
+                            //             .red()
+                            //             .bold()
+                            //     );
+                            payment_booking_step_signals
+                                .p03_call_book_room_api
+                                .set(true);
+                            // } else {
+                            //     // retry handler
+                            //     todo!();
+                            // }
+                        }
+                        Err(e) => {
+                            log!("Error greeting knull {:?}", e);
+                        }
                     }
-                    any_other => {
-                        log!("payment status is {any_other:?}");
-                        Some(any_other.to_string())
-                    }
-                }
+                });
+                Some(payment_status_from_api.clone())
             } else {
                 None
             }
         },
     );
 
-    // view! {
-    //     <div class="bg-gray-100 p-4 border border-emerald-800">
-    //         <Suspense fallback=move || {
-    //             view! { " Getting Payment Status " }
-    //         }>
-
-    //             {move || {
-    //                 let payment_status = block_room_results.payment_status_response.get();
-    //                 match payment_status {
-    //                     Some(status) => {
-    //                         view! {
-    //                             <div>
-    //                                 <div class="payment-status">
-    //                                     {"Payment Status: "} {status.get_payment_status().clone()}
-    //                                 </div>
-    //                                 {if status.get_payment_status() == "finished" {
-    //                                     view! {
-    //                                         <div class="text-green-700 p-2">
-    //                                             "Payment completed successfully!"
-    //                                         </div>
-    //                                     }
-    //                                 } else {
-    //                                     view! {
-    //                                         <div class="border border-red-700 p-2">
-    //                                             "No payment information found. Please contact support."
-    //                                         </div>
-    //                                     }
-    //                                 }}
-    //                             </div>
-    //                         }
-    //                     }
-    //                     None => {
-    //                         view! {
-    //                             <div class="border border-blue-800 p-2">
-    //                                 "Waiting for payment confirmation... Please do not close this window."
-    //                             </div>
-    //                         }
-    //                     }
-    //                 }
-    //             }}
-    //         </Suspense>
-
-    //     // <div class="bg-gray-100 p-4 border border-emerald-800">
-    //     // <Suspense  fallback={move || view!{ " Getting Payment Status "}}>
-    //     // {move ||
-    //     // if let Some(payment_status) = update_payment_details_to_backend.get(){
-
-    //     // view!{
-    //     // {format!("Payment status = {payment_status:?}")}
-    //     // }.into_view()
-    //     // }else{
-    //     // view!{
-    //     // "Did not retrieve payments status yet."
-    //     // }.into_view()
-    //     // }
-    //     // }
-    //     // </Suspense>
-    //     // </div>
-    //     </div>
-    // }
+    view! { <Suspense>{move || update_payment_details_to_backend.get()}</Suspense> }
 }

@@ -18,6 +18,18 @@ pub struct HotelInfoCtx {
 }
 
 impl HotelInfoCtx {
+    pub fn display(&self) -> String {
+        let json_repr = serde_json::json!({
+            "hotel_code": self.hotel_code.get_untracked(),
+            "selected_hotel_name": self.selected_hotel_name.get_untracked(),
+            "selected_hotel_image": self.selected_hotel_image.get_untracked(),
+            "selected_hotel_location": self.selected_hotel_location.get_untracked(),
+        });
+
+        serde_json::to_string_pretty(&json_repr)
+            .unwrap_or_else(|_| "Failed to serialize".to_string())
+    }
+
     pub fn set_selected_hotel_details(code: String, name: String, image: String, location: String) {
         let this: Self = expect_context();
         this.hotel_code.set(code);

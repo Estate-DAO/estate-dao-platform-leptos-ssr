@@ -6,6 +6,7 @@ use crate::{
         BookRoomHandler, BookingHandler, PaymentHandler,
     },
     state::{
+        confirmation_results_state::ConfirmationResultsState,
         search_state::{ConfirmationResults, HotelInfoResults, SearchCtx},
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
@@ -24,13 +25,15 @@ pub struct PaymentBookingStatusUpdates {
 
 #[component]
 pub fn ConfirmationPage() -> impl IntoView {
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
-    let search_ctx: SearchCtx = expect_context();
+    // let hotel_info_ctx: HotelInfoCtx = expect_context();
+    // let search_ctx: SearchCtx = expect_context();
     let status_updates: PaymentBookingStatusUpdates = expect_context();
-    let block_room_ctx: BlockRoomCtx = expect_context();
-    let hotel_info_results: HotelInfoResults = expect_context();
+    // let block_room_ctx: BlockRoomCtx = expect_context();
+    // let hotel_info_results: HotelInfoResults = expect_context();
     let confirmation_ctx: ConfirmationResults = expect_context();
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
+
+    let confirmation_page_state: ConfirmationResultsState = expect_context();
 
     let p01_sig = create_rw_signal("Confirming your payment");
     let p02_sig = create_rw_signal("Making your booking");
@@ -138,18 +141,46 @@ pub fn ConfirmationPage() -> impl IntoView {
                         <Divider />
                         <div class="flex justify-between items-center p-4">
                             <div class="text-left">
-                                <b class="text-lg font-bold mb-6 text-left">{move || hotel_info_ctx.selected_hotel_name.get()}</b>
-                                <p class="text-sm font-sm text-gray-800">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
+                                <b class="text-lg font-bold mb-6 text-left">{move ||  confirmation_page_state.hotel_name.get()}</b>
+                                <p class="text-sm font-sm text-gray-800">{move ||  confirmation_page_state.hotel_location.get()}</p>
                                 // todo: show this data from backend struct. this is wrong.
                                 <p class="text-sm font-sm text-gray-800">{move || {
-                                    let destination = search_ctx.destination.get().unwrap_or_default();
-                                    format!("{} - {}, {}",
-                                        destination.country_name,
-                                        destination.city_id,
-                                        destination.city
-                                    )}
-                                }
-                                </p>
+                                    // hotel_info_ctx.selected_hotel_image.get()
+                                    // hotel_info_ctx.selected_hotel_location.get()
+
+                                    // match hotel_info_ctx.booking_details.get() {
+                                    //     Some(BookRoomResponse::Success(booking)) => {
+                                    //         let destination = &booking.commit_booking.booking_details.user_selected_hotel_room_details.destination;
+                                    //         format!("{} - {}, {}",
+                                    //             destination.country_name,
+                                    //             destination.city_id,
+                                    //             destination.city
+                                    //         )
+                                    //     },
+                                    //     _ => String::new()
+                                    // }
+
+                                    view!{
+                                     {
+                                        let confirmation_page_state: ConfirmationResultsState = expect_context();
+                                        format!("{}", confirmation_page_state.hotel_location.get())
+
+                                     }
+                                    //     <pre>
+                                    //         {
+                                    //         let hotel_info_ctx: HotelInfoCtx = expect_context();
+                                    //         format!("{}", hotel_info_ctx.display())
+                                    //         }
+                                    //     </pre>
+                                    //     <pre>
+                                    //     {
+                                    //         let confirmation_page_state: ConfirmationResultsState = expect_context();
+                                    //         format!("{}", confirmation_page_state.display())
+                                    //     }
+                                    //     </pre>
+
+                                }.into_view()
+                                }}</p>
                             </div>
 
                             <div class="text-right">
@@ -158,7 +189,7 @@ pub fn ConfirmationPage() -> impl IntoView {
                                         Some(details) => match details {
                                             BookRoomResponse::Success(booking) => {
                                                 view!{
-                                                    <div class="text-lg font-medium font-semibold">
+                                                    <div class="text-lg font-semibold">
                                                         <p>Reference ID: {booking.commit_booking.booking_details.booking_ref_no}</p>
                                                         <p>Booking ID: {booking.commit_booking.booking_details.travelomatrix_id}</p>
                                                     </div>
@@ -190,9 +221,13 @@ pub fn ConfirmationPage() -> impl IntoView {
                             <div class="text-left">
                                 <div class="flex-col">
                                     {move || {
-                                        let date_range = search_ctx.date_range.get();
-                                        let adults = block_room_ctx.adults.get();
-                                        let children = block_room_ctx.children.get();
+                                        // let date_range = search_ctx.date_range.get();
+                                        // let adults = block_room_ctx.adults.get();
+                                        // let children = block_room_ctx.children.get();
+                                        let date_range = confirmation_page_state.date_range.get();
+                                        let adults = confirmation_page_state.adults.get();
+                                        let children = confirmation_page_state.children.get();
+
                                         let no_of_adults = adults.len();
                                         let no_of_child = children.len();
                                         let primary_adult = adults.first().cloned().unwrap_or_default();
@@ -222,7 +257,7 @@ pub fn ConfirmationPage() -> impl IntoView {
 
                             <div class="text-right text-xs font-semibold">
                                 {move || {
-                                    let sorted_rooms = hotel_info_results.sorted_rooms.get();
+                                    let sorted_rooms = confirmation_page_state.sorted_rooms.get();
                                     view! {
                                         <>
                                             {sorted_rooms.iter().map(|room| view! {

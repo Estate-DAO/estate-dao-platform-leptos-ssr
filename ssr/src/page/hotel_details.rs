@@ -328,7 +328,7 @@ impl From<RoomCounterKeyValue> for RoomCounterKeyValueStatic {
     }
 }
 
-#[derive(PartialEq, Debug, Default, Clone)]
+#[derive(PartialEq, Debug, Default, Clone, serde::Serialize)]
 pub struct SortedRoom {
     pub room_type: String,
     pub room_unique_id: String,

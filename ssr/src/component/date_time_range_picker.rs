@@ -11,7 +11,7 @@ use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
 
 /// year,  month, day
 /// Struct is stored in the global search state - SearchCtx and accessed from there
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize)]
 pub struct SelectedDateRange {
     pub start: (u32, u32, u32),
     // start: RwSignal<(u32, u32, u32)>,

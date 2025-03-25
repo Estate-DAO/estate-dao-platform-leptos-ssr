@@ -8,6 +8,7 @@ use crate::{
     component::SelectedDateRange,
     page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates, SortedRoom},
     state::{
+        confirmation_results_state::ConfirmationResultsState,
         local_storage::use_booking_id_store,
         search_state::{
             BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
@@ -17,7 +18,9 @@ use crate::{
     utils::app_reference,
 };
 use colored::Colorize;
+use leptos::logging::log;
 use leptos::*;
+// use crate::log;
 use std::collections::HashMap;
 
 pub fn read_booking_details_from_local_storage() -> Result<(String, String), String> {
@@ -31,38 +34,200 @@ pub fn read_booking_details_from_local_storage() -> Result<(String, String), Str
     Ok((email, app_reference))
 }
 
-fn set_to_context(booking: backend::Booking) {
+// fn set_to_context_v2(email: String, app_reference: String,booking: backend::Booking) {
+//     log!("{}", format!(" set_to_context_v2 - {}, {}", email, app_reference).bright_blue().bold());
+//     // todo [UAT] 2 : set hotel context from backend?? verify once
+//     // let (email, app_reference) = match read_booking_details_from_local_storage() {
+//     //     Ok(details) => details,
+//     //     Err(err) => {
+//     //         println!(
+//     //             "{}",
+//     //             format!("should_fetch_from_canister - Err - {} ", err).red()
+//     //         );
+//     //         return;
+//     //     }
+//     // };
+
+//     let block_room_ctx = expect_context::<BlockRoomCtx>();
+//     let block_room = expect_context::<BlockRoomResults>();
+//     let confirmation_ctx = expect_context::<ConfirmationResults>();
+//     let hotel_info_ctx = expect_context::<HotelInfoCtx>();
+//     let hotel_info_results = expect_context::<HotelInfoResults>();
+
+//     let email_cloned = email.clone();
+//     let hotel_det_cloned = booking
+//         .user_selected_hotel_room_details
+//         .hotel_details
+//         .clone();
+
+//     let date_range = SelectedDateRange {
+//         start: booking.user_selected_hotel_room_details.date_range.start,
+//         end: booking.user_selected_hotel_room_details.date_range.end,
+//     };
+
+//     SearchCtx::set_date_range(date_range);
+//     HotelInfoCtx::set_selected_hotel_details(
+//         booking
+//             .user_selected_hotel_room_details
+//             .hotel_details
+//             .hotel_code,
+//         booking
+//             .user_selected_hotel_room_details
+//             .hotel_details
+//             .hotel_name,
+//         booking
+//             .user_selected_hotel_room_details
+//             .hotel_details
+//             .hotel_image,
+//         booking
+//             .user_selected_hotel_room_details
+//             .hotel_details
+//             .hotel_location,
+//     );
+//     let hotel_info_ctx: HotelInfoCtx = expect_context();
+
+//     println!("{}",format!("set_to_context: hotel_info_ctx = {}",  hotel_info_ctx.display()).bright_cyan().bold());
+
+//     // Storing hotel_location is the field given for hotel_category becoz why not
+//     let hotel_res = HotelResult {
+//         hotel_code: hotel_det_cloned.hotel_code,
+//         hotel_name: hotel_det_cloned.hotel_name,
+//         hotel_picture: hotel_det_cloned.hotel_image,
+//         hotel_category: hotel_det_cloned.hotel_location,
+//         result_token: hotel_det_cloned.hotel_token,
+//         star_rating: 0,
+//         price: Price::default(),
+//     };
+//     let hotel_search_res = HotelSearchResult {
+//         hotel_results: vec![hotel_res],
+//     };
+//     let search_res = Search {
+//         hotel_search_result: hotel_search_res,
+//     };
+//     let hotel_search_resp = HotelSearchResponse {
+//         status: 0,
+//         message: "Default Message".to_string(),
+//         search: Some(search_res),
+//     };
+
+//     SearchListResults::set_search_results(Some(hotel_search_resp));
+
+//     let book_room_status = booking.book_room_status;
+//     let book_room_status_cloned = book_room_status.clone();
+//     let book_room_status_twice = book_room_status.clone();
+//     let booking_status_cloned_again = book_room_status_cloned.clone();
+//     let booking_status_cloned_again1 = book_room_status_cloned.clone();
+//     let booking_status_cloned_again2 = book_room_status_cloned.clone();
+//     let booking_status_cloned_again3 = book_room_status_cloned.clone();
+
+//     // todo [UAT] - details from backend maybe of error type too!? Need some logic around here?!
+//     let booking_details = BookRoomResponse::Success(SuccessBookRoomResponse {
+//         status: book_room_status
+//             .as_ref()
+//             .map_or(BookingStatus::BookFailed, |status| {
+//                 // let booking_status_str = status.clone().commit_booking.booking_status;
+//                 // let booking_status_enum = match booking_status_str.as_str() {
+//                 //     "BookConfirmed" =>  backend::BookingStatus::Confirmed,
+//                 //     "BookFailed" =>  backend::BookingStatus::BookFailed,
+//                 //     _ =>  backend::BookingStatus::BookFailed, // Default case
+//                 // };
+//                 // booking_status_enum.into()
+//                 status.commit_booking.api_status.clone().into()
+//             }),
+//         message: book_room_status_cloned.unwrap_or_default().message,
+//         commit_booking: BookingDetailsContainer {
+//             booking_details: BookingDetails {
+//                 //Using booking_id here since struct might ahve changed
+//                 travelomatrix_id: booking_status_cloned_again3
+//                     .unwrap_or_default()
+//                     .commit_booking
+//                     .travelomatrix_id,
+//                 booking_ref_no: booking_status_cloned_again
+//                     .unwrap_or_default()
+//                     .commit_booking
+//                     .booking_ref_no,
+//                 confirmation_no: booking_status_cloned_again1
+//                     .unwrap_or_default()
+//                     .commit_booking
+//                     .confirmation_no,
+//                 booking_status: booking_status_cloned_again2
+//                     .unwrap_or_default()
+//                     .commit_booking
+//                     .booking_status,
+//             },
+//         },
+//     });
+
+//     confirmation_ctx.booking_details.set(Some(booking_details));
+//     let booking_guests = booking.guests.clone();
+//     let booking_guests2 = booking.guests.clone();
+
+//     let adults: Vec<crate::state::view_state::AdultDetail> = booking_guests.into();
+//     let children: Vec<crate::state::view_state::ChildDetail> = booking_guests2.into();
+
+//     let adults_clon = adults.clone();
+//     let children_clon = children.clone();
+//     BlockRoomCtx::set_adults(adults);
+//     BlockRoomCtx::set_children(children);
+//     BlockRoomResults::set_id(Some(
+//         booking
+//             .user_selected_hotel_room_details
+//             .hotel_details
+//             .block_room_id,
+//     ));
+//     let room_counts: HashMap<String, u32> = booking
+//         .user_selected_hotel_room_details
+//         .room_details
+//         .iter()
+//         .fold(HashMap::new(), |mut map, room| {
+//             *map.entry(room.room_type_name.clone()).or_insert(0) += 1;
+//             map
+//         });
+
+//     let sorted_rooms: Vec<SortedRoom> = booking
+//         .user_selected_hotel_room_details
+//         .room_details
+//         .into_iter()
+//         .map(|room| SortedRoom {
+//             room_type: room.room_type_name.clone(),
+//             room_unique_id: room.room_unique_id,
+//             room_price: room.room_price as f64,
+//             room_count_for_given_type: room_counts.get(&room.room_type_name).cloned().unwrap_or(1),
+//         })
+//         .collect();
+//     hotel_info_results.set_sorted_rooms(sorted_rooms);
+// }
+
+fn set_to_context_v2(email: String, app_reference: String, booking: backend::Booking) {
+    log!(
+        "{}",
+        format!(" set_to_context_v2 - {}, {}", email, app_reference)
+            .bright_blue()
+            .bold()
+    );
     // todo [UAT] 2 : set hotel context from backend?? verify once
-    let (email, app_reference) = match read_booking_details_from_local_storage() {
-        Ok(details) => details,
-        Err(err) => {
-            println!(
-                "{}",
-                format!("should_fetch_from_canister - Err - {} ", err).red()
-            );
-            return;
-        }
-    };
 
-    let block_room_ctx = expect_context::<BlockRoomCtx>();
-    let block_room = expect_context::<BlockRoomResults>();
-    let confirmation_ctx = expect_context::<ConfirmationResults>();
-    let hotel_info_ctx = expect_context::<HotelInfoCtx>();
-    let hotel_info_results = expect_context::<HotelInfoResults>();
+    // let block_room_ctx = expect_context::<BlockRoomCtx>();
+    // let block_room = expect_context::<BlockRoomResults>();
+    // let confirmation_ctx = expect_context::<ConfirmationResults>();
+    // let hotel_info_ctx = expect_context::<HotelInfoCtx>();
+    // let hotel_info_results = expect_context::<HotelInfoResults>();
 
-    let email_cloned = email.clone();
-    let hotel_det_cloned = booking
-        .user_selected_hotel_room_details
-        .hotel_details
-        .clone();
+    // let email_cloned = email.clone();
+    // let hotel_det_cloned = booking
+    //     .user_selected_hotel_room_details
+    //     .hotel_details
+    //     .clone();
 
     let date_range = SelectedDateRange {
         start: booking.user_selected_hotel_room_details.date_range.start,
         end: booking.user_selected_hotel_room_details.date_range.end,
     };
 
-    SearchCtx::set_date_range(date_range);
-    HotelInfoCtx::set_selected_hotel_details(
+    // SearchCtx::set_date_range(date_range);
+    ConfirmationResultsState::set_date_range(date_range);
+    // HotelInfoCtx::set_selected_hotel_details(
+    ConfirmationResultsState::set_selected_hotel_details(
         booking
             .user_selected_hotel_room_details
             .hotel_details
@@ -79,95 +244,109 @@ fn set_to_context(booking: backend::Booking) {
             .user_selected_hotel_room_details
             .hotel_details
             .hotel_location,
+        booking
+            .user_selected_hotel_room_details
+            .hotel_details
+            .hotel_token,
+        booking
+            .user_selected_hotel_room_details
+            .hotel_details
+            .block_room_id,
     );
+    // let hotel_info_ctx: HotelInfoCtx = expect_context();
+
+    // println!("{}",format!("set_to_context: hotel_info_ctx = {}",  hotel_info_ctx.display()).bright_cyan().bold());
 
     // Storing hotel_location is the field given for hotel_category becoz why not
-    let hotel_res = HotelResult {
-        hotel_code: hotel_det_cloned.hotel_code,
-        hotel_name: hotel_det_cloned.hotel_name,
-        hotel_picture: hotel_det_cloned.hotel_image,
-        hotel_category: hotel_det_cloned.hotel_location,
-        result_token: hotel_det_cloned.hotel_token,
-        star_rating: 0,
-        price: Price::default(),
-    };
-    let hotel_search_res = HotelSearchResult {
-        hotel_results: vec![hotel_res],
-    };
-    let search_res = Search {
-        hotel_search_result: hotel_search_res,
-    };
-    let hotel_search_resp = HotelSearchResponse {
-        status: 0,
-        message: "Default Message".to_string(),
-        search: Some(search_res),
-    };
+    // let hotel_res = HotelResult {
+    //     hotel_code: hotel_det_cloned.hotel_code,
+    //     hotel_name: hotel_det_cloned.hotel_name,
+    //     hotel_picture: hotel_det_cloned.hotel_image,
+    //     hotel_category: hotel_det_cloned.hotel_location,
+    //     result_token: hotel_det_cloned.hotel_token,
+    //     star_rating: 0,
+    //     price: Price::default(),
+    // };
+    // let hotel_search_res = HotelSearchResult {
+    //     hotel_results: vec![hotel_res],
+    // };
+    // let search_res = Search {
+    //     hotel_search_result: hotel_search_res,
+    // };
+    // let hotel_search_resp = HotelSearchResponse {
+    //     status: 0,
+    //     message: "Default Message".to_string(),
+    //     search: Some(search_res),
+    // };
 
-    SearchListResults::set_search_results(Some(hotel_search_resp));
+    // SearchListResults::set_search_results(Some(hotel_search_resp));
 
-    let book_room_status = booking.book_room_status;
-    let book_room_status_cloned = book_room_status.clone();
-    let book_room_status_twice = book_room_status.clone();
-    let booking_status_cloned_again = book_room_status_cloned.clone();
-    let booking_status_cloned_again1 = book_room_status_cloned.clone();
-    let booking_status_cloned_again2 = book_room_status_cloned.clone();
-    let booking_status_cloned_again3 = book_room_status_cloned.clone();
+    // let book_room_status = booking.book_room_status;
+    // let book_room_status_cloned = book_room_status.clone();
+    // let book_room_status_twice = book_room_status.clone();
+    // let booking_status_cloned_again = book_room_status_cloned.clone();
+    // let booking_status_cloned_again1 = book_room_status_cloned.clone();
+    // let booking_status_cloned_again2 = book_room_status_cloned.clone();
+    // let booking_status_cloned_again3 = book_room_status_cloned.clone();
 
     // todo [UAT] - details from backend maybe of error type too!? Need some logic around here?!
-    let booking_details = BookRoomResponse::Success(SuccessBookRoomResponse {
-        status: book_room_status
-            .as_ref()
-            .map_or(BookingStatus::BookFailed, |status| {
-                // let booking_status_str = status.clone().commit_booking.booking_status;
-                // let booking_status_enum = match booking_status_str.as_str() {
-                //     "BookConfirmed" =>  backend::BookingStatus::Confirmed,
-                //     "BookFailed" =>  backend::BookingStatus::BookFailed,
-                //     _ =>  backend::BookingStatus::BookFailed, // Default case
-                // };
-                // booking_status_enum.into()
-                status.commit_booking.api_status.clone().into()
-            }),
-        message: book_room_status_cloned.unwrap_or_default().message,
-        commit_booking: BookingDetailsContainer {
-            booking_details: BookingDetails {
-                //Using booking_id here since struct might ahve changed
-                travelomatrix_id: booking_status_cloned_again3
-                    .unwrap_or_default()
-                    .commit_booking
-                    .travelomatrix_id,
-                booking_ref_no: booking_status_cloned_again
-                    .unwrap_or_default()
-                    .commit_booking
-                    .booking_ref_no,
-                confirmation_no: booking_status_cloned_again1
-                    .unwrap_or_default()
-                    .commit_booking
-                    .confirmation_no,
-                booking_status: booking_status_cloned_again2
-                    .unwrap_or_default()
-                    .commit_booking
-                    .booking_status,
-            },
-        },
-    });
+    // let booking_details = BookRoomResponse::Success(SuccessBookRoomResponse {
+    //     status: book_room_status
+    //         .as_ref()
+    //         .map_or(BookingStatus::BookFailed, |status| {
+    //             // let booking_status_str = status.clone().commit_booking.booking_status;
+    //             // let booking_status_enum = match booking_status_str.as_str() {
+    //             //     "BookConfirmed" =>  backend::BookingStatus::Confirmed,
+    //             //     "BookFailed" =>  backend::BookingStatus::BookFailed,
+    //             //     _ =>  backend::BookingStatus::BookFailed, // Default case
+    //             // };
+    //             // booking_status_enum.into()
+    //             status.commit_booking.api_status.clone().into()
+    //         }),
+    //     message: book_room_status_cloned.unwrap_or_default().message,
+    //     commit_booking: BookingDetailsContainer {
+    //         booking_details: BookingDetails {
+    //             //Using booking_id here since struct might ahve changed
+    //             travelomatrix_id: booking_status_cloned_again3
+    //                 .unwrap_or_default()
+    //                 .commit_booking
+    //                 .travelomatrix_id,
+    //             booking_ref_no: booking_status_cloned_again
+    //                 .unwrap_or_default()
+    //                 .commit_booking
+    //                 .booking_ref_no,
+    //             confirmation_no: booking_status_cloned_again1
+    //                 .unwrap_or_default()
+    //                 .commit_booking
+    //                 .confirmation_no,
+    //             booking_status: booking_status_cloned_again2
+    //                 .unwrap_or_default()
+    //                 .commit_booking
+    //                 .booking_status,
+    //         },
+    //     },
+    // });
 
-    confirmation_ctx.booking_details.set(Some(booking_details));
+    // confirmation_ctx.booking_details.set(Some(booking_details));
     let booking_guests = booking.guests.clone();
     let booking_guests2 = booking.guests.clone();
 
     let adults: Vec<crate::state::view_state::AdultDetail> = booking_guests.into();
     let children: Vec<crate::state::view_state::ChildDetail> = booking_guests2.into();
 
-    let adults_clon = adults.clone();
-    let children_clon = children.clone();
-    BlockRoomCtx::set_adults(adults);
-    BlockRoomCtx::set_children(children);
-    BlockRoomResults::set_id(Some(
-        booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .block_room_id,
-    ));
+    // let adults_clon = adults.clone();
+    // let children_clon = children.clone();
+    // BlockRoomCtx::set_adults(adults);
+    // BlockRoomCtx::set_children(children);
+    ConfirmationResultsState::set_adults(adults);
+    ConfirmationResultsState::set_children(children);
+
+    // BlockRoomResults::set_id(Some(
+    //     booking
+    //         .user_selected_hotel_room_details
+    //         .hotel_details
+    //         .block_room_id,
+    // ));
     let room_counts: HashMap<String, u32> = booking
         .user_selected_hotel_room_details
         .room_details
@@ -188,7 +367,8 @@ fn set_to_context(booking: backend::Booking) {
             room_count_for_given_type: room_counts.get(&room.room_type_name).cloned().unwrap_or(1),
         })
         .collect();
-    hotel_info_results.set_sorted_rooms(sorted_rooms);
+    ConfirmationResultsState::set_sorted_rooms(sorted_rooms);
+    // hotel_info_results.set_sorted_rooms(sorted_rooms);
 }
 
 #[component]
@@ -243,7 +423,10 @@ pub fn BookingHandler() -> impl IntoView {
 
                 let found_booking = found_booking_opt.unwrap();
                 let found_booking_clone = found_booking.clone();
-                set_to_context(found_booking);
+
+                log!("calling set_to_context, {}, {}", email, app_reference);
+                set_to_context_v2(email, app_reference, found_booking);
+                // set_to_context(email, app_reference, found_booking);
                 // iff data is present in backend, check for the payment status
                 payment_booking_step_signals
                     .p01_fetch_payment_details_from_api

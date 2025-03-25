@@ -1,5 +1,6 @@
 use crate::api::canister::book_room_details::{self, update_book_room_details_backend};
 use crate::api::{BookingDetails, SuccessBookRoomResponse};
+use crate::state::confirmation_results_state::ConfirmationResultsState;
 use crate::state::search_state::HotelInfoResults;
 use crate::{
     api::{
@@ -31,9 +32,9 @@ use leptos::*;
 pub fn BookRoomHandler() -> impl IntoView {
     let (booking_id_signal_read, _, _) = use_booking_id_store();
     let block_room_ctx = expect_context::<BlockRoomCtx>();
-    let block_room_results = expect_context::<BlockRoomResults>();
+    // let block_room_results = expect_context::<BlockRoomResults>();
     let confirmation_results = expect_context::<ConfirmationResults>();
-    let hotel_info_ctx = expect_context::<HotelInfoCtx>();
+    // let hotel_info_ctx = expect_context::<HotelInfoCtx>();
     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
     let book_room_api_call = create_resource(
@@ -46,32 +47,36 @@ pub fn BookRoomHandler() -> impl IntoView {
 
             log!("outside first early return p03_call_book_room_api = {p03_call_book_room_api:?}");
 
-            let hotel_info_ctx: HotelInfoCtx = expect_context();
-            let search_list_result: SearchListResults = expect_context();
-            let block_room: BlockRoomResults = expect_context();
+            // let hotel_info_ctx: HotelInfoCtx = expect_context();
+            // let search_list_result: SearchListResults = expect_context();
+            // let block_room: BlockRoomResults = expect_context();
             let conf_res: ConfirmationResults = expect_context();
 
-            let result_token = search_list_result.get_result_token(hotel_info_ctx.hotel_code.get());
+            let result_token = ConfirmationResultsState::maybe_get_hotel_token()?;
+            // let result_token = search_list_result.get_result_token(hotel_info_ctx.hotel_code.get());
 
-            if block_room.block_room_id.get_untracked().is_none() {
-                println!(
-                    "{}",
-                    format!(
-                        "block_room_id is not set in context - Got: {:?} ",
-                        block_room.block_room_id.get()
-                    )
-                    .magenta()
-                    .bold()
-                );
-                log!("{:?}", block_room.block_room_id.get());
-                return None;
-            }
+            // if block_room.block_room_id.get_untracked().is_none() {
+            //     println!(
+            //         "{}",
+            //         format!(
+            //             "block_room_id is not set in context - Got: {:?} ",
+            //             block_room.block_room_id.get_untracked()
+            //         )
+            //         .magenta()
+            //         .bold()
+            //     );
+            //     log!("{:?}", block_room.block_room_id.get_untracked());
+            //     return None;
+            // }
 
-            let block_room_id = block_room.block_room_id.get_untracked().unwrap();
+            // let block_room_id = block_room.block_room_id.get_untracked().unwrap();
+            let block_room_id = ConfirmationResultsState::maybe_get_block_room_id()?;
             log!("{block_room_id:?}");
 
-            let adults = block_room_ctx.adults.get_untracked();
-            let children = block_room_ctx.children.get_untracked();
+            // let adults = block_room_ctx.adults.get_untracked();
+            // let children = block_room_ctx.children.get_untracked();
+            let adults = ConfirmationResultsState::get_adult_details();
+            let children = ConfirmationResultsState::get_children_details();
 
             let room_detail = RoomDetail {
                 passenger_details: create_passenger_details(&adults, &children),

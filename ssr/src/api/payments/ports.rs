@@ -121,17 +121,29 @@ impl GetPaymentStatusResponse {
             GetPaymentStatusResponse::Failure(failure) => failure.get_payment_status(),
         }
     }
+    pub fn is_finished(&self) -> bool {
+        match self {
+            GetPaymentStatusResponse::Success(success) => success.is_finished(),
+            GetPaymentStatusResponse::Failure(failure) => failure.is_finished(),
+        }
+    }
 }
 
 impl SuccessGetPaymentStatusResponse {
     pub fn get_payment_status(&self) -> String {
         self.payment_status.clone()
     }
+    pub fn is_finished(&self) -> bool {
+        self.get_payment_status().as_str() == "finished"
+    }
 }
 
 impl FailureGetPaymentStatusResponse {
     pub fn get_payment_status(&self) -> String {
         "ApiFailure".into()
+    }
+    pub fn is_finished(&self) -> bool {
+        false
     }
 }
 
