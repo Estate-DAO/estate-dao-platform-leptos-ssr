@@ -96,6 +96,7 @@ service : {
   get_controllers : () -> (vec principal) query;
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;
+  is_booking_paid : (BookingId) -> (bool) query;
   remove_controller : (principal) -> (Result_1);
   update_book_room_response : (BookingId, BEBookRoomResponse) -> (Result);
   update_payment_details : (BookingId, PaymentDetails) -> (Result_2);
