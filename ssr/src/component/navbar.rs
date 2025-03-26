@@ -10,7 +10,7 @@ pub fn Navbar() -> impl IntoView {
                     <img
                         src="/img/nofeebooking.webp"
                         alt="Icon"
-                        class="h-12 w-full max-w-24"
+                        class="h-12 w-full max-w-48"
                     />
                 </a>
             </div>
