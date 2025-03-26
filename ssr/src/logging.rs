@@ -1,6 +1,9 @@
 // use is_server;
 use cfg_if::cfg_if;
 use wasm_bindgen::JsValue;
+
+#[cfg(feature = "ssr")]
+use tracing;
 // use leptos::logging::log;
 
 /// Uses `println!()`-style formatting to log something to the console (in the browser)
@@ -43,18 +46,18 @@ macro_rules! debug_warn {
 }
 
 pub fn console_log(s: &str) {
-    cfg_if! {
-        if #[cfg(feature = "debug_log")] {
-            #[allow(clippy::print_stdout)]
-            if is_server() {
-                println!("{s}");
-            } else {
+    if is_server() {
+        cfg_if! {
+            if #[cfg(feature = "ssr")] {
+                tracing::info!("{s}");
+            }
+        }
+    } else {
+        cfg_if! {
+            if #[cfg(feature = "debug_log")] {
                 web_sys::console::log_1(&JsValue::from_str(s));
             }
         }
-        // else {
-        //     let _ = s;
-        // }
     }
 }
 
