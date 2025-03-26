@@ -194,7 +194,7 @@ pub fn HotelCard(
                     <div class="flex items-center justify-between px-6 pt-4">
                         <p>
                             {if hotel_name.len() > 10 {
-                                format!("{}...", &hotel_name[..10])
+                                format!("{}...", hotel_name.chars().take(10).collect::<String>())
                             } else {
                                 hotel_name.clone()
                             }}
