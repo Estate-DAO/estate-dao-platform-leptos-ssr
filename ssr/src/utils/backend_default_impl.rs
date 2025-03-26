@@ -1,4 +1,10 @@
-use crate::canister::backend::BePaymentApiResponse;
+use crate::{
+    api::BookingDetails,
+    canister::backend::{
+        BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, Destination,
+        HotelRoomDetails, PaymentDetails,
+    },
+};
 
 impl Default for BePaymentApiResponse {
     fn default() -> Self {
@@ -20,6 +26,7 @@ impl Default for BePaymentApiResponse {
         }
     }
 }
+
 impl Default for BookingId {
     fn default() -> Self {
         Self {
@@ -29,8 +36,6 @@ impl Default for BookingId {
     }
 }
 
-use crate::canister::backend::BookingId;
-use crate::canister::backend::PaymentDetails;
 impl Default for PaymentDetails {
     fn default() -> Self {
         Self {
@@ -41,7 +46,6 @@ impl Default for PaymentDetails {
     }
 }
 
-use crate::canister::backend::BackendPaymentStatus;
 impl Default for BackendPaymentStatus {
     fn default() -> Self {
         BackendPaymentStatus::Unpaid(None)
@@ -57,6 +61,20 @@ impl BackendPaymentStatus {
         }
     }
 }
+
+impl Booking {
+    pub fn get_destination(&self) -> Option<Destination> {
+        self.user_selected_hotel_room_details.get_destination()
+    }
+}
+
+impl HotelRoomDetails {
+    /// Returns a reference to the destination if it exists
+    pub fn get_destination(&self) -> Option<Destination> {
+        self.destination.clone()
+    }
+}
+
 //  pub enum BackendPaymentStatus { Paid(String), Unpaid(Option<String>) }
 // #[derive(CandidType, serde::Deserialize, serde::Serialize, Debug, Clone)]
 // pub struct Booking {

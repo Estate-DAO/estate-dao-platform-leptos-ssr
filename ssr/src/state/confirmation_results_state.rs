@@ -96,6 +96,12 @@ impl ConfirmationResultsState {
             None => None,
         }
     }
+    pub fn get_destination() -> Option<backend::Destination> {
+        Self::get()
+            .booking_details
+            .get()
+            .and_then(|booking| booking.get_destination())
+    }
 
     pub fn payment_status_from_backend_is_finished_check() -> bool {
         Self::get_payment_status().map_or(false, |status| status == "finished")

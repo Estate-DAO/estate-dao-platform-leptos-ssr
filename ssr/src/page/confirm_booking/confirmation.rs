@@ -166,9 +166,9 @@ pub fn ConfirmationPage() -> impl IntoView {
 
                                     view!{
                                      {
-                                        let confirmation_page_state: ConfirmationResultsState = expect_context();
-                                        format!("{}", confirmation_page_state.hotel_location.get())
-
+                                        ConfirmationResultsState::get_destination()
+                                        .map(|dest| format!("{}, {}", dest.city, dest.country_name))
+                                        .unwrap_or_else(|| "Country not available".to_string())
                                      }
                                     //     <pre>
                                     //         {
