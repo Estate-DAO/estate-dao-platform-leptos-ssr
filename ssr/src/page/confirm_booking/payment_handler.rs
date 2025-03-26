@@ -263,7 +263,8 @@ pub fn PaymentHandler() -> impl IntoView {
                             // }
                         }
                         Err(e) => {
-                            log!("Error greeting knull {:?}", e);
+                            log!("update_payment_details_to_backend - {:?}", e);
+                            return;
                         }
                     }
                 });
