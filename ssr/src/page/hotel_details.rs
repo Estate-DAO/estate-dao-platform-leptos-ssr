@@ -1,3 +1,4 @@
+use crate::component::loading_button::LoadingButton;
 use crate::component::{FullScreenSpinnerGray, Navbar, SkeletonPricing, SpinnerGray};
 use crate::utils::pluralize;
 use crate::{
@@ -693,32 +694,45 @@ pub fn PricingBreakdown(
                 <div class="text-sm text-right font-semibold">
                     "Cryptocurrency payments accepted!"
                 </div>
-                <button
-                    class={move || {
-                        let base = "w-full py-3 rounded-full";
-                        if is_booking.get() {
-                            format!("{base} bg-blue-400 cursor-not-allowed")
-                        } else {
-                            format!("{base} bg-blue-600 hover:bg-blue-800")
-                        }
-                    }}
-                    disabled=move || is_booking.get()
-                    on:click=move |_| {
-                        is_booking.set(true);
-                        block_room_action.dispatch(())
-                    }
+                // <button
+                //     class={move || {
+                //         let base = "w-full py-3 rounded-full";
+                //         if is_booking.get() {
+                //             format!("{base} bg-blue-400 cursor-not-allowed")
+                //         } else {
+                //             format!("{base} bg-blue-600 hover:bg-blue-800")
+                //         }
+                //     }}
+                //     disabled=move || is_booking.get()
+                //     on:click=move |_| {
+                //         is_booking.set(true);
+                //         block_room_action.dispatch(())
+                //     }
+                // >
+                //     // {move || if is_booking.get() {
+                //     //     view! {
+                //     //         <span class="inline-flex items-center  text-white ">
+                //     //             <span class="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                //     //             "Booking..."
+                //     //         </span>
+                //     //     }
+                //     // } else {
+                //     //     view! { <span class="text-white"> "Book Now" </span> }
+                //     // }}
+
+
+                // </button>
+
+                <LoadingButton
+                is_loading=is_booking.into()
+                on_click=move |_| {
+                    is_booking.set(true);
+                    block_room_action.dispatch(())
+                }
+                loading_text="Booking..."
                 >
-                    {move || if is_booking.get() {
-                        view! {
-                            <span class="inline-flex items-center  text-white ">
-                                <span class="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
-                                "Booking..."
-                            </span>
-                        }
-                    } else {
-                        view! { <span class="text-white"> "Book Now" </span> }
-                    }}
-                </button>
+                "Book Now"
+                </LoadingButton>
             </div>
         </div>
     }
