@@ -1,17 +1,26 @@
-use crate::canister::backend::BookingId;
+// use crate::canister::backend::BookingId;
+
+use crate::utils::app_reference::BookingId;
 
 #[derive(Debug, Clone)]
 pub struct PaymentIdentifiers {
+    /// given to us by payment provider
     pub payment_id: Option<String>,
+
+    /// we generate and give it to payment provider
+    /// see to_order_id for more details
     pub order_id: String,
+
+    /// we generate and give it to booking provider
     pub app_reference: String,
 }
 
 impl BookingId {
-    // Constants for the format
+    /// identifier for the payment provider, for now, it is static
+    /// todo (payment): make this configurable to support any payment provider
     const PREFIX: &'static str = "NP";
 
-    // Convert to order ID with RESP-inspired length prefixes
+    /// Convert to order ID with RESP-inspired length prefixes
     pub fn to_order_id(&self) -> String {
         // Format: "NP${app_ref.len}:${app_ref}${email.len}:${email}"
         format!(
@@ -24,7 +33,7 @@ impl BookingId {
         )
     }
 
-    // Parse using length prefixes, inspired by RESP protocol
+    /// Parse using length prefixes, inspired by RESP protocol
     pub fn from_order_id(order_id: &str) -> Option<Self> {
         // Check prefix
         if !order_id.starts_with(Self::PREFIX) {
@@ -46,7 +55,7 @@ impl BookingId {
         })
     }
 
-    // Helper method to extract length-prefixed strings
+    /// Helper method to extract length-prefixed strings
     fn extract_length_prefixed_string(input: &mut &str) -> Option<String> {
         // Check for $ prefix
         if !input.starts_with('$') {
@@ -80,7 +89,7 @@ impl BookingId {
         Some(result)
     }
 
-    // Create payment identifiers for this booking
+    /// Create payment identifiers for this booking
     pub fn create_payment_identifiers(&self) -> PaymentIdentifiers {
         PaymentIdentifiers {
             payment_id: None, // This will be set by payment provider
@@ -91,28 +100,30 @@ impl BookingId {
 }
 
 impl PaymentIdentifiers {
-    // Create from app_reference and email
+    /// Create from app_reference and email
     pub fn from_booking_id(booking_id: &BookingId) -> Self {
         booking_id.create_payment_identifiers()
     }
 
-    // Create from order_id
+    /// Create from order_id
     pub fn from_order_id(order_id: &str) -> Option<Self> {
         BookingId::from_order_id(order_id).map(|booking_id| booking_id.create_payment_identifiers())
     }
 
-    // Update with payment_id from provider
+    /// Update with payment_id from provider
     pub fn with_payment_id(mut self, payment_id: String) -> Self {
         self.payment_id = Some(payment_id);
         self
     }
 
-    // Get app_reference from order_id
+    /// Get app_reference from order_id - order_id is what we send to NowPayments
+    /// it is RESP-like protocol encoded Example:  NP$5:HB-14$10:ab@def.com
+    ///
     pub fn app_reference_from_order_id(order_id: &str) -> Option<String> {
         Self::from_order_id(order_id).map(|ids| ids.app_reference)
     }
 
-    // Get order_id from app_reference and email
+    /// Get order_id from app_reference and email
     pub fn order_id_from_app_reference(app_reference: &str, email: &str) -> String {
         BookingId {
             app_reference: app_reference.to_string(),

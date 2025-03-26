@@ -129,6 +129,10 @@ pub fn ConfirmationPage() -> impl IntoView {
                 <br />
                 <br />
                 <br />
+                <div class="text-center text-red-500 text-sm mt-8 border-t pt-4">
+                    <p>Do not close this tab until your payment is fully processed</p>
+                    <p>to avoid issues with your booking.</p>
+                </div>
                 <BookingHandler />
                 <PaymentHandler />
                 <BookRoomHandler />

@@ -1,6 +1,7 @@
 use chrono::Local;
 use codee::string::JsonSerdeCodec;
-use leptos::{Signal, SignalGet};
+use leptos::SignalGetUntracked;
+use leptos::{Signal, SignalGet, SignalSet};
 use leptos_use::storage::{use_local_storage, UseStorageOptions};
 use log::info;
 // Import necessary modules
@@ -11,8 +12,8 @@ use crate::{canister::backend::Booking, state::local_storage::use_booking_id_sto
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct BookingId {
-    email: String,
-    app_reference: String,
+    pub email: String,
+    pub app_reference: String,
 }
 
 impl BookingId {
@@ -40,6 +41,11 @@ impl BookingId {
             .map(|booking_id| (booking_id.get_email(), booking_id.get_app_reference()))
     }
 
+    pub fn read_from_local_storage() -> Option<Self> {
+        let (state, _, _) = use_booking_id_store();
+        state.get_untracked()
+    }
+
     /// Attempts to read the booking details from local storage with fallback
     /// Returns a tuple of (email, app_reference), using empty strings as fallback
     pub fn read_from_storage_with_fallback() -> (String, String) {
@@ -48,11 +54,26 @@ impl BookingId {
             (String::new(), String::new())
         })
     }
+
+    /// Store a BookingId in local storage and return the storage signal
+    fn store_booking_id_in_local_storage(&self) -> Signal<Option<BookingId>> {
+        let (state, set_state, _) = use_booking_id_store();
+
+        // Log the storage for debugging
+        info!(
+            "Storing booking_id with app_reference: {}",
+            self.get_app_reference()
+        );
+
+        set_state(Some(self.clone()));
+        state
+    }
 }
 
 /// Generates a new app reference and stores it in local storage
 /// Format: HB<date>-<random>-<random>
 /// Example: HB2203-12345-67890
+/// Generate and store a new app reference
 pub fn generate_app_reference(email: String) -> Signal<Option<BookingId>> {
     // Generate a unique app reference
     let today = Local::now().format("%d%m").to_string();
@@ -61,32 +82,17 @@ pub fn generate_app_reference(email: String) -> Signal<Option<BookingId>> {
     let app_reference_string = format!("HB{}-{}-{}", today, rand_num1, rand_num2);
 
     // Create new BookingId
-    let app_reference = BookingId::new(email, app_reference_string.clone());
+    let booking_id = BookingId::new(email, app_reference_string);
 
-    // Store in local storage
-    let (state, set_state, _) = use_booking_id_store();
-
-    // Log the generation for debugging
-    info!("Generated new app_reference: {}", app_reference_string);
-
-    set_state(Some(app_reference));
-    state
+    // Store and return
+    booking_id.store_booking_id_in_local_storage()
 }
 
 /// Reads the current app_reference from local storage
 /// Returns None if not found or if there was an error
-pub fn read_app_reference() -> Option<String> {
-    BookingId::read_from_storage().map(|(_, app_ref)| app_ref)
-}
-
-/// Reads the current app_reference from local storage with fallback
-/// Returns empty string if not found or if there was an error
-pub fn read_app_reference_with_fallback() -> String {
-    read_app_reference().unwrap_or_else(|| {
-        log::warn!("Failed to read app_reference from local storage, using fallback");
-        String::new()
-    })
-}
+// pub fn read_app_reference() -> Option<String> {
+//     BookingId::read_from_local_storage().map(|(_, app_ref)| app_ref)
+// }
 
 #[cfg(test)]
 mod tests {
