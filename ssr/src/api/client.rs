@@ -288,8 +288,8 @@ impl Provab {
         // sleep by 3 seconds before response
 
         use std::time::Duration;
-        #[cfg(feature = "ssr")]
-        tokio::time::sleep(Duration::from_secs(3)).await;
+        #[cfg(all(feature = "ssr", feature = "mock-provab"))]
+        tokio::time::sleep(Duration::from_secs(1)).await;
 
         Ok(Req::Response::generate_mock_response(0.5))
     }

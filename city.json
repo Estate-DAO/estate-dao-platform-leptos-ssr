@@ -49,20 +49,6 @@
         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Maldives_Resort%2C_Indian_Ocean.jpg/640px-Maldives_Resort%2C_Indian_Ocean.jpg"
     },
     {
-        "city_code": "195",
-        "city_name": "Santorin",
-        "country_name": "Greece",
-        "country_code": "GR",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Thira_%28Santorini%29_-_Ia-01.jpg/640px-Thira_%28Santorini%29_-_Ia-01.jpg"
-    },
-    {
-        "city_code": "66530",
-        "city_name": "Seychelles",
-        "country_name": "Mahe Island",
-        "country_code": "SC",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Grand_Anse-La_Digue-Seychellen.jpg/640px-Grand_Anse-La_Digue-Seychellen.jpg"
-    },
-    {
         "city_code": "1254",
         "city_name": "Goa",
         "country_name": "India",
@@ -98,13 +84,6 @@
         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/1_zermatt_night_2012.jpg/640px-1_zermatt_night_2012.jpg"
     },
     {
-        "city_code": "60589",
-        "city_name": "New York City",
-        "country_name": "United States",
-        "country_code": "US",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Lower_Manhattan_from_Jersey_City_November_2014_panorama_1.jpg/640px-Lower_Manhattan_from_Jersey_City_November_2014_panorama_1.jpg"
-    },
-    {
         "city_code": "484",
         "city_name": "Barcelona",
         "country_name": "Spain",
@@ -138,12 +117,5 @@
         "country_name": "Switzerland",
         "country_code": "CH",
         "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg/640px-Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg"
-    },
-    {
-        "city_code": "251",
-        "city_name": "London",
-        "country_name": "United Kingdom",
-        "country_code": "GB",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/London_Skyline_%28125508655%29.jpeg/640px-London_Skyline_%28125508655%29.jpeg"
     }
 ]
