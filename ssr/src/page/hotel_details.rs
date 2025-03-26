@@ -1,3 +1,4 @@
+use crate::component::code_print::DebugDisplay;
 use crate::component::loading_button::LoadingButton;
 use crate::component::{FullScreenSpinnerGray, Navbar, SkeletonPricing, SpinnerGray};
 use crate::utils::pluralize;
@@ -507,6 +508,7 @@ pub fn PricingBookNow() -> impl IntoView {
             <div class="flex flex-col space-y-2">
                 <div class="font-semibold">Select room type:</div>
 
+                // <DebugDisplay label="Sorted Rooms" value=move || format!("{:#?}", sorted_rooms.get()) />
                 <Show when=sorted_rooms_called fallback=SkeletonPricing>
                     <For
                         each=move || sorted_rooms.get()
@@ -665,6 +667,9 @@ pub fn PricingBreakdown(
     view! {
         <div class="flex flex-col space-y-2 mt-4">
             <div class=row_format_class>
+
+            // <DebugDisplay label="Total Price" value=move || format!("{:#?}", total_calc.get()) />
+            // <DebugDisplay label="per_night_calc" value=move || format!("{:#?}", per_night_calc.get()) />
 
                 <PriceDisplay
                     price=price_per_night
