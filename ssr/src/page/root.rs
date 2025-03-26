@@ -145,6 +145,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                 let result = search_hotel(search_ctx.into()).await.ok();
                 // log!("SEARCH_HOTEL_API: {result:?}");
                 SearchListResults::set_search_results(result);
+                local_disabled.set(false);
             });
         }
     });
