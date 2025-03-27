@@ -197,7 +197,7 @@ pub fn MostPopular() -> impl IntoView {
                                                 <img
                                                     src=img_url
                                                     alt=format!("{}, {}", city_name, country_name)
-                                                    class="w-full object-cover h-3/4"
+                                                    class="w-full object-cover h-56"
                                                 />
                                                 <div class="p-5 bg-white">
                                                     <p class="text-lg font-semibold mb-1">{city_name}</p>
