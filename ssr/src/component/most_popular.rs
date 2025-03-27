@@ -132,10 +132,11 @@ pub fn MostPopular() -> impl IntoView {
         let search_ctx = search_ctx.clone();
         async move {
             log!("Search button clicked");
-            //  move to the hotel listing page
-            nav(AppRoutes::HotelList.to_string(), Default::default());
 
             SearchListResults::reset();
+
+            //  move to the hotel listing page
+            nav(AppRoutes::HotelList.to_string(), Default::default());
 
             // call server function inside action
             spawn_local(async move {
@@ -185,7 +186,7 @@ pub fn MostPopular() -> impl IntoView {
                                         };
                                         view! {
                                             <div
-                                                class="rounded-lg overflow-hidden border border-gray-300 h-4/5 cursor-pointer hover:shadow-lg transition-shadow"
+                                                class="rounded-lg overflow-hidden border border-gray-300 h-4/5 cursor-pointer hover:shadow-lg transition-shadow m-2"
                                                 on:click=move |_| {
                                                     SearchCtx::set_destination(dest.clone().into());
                                                     SearchCtx::set_date_range(date_range.clone());
@@ -198,9 +199,9 @@ pub fn MostPopular() -> impl IntoView {
                                                     alt=format!("{}, {}", city_name, country_name)
                                                     class="w-full object-cover h-3/4"
                                                 />
-                                                <div class="p-4 bg-white">
-                                                    <p class="text-lg font-semibold">{city_name}</p>
-                                                    <p class="text-sm text-gray-600 pb-2">{country_name}</p>
+                                                <div class="p-5 bg-white">
+                                                    <p class="text-lg font-semibold mb-1">{city_name}</p>
+                                                    <p class="text-sm text-gray-600 pb-4">{country_name}</p>
                                                 </div>
                                             </div>
                                         }
