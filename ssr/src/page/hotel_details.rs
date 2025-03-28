@@ -442,9 +442,23 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
     let search_ctx: SearchCtx = expect_context();
     let num_nights = move || search_ctx.date_range.get().no_of_nights();
 
+    let total_room_price = create_memo(|_| {
+        let pricing_book_state: PricingBookNowState = expect_context();
+        pricing_book_state.room_counters_as_chosen_by_user.track();
+        let valv = PricingBookNowState::total_room_price_for_all_user_selected_rooms();
+        log!(
+            "total_room_price_for_all_user_selected_rooms - PricingBreakdownV2 - create_memo - {}",
+            valv
+        );
+
+        valv
+    });
+
     // let total_calc = move || price_per_night.get() * number_of_nights.get() as f64;
     let total_calc = move || {
-        PricingBookNowState::total_room_price_for_all_user_selected_rooms() * (num_nights() as f64)
+        let valv = total_room_price.get() * (num_nights() as f64);
+        log!("total_calc - PricingBreakdownV2 - create_memo {}", valv);
+        valv
     };
 
     let navigate = use_navigate();

@@ -186,7 +186,16 @@ impl HotelInfoResults {
         self_val.room_result.set(hotel_room_response);
 
         // as soon as room results are available, set rooms available for booking
-        let room_details = self_val.get_hotel_room_details();
+        let room_details: Option<Vec<HotelRoomDetail>> = self_val.get_hotel_room_details();
+        let room_details_prices: Vec<(String, f64)> = room_details
+            .iter()
+            .flat_map(|details| details.iter())
+            .map(|r| (r.room_type_name.clone(), r.price.offered_price))
+            .collect();
+        log!(
+            "[pricing_component_not_loading] Room details: {:?}",
+            room_details_prices
+        );
         PricingBookNowState::set_rooms_available_for_booking_from_api(room_details);
     }
 

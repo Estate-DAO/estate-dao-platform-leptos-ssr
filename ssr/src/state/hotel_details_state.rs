@@ -102,7 +102,12 @@ impl RoomForPricing {
     }
 
     pub fn increment(&mut self, room_type: String) {
+        log!("[room_for_pricing] increment - room_type: {:?}", room_type);
         if let Some(room_details) = self.get(&room_type) {
+            log!(
+                "[room_for_pricing] increment - room_details: {:?}",
+                room_details
+            );
             self.upsert(
                 room_type.clone(),
                 room_details.room_count + 1,
@@ -110,7 +115,7 @@ impl RoomForPricing {
                 room_details.room_price,
             );
         } else {
-            log!(" RoomForPricing increment failed")
+            log!("[room_for_pricing] increment - RoomForPricing increment failed");
             // self.upsert(room_type, 1, room_unique_id, room_price);
         }
     }
@@ -130,13 +135,20 @@ impl RoomForPricing {
     }
 
     pub fn decrement(&mut self, room_type: String) {
+        log!("[room_for_pricing] decrement - room_type: {:?}", room_type);
         if let Some(room_details) = self.get(&room_type) {
+            log!(
+                "[room_for_pricing] decrement - room_details: {:?}",
+                room_details
+            );
             self.upsert(
                 room_type.clone(),
-                room_details.room_count - 1,
+                room_details.room_count.saturating_sub(1),
                 room_details.room_unique_id.clone(),
                 room_details.room_price,
             );
+        } else {
+            log!("[room_for_pricing] decrement - RoomForPricing decrement failed");
         }
     }
     pub fn get(&self, room_type: &str) -> Option<&RoomDetailsForPricingComponent> {
@@ -210,16 +222,34 @@ impl PricingBookNowState {
     // }
 
     pub fn increment_room_counter(room_type: String) {
-        let this = Self::get();
+        log!(
+            "[hotel_details_state] increment_room_counter - room_type: {:?}",
+            room_type
+        );
+        // let this = Self::get();
+        let this: Self = expect_context();
         let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
         room_counters.increment(room_type);
+        log!(
+            "[hotel_details_state] increment_room_counter - room_counters: {:?}",
+            room_counters
+        );
         this.room_counters_as_chosen_by_user.set(room_counters);
     }
 
     pub fn decrement_room_counter(room_type: String) {
-        let this = Self::get();
+        log!(
+            "[hotel_details_state] decrement_room_counter - room_type: {:?}",
+            room_type
+        );
+        // let this = Self::get();
+        let this: Self = expect_context();
         let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
         room_counters.decrement(room_type);
+        log!(
+            "[hotel_details_state] decrement_room_counter - room_counters: {:?}",
+            room_counters
+        );
         this.room_counters_as_chosen_by_user.set(room_counters);
     }
 
@@ -238,15 +268,12 @@ impl PricingBookNowState {
     }
 
     pub fn set_rooms_available_for_booking_from_api(room_details: Option<Vec<HotelRoomDetail>>) {
-        // todo (bug145): max call stack size exceeded
-        // let room_details = Self::room_details_from_hotel_details();
-        // let hotel_info_results: HotelInfoResults = expect_context();
-        // let room_details = hotel_info_results.get_hotel_room_details();
-
         if let Some(room_details) = room_details {
             let mut room_for_pricing = RoomForPricing::new();
 
             for room in room_details {
+                // log!("[hotel_details_state] room_details_price: {:?}", room.price.offered_price);
+
                 let room_type = room.room_type_name.clone();
                 room_for_pricing.accumulate(
                     room_type,
@@ -254,6 +281,12 @@ impl PricingBookNowState {
                     room.price.offered_price,
                 );
             }
+
+            log!(
+                "[hotel_details_state] room_for_pricing: {:?}",
+                room_for_pricing
+            );
+
             Self::get()
                 .rooms_available_for_booking_from_api
                 .set(room_for_pricing);
@@ -264,6 +297,10 @@ impl PricingBookNowState {
         room_type: String,
         room_details: RoomDetailsForPricingComponent,
     ) {
+        log!(
+            "[hotel_details_state] set_room_counters_as_chosen_by_user - room_type: {:?}",
+            room_type
+        );
         Self::get()
             .room_counters_as_chosen_by_user
             .update(|room_for_pricing| {
@@ -297,7 +334,10 @@ impl PricingBookNowState {
 
         room_counters
             .iter()
-            .map(|room_details| (room_details.room_count as f64) * room_details.room_price)
+            .map(|room_details| {
+                log!("room_details - HotelDetailsState - total_room_price_for_all_user_selected_rooms - {:?}", room_details);
+                (room_details.room_count as f64) * room_details.room_price
+            })
             .sum()
     }
 
@@ -330,30 +370,63 @@ impl From<RoomForPricing> for Vec<RoomDetails> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_get_count_of_rooms_for_room_type() {
+    #[test]
+    fn test_room_for_pricing_increment() {
+        let mut room_pricing = RoomForPricing::new();
 
-//         // Add a room type with count
-//         PricingBookNowState::set_room_counters_as_chosen_by_user(
-//             "Deluxe".to_string(),
-//             RoomDetailsForPricingComponent {
-//                 room_type: "Deluxe".to_string(),
-//                 room_count: 2,
-//                 room_unique_id: "123".to_string(),
-//                 room_price: 100.0,
-//             }
-//         );
+        // First insert a room
+        room_pricing.upsert("Deluxe".to_string(), 1, "room123".to_string(), 100.0);
 
-//         // Test existing room type
-//         let count_deluxe = PricingBookNowState::get_count_of_rooms_for_room_type("Deluxe".to_string());
-//         assert_eq!(count_deluxe, 2, "Should return correct count for existing room type");
+        // Test increment on existing room
+        room_pricing.increment("Deluxe".to_string());
+        let room = room_pricing.get("Deluxe").unwrap();
+        assert_eq!(room.room_count, 2, "Room count should be incremented to 2");
+        assert_eq!(room.room_price, 100.0, "Price should remain unchanged");
+        assert_eq!(
+            room.room_unique_id, "room123",
+            "Room ID should remain unchanged"
+        );
 
-//         // Test non-existing room type
-//         let count_suite = PricingBookNowState::get_count_of_rooms_for_room_type("Suite".to_string());
-//         assert_eq!(count_suite, 0, "Should return 0 for non-existing room type");
-//     }
-// }
+        // Test increment on non-existent room - should fail silently
+        room_pricing.increment("Suite".to_string());
+        assert!(
+            room_pricing.get("Suite").is_none(),
+            "Non-existent room should not be created on increment"
+        );
+    }
+
+    #[test]
+    fn test_room_for_pricing_decrement() {
+        let mut room_pricing = RoomForPricing::new();
+
+        // First insert a room with count 2
+        room_pricing.upsert("Deluxe".to_string(), 2, "room123".to_string(), 100.0);
+
+        // Test decrement
+        room_pricing.decrement("Deluxe".to_string());
+        let room = room_pricing.get("Deluxe").unwrap();
+        assert_eq!(room.room_count, 1, "Room count should be decremented to 1");
+        assert_eq!(room.room_price, 100.0, "Price should remain unchanged");
+        assert_eq!(
+            room.room_unique_id, "room123",
+            "Room ID should remain unchanged"
+        );
+
+        // Test decrement below zero
+        room_pricing.decrement("Deluxe".to_string());
+        room_pricing.decrement("Deluxe".to_string());
+        let room = room_pricing.get("Deluxe").unwrap();
+        assert_eq!(room.room_count, 0, "Room count can go below zero");
+
+        // Test decrement on non-existent room - should fail silently
+        room_pricing.decrement("Suite".to_string());
+        assert!(
+            room_pricing.get("Suite").is_none(),
+            "Non-existent room should not be created on decrement"
+        );
+    }
+}
