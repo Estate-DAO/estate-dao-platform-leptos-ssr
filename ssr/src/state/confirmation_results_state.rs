@@ -4,8 +4,9 @@ use crate::canister::backend::{self};
 use leptos::*;
 
 use crate::component::SelectedDateRange;
-use crate::page::SortedRoom;
+// use crate::page::SortedRoom;
 
+use super::hotel_details_state::RoomDetailsForPricingComponent;
 use super::view_state::{AdultDetail, ChildDetail};
 use super::GlobalStateForLeptos;
 
@@ -20,7 +21,8 @@ pub struct ConfirmationResultsState {
     pub hotel_name: RwSignal<String>,
     pub hotel_image: RwSignal<String>,
     pub hotel_location: RwSignal<String>,
-    pub sorted_rooms: RwSignal<Vec<SortedRoom>>,
+    // pub sorted_rooms: RwSignal<Vec<SortedRoom>>,
+    pub sorted_rooms: RwSignal<Vec<RoomDetailsForPricingComponent>>,
     pub hotel_token: RwSignal<String>,
     pub block_room_id: RwSignal<String>,
     // payment data
@@ -81,7 +83,7 @@ impl ConfirmationResultsState {
         this.block_room_id.set(block_room_id);
     }
 
-    pub fn set_sorted_rooms(sorted_rooms: Vec<SortedRoom>) {
+    pub fn set_sorted_rooms(sorted_rooms: Vec<RoomDetailsForPricingComponent>) {
         Self::get().sorted_rooms.set(sorted_rooms);
     }
 

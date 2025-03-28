@@ -6,9 +6,10 @@ use crate::{
     },
     canister::backend,
     component::SelectedDateRange,
-    page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates, SortedRoom},
+    page::{create_passenger_details, hotel_details, PaymentBookingStatusUpdates},
     state::{
         confirmation_results_state::ConfirmationResultsState,
+        hotel_details_state::RoomDetailsForPricingComponent,
         local_storage::use_booking_id_store,
         search_state::{
             BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
@@ -356,18 +357,30 @@ fn set_to_context_v2(email: String, app_reference: String, booking: backend::Boo
             map
         });
 
-    let sorted_rooms: Vec<SortedRoom> = booking
+    let sorted_rooms: Vec<RoomDetailsForPricingComponent> = booking
         .user_selected_hotel_room_details
         .room_details
         .into_iter()
-        .map(|room| SortedRoom {
+        .map(|room| RoomDetailsForPricingComponent {
             room_type: room.room_type_name.clone(),
+            room_count: room_counts.get(&room.room_type_name).cloned().unwrap_or(1),
             room_unique_id: room.room_unique_id,
             room_price: room.room_price as f64,
-            room_count_for_given_type: room_counts.get(&room.room_type_name).cloned().unwrap_or(1),
         })
         .collect();
     ConfirmationResultsState::set_sorted_rooms(sorted_rooms);
+    // let sorted_rooms: Vec<SortedRoom> = booking
+    //     .user_selected_hotel_room_details
+    //     .room_details
+    //     .into_iter()
+    //     .map(|room| SortedRoom {
+    //         room_type: room.room_type_name.clone(),
+    //         room_unique_id: room.room_unique_id,
+    //         room_price: room.room_price as f64,
+    //         room_count_for_given_type: room_counts.get(&room.room_type_name).cloned().unwrap_or(1),
+    //     })
+    //     .collect();
+    // ConfirmationResultsState::set_sorted_rooms(sorted_rooms);
     // hotel_info_results.set_sorted_rooms(sorted_rooms);
 }
 

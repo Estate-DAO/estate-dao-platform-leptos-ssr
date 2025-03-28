@@ -5,8 +5,8 @@ use crate::{
         HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     },
     component::{Destination, GuestSelection, SelectedDateRange},
-    page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
-    state::view_state::BlockRoomCtx,
+    // page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
+    state::{hotel_details_state::PricingBookNowState, view_state::BlockRoomCtx},
     utils::app_reference::generate_app_reference,
 };
 // use leptos::logging::log;
@@ -128,9 +128,9 @@ pub struct HotelInfoResults {
     pub search_result: RwSignal<Option<HotelInfoResponse>>,
     pub room_result: RwSignal<Option<HotelRoomResponse>>,
     pub price_per_night: RwSignal<f64>,
-    pub room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
-    pub block_room_counters: RwSignal<HashMap<String, RoomCounterKeyValueStatic>>,
-    pub sorted_rooms: RwSignal<Vec<SortedRoom>>,
+    // pub room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
+    // pub block_room_counters: RwSignal<HashMap<String, RoomCounterKeyValueStatic>>,
+    // pub sorted_rooms: RwSignal<Vec<SortedRoom>>,
 }
 
 impl GlobalStateForLeptos for HotelInfoResults {}
@@ -142,7 +142,7 @@ impl HotelInfoResults {
             "room_result": self.room_result.get_untracked(),
             "price_per_night": self.price_per_night.get_untracked(),
             // "block_room_counters": self.block_room_counters.get(),
-            "sorted_rooms": self.sorted_rooms.get_untracked()
+            // "sorted_rooms": self.sorted_rooms.get_untracked()
         });
 
         serde_json::to_string_pretty(&json_repr)
@@ -156,13 +156,13 @@ impl HotelInfoResults {
     pub fn reset() {
         Self::from_leptos_context().search_result.set(None);
         Self::from_leptos_context().room_result.set(None);
-        Self::from_leptos_context()
-            .room_counters
-            .set(HashMap::new());
-        Self::from_leptos_context()
-            .block_room_counters
-            .set(HashMap::new());
-        Self::from_leptos_context().sorted_rooms.set(Vec::new());
+        // Self::from_leptos_context()
+        //     .room_counters
+        //     .set(HashMap::new());
+        // Self::from_leptos_context()
+        //     .block_room_counters
+        //     .set(HashMap::new());
+        // Self::from_leptos_context().sorted_rooms.set(Vec::new());
     }
 
     pub fn set_info_results(hotel_info_response: Option<HotelInfoResponse>) {
@@ -184,6 +184,10 @@ impl HotelInfoResults {
             );
         }
         self_val.room_result.set(hotel_room_response);
+
+        // as soon as room results are available, set rooms available for booking
+        let room_details = self_val.get_hotel_room_details();
+        // PricingBookNowState::set_rooms_available_for_booking_from_api(room_details);
     }
 
     pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {
@@ -213,93 +217,93 @@ impl HotelInfoResults {
             .set(per_night_calc);
     }
 
-    pub fn set_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
-        Self::from_leptos_context().room_counters.set(room_counters);
-    }
+    // pub fn set_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
+    //     Self::from_leptos_context().room_counters.set(room_counters);
+    // }
 
-    pub fn get_room_count(&self, room_type: &str) -> Option<u32> {
-        self.room_counters
-            .get()
-            .get(room_type)
-            .map(|counter| counter.key.get_untracked())
-    }
+    // pub fn get_room_count(&self, room_type: &str) -> Option<u32> {
+    //     self.room_counters
+    //         .get()
+    //         .get(room_type)
+    //         .map(|counter| counter.key.get_untracked())
+    // }
 
-    pub fn get_room_unique_id(&self, room_type: &str) -> Option<String> {
-        self.room_counters
-            .get()
-            .get(room_type)
-            .and_then(|counter| counter.value.get_untracked())
-    }
+    // pub fn get_room_unique_id(&self, room_type: &str) -> Option<String> {
+    //     self.room_counters
+    //         .get()
+    //         .get(room_type)
+    //         .and_then(|counter| counter.value.get_untracked())
+    // }
 
-    pub fn update_room_count(&self, room_type: String, count: u32) {
-        if let Some(counter) = self.room_counters.get().get(&room_type) {
-            counter.key.set(count);
-        } else {
-            let mut counters = self.room_counters.get();
-            let mut new_counter = RoomCounterKeyValue::default();
-            new_counter.key.set(count);
-            counters.insert(room_type, new_counter);
-            self.room_counters.set(counters);
-        }
-    }
+    // pub fn update_room_count(&self, room_type: String, count: u32) {
+    //     if let Some(counter) = self.room_counters.get().get(&room_type) {
+    //         counter.key.set(count);
+    //     } else {
+    //         let mut counters = self.room_counters.get();
+    //         let mut new_counter = RoomCounterKeyValue::default();
+    //         new_counter.key.set(count);
+    //         counters.insert(room_type, new_counter);
+    //         self.room_counters.set(counters);
+    //     }
+    // }
 
-    pub fn update_room_unique_id(&self, room_type: String, unique_id: Option<String>) {
-        if let Some(counter) = self.room_counters.get().get(&room_type) {
-            counter.value.set(unique_id);
-        } else {
-            let mut counters = self.room_counters.get();
-            let mut new_counter = RoomCounterKeyValue::default();
-            new_counter.value.set(unique_id);
-            counters.insert(room_type, new_counter);
-            self.room_counters.set(counters);
-        }
-    }
+    // pub fn update_room_unique_id(&self, room_type: String, unique_id: Option<String>) {
+    //     if let Some(counter) = self.room_counters.get().get(&room_type) {
+    //         counter.value.set(unique_id);
+    //     } else {
+    //         let mut counters = self.room_counters.get();
+    //         let mut new_counter = RoomCounterKeyValue::default();
+    //         new_counter.value.set(unique_id);
+    //         counters.insert(room_type, new_counter);
+    //         self.room_counters.set(counters);
+    //     }
+    // }
 
-    pub fn increment_room_count(&self, room_type: String) -> bool {
-        if let Some(counter) = self.room_counters.get().get(&room_type) {
-            let current = counter.key.get();
-            counter.key.set(current + 1);
-            true
-        } else {
-            let mut counters = self.room_counters.get();
-            let mut new_counter = RoomCounterKeyValue::default();
-            new_counter.key.set(1);
-            counters.insert(room_type, new_counter);
-            self.room_counters.set(counters);
-            true
-        }
-    }
+    // pub fn increment_room_count(&self, room_type: String) -> bool {
+    //     if let Some(counter) = self.room_counters.get().get(&room_type) {
+    //         let current = counter.key.get();
+    //         counter.key.set(current + 1);
+    //         true
+    //     } else {
+    //         let mut counters = self.room_counters.get();
+    //         let mut new_counter = RoomCounterKeyValue::default();
+    //         new_counter.key.set(1);
+    //         counters.insert(room_type, new_counter);
+    //         self.room_counters.set(counters);
+    //         true
+    //     }
+    // }
 
-    pub fn decrement_room_count(&self, room_type: String) -> bool {
-        if let Some(counter) = self.room_counters.get().get(&room_type) {
-            let current = counter.key.get();
-            if current > 0 {
-                counter.key.set(current - 1);
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
+    // pub fn decrement_room_count(&self, room_type: String) -> bool {
+    //     if let Some(counter) = self.room_counters.get().get(&room_type) {
+    //         let current = counter.key.get();
+    //         if current > 0 {
+    //             counter.key.set(current - 1);
+    //             true
+    //         } else {
+    //             false
+    //         }
+    //     } else {
+    //         false
+    //     }
+    // }
 
-    pub fn set_sorted_rooms(&self, sorted_rooms: Vec<SortedRoom>) {
-        Self::from_leptos_context().sorted_rooms.set(sorted_rooms);
-    }
+    // pub fn set_sorted_rooms(&self, sorted_rooms: Vec<SortedRoom>) {
+    //     Self::from_leptos_context().sorted_rooms.set(sorted_rooms);
+    // }
 
-    pub fn set_block_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
-        // log!("set_block_room_counters : input:  {room_counters:#?}");
+    // pub fn set_block_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
+    //     // log!("set_block_room_counters : input:  {room_counters:#?}");
 
-        let new_map: HashMap<String, RoomCounterKeyValueStatic> = room_counters
-            .into_iter()
-            .map(|(key, value)| (key, RoomCounterKeyValueStatic::from(value)))
-            .collect();
+    //     let new_map: HashMap<String, RoomCounterKeyValueStatic> = room_counters
+    //         .into_iter()
+    //         .map(|(key, value)| (key, RoomCounterKeyValueStatic::from(value)))
+    //         .collect();
 
-        // log!("final new_map for block_room_counters:  {new_map:#?}");
+    //     // log!("final new_map for block_room_counters:  {new_map:#?}");
 
-        Self::from_leptos_context().block_room_counters.set(new_map);
-    }
+    //     Self::from_leptos_context().block_room_counters.set(new_map);
+    // }
 
     pub fn block_room_request(&self, uniq_room_ids: Vec<String>) -> BlockRoomRequest {
         // Get unique room IDs from the room response

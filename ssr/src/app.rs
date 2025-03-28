@@ -9,6 +9,7 @@ use crate::{
     state::{
         api_error_state::ApiErrorState,
         confirmation_results_state::ConfirmationResultsState,
+        hotel_details_state::PricingBookNowState,
         search_state::{
             BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
         },
@@ -67,6 +68,8 @@ pub fn App() -> impl IntoView {
 
     provide_context(HotelInfoCtx::default());
     provide_context(HotelInfoResults::default());
+    // NEW booking context for hotel_details page
+    provide_context(PricingBookNowState::default());
 
     provide_context(BlockRoomCtx::default());
     provide_context(BlockRoomResults::default());

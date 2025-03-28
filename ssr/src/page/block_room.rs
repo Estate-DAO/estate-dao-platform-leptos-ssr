@@ -21,6 +21,7 @@ use crate::component::{Divider, FilterAndSortBy, PriceDisplay, StarRating};
 use crate::component::{ErrorPopup, Navbar, SkeletonCards, SpinnerGray};
 use crate::page::InputGroup;
 use crate::state::api_error_state::{ApiErrorState, ApiErrorType};
+use crate::state::hotel_details_state::PricingBookNowState;
 use crate::state::search_state::{
     BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
 };
@@ -177,10 +178,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                 && booking_id_is_valid,
         );
 
-        log!(
-            "form_validation - hotel_info_results.sorted_rooms - {:?}",
-            hotel_info_results.sorted_rooms.get()
-        );
+        // log!(
+        //     "form_validation - hotel_info_results.sorted_rooms - {:?}",
+        //     hotel_info_results.sorted_rooms.get()
+        // );
     };
 
     // Call the validation function whenever inputs change
@@ -232,7 +233,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let _block_room_call = create_resource(show_modal, move |modal_value| {
         let hotel_info_results = expect_context::<HotelInfoResults>();
-        let room_counters = hotel_info_results.block_room_counters.get_untracked();
+        // let room_counters = hotel_info_results.block_room_counters.get_untracked();
         block_room_called.set(false);
         // log!("block_room.rs -- component room_coutners value - \n {room_counters:#?}");
         async move {
@@ -243,10 +244,12 @@ pub fn BlockRoomPage() -> impl IntoView {
                 // Reset previous block room results
                 BlockRoomResults::reset();
 
-                let uniq_room_ids: Vec<String> = room_counters
-                    .values()
-                    .filter_map(|counter| counter.value.clone())
-                    .collect();
+                // let uniq_room_ids: Vec<String> = room_counters
+                //     .values()
+                //     .filter_map(|counter| counter.value.clone())
+                //     .collect();
+
+                let uniq_room_ids = PricingBookNowState::unique_room_ids();
                 log!("{uniq_room_ids:#?}");
 
                 let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
@@ -359,17 +362,20 @@ pub fn BlockRoomPage() -> impl IntoView {
                     );
 
                     // todo: [UAT]  feedback - select only those room which are selected by the user!!
-                    let sorted_rooms = hotel_info_results.sorted_rooms.get();
-                    log!("SORTED-----ROOM?>>>>>>>>>>>>>>>\n{:?}", sorted_rooms);
+                    // let sorted_rooms = hotel_info_results.sorted_rooms.get();
+                    // log!("SORTED-----ROOM?>>>>>>>>>>>>>>>\n{:?}", sorted_rooms);
 
-                    let room_details = sorted_rooms
-                        .into_iter()
-                        .map(|sorted_room| RoomDetails {
-                            room_price: sorted_room.room_price as f32,
-                            room_unique_id: sorted_room.room_unique_id,
-                            room_type_name: sorted_room.room_type,
-                        })
-                        .collect();
+                    // let room_details: Vec<RoomDetails> = sorted_rooms
+                    //     .into_iter()
+                    //     .map(|sorted_room| RoomDetails {
+                    //         room_price: sorted_room.room_price as f32,
+                    //         room_unique_id: sorted_room.room_unique_id,
+                    //         room_type_name: sorted_room.room_type,
+                    //     })
+                    //     .collect();
+
+                    let room_details: Vec<RoomDetails> =
+                        PricingBookNowState::get_room_counters().into();
 
                     let destination = search_ctx.destination.get().map(|dest| {
                         crate::canister::backend::Destination {
