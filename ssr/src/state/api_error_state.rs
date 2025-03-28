@@ -1,4 +1,5 @@
 use crate::api::ApiError;
+use crate::state::GlobalStateForLeptos;
 use leptos::*;
 use std::fmt;
 
@@ -34,10 +35,11 @@ pub struct ApiErrorState {
     pub error_message: RwSignal<String>,
     pub show_popup: RwSignal<bool>,
 }
+impl GlobalStateForLeptos for ApiErrorState {}
 
 impl ApiErrorState {
     pub fn from_leptos_context() -> Self {
-        expect_context()
+        Self::get()
     }
 
     pub fn reset() {

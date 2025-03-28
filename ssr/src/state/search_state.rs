@@ -15,7 +15,7 @@ use leptos::RwSignal;
 use leptos::*;
 use std::collections::HashMap;
 
-use super::view_state::HotelInfoCtx;
+use super::{view_state::HotelInfoCtx, GlobalStateForLeptos};
 
 //  ==================================================================
 
@@ -133,6 +133,8 @@ pub struct HotelInfoResults {
     pub sorted_rooms: RwSignal<Vec<SortedRoom>>,
 }
 
+impl GlobalStateForLeptos for HotelInfoResults {}
+
 impl HotelInfoResults {
     pub fn display(&self) -> String {
         let json_repr = serde_json::json!({
@@ -148,7 +150,7 @@ impl HotelInfoResults {
     }
 
     fn from_leptos_context() -> Self {
-        expect_context()
+        Self::get()
     }
 
     pub fn reset() {
