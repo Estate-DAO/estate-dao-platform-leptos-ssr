@@ -601,16 +601,21 @@ pub fn NumberCounterWrapperV2(
     let room_type_signal = store_value(room_type.clone());
     // let room_type_signal = create_rw_signal(room_type.clone());
 
-    let counter = move || {
-        PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone())
-    };
-    let counter_clone = move || {
-        PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone())
-    };
+    // let counter = move || {
+    //     PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone())
+    // };
+    let counter = create_rw_signal(PricingBookNowState::get_count_of_rooms_for_room_type(
+        room_type_signal.get_value().clone(),
+    ));
+
+    // let counter_clone = move || {
+    //     PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone())
+    // };
+    // let counter_clone = create_rw_signal(PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone()));
 
     let can_increment =
         move || PricingBookNowState::total_count_of_rooms_selected_by_user() < max_rooms_allowed();
-    let can_decrement = move || counter() > 0;
+    let can_decrement = move || counter.get() > 0;
     // let can_decrement_clone = move || counter() > 0;
 
     view! {
@@ -622,17 +627,21 @@ pub fn NumberCounterWrapperV2(
                     disabled=move || !can_decrement()
                     on:click=move |_| {
                         if PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone()) > 0 {
+                            log!("can_decrement");
+                            counter.update(|n| *n -= 1);
                             PricingBookNowState::decrement_room_counter(room_type_signal.get_value().clone());
                         }
                     }
                 >
                     {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
                 </button>
-                <p class="text-center w-6">{ move || counter_clone()}</p>
+                <p class="text-center w-6">{ move || counter.get()}</p>
                 <button
                     class="py-1 text-2xl"
                     on:click=move |_: MouseEvent| {
                         if can_increment() {
+                            log!("can_increment");
+                            counter.update(|n| *n += 1);
                             PricingBookNowState::increment_room_counter(room_type_signal.get_value().clone());
                         }
                     }
