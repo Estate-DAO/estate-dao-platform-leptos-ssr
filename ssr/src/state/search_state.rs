@@ -187,7 +187,7 @@ impl HotelInfoResults {
 
         // as soon as room results are available, set rooms available for booking
         let room_details = self_val.get_hotel_room_details();
-        // PricingBookNowState::set_rooms_available_for_booking_from_api(room_details);
+        PricingBookNowState::set_rooms_available_for_booking_from_api(room_details);
     }
 
     pub fn get_hotel_room_details(&self) -> Option<Vec<HotelRoomDetail>> {

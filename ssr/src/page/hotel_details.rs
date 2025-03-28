@@ -333,20 +333,21 @@ pub fn PricingBookNow() -> impl IntoView {
     // create_effect(move |_| {
     //     let _val = hotel_info_results_clone.room_result.track();
     //     log!("[diagnosis] hotel_info_results_clone.room_result called from create_effect");
-    //     PricingBookNowState::set_rooms_available_for_booking_from_api();
+    //     let room_details = hotel_info_results_clone.get_hotel_room_details();
+    //     PricingBookNowState::set_rooms_available_for_booking_from_api(room_details);
     // });
 
     // let price = Signal::derive(move || total_room_price.get());
     let price = move || PricingBookNowState::total_room_price_for_all_user_selected_rooms();
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
-    let is_room_available_from_api = move || PricingBookNowState::is_room_available_from_api();
+    // let is_room_available_from_api = move || PricingBookNowState::is_room_available_from_api();
 
     let total_rooms_selected_by_user =
         move || PricingBookNowState::total_count_of_rooms_selected_by_user();
 
     // room_counters
-    let hotel_info_results: HotelInfoResults = expect_context();
+    // let hotel_info_results: HotelInfoResults = expect_context();
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg rounded-xl border border-gray-200 p-8">
@@ -383,7 +384,7 @@ pub fn PricingBookNow() -> impl IntoView {
 
                 // <DebugDisplay label="Sorted Rooms" value=move || format!("{:#?}", sorted_rooms.get()) />
 
-                <Show when=is_room_available_from_api fallback=SkeletonPricing>
+                <Show when=move || PricingBookNowState::is_room_available_from_api() fallback=SkeletonPricing>
                     <For
                         each=move || PricingBookNowState::get().rooms_available_for_booking_from_api.get()
                         key=|room| room.clone()

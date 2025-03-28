@@ -150,12 +150,15 @@ ssr = [
 
 # setup the localhost url for dev env
 debug_log = []
+# for the DebugDisplay component 
+debug_display = []
 
 local-consts = []
 local-lib = ["local-consts", "hydrate", "debug_log"]
 local-bin = ["ssr","local-consts", "debug_log"]
-# local-lib-with-debug = ["local-consts", "hydrate", "debug_log" ]
-# local-bin-with-debug = ["ssr","local-consts","debug_log"]
+
+local-lib-with-debug-display = ["local-lib", "debug_display" ]
+local-bin-with-debug-display = ["local-bin","debug_display"]
 
 # mocking features 
 mock-provab = ["dep:fake"]

@@ -211,21 +211,21 @@ impl PricingBookNowState {
 
     pub fn increment_room_counter(room_type: String) {
         let this = Self::get();
-        let mut room_counters = this.room_counters_as_chosen_by_user.get();
+        let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
         room_counters.increment(room_type);
         this.room_counters_as_chosen_by_user.set(room_counters);
     }
 
     pub fn decrement_room_counter(room_type: String) {
         let this = Self::get();
-        let mut room_counters = this.room_counters_as_chosen_by_user.get();
+        let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
         room_counters.decrement(room_type);
         this.room_counters_as_chosen_by_user.set(room_counters);
     }
 
     pub fn get_count_of_rooms_for_room_type(room_type: String) -> u32 {
         let this = Self::get();
-        let mut room_counters = this.room_counters_as_chosen_by_user.get();
+        let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
         let count = room_counters.get_or_default(&room_type).room_count;
         this.room_counters_as_chosen_by_user.set(room_counters);
 
