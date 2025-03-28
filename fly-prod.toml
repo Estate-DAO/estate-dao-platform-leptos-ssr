@@ -19,7 +19,7 @@ tls_options = { "versions" = ["TLSv1.2", "TLSv1.3"] }
 port = 443
 
 [env]
-RUST_LOG="info"
+RUST_LOG="debug"
 
 [[vm]]
   cpu_kind = "shared"
