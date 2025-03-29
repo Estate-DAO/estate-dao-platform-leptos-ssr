@@ -226,6 +226,35 @@ impl HotelInfoResults {
             .set(per_night_calc);
     }
 
+    // pub fn get_images(&self) -> Vec<String> {
+    //     self.search_result
+    //         .get()
+    //         .map(|response| response.get_images())
+    //         .unwrap_or_default()
+    // }
+
+    // pub fn hotel_name_signal(&self) -> String {
+    //     self.search_result
+    //         .get()
+    //         .map(|response| response.get_hotel_name())
+    //         .unwrap_or_default()
+    // }
+
+    // pub fn hotel_address_signal(&self) -> String {
+    //     self.search_result
+    //         .get()
+    //         .map(|response| response.get_address())
+    //         .unwrap_or_default()
+    // }
+
+    // let images_signal = move || {
+    //     if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+    //         hotel_info_api_response.get_images()
+    //     } else {
+    //         vec![]
+    //     }
+    // };
+
     // pub fn set_room_counters(&self, room_counters: HashMap<String, RoomCounterKeyValue>) {
     //     Self::from_leptos_context().room_counters.set(room_counters);
     // }
@@ -387,6 +416,14 @@ impl BlockRoomResults {
         Self::from_leptos_context()
             .payment_status_response
             .set(results);
+    }
+
+    pub fn get_room_price() -> f64 {
+        Self::from_leptos_context()
+            .block_room_results
+            .get()
+            .unwrap_or_default()
+            .get_room_price_summed()
     }
 
     // todo caution - do not generate app reference here please.

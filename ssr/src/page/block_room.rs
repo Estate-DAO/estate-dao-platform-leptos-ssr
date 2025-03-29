@@ -17,6 +17,7 @@ use crate::canister::backend::HotelDetails;
 use crate::canister::backend::HotelRoomDetails;
 use crate::canister::backend::RoomDetails;
 use crate::canister::backend::UserDetails;
+use crate::component::code_print::DebugDisplay;
 use crate::component::{Divider, FilterAndSortBy, PriceDisplay, StarRating};
 use crate::component::{ErrorPopup, Navbar, SkeletonCards, SpinnerGray};
 use crate::page::InputGroup;
@@ -43,7 +44,7 @@ use crate::{
 };
 use chrono::NaiveDate;
 // use leptos::logging::log;
-use crate::log;
+use crate::{log, warn};
 
 #[component]
 pub fn BlockRoomPage() -> impl IntoView {
@@ -65,22 +66,18 @@ pub fn BlockRoomPage() -> impl IntoView {
     let block_room_results_context_cloned: BlockRoomResults = block_room_results_context.clone();
 
     // ================ Pricing component signals  ================
-
-    let room_price = Signal::derive(move || {
-        // let room_price = create_memo(move |_| {
-        if let Some(block_room_response) = block_room_results_context.block_room_results.get() {
-            block_room_response.get_room_price_summed()
-        } else {
-            0.0
-        }
-    });
+    let room_price = Signal::derive(move || BlockRoomResults::get_room_price());
+    log!("[block_room_page] - room_price - {}", room_price.get());
 
     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
-    let total_price = create_memo(move |_| {
+    // let total_price = create_memo(move |_| {
+    let total_price = Signal::derive(move || {
         let room_price = room_price.get();
         let nights = num_nights.get();
-        room_price * nights as f64
+        let total = room_price * nights as f64;
+        log!("[block_room_page] - total_price - {}", total);
+        total
     });
 
     // ================  Form Fields signals  ================
@@ -257,8 +254,6 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let result = block_room(block_room_request).await.ok();
                     let res = result.clone();
                     let block_room_id = res.and_then(|resp| resp.get_block_room_id());
-                    // log!("BLOCK_ROOM_API: {result:?}");
-                    // log!("BLOCK_ROOM_ID: {block_room_id:?}");
                     let res2 = result.clone();
                     BlockRoomResults::set_results(result);
                     BlockRoomResults::set_id(block_room_id);
@@ -496,26 +491,24 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                                 match add_booking_backend(email_cloned, value_for_serverfn).await {
                                     Ok(response) => {
-                                        // log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
-                                        let payments_skip_in_dev_env =
-                                            std::env::var("PAYMENTS_SKIP_LOCAL")
-                                                .unwrap_or("false".to_string());
-                                        if payments_skip_in_dev_env != "true" {
+                                        log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+                                        #[cfg(feature = "mock-provab")]
+                                        {
+                                            let _ =
+                                                window().location().assign(&get_payments_url(""));
+                                        }
+                                        #[cfg(not(feature = "mock-provab"))]
+                                        {
                                             let _ = window().location().assign(&resp.invoice_url);
-                                        } else {
-                                            // simulate a success redirection
-                                            let _ = window()
-                                                .location()
-                                                .assign(&get_payments_url("success"));
                                         }
                                     }
                                     Err(e) => {
-                                        log!("[block_room_page] - handle_pay_click - Error add_booking_backend serverFn {:?}", e);
+                                        warn!("[block_room_page] - handle_pay_click - Error add_booking_backend serverFn {:?}", e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                log!("[block_room_page] - handle_pay_click - Error creating invoice: {:?}", e);
+                                warn!("[block_room_page] - handle_pay_click - Error creating invoice: {:?}", e);
                             }
                         }
                     });
@@ -611,6 +604,9 @@ pub fn BlockRoomPage() -> impl IntoView {
                                     {move || hotel_info_ctx.selected_hotel_location.get()}
                                 </p>
                             </div>
+                            // <DebugDisplay label="Total Price"
+                            //     value=move || total_price.get().to_string()
+                            // />
                         </div>
                         <div class="details">
                             <p class="mt-2">
@@ -822,13 +818,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                 </div>
                 <div class="mb-[40rem] rounded-xl bg-white p-6 shadow-xl">
                     <h2 class="mb-4 text-xl font-bold">
-                        "$"{move || room_price.get() as u64}"/" "night"
+                        "$"{move || room_price.get() }"/" "night"
                     </h2>
                     <Divider />
                     <div class="price-breakdown">
                         <div class="flex justify-between">
                             <span>
-                                "$"{move || room_price.get() as u64}" x "
+                                "$"{move || room_price.get()}" x "
                                 {move || {
                                     let nights = move || num_nights.get();
                                     pluralize(nights(), "night", "nights")
@@ -838,7 +834,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                         <div class="price-total mt-4 flex justify-between font-bold">
                             <span>"Total"</span>
-                            <span>"$"{move || total_price.get() as u64}</span>
+                            <span>"$"{move || total_price.get()}</span>
                         </div>
                     </div>
                 </div>
@@ -862,14 +858,14 @@ pub fn BlockRoomPage() -> impl IntoView {
                     <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                     <div class="flex justify-between">
                         <h2 class="mb-4 text-xl font-bold">
-                            "$"{move || room_price.get() as u64}"/" "night"
+                            "$"{move || room_price.get()}"/" "night"
                         </h2>
                         <span>"x "{move || pluralize(num_nights.get(), "night", "nights")}</span>
                     </div>
                     <Divider />
                     <div class="price-breakdown price-total mt-4 flex justify-between font-bold">
                         <span>"Total"</span>
-                        <span>"$"{move || total_price.get() as u64}</span>
+                        <span>"$"{move || total_price.get()}</span>
                     </div>
                     <Divider />
                     <Show when=move || { should_not_have_loading_spinner.get() } fallback=SpinnerGray>
@@ -911,28 +907,28 @@ pub fn BlockRoomPage() -> impl IntoView {
                                     // <Show when=payment_button_enabled fallback=SpinnerGray>
                                     // {move ||  if payment_button_enabled.get() {
                                     //     view!{
-                                        <button
+                                <button
                                             // class="ml-2"
-                                            class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
-                                            on:click=move |_| {
+                                    class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
+                                    on:click=move |_| {
                                                 // handle_pay_signal.set("NOWPayments".to_owned())
-                                                handle_pay_click.dispatch("NOWPayments".to_owned());
-                                            }
-                                        >
-                                        <span class="px-2 py-2"> Pay With Crypto </span>
-                                        </button>
+                                        handle_pay_click.dispatch("NOWPayments".to_owned());
+                                    }
+                                >
+                                <span class="px-2 py-2"> Pay With Crypto </span>
+                                </button>
 
                                     // }
                                     // </Show>
 
-                                    <p class="text-sm mt-4 mb-6 text-red-500">
-                                        Note: Full payment required. Partial payments are not supported and will not secure your reservation.
-                                    </p>
+                                <p class="text-sm mt-4 mb-6 text-red-500">
+                                    Note: Full payment required. Partial payments are not supported and will not secure your reservation.
+                                </p>
 
-                                <div class="text-center text-red-500 text-sm mt-8 border-t pt-4">
-                                    <p>Do not close this tab until your payment is fully processed</p>
-                                    <p>to avoid issues with your booking.</p>
-                                </div>
+                            <div class="text-center text-red-500 text-sm mt-8 border-t pt-4">
+                                <p>Do not close this tab until your payment is fully processed</p>
+                                <p>to avoid issues with your booking.</p>
+                            </div>
                                 // </label>
                             </div>
                         </div>

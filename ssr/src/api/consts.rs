@@ -71,6 +71,19 @@ use std::collections::HashMap;
 use std::env::VarError;
 use thiserror::Error;
 
+#[cfg(feature = "mock-provab")]
+pub fn get_payments_url(_status: &str) -> String {
+    let base_url = APP_URL;
+    let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
+        .unwrap_or_else(|e| {
+            eprintln!("Error joining URL: {}", e);
+            format!("{}?NP_id={}", base_url, _status) // Fallback to simpler construction if joining fails.
+        });
+    // http://localhost:3000/confirmation?NP_id=4766973829
+    format!("{}?NP_id={}", url, "4766973829")
+}
+
+#[cfg(not(feature = "mock-provab"))]
 pub fn get_payments_url(status: &str) -> String {
     let base_url = APP_URL;
     let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())

@@ -268,7 +268,9 @@ pub fn PaymentHandler() -> impl IntoView {
                         }
                     }
                 });
-                Some(payment_status_from_api.clone())
+                // do not add any UI part because of this resource
+                // Some(payment_status_from_api.clone())
+                return None::<String>;
             } else {
                 None
             }
