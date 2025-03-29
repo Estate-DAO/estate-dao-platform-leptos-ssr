@@ -221,11 +221,11 @@ pub fn BlockRoomPage() -> impl IntoView {
 
     let should_not_have_loading_spinner: Signal<bool> = Signal::derive(move || {
         log!(
-            "should_not_have_loading_spinner - block_room_called: {}",
+            "[block_room_page] - should_not_have_loading_spinner - block_room_called: {}",
             block_room_called.get()
         );
         log!(
-            "should_not_have_loading_spinner - payment_button_enabled: {}",
+            "[block_room_page] - should_not_have_loading_spinner - payment_button_enabled: {}",
             payment_button_enabled.get()
         );
         block_room_called.get() && payment_button_enabled.get()
@@ -244,16 +244,12 @@ pub fn BlockRoomPage() -> impl IntoView {
                 // Reset previous block room results
                 BlockRoomResults::reset();
 
-                // let uniq_room_ids: Vec<String> = room_counters
-                //     .values()
-                //     .filter_map(|counter| counter.value.clone())
-                //     .collect();
-
                 let uniq_room_ids = PricingBookNowState::room_unique_ids();
-                log!("{uniq_room_ids:#?}");
+                log!("[block_room_page] - {uniq_room_ids:#?}");
 
                 let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 
+                log!("[block_room_page] - block_room_request - {block_room_request:?}");
                 // Call server function inside action
                 spawn_local(async move {
                     // TODO(temporary-fix): temporarily disable second call to block room
@@ -272,11 +268,14 @@ pub fn BlockRoomPage() -> impl IntoView {
                     }
 
                     let res: BlockRoomResults = expect_context();
-                    log!("\n LOOK HERE >{:?}", res.block_room_results.get());
+                    log!(
+                        "[block_room_page] - block_room_results - {:?}",
+                        res.block_room_results.get()
+                    );
                 });
             } else {
                 block_room_called.set(false);
-                log!("modal closed. Nothing to do");
+                log!("[block_room_page] - modal closed. Nothing to do");
             }
         }
     });
@@ -329,7 +328,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                     let booking_id = BookingId::read_from_local_storage().unwrap_or_else(|| {
                         generate_app_reference(email.clone())
                             .get()
-                            .expect("Failed to generate booking id")
+                            .expect("[block_room_page] - Failed to generate booking id")
                     });
 
                     let backend_booking_id = backend::BookingId {
@@ -357,7 +356,7 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                     // Log payment request for debugging
                     log!(
-                        "Creating payment request with order_id: {}",
+                        "[block_room_page] - Creating payment request with order_id: {}",
                         invoice_request.order_id
                     );
 
@@ -399,7 +398,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                         .get()
                         .unwrap_or_default();
 
-                    log!("BHAI BATA DE_____> {:?}", block_room_id);
+                    log!(
+                        "[block_room_page] - handle_pay_click - block_room_id> {:?}",
+                        block_room_id
+                    );
                     let user_selected_hotel_room_details = HotelRoomDetails {
                         destination,
                         requested_payment_amount: total_price.get(),
@@ -418,7 +420,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                         },
                     };
                     log!(
-                        "BOOKING 1st PARAM >>>>>>>>>>>>>>>>\n{:?}",
+                        "[block_room_page] - handle_pay_click - user_selected_hotel_room_details> {:?}",
                         user_selected_hotel_room_details
                     );
 
@@ -474,7 +476,10 @@ pub fn BlockRoomPage() -> impl IntoView {
                         payment_details,
                     };
 
-                    log!("block_room page - booking - {:#?}", booking);
+                    log!(
+                        "[block_room_page] - handle_pay_click - booking - {:#?}",
+                        booking
+                    );
 
                     spawn_local(async move {
                         let create_invoice_response =
@@ -482,7 +487,9 @@ pub fn BlockRoomPage() -> impl IntoView {
                         log!("creating invoice");
                         match create_invoice_response {
                             Ok(resp) => {
-                                log!("heres CreateInvoiceResponse");
+                                log!(
+                                    "[block_room_page] - handle_pay_click - CreateInvoiceResponse"
+                                );
                                 log!("{:?}\n{:?}", email_cloned, booking);
                                 let value_for_serverfn: String =
                                     serde_json::to_string(&booking).unwrap();
@@ -503,12 +510,12 @@ pub fn BlockRoomPage() -> impl IntoView {
                                         }
                                     }
                                     Err(e) => {
-                                        log!("Error add_booking_backend serverFn {:?}", e);
+                                        log!("[block_room_page] - handle_pay_click - Error add_booking_backend serverFn {:?}", e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                log!("Error creating invoice: {:?}", e);
+                                log!("[block_room_page] - handle_pay_click - Error creating invoice: {:?}", e);
                             }
                         }
                     });

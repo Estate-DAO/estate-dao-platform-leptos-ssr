@@ -128,10 +128,10 @@ pub fn HotelDetailsPage() -> impl IntoView {
     // create_reactive_value!( address_signal, hotel_info_results, get_address );
     // create_reactive_value!( description_signal, hotel_info_results, get_description );
 
-    on_cleanup(|| {
-        // ensure that all the user selected rooms (from previous visits) are cleaned up
-        PricingBookNowState::reset_room_counters();
-    });
+    // on_cleanup(|| {
+    //     // ensure that all the user selected rooms (from previous visits) are cleaned up
+    //     PricingBookNowState::reset_room_counters();
+    // });
 
     view! {
         <section class="relative h-screen">
