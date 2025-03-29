@@ -1,9 +1,26 @@
+#!/bin/bash
 set -a 
 
 source .env 
 
-# LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS cargo leptos watch --lib-features "local-lib" --bin-features "local-bin"
-cargo leptos build --lib-features "local-lib-with-debug-display" --bin-features "local-bin-with-debug-display" --release || exit 1
+# Initialize debug_display flag
+DEBUG_DISPLAY=""
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug_display)
+            DEBUG_DISPLAY=",debug_display"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+cargo leptos build --lib-features "local-lib${DEBUG_DISPLAY}" --bin-features "local-bin${DEBUG_DISPLAY}" || exit 1
 
 # # LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS
 export LEPTOS_SITE_ROOT="target/site"
@@ -13,4 +30,4 @@ export PAYMENTS_SKIP_LOCAL="true"
 
 # LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS cargo leptos serve
 
-set +a 
+set +a
