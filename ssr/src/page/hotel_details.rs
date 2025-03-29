@@ -71,6 +71,7 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {
+    PricingBookNowState::reset_room_counters();
     let hotel_info_results: HotelInfoResults = expect_context();
 
     let address_signal = move || {
