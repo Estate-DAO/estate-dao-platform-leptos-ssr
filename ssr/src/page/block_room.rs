@@ -249,7 +249,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                 //     .filter_map(|counter| counter.value.clone())
                 //     .collect();
 
-                let uniq_room_ids = PricingBookNowState::unique_room_ids();
+                let uniq_room_ids = PricingBookNowState::room_unique_ids();
                 log!("{uniq_room_ids:#?}");
 
                 let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);

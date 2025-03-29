@@ -2,7 +2,7 @@ use super::{search_state::HotelInfoResults, GlobalStateForLeptos};
 use crate::api::HotelRoomDetail;
 // use crate::api::{HotelRoomDetail, RoomDetail};
 use crate::canister::backend::RoomDetails;
-use crate::log;
+use crate::{log, warn};
 use leptos::*;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
@@ -109,7 +109,7 @@ impl RoomForPricing {
                 room_details
             );
             self.upsert(
-                room_type.clone(),
+                room_type,
                 room_details.room_count + 1,
                 room_details.room_unique_id.clone(),
                 room_details.room_price,
@@ -151,13 +151,13 @@ impl RoomForPricing {
             log!("[room_for_pricing] decrement - RoomForPricing decrement failed");
         }
     }
-    pub fn get(&self, room_type: &str) -> Option<&RoomDetailsForPricingComponent> {
-        self.0.get(room_type)
+    pub fn get(&self, room_type: &str) -> Option<RoomDetailsForPricingComponent> {
+        self.0.get(room_type).cloned()
     }
 
     pub fn get_or_default(&mut self, room_type: &str) -> RoomDetailsForPricingComponent {
-        if let Some(room_details) = self.0.get(room_type) {
-            room_details.clone()
+        if let Some(room_details) = self.get(room_type) {
+            room_details
         } else {
             let default = RoomDetailsForPricingComponent::default();
             self.0.insert(room_type.to_string(), default.clone());
@@ -221,33 +221,81 @@ impl PricingBookNowState {
     //     hotel_info_results.get_hotel_room_details()
     // }
 
+    fn ensure_room_initialized(room_type: &str, room_counters: &mut RoomForPricing) -> bool {
+        let rooms_available = Self::get()
+            .rooms_available_for_booking_from_api
+            .get_untracked();
+
+        // Return early if room already exists
+        if room_counters.get(room_type).is_some() {
+            let room_details = room_counters.get(room_type).unwrap();
+            if room_details.room_price == 0.0 {
+                // log!("[hotel_details_state] ensure_room_initialized - room_type={room_type} already exists with zero price, overwriting");
+            } else {
+                // log!("[hotel_details_state] ensure_room_initialized - room_type={room_type} already exists");
+                return true;
+            }
+        }
+
+        // Try to initialize user_selected_from from available rooms
+        rooms_available
+            .get(room_type)
+            .map(|room| {
+                // log!("[hotel_details_state] ensure_room_initialized - room_type={room_type} found in available rooms - {:?}", room);
+                room_counters.upsert(
+                    room_type.to_string(),
+                    0,
+                    room.room_unique_id.clone(),
+                    room.room_price,
+                );
+                // log!("[hotel_details_state] ensure_room_initialized - room_type={room_type} initialized - room_counters={:?}", room_counters);
+                true
+            })
+            .unwrap_or_else(|| {
+                warn!(
+                    "[hotel_details_state] ensure_room_initialized - room_type not found in available rooms (unreachable!): {:?}",
+                    room_type
+                );
+                false
+            })
+    }
+
     pub fn increment_room_counter(room_type: String) {
-        log!(
-            "[hotel_details_state] increment_room_counter - room_type: {:?}",
-            room_type
-        );
-        // let this = Self::get();
-        let this: Self = expect_context();
+        // log!(
+        //     "[hotel_details_state] - increment_room_counter - room_type: {:?}",
+        //     room_type
+        // );
+        let this = Self::get();
         let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
+
+        // log!("[hotel_details_state] - increment_room_counter - room_counters before early return: {:?}", room_counters);
+        if !Self::ensure_room_initialized(&room_type, &mut room_counters) {
+            return;
+        }
+
         room_counters.increment(room_type);
-        log!(
-            "[hotel_details_state] increment_room_counter - room_counters: {:?}",
-            room_counters
-        );
+        // log!(
+        //     "[hotel_details_state] - increment_room_counter - room_counters: {:?}",
+        //     room_counters
+        // );
         this.room_counters_as_chosen_by_user.set(room_counters);
     }
 
     pub fn decrement_room_counter(room_type: String) {
-        log!(
-            "[hotel_details_state] decrement_room_counter - room_type: {:?}",
-            room_type
-        );
-        // let this = Self::get();
+        // log!(
+        //     "[hotel_details_state] - decrement_room_counter - room_type: {:?}",
+        //     room_type
+        // );
         let this: Self = expect_context();
         let mut room_counters = this.room_counters_as_chosen_by_user.get_untracked();
+
+        if !Self::ensure_room_initialized(&room_type, &mut room_counters) {
+            return;
+        }
+
         room_counters.decrement(room_type);
         log!(
-            "[hotel_details_state] decrement_room_counter - room_counters: {:?}",
+            "[hotel_details_state] - decrement_room_counter - room_counters: {:?}",
             room_counters
         );
         this.room_counters_as_chosen_by_user.set(room_counters);
@@ -283,13 +331,18 @@ impl PricingBookNowState {
             }
 
             log!(
-                "[hotel_details_state] room_for_pricing: {:?}",
+                "[hotel_details_state] - room_for_pricing: {:?}",
                 room_for_pricing
             );
 
             Self::get()
                 .rooms_available_for_booking_from_api
                 .set(room_for_pricing);
+            let local = Self::get().rooms_available_for_booking_from_api.get();
+            log!(
+                "[hotel_details_state] - room_for_pricing - local: {:?}",
+                local
+            );
         }
     }
 
@@ -298,19 +351,24 @@ impl PricingBookNowState {
         room_details: RoomDetailsForPricingComponent,
     ) {
         log!(
-            "[hotel_details_state] set_room_counters_as_chosen_by_user - room_type: {:?}",
+            "[hotel_details_state] -    set_room_counters_as_chosen_by_user - room_type: {:?}",
             room_type
         );
-        Self::get()
-            .room_counters_as_chosen_by_user
-            .update(|room_for_pricing| {
-                room_for_pricing.upsert(
-                    room_type,
-                    room_details.room_count,
-                    room_details.room_unique_id,
-                    room_details.room_price,
-                );
-            });
+        let rooms_available = Self::get().rooms_available_for_booking_from_api.get();
+        if let Some(room_available) = rooms_available.get(&room_type) {
+            Self::get()
+                .room_counters_as_chosen_by_user
+                .update(|room_for_pricing| {
+                    room_for_pricing.upsert(
+                        room_type,
+                        room_details.room_count,
+                        room_available.room_unique_id.clone(),
+                        room_available.room_price,
+                    );
+                });
+        } else {
+            warn!("[hotel_details_state] - set_room_counters_as_chosen_by_user - rooms_available_for_booking_from_api - room_type not found (unreachable!): {:?}", room_type);
+        }
     }
 
     pub fn total_count_of_rooms_selected_by_user() -> u32 {
@@ -321,7 +379,7 @@ impl PricingBookNowState {
             .sum()
     }
 
-    pub fn unique_room_ids() -> Vec<String> {
+    pub fn room_unique_ids() -> Vec<String> {
         let room_counters = Self::get().room_counters_as_chosen_by_user.get();
         room_counters
             .iter()
@@ -335,7 +393,10 @@ impl PricingBookNowState {
         room_counters
             .iter()
             .map(|room_details| {
-                log!("room_details - HotelDetailsState - total_room_price_for_all_user_selected_rooms - {:?}", room_details);
+                log!(
+                    "[hotel_details_state] - total_room_price_for_all_user_selected_rooms - {:?}",
+                    room_details
+                );
                 (room_details.room_count as f64) * room_details.room_price
             })
             .sum()

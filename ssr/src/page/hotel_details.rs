@@ -128,6 +128,11 @@ pub fn HotelDetailsPage() -> impl IntoView {
     // create_reactive_value!( address_signal, hotel_info_results, get_address );
     // create_reactive_value!( description_signal, hotel_info_results, get_description );
 
+    on_cleanup(|| {
+        // ensure that all the user selected rooms (from previous visits) are cleaned up
+        PricingBookNowState::reset_room_counters();
+    });
+
     view! {
         <section class="relative h-screen">
             <Navbar />
@@ -499,7 +504,7 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
             //     hotel_info_results.sorted_rooms.get()
             // );
 
-            let uniq_room_ids = PricingBookNowState::unique_room_ids();
+            let uniq_room_ids = PricingBookNowState::room_unique_ids();
             let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
 
             // Call server function
