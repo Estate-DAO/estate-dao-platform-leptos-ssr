@@ -1,3 +1,4 @@
+use crate::api::consts::SEARCH_COMPONENT_ROOMS_DEFAULT;
 use crate::api::RoomGuest;
 // use crate::page::NumberCounter;
 use crate::utils::pluralize;
@@ -25,7 +26,7 @@ impl Default for GuestSelection {
         Self {
             adults: RwSignal::new(2),
             children: RwSignal::new(0),
-            rooms: RwSignal::new(1), // Set default value for rooms to 1
+            rooms: RwSignal::new(SEARCH_COMPONENT_ROOMS_DEFAULT), // Set default value for rooms to 1
             children_ages: ChildrenAges::default(),
         }
     }

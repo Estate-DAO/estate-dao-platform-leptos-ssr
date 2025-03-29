@@ -30,14 +30,17 @@ cfg_if! {
     if #[cfg(feature = "local-consts")] {
         pub const APP_URL: &str = LOCALHOST_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
+        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
     }
     else if #[cfg(feature = "prod-consts")] {
         pub const APP_URL: &str = PROD_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
+        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else {
         pub const APP_URL: &str = STAGING_APP_URL;
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
+        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
 }
 
