@@ -384,6 +384,7 @@ impl PricingBookNowState {
         room_counters
             .iter()
             .map(|room_details| room_details.room_unique_id.clone())
+            .filter(|id| !id.is_empty())
             .collect()
     }
 
