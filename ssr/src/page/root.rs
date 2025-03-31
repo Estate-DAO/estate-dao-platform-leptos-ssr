@@ -149,20 +149,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             });
         }
     });
-
-    // let greet_action = create_action(move |_| async move {
-    //     match greet_backend("Knull".to_string()).await {
-    //         Ok(response) => {
-    //             log!("{:#}", response);
-    //         }
-    //         Err(e) => {
-    //             log!("Error greeting knull {:?}", e);
-    //         }
-    //     }
-    // });
-
-    // -------------------------------------
-
     view! {
         <div class=move || {
             format!(
@@ -229,14 +215,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     </Show>
                 </div>
             </button>
-        // <button
-        // on:click=move |_| greet_action.dispatch(())
-        // class=move || {
-        // format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
-        // }
-        // >
-        // Greet me!
-        // </button>
         </div>
     }
 }

@@ -10,6 +10,7 @@ use crate::{
         api_error_state::ApiErrorState,
         confirmation_results_state::ConfirmationResultsState,
         hotel_details_state::PricingBookNowState,
+        input_group_state::InputGroupState,
         search_state::{
             BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
         },
@@ -62,6 +63,8 @@ pub fn App() -> impl IntoView {
     // fallible component in app startup
     // -> if environment variables are not defined, panic!
     // provide_context(EnvVarConfig::try_from_env());
+
+    provide_context(InputGroupState::default());
 
     provide_context(SearchCtx::default());
     provide_context(SearchListResults::default());

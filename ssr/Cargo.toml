@@ -157,8 +157,8 @@ local-consts = []
 local-lib = ["local-consts", "hydrate", "debug_log"]
 local-bin = ["ssr","local-consts", "debug_log"]
 
-local-lib-with-debug-display = ["local-lib", "debug_display" ]
-local-bin-with-debug-display = ["local-bin","debug_display"]
+# local-lib-with-debug-display = ["local-lib", "debug_display" ]
+# local-bin-with-debug-display = ["local-bin","debug_display"]
 
 # mocking features 
 mock-provab = ["dep:fake"]

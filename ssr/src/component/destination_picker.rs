@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     component::{Divider, HSettingIcon},
-    state::search_state::SearchCtx,
+    state::{
+        input_group_state::{InputGroupState, OpenDialogComponent},
+        search_state::SearchCtx,
+    },
 };
 // use leptos::logging::log;
 use crate::log;
@@ -81,7 +84,10 @@ fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
 
 #[component]
 pub fn DestinationPicker() -> impl IntoView {
-    let (is_open, set_is_open) = create_signal(false);
+    let is_open = create_memo(move |_| {
+        // log!("is_open called");
+        InputGroupState::is_destination_open()
+    });
     let search_ctx: SearchCtx = expect_context();
 
     // let destinations_resource = create_resource(is_open , move  |_| async move { read_destinations_from_file("city.json".into()).await});
@@ -105,7 +111,7 @@ pub fn DestinationPicker() -> impl IntoView {
 
     view! {
         <div class="relative w-full">
-            <div class="w-full" on:click=move |_| set_is_open.update(|open| *open = !*open)>
+            <div class="w-full" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)>
                 <input
                     type="text"
                     placeholder="Where to?"
@@ -130,7 +136,6 @@ pub fn DestinationPicker() -> impl IntoView {
                                             view! {
                                                 <ShowDestinations
                                                     dest_vec=dest_vec.unwrap_or_default()
-                                                    set_is_open=set_is_open
                                                 />
                                             }
                                         })
@@ -146,7 +151,7 @@ pub fn DestinationPicker() -> impl IntoView {
 }
 
 #[component]
-fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) -> impl IntoView {
+fn ShowDestinations(dest_vec: Vec<Destination>) -> impl IntoView {
     view! {
         <div class="h-80 custom-scrollbar">
             {move || {
@@ -161,7 +166,7 @@ fn ShowDestinations(dest_vec: Vec<Destination>, set_is_open: WriteSignal<bool>) 
                                 class="cursor-pointer hover:bg-gray-50 p-2 rounded"
                                 on:click=move |_| {
                                     SearchCtx::set_destination(dest.clone());
-                                    set_is_open.set(false);
+                                    InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent);
                                 }
                             >
                                 <span class="text-gray-800">
