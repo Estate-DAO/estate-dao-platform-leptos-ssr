@@ -4,6 +4,7 @@ use leptos_router::use_navigate;
 use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
 use crate::log;
+use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::state::search_state::HotelInfoResults;
 use crate::{
     api::hotel_info,
@@ -151,6 +152,9 @@ pub fn HotelCard(
 
                 // Navigate after data is loaded to ensure clean state transition
                 nav(AppRoutes::HotelDetails.to_string(), Default::default());
+
+                // close all the dialogs
+                InputGroupState::toggle_dialog(OpenDialogComponent::None);
             });
         }
     });

@@ -1,8 +1,9 @@
 // use console_log::log;
+use crate::state::input_group_state::OpenDialogComponent;
 use leptos::*;
 use leptos_icons::*;
 // use leptos_use::use_timestamp;
-use crate::state::search_state::SearchCtx;
+use crate::state::{input_group_state::InputGroupState, search_state::SearchCtx};
 use crate::utils::date::*;
 use chrono::NaiveDate;
 // use leptos::logging::log;
@@ -63,7 +64,11 @@ impl SelectedDateRange {
 
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
-    let (is_open, set_is_open) = create_signal(false);
+    // let (is_open, set_is_open) = create_signal(false);
+    let is_open = create_memo(move |_| {
+        // log!("is_open called");
+        InputGroupState::is_date_open()
+    });
 
     let search_ctx: SearchCtx = expect_context();
 
@@ -109,7 +114,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
             <button
                 class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm text-left"
-                on:click=move |_| set_is_open.update(|open| *open = !*open)
+                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
             >
                 {{ move || date_range_display() }}
             </button>

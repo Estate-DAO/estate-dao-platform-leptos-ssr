@@ -4,6 +4,7 @@ use crate::component::{
     FullScreenSpinnerGray, Navbar, PriceDisplayV2, SkeletonPricing, SpinnerGray,
 };
 use crate::state::hotel_details_state::{PricingBookNowState, RoomDetailsForPricingComponent};
+use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::utils::pluralize;
 use crate::{
     api::block_room,
@@ -535,6 +536,8 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
             is_booking.set(false);
             // Navigate to block room page
             nav(AppRoutes::BlockRoom.to_string(), Default::default());
+            // close all the dialogs on navigation
+            InputGroupState::toggle_dialog(OpenDialogComponent::None);
         }
     });
 

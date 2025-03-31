@@ -1,5 +1,6 @@
 use crate::api::consts::SEARCH_COMPONENT_ROOMS_DEFAULT;
 use crate::api::RoomGuest;
+use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 // use crate::page::NumberCounter;
 use crate::utils::pluralize;
 use crate::{
@@ -99,7 +100,7 @@ impl GuestSelection {
 /// Guest quantity component (button)
 #[component]
 pub fn GuestQuantity() -> impl IntoView {
-    let (is_open, set_is_open) = create_signal(false);
+    let is_open = create_memo(move |_| InputGroupState::is_guest_open());
 
     let icon = create_memo(move |_| {
         if is_open() {
@@ -135,7 +136,7 @@ pub fn GuestQuantity() -> impl IntoView {
             id="guestsDropdown"
             class="w-full flex-0 py-2 pl-10 text-left text-gray-700 text-sm font-light bg-transparent rounded-full focus:outline-none"
             // on:blur=move |_| set_is_open.set(false)
-            on:click=move |_| set_is_open.update(|open| *open = !*open)
+            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
         >
             {{ move || guest_count_display }}
         </button>
@@ -145,13 +146,13 @@ pub fn GuestQuantity() -> impl IntoView {
         </div>
 
         <Show when=move || is_open()>
-            <PeopleOptions set_is_open=set_is_open.into() />
+            <PeopleOptions />
         </Show>
     }
 }
 
 #[component]
-fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
+fn PeopleOptions() -> impl IntoView {
     let search_ctx: SearchCtx = expect_context();
 
     let guest_selection = search_ctx.guests;
@@ -167,7 +168,7 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
         );
 
         SearchCtx::log_state();
-        set_is_open.set(false);
+        InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
     };
 
     create_effect(move |_| {
@@ -196,7 +197,7 @@ fn PeopleOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
         <div class="p-4">
             <div
                 id="guestsDropdownContent"
-                class="absolute right-0 bg-white rounded-md shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border border-gray-200 px-4"
+                class="absolute right-0 bg-white shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border px-4"
             >
                 <NumberCounter
                     label="Adults"

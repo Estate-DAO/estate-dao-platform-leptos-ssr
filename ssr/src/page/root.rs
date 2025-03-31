@@ -1,5 +1,7 @@
+use crate::component::outside_click_detector::OutsideClickDetector;
 // use leptos::logging::log;
 use crate::log;
+use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 use leptos::*;
 use leptos_icons::*;
 use leptos_query::QueryResult;
@@ -23,6 +25,11 @@ use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+// use leptos::ev;
+// use leptos::html::*;
+// use leptos::{event_target, window_event_listener};
+// use wasm_bindgen::JsCast;
+
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
@@ -38,6 +45,9 @@ pub fn RootPage() -> impl IntoView {
 
 #[component]
 pub fn HeroSection() -> impl IntoView {
+    // reset the search bar
+    InputGroupState::toggle_dialog(OpenDialogComponent::None);
+
     view! {
         <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')]">
             <Navbar />
@@ -46,6 +56,7 @@ pub fn HeroSection() -> impl IntoView {
                     <h1 class="text-5xl font-semibold text-black mb-8">
                         Hey! Where are you off to?
                     </h1>
+
                     <InputGroup />
                     <br />
                     // todo: uncomment in v2 when implementing filtering and sorting
@@ -132,6 +143,10 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     let navigate = use_navigate();
     let search_action = create_action(move |_| {
         SearchListResults::reset();
+
+        // close all the dialogs
+        InputGroupState::toggle_dialog(OpenDialogComponent::None);
+
         let nav = navigate.clone();
         let search_ctx = search_ctx.clone();
         local_disabled.set(true);
@@ -149,13 +164,22 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             });
         }
     });
+
+    let close_closure = move |_: ()| {
+        log!("[root.rs] close panel");
+        InputGroupState::toggle_dialog(OpenDialogComponent::None);
+    };
+
     view! {
-        <div class=move || {
-            format!(
-                " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
-                bg_class(),
-            )
-        }>
+        <OutsideClickDetector debug=true on_outside_click=Callback::new(close_closure)>
+        <div
+            class=move || {
+                format!(
+                    " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
+                    bg_class(),
+                )
+            }
+        >
             // <!-- Destination input -->
 
             <div class="relative flex-1">
@@ -216,5 +240,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                 </div>
             </button>
         </div>
+        </OutsideClickDetector>
     }
 }

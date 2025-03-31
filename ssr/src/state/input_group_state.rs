@@ -12,60 +12,53 @@ impl GlobalStateForLeptos for InputGroupState {}
 
 impl InputGroupState {
     pub fn set_open_dialog(dialog: OpenDialogComponent) {
-        log!("Setting dialog to: {:?}", dialog);
+        // log!("Setting dialog to: {:?}", dialog);
         Self::get().open_dialog.update(|d| *d = dialog);
     }
 
     pub fn set_destination_open() {
-        log!("Opening destination dialog");
+        // log!("Opening destination dialog");
         Self::set_open_dialog(OpenDialogComponent::CityListComponent);
         // Self::get().open_dialog.update(|d| *d = OpenDialogComponent::CityListComponent);
     }
     pub fn set_close_dialog() {
-        log!("Closing dialog");
+        // log!("Closing dialog");
         Self::set_open_dialog(OpenDialogComponent::None);
     }
 
     pub fn set_date_open() {
-        log!("Opening date dialog");
+        // log!("Opening date dialog");
         Self::set_open_dialog(OpenDialogComponent::DateComponent);
     }
 
     pub fn set_guest_open() {
-        log!("Opening guest dialog");
+        // log!("Opening guest dialog");
         Self::set_open_dialog(OpenDialogComponent::GuestComponent);
     }
 
     pub fn is_destination_open() -> bool {
         let is_open = Self::get().open_dialog.get().is_destination_open();
-        log!("Checking if destination is open: {}", is_open);
+        // log!("Checking if destination is open: {}", is_open);
         is_open
     }
 
     pub fn is_date_open() -> bool {
         let is_open = Self::get().open_dialog.get().is_date_open();
-        log!("Checking if date is open: {}", is_open);
+        // log!("Checking if date is open: {}", is_open);
         is_open
     }
 
     pub fn is_guest_open() -> bool {
         let is_open = Self::get().open_dialog.get().is_guest_open();
-        log!("Checking if guest is open: {}", is_open);
+        // log!("Checking if guest is open: {}", is_open);
         is_open
     }
 
     pub fn toggle_dialog(dialog: OpenDialogComponent) {
         let current = Self::get().open_dialog.get_untracked();
-        log!(
-            "Toggle dialog - Current: {:?}, Requested: {:?}",
-            current,
-            dialog
-        );
         if current.matches(dialog) {
-            log!("Dialog matches current - closing");
             Self::set_open_dialog(OpenDialogComponent::None);
         } else {
-            log!("Dialog differs from current - opening new dialog");
             Self::set_open_dialog(dialog);
         }
     }

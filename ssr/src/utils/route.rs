@@ -3,6 +3,8 @@ use std::fmt::Display;
 use leptos_router::use_navigate;
 use reqwest::Url;
 
+use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
+
 #[macro_export]
 macro_rules! try_or_redirect {
     ($e:expr) => {
@@ -39,6 +41,9 @@ pub fn failure_redirect<E: Display>(err: E) {
 pub fn go_to_root() {
     let nav = use_navigate();
     nav("/", Default::default());
+
+    // close all the dialogs
+    InputGroupState::toggle_dialog(OpenDialogComponent::None);
 }
 
 pub fn join_base_and_path_url(base: &str, path: &str) -> Result<String, String> {
