@@ -114,8 +114,8 @@ pub fn DestinationPicker() -> impl IntoView {
             <div class="w-full" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)>
                 <input
                     type="text"
-                    placeholder="Where to?"
-                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm"
+                    placeholder=""
+                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm font-semibold"
                     prop:value=display_value
                     readonly=true
                 />

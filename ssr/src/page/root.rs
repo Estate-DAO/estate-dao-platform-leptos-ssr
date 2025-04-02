@@ -51,9 +51,9 @@ pub fn HeroSection() -> impl IntoView {
     view! {
         <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')]">
             <Navbar />
-            <div class="mt-40">
+            <div class="mt-20 md:mt-40 px-4 md:px-0">
                 <div class="flex flex-col items-center justify-center h-full">
-                    <h1 class="text-5xl font-semibold text-black mb-8">
+                    <h1 class="text-3xl md:text-5xl font-semibold text-black mb-6 md:mb-8 text-center">
                         Hey! Where are you off to?
                     </h1>
 
@@ -65,20 +65,22 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <br />
                     <br />
-                    <div class="flex items-end px-6 py-3 bg-white rounded-xl max-w-fit w-full ">
+                    <div class="flex flex-col md:flex-row items-center md:items-end px-4 md:px-6 py-3 bg-white rounded-xl max-w-fit w-full text-center md:text-left">
                         "We're the first decentralized booking platform powered by ICP."
-                        <a
-                            href="https://internetcomputer.org/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="font-semibold text-blue-500 ml-4 inline"
-                        >
-                            "Learn more about ICP "
-                        </a>
-                        <Icon
-                            class="w-6 h-6 font-semibold inline ml-2 text-blue-500"
-                            icon=icondata::CgArrowRight
-                        />
+                        <div class="flex items-center mt-2 md:mt-0">
+                            <a
+                                href="https://internetcomputer.org/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="font-semibold text-blue-500 md:ml-4 inline"
+                            >
+                                "Learn more about ICP "
+                            </a>
+                            <Icon
+                                class="w-6 h-6 font-semibold inline ml-2 text-blue-500"
+                                icon=icondata::CgArrowRight
+                            />
+                        </div>
                     </div>
                     <br />
                     <br />
@@ -137,7 +139,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             .destination
             .get()
             .map(|d| format!("{}, {}", d.city, d.country_name))
-            .unwrap_or_else(|| "Where to?".to_string())
+            .unwrap_or_else(|| "".to_string())
     });
 
     let navigate = use_navigate();
@@ -175,14 +177,14 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         <div
             class=move || {
                 format!(
-                    " {} backdrop-blur rounded-full flex items-center p-2 border border-gray-300 divide-x divide-white max-w-4xl w-full z-[70]",
+                    " {} md:backdrop-blur md:rounded-full flex flex-col md:flex-row items-stretch md:items-center md:p-2 border border-gray-300 md:divide-x divide-white max-w-4xl w-full z-[70] space-y-2 md:space-y-0 bg-transparent",
                     bg_class(),
                 )
             }
         >
             // <!-- Destination input -->
 
-            <div class="relative flex-1">
+            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none rounded-full md:rounded-none p-2 md:p-0">
                 <div class="absolute inset-y-0 left-2 text-xl flex items-center">
                     <Icon icon=icondata::BsMap class="text-black" />
                 </div>
@@ -202,13 +204,12 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             </div>
 
             // <!-- Date range picker -->
-            <div class="relative flex-1 border-l border-r border-white">
+            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none rounded-full md:rounded-none p-2 md:p-0 md:border-l md:border-r border-white">
                 <DateTimeRangePickerCustom />
-
             </div>
 
             // <!-- Guests dropdown -->
-            <div class="relative flex-1 flex items-center">
+            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none rounded-full md:rounded-none p-2 md:p-0 flex items-center">
                 <GuestQuantity />
             </div>
 
@@ -216,10 +217,10 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <button
                 on:click=move |_| search_action.dispatch(())
                 class=move || {
-                    format!(" {}  text-2xl p-2 rounded-full  focus:outline-none", bg_search_class())
+                    format!(" {} text-2xl p-2 rounded-full w-full md:w-auto focus:outline-none backdrop-blur md:backdrop-blur-none", bg_search_class())
                 }
             >
-                <div>
+                <div class="flex justify-center">
                     // done with tricks shared by generous Prakash!
                     <Show
                         when=move || disabled.get()
