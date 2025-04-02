@@ -180,20 +180,20 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         <div
             class=move || {
                 format!(
-                    " {} md:backdrop-blur md:rounded-full flex flex-col md:flex-row items-stretch md:items-center md:p-2 md:divide-x divide-white max-w-4xl w-full z-[70] space-y-2 md:space-y-0 md:bg-transparent",
+                    " {} md:backdrop-blur md:rounded-full flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-2 md:space-y-0 md:bg-transparent border border-gray-400 shadow-sm",
                     bg_class(),
                 )
             }
         >
             // <!-- Destination input -->
-            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 rounded-full md:rounded-none">
-                <div class="flex items-center h-[56px] px-4">
+            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 md:border-0 rounded-full md:rounded-none">
+                <div class="flex items-center h-[56px] px-4 md:px-6">
                     <div class="text-xl flex items-center">
                         <Icon icon=icondata::BsMap class="text-black" />
                     </div>
 
                     <button
-                        class="flex-1 ml-2 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left"
+                        class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left flex items-center"
                         disabled=disabled
                     >
                         {move || destination_display.get()}
@@ -208,15 +208,15 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             </div>
 
             // <!-- Date range picker -->
-            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 rounded-full md:rounded-none">
-                <div class="flex items-center h-[56px] px-4">
+            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 md:border-0 rounded-full md:rounded-none">
+                <div class="flex items-center h-[56px] px-4 md:px-6">
                     <DateTimeRangePickerCustom />
                 </div>
             </div>
 
             // <!-- Guests dropdown -->
-            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 rounded-full md:rounded-none">
-                <div class="flex items-center h-[56px] px-4">
+            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 md:border-0 rounded-full md:rounded-none">
+                <div class="flex items-center h-[56px] px-4 md:px-6">
                     <GuestQuantity />
                 </div>
             </div>
@@ -225,7 +225,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <button
                 on:click=move |_| search_action.dispatch(())
                 class=move || {
-                    format!(" {} text-2xl rounded-full w-full md:w-auto focus:outline-none backdrop-blur md:backdrop-blur-none flex items-center justify-center h-[56px] px-4", bg_search_class())
+                    format!(" {} text-2xl rounded-full w-full md:w-auto focus:outline-none backdrop-blur flex items-center justify-center h-[56px] px-4", bg_search_class())
                 }
             >
                 <div class="flex justify-center">

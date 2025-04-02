@@ -106,47 +106,47 @@ pub fn DestinationPicker() -> impl IntoView {
             .destination
             .get()
             .map(|d| format!("{}, {}", d.city, d.country_name))
-            .unwrap_or_else(|| "".to_string())
+            .unwrap_or_else(|| "Where to?".to_string())
     });
 
     view! {
-        <div class="relative w-full">
-            <div class="w-full" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)>
-                <input
-                    type="text"
-                    placeholder="Where to?"
-                    class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm font-semibold"
-                    prop:value=display_value
-                    readonly=true
-                />
-            </div>
 
-            <Show when=move || is_open()>
-                <div class="absolute mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                    <div class="p-4">
-                        <div class="space-y-4">
-                            <Suspense fallback=move || {
-                                view! { <p>"Loading..."</p> }
-                            }>
-                                {move || {
-                                    destinations_resource
-                                        .get()
-                                        .map(|dest_vec| {
-                                            // log!("{dest_vec:?}");
-                                            view! {
-                                                <ShowDestinations
-                                                    dest_vec=dest_vec.unwrap_or_default()
-                                                />
-                                            }
-                                        })
-                                }}
+        <div class="absolute inset-0 flex items-center justify-center">
+        <div class="w-full h-full flex items-center" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)>
+            <input
+                type="text"
+                placeholder=""
+                class="w-full h-full text-gray-800 bg-transparent border-none focus:outline-none text-sm font-semibold text-center"
+                prop:value=display_value
+                readonly=true
+            />
+        </div>
 
-                            </Suspense>
-                        </div>
+        <Show when=move || is_open()>
+            <div class="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                <div class="p-4">
+                    <div class="space-y-4">
+                        <Suspense fallback=move || {
+                            view! { <p>"Loading..."</p> }
+                        }>
+                            {move || {
+                                destinations_resource
+                                    .get()
+                                    .map(|dest_vec| {
+                                        // log!("{dest_vec:?}");
+                                        view! {
+                                            <ShowDestinations
+                                                dest_vec=dest_vec.unwrap_or_default()
+                                            />
+                                        }
+                                    })
+                            }}
+                        </Suspense>
                     </div>
                 </div>
-            </Show>
-        </div>
+            </div>
+        </Show>
+    </div>
     }
 }
 
