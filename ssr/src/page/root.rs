@@ -13,7 +13,8 @@ use crate::{
     app::AppRoutes,
     component::{
         DateTimeRangePickerCustom, Destination, DestinationPicker, EstateDaoIcon, FilterAndSortBy,
-        GuestQuantity, GuestSelection, HSettingIcon, SelectedDateRange,
+        FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
+        SelectedDateRange,
     },
     state::search_state::{SearchCtx, SearchListResults},
 };
@@ -34,10 +35,12 @@ use std::time::Duration;
 pub fn RootPage() -> impl IntoView {
     view! {
         <main>
-            <div>
-                <HeroSection />
-                <MostPopular />
-            </div>
+            <FullScreenBannerForMobileModeNotReady>
+                <div>
+                    <HeroSection />
+                    <MostPopular />
+                </div>
+            </FullScreenBannerForMobileModeNotReady>
             // <Footer />
         </main>
     }

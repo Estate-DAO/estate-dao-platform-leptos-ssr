@@ -66,3 +66,6 @@ pub mod modal;
 pub mod overlay;
 
 pub mod outside_click_detector;
+
+pub mod full_screen_mobile_banner;
+pub use full_screen_mobile_banner::*;
