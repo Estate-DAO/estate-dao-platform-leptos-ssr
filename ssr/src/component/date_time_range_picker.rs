@@ -167,7 +167,7 @@ fn DateCells(
 
     let start_month_day = create_rw_signal(0_u32);
 
-    let days_in_month = match month_signal() {
+    let days_in_month = create_memo(move |_| match month_signal() {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
         2 => {
@@ -178,7 +178,7 @@ fn DateCells(
             }
         }
         _ => 0,
-    };
+    });
 
     let weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -216,7 +216,7 @@ fn DateCells(
                         .collect::<Vec<_>>()
                 }}
                 {move || {
-                    (1..=days_in_month)
+                    (1..=days_in_month())
                         .map(|day_num| {
                             let on_click = move |_val| {
                                 // Check if date is in the past
