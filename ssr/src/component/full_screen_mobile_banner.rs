@@ -19,7 +19,7 @@ pub fn FullScreenBannerForMobileModeNotReady(children: ChildrenFn) -> impl IntoV
 
     view! {
         <>
-            <Modal show=show>
+            <Modal show=show never_close=true>
                 <div class="flex flex-col items-center justify-center text-center gap-6 py-8">
                     <h2 class="text-2xl font-semibold text-gray-800">
                         Desktop Experience Recommended

@@ -4,7 +4,15 @@ use leptos_icons::Icon; // Specific imports are slightly clearer
 use leptos_router::use_navigate;
 
 #[component]
-pub fn Modal(#[prop(into)] show: RwSignal<bool>, children: ChildrenFn) -> impl IntoView {
+pub fn Modal(
+    #[prop(into)] show: RwSignal<bool>,
+    children: ChildrenFn,
+
+    /// If true, the modal cannot be closed by the user
+    /// This is useful for non-closable modals like the full-screen mobile banner
+    #[prop(optional, default = false)]
+    never_close: bool,
+) -> impl IntoView {
     view! {
         // Use the ShadowOverlay, passing the show signal
         <ShadowOverlay show=show>
@@ -12,7 +20,7 @@ pub fn Modal(#[prop(into)] show: RwSignal<bool>, children: ChildrenFn) -> impl I
                 // Header section with the close button
                 <div class="flex w-full justify-end items-center p-2 sticky top-0 bg-white z-10"> // Added sticky positioning for close button
                     <button
-                        on:click=move |_| show.set(false) // Close button updates the show signal
+                        on:click=move |_| if !never_close { show.set(false) } // Close button updates the show signal
                         class="text-gray-700 hover:text-red-600 p-1 text-lg md:text-xl rounded-full transition-colors"
                         aria-label="Close modal" // Added aria-label for accessibility
                     >
