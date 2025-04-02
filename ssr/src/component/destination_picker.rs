@@ -106,7 +106,7 @@ pub fn DestinationPicker() -> impl IntoView {
             .destination
             .get()
             .map(|d| format!("{}, {}", d.city, d.country_name))
-            .unwrap_or_else(|| "Where to?".to_string())
+            .unwrap_or_else(|| "".to_string())
     });
 
     view! {
@@ -114,7 +114,7 @@ pub fn DestinationPicker() -> impl IntoView {
             <div class="w-full" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)>
                 <input
                     type="text"
-                    placeholder=""
+                    placeholder="Where to?"
                     class="w-full ml-2 py-2 pl-8 text-gray-800 bg-transparent border-none focus:outline-none text-sm font-semibold"
                     prop:value=display_value
                     readonly=true
