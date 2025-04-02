@@ -379,13 +379,28 @@ impl PricingBookNowState {
             .sum()
     }
 
+    /// Returns a vector of room unique IDs based on user's room selection.
+    ///
+    /// For each selected room type, the function includes the room's unique ID
+    /// in the result vector multiple times based on the room count. For example,
+    /// if a user selects 4 rooms of the same type, the unique ID for that room
+    /// will appear 4 times in the result.
+    ///
+    /// Empty room IDs are filtered out from the result.
     pub fn room_unique_ids() -> Vec<String> {
         let room_counters = Self::get().room_counters_as_chosen_by_user.get();
-        room_counters
-            .iter()
-            .map(|room_details| room_details.room_unique_id.clone())
-            .filter(|id| !id.is_empty())
-            .collect()
+        let mut result = Vec::new();
+
+        for room_details in room_counters.iter() {
+            if !room_details.room_unique_id.is_empty() {
+                // Add the same unique_id multiple times based on room_count
+                for _ in 0..room_details.room_count {
+                    result.push(room_details.room_unique_id.clone());
+                }
+            }
+        }
+
+        result
     }
 
     pub fn total_room_price_for_all_user_selected_rooms() -> f64 {
