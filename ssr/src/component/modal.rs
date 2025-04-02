@@ -17,6 +17,7 @@ pub fn Modal(
         // Use the ShadowOverlay, passing the show signal
         <ShadowOverlay show=show>
             <div class="mx-4 py-4 px-8 max-w-lg max-h-[90vh] items-center cursor-auto flex-col flex justify-around bg-white rounded-lg shadow-lg overflow-y-auto">
+                <Show when=move || !never_close>
                 // Header section with the close button
                 <div class="flex w-full justify-end items-center p-2 sticky top-0 bg-white z-10"> // Added sticky positioning for close button
                     <button
@@ -27,6 +28,7 @@ pub fn Modal(
                         <Icon icon=icondata::ChCross/>
                     </button>
                 </div>
+                </Show>
                 // The main content area provided by the user of the Modal component
                 <div class="py-4 w-full">{children()}</div>
             </div>

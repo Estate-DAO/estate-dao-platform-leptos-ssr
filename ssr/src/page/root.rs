@@ -192,12 +192,17 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         <Icon icon=icondata::BsMap class="text-black" />
                     </div>
 
-                    <button
-                        class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left flex items-center"
-                        disabled=disabled
+                    <Show
+                        when=move || disabled.get()
+                        fallback=move || view! { <div class="flex-1"></div> }
                     >
-                        {move || destination_display.get()}
-                    </button>
+                        <button
+                            class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left flex items-center"
+                            disabled=disabled.get()
+                        >
+                            {move || destination_display.get()}
+                        </button>
+                    </Show>
                 </div>
 
                 <Show when=move || !disabled.get()>

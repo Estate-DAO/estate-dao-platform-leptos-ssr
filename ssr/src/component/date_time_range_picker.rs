@@ -29,6 +29,41 @@ impl SelectedDateRange {
         format!("{} - {}", start_str, end_str)
     }
 
+    pub fn display_string(&self) -> String {
+        if self.start == (0, 0, 0) && self.end == (0, 0, 0) {
+            return "Check in - Check out".to_string();
+        }
+
+        // Ensure we're displaying dates in the correct order
+        let (start_date, end_date) = if self.start != (0, 0, 0) && self.end != (0, 0, 0) {
+            if self.start > self.end {
+                // If dates are in wrong order, swap them in the display
+                (self.end, self.start)
+            } else {
+                (self.start, self.end)
+            }
+        } else {
+            (self.start, self.end)
+        };
+
+        let start_str = if start_date == (0, 0, 0) {
+            "Check in".to_string()
+        } else {
+            format!(
+                "{:04}-{:02}-{:02}",
+                start_date.0, start_date.1, start_date.2
+            )
+        };
+
+        let end_str = if end_date == (0, 0, 0) {
+            "Check out".to_string()
+        } else {
+            format!("{:04}-{:02}-{:02}", end_date.0, end_date.1, end_date.2)
+        };
+
+        format!("{} - {}", start_str, end_str)
+    }
+
     pub fn no_of_nights(&self) -> u32 {
         let (start_year, start_month, start_day) = self.start;
         let (end_year, end_month, end_day) = self.end;
@@ -46,6 +81,22 @@ impl SelectedDateRange {
             }
         }
         0
+    }
+
+    pub fn normalize(&self) -> Self {
+        if self.start == (0, 0, 0) || self.end == (0, 0, 0) {
+            return self.clone();
+        }
+
+        // If start date is after end date, swap them
+        if self.start > self.end {
+            return SelectedDateRange {
+                start: self.end,
+                end: self.start,
+            };
+        }
+
+        self.clone()
     }
 
     pub fn format_date(date: (u32, u32, u32)) -> String {
@@ -83,11 +134,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
     let date_range_display = create_memo(move |_prev| {
         let range = selected_range.get();
-        if range.start == (0, 0, 0) && range.end == (0, 0, 0) {
-            "Check in - Check out".to_string()
-        } else {
-            range.to_string()
-        }
+        range.display_string()
     });
 
     // todo: find a way to not set signal from effect
@@ -242,24 +289,29 @@ fn DateCells(
                                         end: range.end,
                                     }
                                 } else if range.end == (0, 0, 0) {
-                                    if (year_signal(), month_signal(), day_num) > range.start {
+                                    // If we're selecting the end date, ensure it's after the start date
+                                    if date_tuple > range.start {
                                         SelectedDateRange {
                                             start: range.start,
                                             end: date_tuple,
                                         }
                                     } else {
+                                        // If the selected date is before the start date,
+                                        // make it the new start date and make the old start date the end date
                                         SelectedDateRange {
                                             start: date_tuple,
                                             end: range.start,
                                         }
                                     }
                                 } else {
+                                    // If both dates are already set and we're selecting a new date,
+                                    // start a new selection with this date as the start date
                                     SelectedDateRange {
                                         start: date_tuple,
                                         end: (0, 0, 0),
                                     }
                                 };
-                                selected_range.set(new_range);
+                                selected_range.set(new_range.normalize());
                                 let updated_range = selected_range.get();
                             };
                             view! {
