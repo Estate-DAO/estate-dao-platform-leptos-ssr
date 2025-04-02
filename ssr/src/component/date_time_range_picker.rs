@@ -5,7 +5,7 @@ use leptos_icons::*;
 // use leptos_use::use_timestamp;
 use crate::state::{input_group_state::InputGroupState, search_state::SearchCtx};
 use crate::utils::date::*;
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate, TimeZone, Utc};
 // use leptos::logging::log;
 use crate::log;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
@@ -219,6 +219,11 @@ fn DateCells(
                     (1..=days_in_month)
                         .map(|day_num| {
                             let on_click = move |_val| {
+                                // Check if date is in the past
+                                if is_date_in_past(year_signal(), month_signal(), day_num) {
+                                    return; // Don't allow selecting past dates
+                                }
+
                                 let date_tuple = (year_signal(), month_signal(), day_num);
                                 let range = selected_range.get();
                                 let new_range = if range.start == date_tuple {
@@ -282,26 +287,64 @@ fn DateCells(
     }
 }
 
-fn class_signal(
+pub fn class_signal(
     selected_range: Signal<SelectedDateRange>,
     day_num: u32,
     year: u32,
     month: u32,
 ) -> String {
     let range = selected_range.get();
-    format!(
-        "border p-2 cursor-pointer w-10 rounded-md {} {}",
-        if (year, month, day_num) == range.start || (year, month, day_num) == range.end {
-            "bg-blue-500 text-white hover:bg-blue-600"
-        } else {
-            " hover:bg-gray-100"
-        },
-        if is_date_in_range(range.start, range.end, year, month, day_num) {
-            "bg-gray-200"
-        } else {
-            ""
-        },
-    )
+    let date_tuple = (year, month, day_num);
+
+    // Check if date is in the past
+    let is_past_date = is_date_in_past(year, month, day_num);
+
+    if is_past_date {
+        return "w-8 h-8 rounded-full text-gray-300 cursor-not-allowed".to_string();
+    }
+
+    if range.start == date_tuple {
+        return "w-8 h-8 rounded-full bg-black text-white".to_string();
+    }
+
+    if range.end == date_tuple {
+        return "w-8 h-8 rounded-full bg-black text-white".to_string();
+    }
+
+    if range.start != (0, 0, 0)
+        && range.end != (0, 0, 0)
+        && is_date_between(date_tuple, range.start, range.end)
+    {
+        return "w-8 h-8 rounded-full bg-gray-200".to_string();
+    }
+
+    "w-8 h-8 rounded-full hover:bg-gray-200".to_string()
+}
+
+/// Checks if a date is in the past (before today)
+fn is_date_in_past(year: u32, month: u32, day: u32) -> bool {
+    let today = Local::now().date_naive();
+
+    if let Some(check_date) = NaiveDate::from_ymd_opt(year as i32, month, day) {
+        return check_date < today;
+    }
+
+    false
+}
+
+/// Checks if a date is between two other dates (inclusive)
+fn is_date_between(date: (u32, u32, u32), start: (u32, u32, u32), end: (u32, u32, u32)) -> bool {
+    // Safely convert to NaiveDate, returning false if any date is invalid
+    let date_opt = NaiveDate::from_ymd_opt(date.0 as i32, date.1, date.2);
+    let start_opt = NaiveDate::from_ymd_opt(start.0 as i32, start.1, start.2);
+    let end_opt = NaiveDate::from_ymd_opt(end.0 as i32, end.1, end.2);
+
+    // Only proceed if all dates are valid
+    if let (Some(date), Some(start), Some(end)) = (date_opt, start_opt, end_opt) {
+        return date >= start && date <= end;
+    }
+
+    false
 }
 
 fn calculate_starting_day_of_month(year_month: Signal<(u32, u32)>, result: RwSignal<u32>) -> u32 {
