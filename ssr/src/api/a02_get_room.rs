@@ -230,16 +230,6 @@ impl ProvabReqMeta for HotelRoomRequest {
 
 #[server(GetRoom)]
 pub async fn get_room(request: HotelRoomRequest) -> Result<HotelRoomResponse, ServerFnError> {
-    let provab = Provab::default();
-
-    // Add 15 second sleep
-    // tokio::time::sleep(std::time::Duration::from_secs(15)).await;
-
-    match provab.send(request).await {
-        Ok(response) => Ok(response),
-        Err(e) => {
-            log!("error: {:?}", e);
-            Err(ServerFnError::ServerError(e.to_string()))
-        }
-    }
+    use crate::api::RetryableRequest;
+    request.retry_with_backoff(3).await
 }
