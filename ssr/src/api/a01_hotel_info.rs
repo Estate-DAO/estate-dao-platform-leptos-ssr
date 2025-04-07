@@ -254,7 +254,8 @@ pub async fn hotel_info(
     // let search_list_page: SearchListResults = expect_context();
     // let hotel_code_token = search_list_page.get_hotel_code_results_token_map().get(&hotel_code).unwrap();
 
-    let provab = Provab::default();
+    // let provab = Provab::default();
+    let provab: Provab = expect_context();
 
     // log!("provab_default: {provab:?}");
     match provab.send(request).await {

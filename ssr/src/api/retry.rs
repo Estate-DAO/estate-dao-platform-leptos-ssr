@@ -16,7 +16,12 @@ pub trait RetryableRequest: ProvabReq + Serialize + Clone + 'static {
     #[cfg(feature = "ssr")]
     /// Retry the API call with exponential backoff
     async fn retry_with_backoff(self, retry_count: u8) -> Result<Self::Response, ServerFnError> {
-        let provab = Provab::default();
+        // let provab = Provab::default();
+        // since this is working in SSR context, we need to get the provab instance from context
+
+        use leptos::expect_context;
+        let provab: Provab = expect_context();
+
         let mut attempts = 0;
         let max_attempts = retry_count as usize + 1; // +1 because we count the initial attempt
 

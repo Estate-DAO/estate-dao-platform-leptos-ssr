@@ -251,7 +251,8 @@ pub async fn search_hotel(
     request: HotelSearchRequest,
 ) -> Result<HotelSearchResponse, ServerFnError> {
     log!("SEARCH_HOTEL_API: {request:?}");
-    let provab = Provab::default();
+    let provab: Provab = expect_context();
+    // let provab = Provab::default();
 
     match provab.send(request).await {
         Ok(response) => Ok(response),

@@ -3,8 +3,8 @@
 
 use cfg_if::cfg_if;
 use estate_fe::{
-    api::consts::EnvVarConfig,
-    init::AppStateBuilder,
+    api::{consts::EnvVarConfig, Provab},
+    init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
         mock_handler::MockStep, payment_handler::GetPaymentStatusFromPaymentProvider,
         pipeline::process_pipeline, pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
@@ -56,6 +56,11 @@ cfg_if! {
                 move || {
                     provide_context(app_state.env_var_config.clone());
                     provide_context(AdminCanisters::from_env());
+
+                    // provide a single instance of provab client so that connection pooling can be used
+                    // creating a new client for each reqwest causes new TCP connection each time
+                    // This results in TCP handshake, slow-start, causing considerable latency!
+                    provide_context(app_state.provab_client.clone());
                 },
                 request,
             )
@@ -219,6 +224,9 @@ cfg_if! {
             better_panic::install();
             tracing_subscriber::fmt::init();
 
+            // initialize provab client
+            initialize_provab_client();
+
             let conf = get_configuration(None).await.unwrap();
             let leptos_options = conf.leptos_options;
             let addr = leptos_options.site_addr;
@@ -226,7 +234,7 @@ cfg_if! {
 
             // let (count_tx, count_rx) = broadcast::channel(100);
 
-            let res = AppStateBuilder::new(leptos_options, routes.clone())
+            let res = AppStateBuilder::new(leptos_options, routes.clone(), get_provab_client())
             .build()
             .await;
 
