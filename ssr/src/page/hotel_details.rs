@@ -393,7 +393,8 @@ pub fn PricingBookNow() -> impl IntoView {
 
                 <Show when=move || PricingBookNowState::is_room_available_from_api() fallback=SkeletonPricing>
                     <For
-                        each=move || PricingBookNowState::get().rooms_available_for_booking_from_api.get()
+                        each=move || PricingBookNowState::list_rooms_in_pricing_component()
+                        // each=move || PricingBookNowState::get().rooms_available_for_booking_from_api.get()
                         key=|room| room.clone()
                         let:room
                     >

@@ -430,6 +430,25 @@ impl PricingBookNowState {
             .room_counters_as_chosen_by_user
             .set(RoomForPricing::new());
     }
+
+    /// Returns up to 5 rooms from the available rooms for booking
+    pub fn list_rooms_in_pricing_component() -> RoomForPricing {
+        let mut limited_rooms = RoomForPricing::new();
+        Self::get()
+            .rooms_available_for_booking_from_api
+            .get()
+            .iter()
+            .take(5)
+            .for_each(|room_details_for_pricing_component| {
+                limited_rooms.upsert(
+                    room_details_for_pricing_component.room_type.clone(),
+                    room_details_for_pricing_component.room_count,
+                    room_details_for_pricing_component.room_unique_id.clone(),
+                    room_details_for_pricing_component.room_price,
+                );
+            });
+        limited_rooms
+    }
 }
 
 /// to enable easy conversion
