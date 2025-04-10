@@ -27,8 +27,6 @@ pub trait GlobalStateForLeptos: Clone + Default + 'static + Sized {
 use cfg_if::cfg_if;
 use leptos::{provide_context, use_context};
 
-use crate::api::consts::EnvVarConfig;
-
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::extract::FromRef;
@@ -37,8 +35,9 @@ cfg_if! {
         use leptos_router::RouteListing;
         use crate::ssr_booking::PipelineLockManager;
         // use tokio::sync::broadcast;
+        use crate::{api::consts::EnvVarConfig, utils::notifier::Notifier};
 
-        #[derive(FromRef, Clone)]
+        #[derive(FromRef, Clone, Debug)]
         pub struct AppState {
             pub leptos_options: LeptosOptions,
             // pub canisters: Canisters<false>,
@@ -52,6 +51,7 @@ cfg_if! {
             // pub count_tx: broadcast::Sender<i32>,
             pub pipeline_lock_manager: PipelineLockManager,
             pub provab_client: &'static Provab,
+            pub notifier_for_pipeline: &'static Notifier,
             // pub cookie_key: Key,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,

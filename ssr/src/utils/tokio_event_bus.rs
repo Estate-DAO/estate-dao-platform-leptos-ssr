@@ -44,6 +44,7 @@ pub struct Event<T: Clone + std::fmt::Debug + Send + 'static> {
 }
 
 /// A subscription holding a topic pattern and a bounded sender channel for events.
+#[derive(Debug)]
 pub struct Subscription<T: Clone + std::fmt::Debug + Send + 'static> {
     /// The topic pattern this subscription listens to (e.g., "booking:*").
     pub pattern: String,
@@ -52,6 +53,7 @@ pub struct Subscription<T: Clone + std::fmt::Debug + Send + 'static> {
 }
 
 /// The EventBus holds a registry of subscriptions and auto-generates subscriber IDs.
+#[derive(Debug)]
 pub struct EventBus<T: Clone + std::fmt::Debug + Send + 'static> {
     /// A thread-safe map of subscriber IDs to their subscriptions.
     subscriptions: RwLock<HashMap<usize, Subscription<T>>>,

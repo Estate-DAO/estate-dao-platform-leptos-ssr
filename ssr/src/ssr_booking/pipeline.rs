@@ -1,10 +1,10 @@
-use crate::utils::notifier::Notifier;
+use crate::utils::notifier::{self, Notifier};
 use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
 use crate::utils::uuidv7;
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio::time::{sleep, Duration};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, instrument, span, Instrument, Level};
 
 use super::{SSRBookingPipelineStep, ServerSideBookingEvent};
 
@@ -36,6 +36,7 @@ pub trait PipelineExecutor: Send + Sync {
 // --------------------------
 
 /// Process the pipeline of steps in order, optionally publishing events via `notifier`.
+#[instrument(skip(notifier, steps), fields(correlation_id))]
 pub async fn process_pipeline(
     event: ServerSideBookingEvent,
     steps: &[SSRBookingPipelineStep],
@@ -45,7 +46,8 @@ pub async fn process_pipeline(
 
     // Generate a correlation_id for this pipeline run.
     let correlation_id = uuidv7::create();
-    info!("process_pipeline - correlation_id = {}", correlation_id);
+    tracing::Span::current().record("correlation_id", &correlation_id.as_str());
+    info!("process_pipeline started");
 
     // 1. Publish OnPipelineStart
     if let Some(n) = notifier {
@@ -64,13 +66,15 @@ pub async fn process_pipeline(
     for step in steps {
         // For logging or event purposes, let's define a step name
         let step_name = step.to_string();
-        info!("process_pipeline - step_name = {}", step_name);
+        let step_span = span!(Level::INFO, "pipeline_step", name = %step_name);
+        let _enter = step_span.enter();
 
         // We first validate
         let decision = step.validate(&current_event).await?;
 
         match decision {
             PipelineDecision::Abort(reason) => {
+                info!(status = "aborted", reason = %reason, "Pipeline step aborted");
                 // Publish OnPipelineAbort
                 if let Some(n) = notifier {
                     let abort_event = NotifierEvent {
@@ -87,6 +91,7 @@ pub async fn process_pipeline(
                 return Err(format!("Pipeline aborted: {}", reason));
             }
             PipelineDecision::Skip => {
+                info!(status = "skipped", "Pipeline step skipped");
                 // Publish OnStepSkipped
                 if let Some(n) = notifier {
                     let skipped_event = NotifierEvent {
@@ -104,6 +109,7 @@ pub async fn process_pipeline(
                 continue;
             }
             PipelineDecision::Run => {
+                info!(status = "running", "Pipeline step starting");
                 // Publish OnStepStart
                 if let Some(n) = notifier {
                     let start_event = NotifierEvent {
@@ -120,6 +126,7 @@ pub async fn process_pipeline(
                 // Actually run the step
                 current_event = step.execute(current_event).await?;
 
+                info!(status = "completed", "Pipeline step completed");
                 // Publish OnStepCompleted
                 if let Some(n) = notifier {
                     let completed_event = NotifierEvent {
@@ -136,22 +143,28 @@ pub async fn process_pipeline(
         }
     }
 
-    // 3. If all steps succeed, publish OnPipelineEnd
-    if let Some(n) = notifier {
-        let end_event = NotifierEvent {
-            event_id: uuidv7::create(),
-            correlation_id,
-            timestamp: Utc::now(),
-            order_id: current_event.order_id.clone(),
-            step_name: None,
-            event_type: NotifierEventType::OnPipelineEnd,
-        };
-        n.notify(end_event).await;
+    let notifier_span = span!(Level::DEBUG, "notifier");
+    {
+        let _nspan = notifier_span.enter();
+        // 3. If all steps succeed, publish OnPipelineEnd
+        if let Some(n) = notifier {
+            let end_event = NotifierEvent {
+                event_id: uuidv7::create(),
+                correlation_id,
+                timestamp: Utc::now(),
+                order_id: current_event.order_id.clone(),
+                step_name: None,
+                event_type: NotifierEventType::OnPipelineEnd,
+            };
+            debug!("NotifierEvent = {end_event:#?}");
+            n.notify(end_event).await;
+        }
     }
 
     // this is only for local testing purpose of concurrency of the pipeline.
     #[cfg(feature = "mock-pipeline")]
     tokio::time::sleep(Duration::from_millis(4000)).await;
 
+    info!("process_pipeline completed");
     Ok(current_event)
 }

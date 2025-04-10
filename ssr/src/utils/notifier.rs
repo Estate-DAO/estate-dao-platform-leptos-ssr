@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 /// Notifier publishes events to an EventBus.
 /// We use the concrete type: EventBus<NotifierEvent>
+#[derive(Debug)]
 pub struct Notifier {
     pub bus: Option<Arc<crate::utils::tokio_event_bus::EventBus<NotifierEvent>>>,
 }

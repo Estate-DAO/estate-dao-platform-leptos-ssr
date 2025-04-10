@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use std::time::{Duration, Instant};
 use tokio::time;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, instrument, warn};
 
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
 use crate::api::payments::NowPayments;
 use crate::canister::backend::{
-    BackendPaymentStatus, BePaymentApiResponse, BookingId, PaymentDetails,
+    BackendPaymentStatus, BePaymentApiResponse, BookingId, PaymentDetails, Result2,
 };
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
@@ -71,6 +71,7 @@ pub struct GetPaymentStatusFromPaymentProvider;
 
 #[async_trait]
 impl PipelineValidator for GetPaymentStatusFromPaymentProvider {
+    #[instrument(name = "validate_get_payment_status", skip(self, event), err(Debug))]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
         if event.payment_id.is_some() {
             // what is relation between booking id and order id ??? (see: memories/booking_id.md)
@@ -88,9 +89,8 @@ impl PipelineValidator for GetPaymentStatusFromPaymentProvider {
 
 #[async_trait]
 impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
+    #[instrument(name = "execute_get_payment_status", skip(event), err(Debug))]
     async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
-        info!("Executing GetPaymentStatusFromPaymentProvider");
-
         // step 1:  Retrieves the payment status  from API
 
         // Get payment ID from event
@@ -148,20 +148,28 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
             payment_api_response,
         };
 
-        // Update payment details in backend
         let admin_canister = AdminCanisters::from_env();
         let backend = admin_canister.backend_canister().await;
         // .map_err(|e| format!("Failed to get backend canister: {}", e))?;
 
-        backend
+        // Update payment details in backend and verify the response
+        let updated_booking = backend
             .update_payment_details(booking_id, payment_details)
             .await
-            .map_err(|e| {
-                format!(
-                    "Failed to update payment details in backend_canister: {}",
-                    e
-                )
-            })?;
+            .map_err(|e| format!("call backend canister to update payment details: {}", e))?;
+
+        // Verify that payment status is correctly set to Paid
+        match updated_booking {
+            Result2::Ok(booking) => {
+                info!(
+                    "Payment details updated successfully. Payment status: {:?}",
+                    booking.payment_details.payment_status
+                );
+            }
+            Result2::Err(e) => {
+                return Err(format!("Failed to update payment details: {}", e));
+            }
+        }
 
         // step 3: if the backend update is successful, return updated_event
         // Update the event with the latest payment status and ensure email is set

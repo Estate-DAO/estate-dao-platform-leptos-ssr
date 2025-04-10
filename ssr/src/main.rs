@@ -9,7 +9,7 @@ use estate_fe::{
         mock_handler::MockStep, payment_handler::GetPaymentStatusFromPaymentProvider,
         pipeline::process_pipeline, pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
-    utils::{admin::AdminCanisters, notifier::Notifier, sort_json::sort_json},
+    utils::{admin::AdminCanisters, estate_tracing, notifier::Notifier, sort_json::sort_json},
 };
 
 cfg_if! {
@@ -44,6 +44,9 @@ cfg_if! {
         use tokio::sync::broadcast;
         use std::sync::Arc;
         use estate_fe::ssr_booking::ServerSideBookingEvent;
+
+        use tracing::instrument;
+
 
         pub async fn server_fn_handler(
             State(app_state): State<AppState>,
@@ -114,17 +117,25 @@ cfg_if! {
         // }
 
 
+        #[instrument(skip(state))]
         async fn start_ssr_booking_processing_pipeline(payload: &Value, state: &AppState) {
             let payment_id = payload["payment_id"].as_str();
             let order_id = payload["order_id"].as_str().unwrap_or_default();
             // let order_description = payload["order_description"].as_str().unwrap_or_default().to_string();
 
-            if !state.pipeline_lock_manager.try_acquire_lock(payment_id, order_id) {
-                debug!("Pipeline already running for payment_id: {:?}, order_id: {}", payment_id, order_id);
+            debug!("[ssr_booking] payment_id: {:?}, order_id: {}", payment_id, order_id);
+            if order_id.is_empty() {
+                debug!("[ssr_booking] No order_id provided for payment_id: {:?}", payment_id);
                 return;
             }
 
-            let notifier = Notifier::with_bus();
+            if !state.pipeline_lock_manager.try_acquire_lock(payment_id, order_id) {
+                debug!("[ssr_booking] Pipeline already running for payment_id: {:?}, order_id: {}", payment_id, order_id);
+                return;
+            }
+
+            // start this notifier in app_state so that you have only one event bus with notifier running
+            let notifier = state.notifier_for_pipeline;
             let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
@@ -137,24 +148,24 @@ cfg_if! {
                 backend_payment_status: Some(String::from("started_processing")),
             };
 
-            debug!("ServerSideBookingEvent = {:?}", event);
-
             let lock_manager = state.pipeline_lock_manager.clone();
             let payment_id = payment_id.map(String::from);
             let order_id = order_id.to_string();
 
             tokio::spawn(async move {
-                let result = process_pipeline(event, &[payment_status_step, mock_step], Some(&notifier)).await;
+                let result = process_pipeline(event, &[payment_status_step, mock_step], Some(notifier)).await;
 
                 lock_manager.release_lock(payment_id.as_deref(), &order_id);
 
                 match result {
-                    Ok(_) => debug!("Pipeline processed successfully"),
-                    Err(e) => error!("Pipeline processing failed: {:?}", e),
+                    Ok(val) => debug!("[ssr_booking] Pipeline processed successfully - {val:#?}"),
+                    Err(e) => error!("[ssr_booking] Pipeline processing failed - {e:#?}"),
                 }
             });
         }
 
+
+        #[instrument(skip(state, headers, body, remote_addr))]
         async fn nowpayments_webhook(
             ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
             State(state): State<AppState>,
@@ -222,19 +233,15 @@ cfg_if! {
         #[tokio::main]
         async fn main() {
             better_panic::install();
-            tracing_subscriber::fmt::init();
+            estate_tracing::init_tracing();
 
-            // initialize provab client
-            initialize_provab_client();
 
             let conf = get_configuration(None).await.unwrap();
             let leptos_options = conf.leptos_options;
             let addr = leptos_options.site_addr;
             let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
 
-            // let (count_tx, count_rx) = broadcast::channel(100);
-
-            let res = AppStateBuilder::new(leptos_options, routes.clone(), get_provab_client())
+            let res = AppStateBuilder::new(leptos_options, routes.clone())
             .build()
             .await;
 

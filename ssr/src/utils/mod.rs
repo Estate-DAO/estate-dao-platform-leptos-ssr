@@ -16,6 +16,7 @@ cfg_if::cfg_if! {
         pub mod uuidv7;
         pub mod notifier;
         pub mod notifier_event;
+        pub mod estate_tracing;
     }
 }
 
