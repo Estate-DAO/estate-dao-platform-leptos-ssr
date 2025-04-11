@@ -184,7 +184,7 @@ fn parse_provab_headers(provab_headers: &str) -> HashMap<String, String> {
     }
 }
 
-fn env_w_default(key: &str, default: &str) -> Result<String, EstateEnvConfigError> {
+pub fn env_w_default(key: &str, default: &str) -> Result<String, EstateEnvConfigError> {
     match std::env::var(key) {
         Ok(val) => Ok(val),
         Err(VarError::NotPresent) => Ok(default.to_string()),

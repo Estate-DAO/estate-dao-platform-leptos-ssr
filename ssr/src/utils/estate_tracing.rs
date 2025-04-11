@@ -68,16 +68,25 @@ pub fn init_tracing() {
         .with_thread_ids(true)
         .with_filter(create_env_filter());
 
-    // Layer for writing to file
-    let file_layer = fmt::layer()
-        .with_writer(file_writer)
-        .with_ansi(false)
-        .with_target(true)
-        .with_filter(create_env_filter());
+    #[cfg(feature = "debug_log")]
+    {
+        // Layer for writing to file
+        let file_layer = fmt::layer()
+            .with_writer(file_writer)
+            .with_ansi(false)
+            .with_target(true)
+            .with_filter(create_env_filter());
 
-    // Build and initialize the subscriber
-    Registry::default()
-        .with(stdout_layer)
-        .with(file_layer)
-        .init();
+        // Build and initialize the subscriber
+        Registry::default()
+            .with(stdout_layer)
+            .with(file_layer)
+            .init();
+    }
+
+    #[cfg(not(feature = "debug_log"))]
+    {
+        // Build and initialize the subscriber
+        Registry::default().with(stdout_layer).init();
+    }
 }

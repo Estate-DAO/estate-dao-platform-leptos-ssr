@@ -1,6 +1,6 @@
 use crate::{
     api::{consts::EnvVarConfig, payments::ports::GetPaymentStatusResponse},
-    component::ErrorPopup,
+    component::{ErrorPopup, NotificationExample, NotificationState},
     error_template::{AppError, ErrorTemplate},
     page::{
         BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
@@ -41,6 +41,7 @@ pub enum AppRoutes {
     HotelDetails,
     BlockRoom,
     Confirmation,
+    Notifications,
 }
 
 impl AppRoutes {
@@ -51,6 +52,7 @@ impl AppRoutes {
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
             AppRoutes::Confirmation => "/confirmation",
+            AppRoutes::Notifications => "/notifications",
         }
     }
 }
@@ -84,6 +86,8 @@ pub fn App() -> impl IntoView {
 
     provide_context(ApiErrorState::default());
 
+    provide_context(NotificationState::default());
+
     // Provides Query Client for entire app.
     // leptos_query::provide_query_client();
     provide_query_client_with_options_and_persister(
@@ -114,6 +118,7 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomPage />
                     <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
+                    <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>
             </main>
         </Router>

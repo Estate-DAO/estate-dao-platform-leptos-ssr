@@ -3,13 +3,20 @@
 
 use cfg_if::cfg_if;
 use estate_fe::{
-    api::{consts::EnvVarConfig, Provab},
+    api::{consts::EnvVarConfig, payments::NowPayments, Provab},
     init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
         mock_handler::MockStep, payment_handler::GetPaymentStatusFromPaymentProvider,
         pipeline::process_pipeline, pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
-    utils::{admin::AdminCanisters, estate_tracing, notifier::Notifier, sort_json::sort_json},
+    utils::{
+        admin::AdminCanisters,
+        estate_tracing,
+        event_stream::event_stream_handler,
+        notifier::Notifier,
+        sort_json::sort_json, // notification_system::{NOTIFICATION_SYSTEM, Notification},
+                              // event_stream::{event_stream_handler, counter_events},
+    },
 };
 
 cfg_if! {
@@ -41,11 +48,14 @@ cfg_if! {
         use futures::stream::{self, Stream};
         use std::{convert::Infallible, path::PathBuf, time::Duration};
         use tokio_stream::StreamExt as _;
-        use tokio::sync::broadcast;
+        use tokio::sync::{broadcast, mpsc};
         use std::sync::Arc;
         use estate_fe::ssr_booking::ServerSideBookingEvent;
 
         use tracing::instrument;
+        use tracing::Level;
+
+
 
 
         pub async fn server_fn_handler(
@@ -119,17 +129,26 @@ cfg_if! {
 
         #[instrument(skip(state))]
         async fn start_ssr_booking_processing_pipeline(payload: &Value, state: &AppState) {
-            let payment_id = payload["payment_id"].as_str();
-            let order_id = payload["order_id"].as_str().unwrap_or_default();
+            let span = tracing::span!(Level::DEBUG, "start_ssr_booking_processing_pipeline");
+            let _enter = span.enter();
+
+            let payload_str = serde_json::to_string_pretty(payload).unwrap();
+            debug!("payload_str: {payload_str}");
+
+
+            let payment_id = payload.get("payment_id").and_then(|v| v.as_u64()).map(|id| id.to_string());
+            let order_id = payload.get("order_id").and_then(|v| v.as_str()) ;
+
             // let order_description = payload["order_description"].as_str().unwrap_or_default().to_string();
 
-            debug!("[ssr_booking] payment_id: {:?}, order_id: {}", payment_id, order_id);
-            if order_id.is_empty() {
+            debug!("[ssr_booking] payment_id: {:?}, order_id: {:?}", payment_id, order_id);
+            if order_id.is_none() {
                 debug!("[ssr_booking] No order_id provided for payment_id: {:?}", payment_id);
                 return;
             }
+            let order_id = order_id.unwrap();
 
-            if !state.pipeline_lock_manager.try_acquire_lock(payment_id, order_id) {
+            if !state.pipeline_lock_manager.try_acquire_lock(payment_id.as_deref(), order_id) {
                 debug!("[ssr_booking] Pipeline already running for payment_id: {:?}, order_id: {}", payment_id, order_id);
                 return;
             }
@@ -140,7 +159,7 @@ cfg_if! {
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
             let event = ServerSideBookingEvent {
-                payment_id: payment_id.map(String::from),
+                payment_id: payment_id.clone(),
                 order_id: order_id.to_string(),
                 provider: "nowpayments".to_string(),
                 user_email: String::new(),
@@ -149,7 +168,7 @@ cfg_if! {
             };
 
             let lock_manager = state.pipeline_lock_manager.clone();
-            let payment_id = payment_id.map(String::from);
+            // let payment_id = payment_id;
             let order_id = order_id.to_string();
 
             tokio::spawn(async move {
@@ -235,6 +254,7 @@ cfg_if! {
             better_panic::install();
             estate_tracing::init_tracing();
 
+            estate_fe::utils::debug_local_env();
 
             let conf = get_configuration(None).await.unwrap();
             let leptos_options = conf.leptos_options;
@@ -258,6 +278,8 @@ cfg_if! {
                     get(server_fn_handler).post(server_fn_handler),
                 )
                 .route("/ipn/webhook", post(nowpayments_webhook))
+                .route("/api/events", get(event_stream_handler))
+                // .route("/api/counter-events", get(counter_events))  // For backward compatibility
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(trace_layer)

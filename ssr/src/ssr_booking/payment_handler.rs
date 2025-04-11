@@ -20,7 +20,7 @@ use crate::utils::booking_id::PaymentIdentifiers;
 pub async fn nowpayments_get_payment_status(
     request: GetPaymentStatusRequest,
 ) -> Result<GetPaymentStatusResponse, String> {
-    let nowpayments = NowPayments::default();
+    let nowpayments = NowPayments::try_from_env();
     info!("{:#?}", request);
     match nowpayments.send(request).await {
         Ok(response) => Ok(response),
@@ -38,7 +38,7 @@ where
     GetPaymentStatusRequest: Clone,
 {
     let retry_interval = Duration::from_secs(5);
-    let max_timeout = Duration::from_secs(20 * 60); // 20 minutes
+    let max_timeout = Duration::from_secs(30);
     let start_time = Instant::now();
 
     loop {
@@ -59,6 +59,93 @@ where
                 time::sleep(retry_interval).await;
             }
         }
+    }
+}
+
+/// Checks if payment status is 'finished' with retry and exponential backoff
+/// - Retries with exponential backoff (starting at 5 seconds)
+/// - Cancels (returns error) after the specified timeout duration if payment is not finished
+///
+/// # Arguments
+/// * `request` - The payment status request to check
+/// * `timeout_duration` - Maximum time to wait for payment to be finished (default: 10 minutes)
+///
+/// # Returns
+/// * `Ok(())` - If payment status is 'finished'
+/// * `Err(String)` - If payment status is not 'finished' after timeout or other errors occur
+#[instrument(
+    name = "check_payment_status_finished",
+    skip(request),
+    fields(
+        payment_id = ?request.payment_id,
+        timeout_secs = ?timeout_duration.map(|d| d.as_secs()).unwrap_or(20 * 60)
+    ),
+    err
+)]
+pub async fn check_if_payment_status_finished_with_backoff(
+    request: GetPaymentStatusRequest,
+    timeout_duration: Option<Duration>,
+) -> Result<GetPaymentStatusResponse, String> {
+    let timeout = timeout_duration.unwrap_or(Duration::from_secs(20 * 60)); // Default 20 minutes
+    let start_time = Instant::now();
+    let mut retry_interval = Duration::from_secs(5); // Start with 5 seconds
+    let max_retry_interval = Duration::from_secs(20); // Cap at 20 seconds
+    let backoff_factor = 1.5; // Exponential backoff multiplier
+
+    info!(
+        "Starting payment status check with timeout of {:?}",
+        timeout
+    );
+
+    loop {
+        // Get payment status with retry
+        match get_payment_status_with_retry(request.clone()).await {
+            Ok(response) => {
+                // Check if payment is finished
+                if response.is_finished() {
+                    info!("Payment is finished: payment_id = {:?}", request.payment_id);
+                    return Ok(response);
+                }
+
+                // Payment is not finished, log current status and retry
+                let status = response.get_payment_status();
+                info!(
+                    "Payment not finished yet: payment_id = {:?}, status = {}",
+                    request.payment_id, status
+                );
+            }
+            Err(e) => {
+                warn!(
+                    "Error checking payment status: payment_id = {:?}, error: {}",
+                    request.payment_id, e
+                );
+            }
+        }
+
+        // Check if we've exceeded the timeout
+        if start_time.elapsed() >= timeout {
+            error!(
+                "Timed out waiting for payment to finish: payment_id = {:?}",
+                request.payment_id
+            );
+            return Err(format!(
+                "Timed out waiting for payment to finish after {:?}",
+                timeout
+            ));
+        }
+
+        // Apply exponential backoff with a cap
+        info!(
+            "Payment not finished. Retrying in {:?} seconds...",
+            retry_interval.as_secs()
+        );
+        time::sleep(retry_interval).await;
+
+        // Increase retry interval with exponential backoff
+        retry_interval = std::cmp::min(
+            Duration::from_secs((retry_interval.as_secs() as f64 * backoff_factor) as u64),
+            max_retry_interval,
+        );
     }
 }
 
@@ -104,7 +191,8 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
         let request = GetPaymentStatusRequest { payment_id };
 
         // Get payment status with retry
-        let response = get_payment_status_with_retry(request).await?;
+        let response = check_if_payment_status_finished_with_backoff(request, None).await?;
+        // let response = get_payment_status_with_retry(request).await?;
 
         // Get payment status string from response
         let payment_status = response.get_payment_status();

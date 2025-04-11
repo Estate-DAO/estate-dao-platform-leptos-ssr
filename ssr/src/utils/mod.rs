@@ -17,6 +17,7 @@ cfg_if::cfg_if! {
         pub mod notifier;
         pub mod notifier_event;
         pub mod estate_tracing;
+        pub mod event_stream;
     }
 }
 
@@ -30,3 +31,15 @@ pub fn pluralize(count: u32, singular: &str, plural: &str) -> String {
         format!("{} {}", count, plural)
     }
 }
+
+#[cfg(feature = "debug_log")]
+pub fn debug_local_env() {
+    use log::debug;
+
+    use crate::api::payments::NowPayments;
+
+    debug!("nowpayments - vars = {:#?}", NowPayments::try_from_env());
+}
+
+#[cfg(not(feature = "debug_log"))]
+pub fn debug_local_env() {}

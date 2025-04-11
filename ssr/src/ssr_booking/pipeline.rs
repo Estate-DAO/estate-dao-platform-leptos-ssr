@@ -36,7 +36,7 @@ pub trait PipelineExecutor: Send + Sync {
 // --------------------------
 
 /// Process the pipeline of steps in order, optionally publishing events via `notifier`.
-#[instrument(skip(notifier, steps), fields(correlation_id))]
+#[instrument(skip(steps, notifier), fields(correlation_id))]
 pub async fn process_pipeline(
     event: ServerSideBookingEvent,
     steps: &[SSRBookingPipelineStep],
@@ -49,8 +49,11 @@ pub async fn process_pipeline(
     tracing::Span::current().record("correlation_id", &correlation_id.as_str());
     info!("process_pipeline started");
 
-    // 1. Publish OnPipelineStart
+    // 1. Notify pipeline start
     if let Some(n) = notifier {
+        // let span = span!(Level::INFO, "notify_pipeline_start");
+        // let _enter = span.enter();
+
         let pipeline_start_event = NotifierEvent {
             event_id: uuidv7::create(),
             correlation_id: correlation_id.clone(),
@@ -59,6 +62,8 @@ pub async fn process_pipeline(
             step_name: None,
             event_type: NotifierEventType::OnPipelineStart,
         };
+        info!("pipeline_start_event = {pipeline_start_event:#?}");
+
         n.notify(pipeline_start_event).await;
     }
 

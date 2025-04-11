@@ -2,7 +2,7 @@ use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
     PaymentGateway, PaymentGatewayParams,
 };
-use crate::api::consts::EnvVarConfig;
+use crate::api::consts::{env_w_default, EnvVarConfig};
 use crate::cprintln;
 use colored::Colorize;
 // use leptos::logging::log;
@@ -20,19 +20,32 @@ cfg_if::cfg_if! {
     }
 }
 
+#[derive(Debug)]
 pub struct NowPayments {
     pub api_key: String,
     pub api_host: String,
+    pub ipn_secret: String,
     pub client: reqwest::Client,
 }
 
 impl NowPayments {
-    pub fn new(api_key: String, api_host: String) -> Self {
+    pub fn new(api_key: String, api_host: String, ipn_secret: String) -> Self {
         Self {
             api_key,
             api_host,
+            ipn_secret,
             client: reqwest::Client::default(),
         }
+    }
+
+    pub fn try_from_env() -> Self {
+        let api_key = std::env::var("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY")
+            .expect("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY must be set");
+
+        let api_host = env_w_default("NOWPAYMENTS_API_HOST", "https://api.nowpayments.io").unwrap();
+
+        let ipn_secret = env_w_default("NOWPAYMENTS_IPN_SECRET", "dummy-secret-for-now").unwrap();
+        Self::new(api_key, api_host, ipn_secret)
     }
 
     pub async fn send<Req: PaymentGateway + PaymentGatewayParams + Serialize>(
@@ -82,6 +95,7 @@ impl Default for NowPayments {
         NowPayments::new(
             env_var_config.nowpayments_api_key,
             "https://api.nowpayments.io".to_string(),
+            env_var_config.ipn_secret,
         )
     }
 }
