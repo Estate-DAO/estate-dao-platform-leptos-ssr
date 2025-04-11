@@ -236,7 +236,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
             payment_api_response,
         };
 
-        let admin_canister = AdminCanisters::from_env();
+        let admin_canister = AdminCanisters::from_env_axum_ssr();
         let backend = admin_canister.backend_canister().await;
         // .map_err(|e| format!("Failed to get backend canister: {}", e))?;
 

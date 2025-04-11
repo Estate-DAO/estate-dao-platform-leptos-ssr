@@ -1500,6 +1500,7 @@ dependencies = [
  "flate2",
  "futures",
  "getrandom 0.3.1",
+ "gloo-net",
  "hex",
  "hmac",
  "http",

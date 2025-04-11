@@ -63,6 +63,8 @@ ic-base-types = { git = "https://github.com/dfinity/ic", rev = "tags/release-202
 # dotenvy = "0.15.7"
 # dotenvy_macro = "0.15.7"
 candid = "0.10.10"
+gloo-net = { version = "0.6" }
+
 
 flate2 = "1.0.34"
 serde_path_to_error = "0.1.16"
