@@ -32,6 +32,7 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::{mpsc, RwLock};
+use tokio::time;
 use tracing::warn;
 
 /// An event with a topic and a generic payload.
@@ -102,6 +103,28 @@ impl<T: Clone + std::fmt::Debug + Send + 'static> EventBus<T> {
         subs.remove(&subscriber_id);
     }
 
+    /// Checks if a topic matches a pattern with wildcards.
+    ///
+    /// Pattern can contain '*' as wildcards for any segment.
+    /// For example:
+    /// - "step:*:booking:ABC123:email:*" matches "step:payment:booking:ABC123:email:user@example.com"
+    /// - "step:payment:*" matches "step:payment:anything"
+    fn matches_pattern(pattern: &str, topic: &str) -> bool {
+        let pattern_parts: Vec<&str> = pattern.split(':').collect();
+        let topic_parts: Vec<&str> = topic.split(':').collect();
+
+        // If we have different number of parts and pattern doesn't end with *, no match
+        if pattern_parts.len() != topic_parts.len() {
+            return false;
+        }
+
+        // Check each part
+        pattern_parts
+            .iter()
+            .zip(topic_parts.iter())
+            .all(|(pattern_part, topic_part)| *pattern_part == "*" || *pattern_part == *topic_part)
+    }
+
     /// Publish an event to all matching subscriptions.
     ///
     /// # Arguments
@@ -112,21 +135,12 @@ impl<T: Clone + std::fmt::Debug + Send + 'static> EventBus<T> {
     pub async fn publish(&self, event: Event<T>) {
         let subs = self.subscriptions.read().await;
         for subscription in subs.values() {
-            let pattern = &subscription.pattern;
-            // Simple wildcard matching: if pattern ends with '*', do a prefix match.
-            let is_match = if pattern.ends_with('*') {
-                let prefix = &pattern[..pattern.len() - 1];
-                event.topic.starts_with(prefix)
-            } else {
-                event.topic == *pattern
-            };
-
-            if is_match {
+            if Self::matches_pattern(&subscription.pattern, &event.topic) {
                 // Try to send the event; log a warning if the channel is full.
                 if let Err(err) = subscription.sender.try_send(event.clone()) {
                     warn!(
                         "Dropping event on topic '{}' for pattern '{}'. Error: {:?}",
-                        event.topic, pattern, err
+                        event.topic, subscription.pattern, err
                     );
                 }
             }
@@ -161,6 +175,52 @@ mod tests {
         let received = receiver.recv().await.unwrap();
         assert_eq!(received.topic, "booking:123");
         assert_eq!(received.payload, "test");
+    }
+
+    #[tokio::test]
+    async fn test_multiple_subscription_patterns() {
+        let bus = EventBus::<String>::new();
+
+        // Subscribe using different patterns
+        let (_, mut booking_receiver) = bus
+            .subscribe("step:*:*:booking:ABC123:email:*".to_string())
+            .await;
+        let (_, mut email_receiver) = bus
+            .subscribe("step:*:*:booking:*:email:user@example.com".to_string())
+            .await;
+        let (_, mut both_receiver) = bus
+            .subscribe("step:*:*:booking:ABC123:email:user@example.com".to_string())
+            .await;
+
+        // Create an event that should match all subscription patterns
+        let event = Event {
+            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+                .to_string(),
+            payload: "Payment initiated".to_string(),
+        };
+        bus.publish(event.clone()).await;
+
+        // All subscribers should receive the event
+        let booking_received = booking_receiver.recv().await.unwrap();
+        assert_eq!(
+            booking_received.topic,
+            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+        );
+        assert_eq!(booking_received.payload, "Payment initiated");
+
+        let email_received = email_receiver.recv().await.unwrap();
+        assert_eq!(
+            email_received.topic,
+            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+        );
+        assert_eq!(email_received.payload, "Payment initiated");
+
+        let both_received = both_receiver.recv().await.unwrap();
+        assert_eq!(
+            both_received.topic,
+            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+        );
+        assert_eq!(both_received.payload, "Payment initiated");
     }
 
     #[tokio::test]
@@ -223,5 +283,162 @@ mod tests {
 
         time::sleep(time::Duration::from_millis(100)).await;
         assert!(receiver.try_recv().is_err());
+    }
+
+    #[test]
+    fn test_pattern_matching() {
+        // Test cases with the new topic format: step:<step_name>:<event_type>:booking:<booking_id>:email:<email>
+        let test_cases = vec![
+            // Exact matches
+            (
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                true,
+            ),
+            // Wildcard for step
+            (
+                "step:*:on_payment_start:booking:ABC123:email:user@example.com",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                true,
+            ),
+            // Wildcard for booking ID
+            (
+                "step:payment:on_payment_start:booking:*:email:user@example.com",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                true,
+            ),
+            // Wildcard for email
+            (
+                "step:payment:on_payment_start:booking:ABC123:email:*",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                true,
+            ),
+            // Multiple wildcards
+            (
+                "step:*:*:booking:ABC123:email:*",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                true,
+            ),
+            // Non-matching cases
+            (
+                "step:refund:*:booking:ABC123:email:*",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                false,
+            ),
+            // Different number of segments
+            (
+                "step:payment:booking:ABC123",
+                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
+                false,
+            ),
+        ];
+
+        for (pattern, topic, expected) in test_cases {
+            assert_eq!(
+                EventBus::<String>::matches_pattern(pattern, topic),
+                expected,
+                "Pattern: {}, Topic: {}",
+                pattern,
+                topic
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_publish_with_pattern_matching() {
+        let bus = EventBus::<String>::new();
+
+        // Create multiple subscribers with different patterns
+        let (_, mut booking_receiver) = bus
+            .subscribe("step:*:*:booking:ABC123:email:*".to_string())
+            .await;
+        let (_, mut email_receiver) = bus
+            .subscribe("step:*:*:booking:*:email:user@example.com".to_string())
+            .await;
+        let (_, mut specific_receiver) = bus
+            .subscribe("step:payment:on_payment_start:booking:ABC123:email:*".to_string())
+            .await;
+        let (_, mut non_matching_receiver) = bus
+            .subscribe("step:refund:*:booking:XYZ:email:*".to_string())
+            .await;
+
+        // Create and publish an event
+        let event = Event {
+            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+                .to_string(),
+            payload: "test_payload".to_string(),
+        };
+        bus.publish(event.clone()).await;
+
+        // Test matching subscribers receive the event
+        let timeout = time::Duration::from_millis(100);
+
+        // Booking pattern subscriber should receive
+        let received = time::timeout(timeout, booking_receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
+        assert_eq!(received.topic, event.topic);
+        assert_eq!(received.payload, event.payload);
+
+        // Email pattern subscriber should receive
+        let received = time::timeout(timeout, email_receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
+        assert_eq!(received.topic, event.topic);
+        assert_eq!(received.payload, event.payload);
+
+        // Specific pattern subscriber should receive
+        let received = time::timeout(timeout, specific_receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
+        assert_eq!(received.topic, event.topic);
+        assert_eq!(received.payload, event.payload);
+
+        // Non-matching subscriber should not receive
+        let received = time::timeout(timeout, non_matching_receiver.recv()).await;
+        assert!(received.is_err()); // Timeout error means no message received
+    }
+
+    #[tokio::test]
+    async fn test_publish_channel_full() {
+        let bus = EventBus::<String>::new();
+
+        // Create a subscriber with a small channel capacity
+        let (_, mut receiver) = bus
+            .subscribe("step:*:*:booking:ABC123:email:*".to_string())
+            .await;
+
+        // Fill up the channel
+        for i in 0..1000 {
+            let event = Event {
+                topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+                    .to_string(),
+                payload: format!("test_payload_{}", i),
+            };
+            bus.publish(event).await;
+        }
+
+        // Try to publish one more event - this should be dropped and logged
+        let overflow_event = Event {
+            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+                .to_string(),
+            payload: "overflow".to_string(),
+        };
+        bus.publish(overflow_event).await;
+
+        // Verify we can still receive events after clearing the channel
+        while let Ok(_) = receiver.try_recv() {}
+
+        let new_event = Event {
+            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+                .to_string(),
+            payload: "after_overflow".to_string(),
+        };
+        bus.publish(new_event.clone()).await;
+
+        let received = time::timeout(time::Duration::from_millis(100), receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
+        assert_eq!(received.payload, "after_overflow");
     }
 }

@@ -37,17 +37,25 @@ pub struct NotifierEvent {
     pub correlation_id: Uuid,
     pub timestamp: DateTime<Utc>,
     pub order_id: String,
+    /// User's email associated with this event
+    pub email: String,
     pub step_name: Option<String>, // None for pipeline-level events.
     pub event_type: NotifierEventType,
 }
 
 impl NotifierEvent {
-    pub fn new_step_start(order_id: String, step_name: String, corr_id: Uuid) -> Self {
+    pub fn new_step_start(
+        order_id: String,
+        email: String,
+        step_name: String,
+        corr_id: Uuid,
+    ) -> Self {
         Self {
             event_id: uuidv7::create(),
             correlation_id: corr_id,
             timestamp: Utc::now(),
             order_id,
+            email,
             step_name: Some(step_name),
             event_type: NotifierEventType::OnStepStart,
         }
@@ -55,15 +63,19 @@ impl NotifierEvent {
 
     /// Constructs a topic string based on the event details.
     ///
-    /// The format is: "booking:{order_id}:step:{step_name}:{event_type}"
-    /// If step_name is None, a placeholder (*) is used.
+    /// Format: `step:<step_name>:booking:<booking_id>:email:<email>`
+    /// Supports filtering by:
+    /// - Booking ID → `step:*:booking:<id>:email:*`
+    /// - Email → `step:*:booking:*:email:<email>`
+    /// - Both → `step:*:booking:<id>:email:<email>`
     pub fn topic(&self) -> String {
         let step = self.step_name.as_deref().unwrap_or("*");
         format!(
-            "booking:{}:step:{}:{}",
-            self.order_id,
+            "step:{}:{}:booking:{}:email:{}",
             step,
-            format_event_type(&self.event_type)
+            format_event_type(&self.event_type),
+            self.order_id,
+            self.email
         )
     }
 }

@@ -58,6 +58,7 @@ mod notifier_tests {
             "booking123".to_string(),
             "step1".to_string(),
             "corr123".to_string(),
+            "user@example.com".to_string(),
         );
         notifier.notify(event.clone()).await;
 
@@ -82,6 +83,7 @@ mod notifier_tests {
             "booking123".to_string(),
             "step1".to_string(),
             "corr123".to_string(),
+            "user@example.com".to_string(),
         );
 
         // This should complete successfully without error, even though there's no bus

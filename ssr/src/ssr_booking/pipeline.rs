@@ -61,6 +61,7 @@ pub async fn process_pipeline(
             order_id: current_event.order_id.clone(),
             step_name: None,
             event_type: NotifierEventType::OnPipelineStart,
+            email: current_event.user_email.clone(),
         };
         info!("pipeline_start_event = {pipeline_start_event:#?}");
 
@@ -89,6 +90,7 @@ pub async fn process_pipeline(
                         order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnPipelineAbort,
+                        email: current_event.user_email.clone(),
                     };
                     n.notify(abort_event).await;
                 }
@@ -106,6 +108,7 @@ pub async fn process_pipeline(
                         order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnStepSkipped,
+                        email: current_event.user_email.clone(),
                     };
                     n.notify(skipped_event).await;
                 }
@@ -124,6 +127,7 @@ pub async fn process_pipeline(
                         order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnStepStart,
+                        email: current_event.user_email.clone(),
                     };
                     n.notify(start_event).await;
                 }
@@ -141,6 +145,7 @@ pub async fn process_pipeline(
                         order_id: current_event.order_id.clone(),
                         step_name: Some(step_name.clone()),
                         event_type: NotifierEventType::OnStepCompleted,
+                        email: current_event.user_email.clone(),
                     };
                     n.notify(completed_event).await;
                 }
@@ -160,6 +165,7 @@ pub async fn process_pipeline(
                 order_id: current_event.order_id.clone(),
                 step_name: None,
                 event_type: NotifierEventType::OnPipelineEnd,
+                email: current_event.user_email.clone(),
             };
             debug!("NotifierEvent = {end_event:#?}");
             n.notify(end_event).await;
