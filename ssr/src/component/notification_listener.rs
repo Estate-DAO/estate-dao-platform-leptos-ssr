@@ -27,7 +27,7 @@ pub fn NotificationListener(
     #[prop(optional)]
     event_type: Option<String>,
     // Callback when a notification is received
-    // on_notification: Box<dyn Fn(NotificationData)>,
+    on_notification: Box<dyn Fn(NotificationData)>,
 ) -> impl IntoView {
     #[cfg(not(feature = "ssr"))]
     {
@@ -69,6 +69,8 @@ pub fn NotificationListener(
                         // Store notification in global state
                         log!("notification_parsed: {:#?}", notification);
                         NotificationState::add_notification(notification.clone());
+                        // invoke the handler
+                        (on_notification)(notification.clone());
                         Some(notification)
                     }
                     Err(e) => {
@@ -119,7 +121,10 @@ pub fn NotificationExample() -> impl IntoView {
                 order_id="NP$6:ABC123$16:user@example.com".to_string()
                 email="user@example.com".to_string()
                 event_type="nowpayments".to_string()
-                // on_notification=handle_notification
+                on_notification={Box::new(move |notification: NotificationData| {
+                    // SSEBookingStatusUpdates::update_from_notification(&notification);
+                    log!("invoking_on_notification: {:#?}", notification);
+                })}
             />
             <ul>
                 {move || NotificationState::get().notifications.get().into_iter().map(|n: NotificationData| {

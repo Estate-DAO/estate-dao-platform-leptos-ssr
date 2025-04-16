@@ -4,7 +4,7 @@ use crate::{
     error_template::{AppError, ErrorTemplate},
     page::{
         BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
-        PaymentBookingStatusUpdates, RootPage, SSEConfirmationPage,
+        PaymentBookingStatusUpdates, RootPage, SSEBookingStatusUpdates, SSEConfirmationPage,
     },
     state::{
         api_error_state::ApiErrorState,
@@ -83,6 +83,7 @@ pub fn App() -> impl IntoView {
     provide_context(ConfirmationResultsState::default());
 
     provide_context(PaymentBookingStatusUpdates::default());
+    provide_context(SSEBookingStatusUpdates::default());
 
     provide_context(ApiErrorState::default());
 
