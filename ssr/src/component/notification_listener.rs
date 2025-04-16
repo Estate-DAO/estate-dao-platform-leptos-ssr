@@ -99,9 +99,6 @@ pub fn NotificationListener(
 /// Example usage component that demonstrates how to use NotificationListener
 #[component]
 pub fn NotificationExample() -> impl IntoView {
-    // let (notifications, set_notifications) = create_signal(Vec::new());
-    let notifications = NotificationState::get().notifications;
-
     // let handle_notification = Box::new(move |notification: NotificationData| {
     //     set_notifications.update(|list| {
     //         let mut new_list = list.clone();
@@ -124,7 +121,7 @@ pub fn NotificationExample() -> impl IntoView {
                 // on_notification=handle_notification
             />
             <ul>
-                {move || notifications.get().into_iter().map(|n: NotificationData| {
+                {move || NotificationState::get().notifications.get().into_iter().map(|n: NotificationData| {
                     view! {
                         <li>
                             {format!("{}: {} - {}", n.event_type, n.step, n.order_id)}

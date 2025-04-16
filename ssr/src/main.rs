@@ -11,6 +11,8 @@ use estate_fe::{
     },
     utils::{
         admin::AdminCanisters,
+        app_reference::BookingId,
+        booking_id,
         estate_tracing,
         event_stream::event_stream_handler,
         notifier::Notifier,
@@ -158,17 +160,36 @@ cfg_if! {
             let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
+            let booking_id_result = BookingId::from_order_id(order_id);
+
+            // let user_email = if let Some(booking_id) = booking_id_result {
+            //     booking_id.email.to_string()
+            // } else {
+            //     // current flow assumes the existence of user email to lookup payment / booking details in backend
+            //     error!("Failed to extract user_email from order_id: {}", order_id);
+            //     String::new()
+            // };
+
+
+            // current flow assumes the existence of user email to lookup payment / booking details in backend
+            if booking_id_result.is_none() {
+                error!("Failed to extract user_email from order_id: {}", order_id);
+                return;
+            }
+
+            let booking_id = booking_id_result.unwrap();
+            let user_email = booking_id.email.to_string();
+
             let event = ServerSideBookingEvent {
                 payment_id: payment_id.clone(),
                 order_id: order_id.to_string(),
                 provider: "nowpayments".to_string(),
-                user_email: String::new(),
+                user_email,
                 payment_status: None,
                 backend_payment_status: Some(String::from("started_processing")),
             };
 
             let lock_manager = state.pipeline_lock_manager.clone();
-            // let payment_id = payment_id;
             let order_id = order_id.to_string();
 
             tokio::spawn(async move {

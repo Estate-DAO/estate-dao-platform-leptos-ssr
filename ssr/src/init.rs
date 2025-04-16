@@ -1,6 +1,5 @@
 use leptos::LeptosOptions;
 use leptos_router::RouteListing;
-use tokio::sync::broadcast;
 
 use crate::{
     api::consts::EnvVarConfig, ssr_booking::PipelineLockManager, state::AppState,
@@ -38,15 +37,10 @@ pub struct AppStateBuilder {
     routes: Vec<RouteListing>,
     provab_client: &'static Provab,
     notifier_for_pipeline: &'static Notifier,
-    // broadcaster: broadcast::Sender<i32>,
 }
 
 impl AppStateBuilder {
-    pub fn new(
-        leptos_options: LeptosOptions,
-        routes: Vec<RouteListing>,
-        // broadcaster: broadcast::Sender<i32>,
-    ) -> Self {
+    pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
         initialize_provab_client();
         initialize_notifier();
 
@@ -55,19 +49,30 @@ impl AppStateBuilder {
             routes,
             provab_client: get_provab_client(),
             notifier_for_pipeline: get_notifier(),
-            // broadcaster,
         }
     }
 
     pub async fn build(self) -> AppState {
-        AppState {
+        let app_state = AppState {
             leptos_options: self.leptos_options,
             routes: self.routes,
             env_var_config: EnvVarConfig::try_from_env(),
-            // count_tx: self.broadcaster,
             pipeline_lock_manager: PipelineLockManager::new(),
             provab_client: self.provab_client,
             notifier_for_pipeline: self.notifier_for_pipeline,
+        };
+
+        let app_state_clone = app_state.clone();
+
+        #[cfg(feature = "debug_log")]
+        {
+            // Setup debug event subscriber
+            let debug_state = app_state_clone;
+            tokio::spawn(async move {
+                debug_state.setup_debug_event_subscriber().await;
+            });
         }
+
+        app_state
     }
 }

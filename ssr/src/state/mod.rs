@@ -36,6 +36,15 @@ cfg_if! {
         use crate::ssr_booking::PipelineLockManager;
         // use tokio::sync::broadcast;
         use crate::{api::consts::EnvVarConfig, utils::notifier::Notifier};
+        use std::sync::Arc;
+        use tokio::sync::RwLock;
+        use tracing::{debug, info};
+        use futures::StreamExt;
+        use tokio::task;
+        use crate::{
+            utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent},
+        };
+        use tracing::instrument;
 
         #[derive(FromRef, Clone, Debug)]
         pub struct AppState {
@@ -57,6 +66,35 @@ cfg_if! {
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,
             // #[cfg(feature = "ga4")]
             // pub grpc_offchain_channel: tonic::transport::Channel,
+        }
+
+        #[cfg(feature = "debug_log")]
+        impl AppState {
+            #[instrument(skip(self))]
+            pub async fn setup_debug_event_subscriber(&self) {
+                // info!("[DEBUG_EVENT_BUS] Setting up debug event subscriber");
+                if let Some(bus) = &self.notifier_for_pipeline.bus {
+                info!("[DEBUG_EVENT_BUS] subscribed to eventbus");
+
+                let subscribe_to_all_events = NotifierEvent::subscribe_all_steps_pattern();
+                info!("[DEBUG_EVENT_BUS] subscribing to all events pattern  - {subscribe_to_all_events}");
+                    let (_, receiver) = bus.subscribe(subscribe_to_all_events).await;
+
+                    // Spawn a task to log all events
+                    task::spawn(async move {
+                        let mut stream = receiver;
+                        // info!("[DEBUG_EVENT_BUS] waiting for event from eventbus");
+
+                        while let Some(event) = stream.recv().await {
+                            let BusEvent { topic, payload: NotifierEvent { event_type, step_name, order_id, email, .. } } = event;
+                            info!(
+                                "[DEBUG_EVENT_BUS] Received event - Topic: {}, Type: {:?}, Step: {:?}, Order: {}, Email: {}",
+                                topic, event_type, step_name, order_id, email
+                            );
+                        }
+                    });
+                }
+            }
         }
     }
 }

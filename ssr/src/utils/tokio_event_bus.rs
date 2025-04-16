@@ -35,6 +35,8 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time;
 use tracing::warn;
 
+use super::notifier_event::NotifierEvent;
+
 /// An event with a topic and a generic payload.
 #[derive(Debug, Clone)]
 pub struct Event<T: Clone + std::fmt::Debug + Send + 'static> {
@@ -103,28 +105,6 @@ impl<T: Clone + std::fmt::Debug + Send + 'static> EventBus<T> {
         subs.remove(&subscriber_id);
     }
 
-    /// Checks if a topic matches a pattern with wildcards.
-    ///
-    /// Pattern can contain '*' as wildcards for any segment.
-    /// For example:
-    /// - "step:*:booking:ABC123:email:*" matches "step:payment:booking:ABC123:email:user@example.com"
-    /// - "step:payment:*" matches "step:payment:anything"
-    fn matches_pattern(pattern: &str, topic: &str) -> bool {
-        let pattern_parts: Vec<&str> = pattern.split(':').collect();
-        let topic_parts: Vec<&str> = topic.split(':').collect();
-
-        // If we have different number of parts and pattern doesn't end with *, no match
-        if pattern_parts.len() != topic_parts.len() {
-            return false;
-        }
-
-        // Check each part
-        pattern_parts
-            .iter()
-            .zip(topic_parts.iter())
-            .all(|(pattern_part, topic_part)| *pattern_part == "*" || *pattern_part == *topic_part)
-    }
-
     /// Publish an event to all matching subscriptions.
     ///
     /// # Arguments
@@ -135,7 +115,7 @@ impl<T: Clone + std::fmt::Debug + Send + 'static> EventBus<T> {
     pub async fn publish(&self, event: Event<T>) {
         let subs = self.subscriptions.read().await;
         for subscription in subs.values() {
-            if Self::matches_pattern(&subscription.pattern, &event.topic) {
+            if NotifierEvent::matches_pattern(&subscription.pattern, &event.topic) {
                 // Try to send the event; log a warning if the channel is full.
                 if let Err(err) = subscription.sender.try_send(event.clone()) {
                     warn!(
@@ -201,26 +181,37 @@ mod tests {
         bus.publish(event.clone()).await;
 
         // All subscribers should receive the event
-        let booking_received = booking_receiver.recv().await.unwrap();
-        assert_eq!(
-            booking_received.topic,
-            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
-        );
-        assert_eq!(booking_received.payload, "Payment initiated");
+        let timeout = time::Duration::from_millis(100);
 
-        let email_received = email_receiver.recv().await.unwrap();
+        // Booking pattern subscriber should receive
+        let received = time::timeout(timeout, booking_receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
         assert_eq!(
-            email_received.topic,
+            received.topic,
             "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
         );
-        assert_eq!(email_received.payload, "Payment initiated");
+        assert_eq!(received.payload, "Payment initiated");
 
-        let both_received = both_receiver.recv().await.unwrap();
+        // Email pattern subscriber should receive
+        let received = time::timeout(timeout, email_receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
         assert_eq!(
-            both_received.topic,
+            received.topic,
             "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
         );
-        assert_eq!(both_received.payload, "Payment initiated");
+        assert_eq!(received.payload, "Payment initiated");
+
+        // Specific pattern subscriber should receive
+        let received = time::timeout(timeout, both_receiver.recv()).await;
+        assert!(received.is_ok());
+        let received = received.unwrap().unwrap();
+        assert_eq!(
+            received.topic,
+            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+        );
+        assert_eq!(received.payload, "Payment initiated");
     }
 
     #[tokio::test]
@@ -283,65 +274,6 @@ mod tests {
 
         time::sleep(time::Duration::from_millis(100)).await;
         assert!(receiver.try_recv().is_err());
-    }
-
-    #[test]
-    fn test_pattern_matching() {
-        // Test cases with the new topic format: step:<step_name>:<event_type>:booking:<booking_id>:email:<email>
-        let test_cases = vec![
-            // Exact matches
-            (
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                true,
-            ),
-            // Wildcard for step
-            (
-                "step:*:on_payment_start:booking:ABC123:email:user@example.com",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                true,
-            ),
-            // Wildcard for booking ID
-            (
-                "step:payment:on_payment_start:booking:*:email:user@example.com",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                true,
-            ),
-            // Wildcard for email
-            (
-                "step:payment:on_payment_start:booking:ABC123:email:*",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                true,
-            ),
-            // Multiple wildcards
-            (
-                "step:*:*:booking:ABC123:email:*",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                true,
-            ),
-            // Non-matching cases
-            (
-                "step:refund:*:booking:ABC123:email:*",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                false,
-            ),
-            // Different number of segments
-            (
-                "step:payment:booking:ABC123",
-                "step:payment:on_payment_start:booking:ABC123:email:user@example.com",
-                false,
-            ),
-        ];
-
-        for (pattern, topic, expected) in test_cases {
-            assert_eq!(
-                EventBus::<String>::matches_pattern(pattern, topic),
-                expected,
-                "Pattern: {}, Topic: {}",
-                pattern,
-                topic
-            );
-        }
     }
 
     #[tokio::test]

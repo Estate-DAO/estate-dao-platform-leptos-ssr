@@ -131,12 +131,15 @@ fn determine_subscription_pattern(
     email: &Option<String>,
     event_type: &Option<String>,
 ) -> String {
-    match (order_id, email, event_type) {
-        // Uncomment and implement your filtering logic here
-        // (Some(order_id), _, Some(event_type)) if event_type == "payment" => format!("payment:{}:*", order_id),
-        // (_, Some(email), Some(event_type)) if event_type == "booking" => format!("booking:{}:*", email),
-        // (Some(order_id), _, _) => format!("*:{}:*", order_id),
-        // (_, Some(email), _) => format!("*:{}:*", email),
-        _ => "*".to_string(), // Subscribe to all events if no specific identifier
-    }
+    // match (order_id, email) {
+    //     // Uncomment and implement your filtering logic here
+    //     // (Some(order_id), _, Some(event_type)) if event_type == "payment" => format!("payment:{}:*", order_id),
+    //     // (_, Some(email), Some(event_type)) if event_type == "booking" => format!("booking:{}:*", email),
+    //     // (Some(order_id), _, _) => format!("*:{}:*", order_id),
+    //     // (_, Some(email), _) => format!("*:{}:*", email),
+    //     _ => "*".to_string(), // Subscribe to all events if no specific identifier
+    // }
+
+    // todo (event_bus): for now, we are only subscribing to event based on user_email
+    NotifierEvent::make_topic_pattern(email.as_deref(), None, None)
 }
