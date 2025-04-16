@@ -7,9 +7,9 @@ use web_sys::EventSource;
 /// Notification data received from the server
 #[derive(Debug, Deserialize, Clone)]
 pub struct NotificationData {
+    pub correlation_id: String,
     pub order_id: String,
-    pub step: String,
-    // pub correlation_id: String,
+    pub step: Option<String>,
     #[serde(rename = "type")]
     pub event_type: String,
 }
@@ -63,10 +63,11 @@ pub fn NotificationListener(
         let s = create_signal_from_stream(stream.map(move |value| match value {
             Ok(event) => {
                 let data = event.1.data().as_string().expect("expected string value");
-
+                log!("notification_data: {}", data);
                 match serde_json::from_str::<NotificationData>(&data) {
                     Ok(notification) => {
                         // Store notification in global state
+                        log!("notification_parsed: {:#?}", notification);
                         NotificationState::add_notification(notification.clone());
                         Some(notification)
                     }
@@ -124,7 +125,7 @@ pub fn NotificationExample() -> impl IntoView {
                 {move || NotificationState::get().notifications.get().into_iter().map(|n: NotificationData| {
                     view! {
                         <li>
-                            {format!("{}: {} - {}", n.event_type, n.step, n.order_id)}
+                            {format!("{}: {} - {}", n.event_type, n.step.unwrap_or_default(), n.order_id)}
                         </li>
                     }
                 }).collect::<Vec<_>>()}
@@ -144,13 +145,17 @@ impl GlobalStateForLeptos for NotificationState {}
 
 impl NotificationState {
     pub fn add_notification(notification: NotificationData) {
-        Self::get().notifications.update(|list| {
-            let mut new_list = list.clone();
-            new_list.push(notification);
-            // Keep only last 20 notifications
-            if new_list.len() > 20 {
-                new_list.remove(0);
-            }
-        });
+        let mut current_notifications = Self::get_notifications().get_untracked();
+        current_notifications.push(notification.clone());
+        // Keep only last 20 notifications
+        if current_notifications.len() > 20 {
+            current_notifications.remove(0);
+        }
+
+        Self::get().notifications.set(current_notifications);
+    }
+
+    pub fn get_notifications() -> RwSignal<Vec<NotificationData>> {
+        Self::get().notifications
     }
 }

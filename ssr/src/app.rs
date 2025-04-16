@@ -4,7 +4,7 @@ use crate::{
     error_template::{AppError, ErrorTemplate},
     page::{
         BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
-        PaymentBookingStatusUpdates, RootPage,
+        PaymentBookingStatusUpdates, RootPage, SSEConfirmationPage,
     },
     state::{
         api_error_state::ApiErrorState,
@@ -117,7 +117,8 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
                     <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomPage />
-                    <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
+                    <Route path=AppRoutes::Confirmation.to_string() view=SSEConfirmationPage />
+                    // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                     <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>
             </main>
