@@ -6,7 +6,8 @@ use estate_fe::{
     api::{consts::EnvVarConfig, payments::NowPayments, Provab},
     init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
-        booking_handler::MakeBookingFromBookingProvider, mock_handler::MockStep,
+        booking_handler::MakeBookingFromBookingProvider,
+        get_booking_from_backend::GetBookingFromBackend, mock_handler::MockStep,
         payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
         pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
@@ -160,6 +161,7 @@ cfg_if! {
             let notifier = state.notifier_for_pipeline;
             let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
             let book_room_step = SSRBookingPipelineStep::BookRoom(MakeBookingFromBookingProvider);
+            // let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
             let booking_id_result = BookingId::from_order_id(order_id);
@@ -190,6 +192,7 @@ cfg_if! {
                 payment_status: None,
                 backend_payment_status: Some(String::from("started_processing")),
                 backend_booking_status: None,
+                backend_booking_struct: None,
             };
 
             let lock_manager = state.pipeline_lock_manager.clone();
@@ -197,6 +200,7 @@ cfg_if! {
 
             tokio::spawn(async move {
                 let result = process_pipeline(event, &[payment_status_step, book_room_step, mock_step], Some(notifier)).await;
+                // let result = process_pipeline(event, &[payment_status_step, book_room_step, get_booking_step, mock_step], Some(notifier)).await;
 
                 lock_manager.release_lock(payment_id.as_deref(), &order_id);
 

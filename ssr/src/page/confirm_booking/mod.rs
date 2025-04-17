@@ -9,5 +9,8 @@ pub use confirmation::ConfirmationPage;
 pub use confirmation::PaymentBookingStatusUpdates;
 pub use payment_handler::PaymentHandler;
 
+mod sse_booking_handler;
+pub use sse_booking_handler::*;
+
 mod sse_booking;
 pub use sse_booking::*;

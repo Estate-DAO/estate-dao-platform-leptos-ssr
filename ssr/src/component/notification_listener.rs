@@ -1,4 +1,4 @@
-use crate::{error, log, state::GlobalStateForLeptos, warn};
+use crate::{canister::backend, error, log, state::GlobalStateForLeptos, warn};
 
 use leptos::*;
 use serde::Deserialize;
@@ -12,6 +12,7 @@ pub struct NotificationData {
     pub step: Option<String>,
     #[serde(rename = "type")]
     pub event_type: String,
+    pub backend_booking_details: Option<backend::Booking>,
 }
 
 /// Component that listens to server-sent events and handles notifications

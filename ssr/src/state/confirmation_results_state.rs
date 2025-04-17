@@ -105,6 +105,9 @@ impl ConfirmationResultsState {
             .and_then(|booking| booking.get_destination())
     }
 
+    pub fn loaded_booking_from_backend() -> bool {
+        Self::get().booking_details.get().is_some()
+    }
     pub fn payment_status_from_backend_is_finished_check() -> bool {
         Self::get_payment_status().map_or(false, |status| status == "finished")
     }
@@ -131,6 +134,13 @@ impl ConfirmationResultsState {
 
     pub fn get_children_details() -> Vec<ChildDetail> {
         Self::get().children.get_untracked()
+    }
+
+    pub fn get_country() -> Option<String> {
+        Self::get_destination().map(|dest| dest.country_name)
+    }
+    pub fn get_city() -> Option<String> {
+        Self::get_destination().map(|dest| dest.city)
     }
 
     fn maybe_string(s: String) -> Option<String> {
