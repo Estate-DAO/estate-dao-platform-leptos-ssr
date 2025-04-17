@@ -196,6 +196,7 @@ mod tests {
 
         for (app_ref, email, desc) in test_cases {
             let order_id = create_test_order_id(app_ref, email);
+            dbg!("Test case - order id : {}", order_id.clone());
             let booking = BookingId::from_order_id(&order_id).unwrap();
 
             assert_eq!(

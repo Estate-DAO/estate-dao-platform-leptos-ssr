@@ -1,10 +1,12 @@
 use crate::{
     api::BookingDetails,
     canister::backend::{
-        BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, Destination,
+        self, BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, Destination,
         HotelRoomDetails, PaymentDetails,
     },
 };
+
+use crate::utils::app_reference::BookingId as AppReferenceBookingId;
 
 impl Default for BePaymentApiResponse {
     fn default() -> Self {
@@ -84,3 +86,13 @@ impl HotelRoomDetails {
 //   pub book_room_status: Option<BeBookRoomResponse>,
 //   pub payment_details: PaymentDetails,
 // }
+
+// convert BookingId to backend::BookingId
+impl From<AppReferenceBookingId> for backend::BookingId {
+    fn from(value: AppReferenceBookingId) -> Self {
+        Self {
+            app_reference: value.app_reference,
+            email: value.email,
+        }
+    }
+}

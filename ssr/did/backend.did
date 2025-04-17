@@ -38,6 +38,7 @@ type BookingDetails = record {
   booking_ref_no : text;
   booking_status : text;
   confirmation_no : text;
+  resolved_booking_status : ResolvedBookingStatus;
   booking_id : BookingId;
   travelomatrix_id : text;
 };
@@ -73,6 +74,13 @@ type PaymentDetails = record {
   payment_status : BackendPaymentStatus;
   booking_id : BookingId;
   payment_api_response : BEPaymentApiResponse;
+};
+type ResolvedBookingStatus = variant {
+  BookingConfirmed;
+  BookingOnHold;
+  BookingFailed;
+  Unknown;
+  BookingCancelled;
 };
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok; Err : text };

@@ -6,8 +6,9 @@ use estate_fe::{
     api::{consts::EnvVarConfig, payments::NowPayments, Provab},
     init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
-        mock_handler::MockStep, payment_handler::GetPaymentStatusFromPaymentProvider,
-        pipeline::process_pipeline, pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
+        booking_handler::MakeBookingFromBookingProvider, mock_handler::MockStep,
+        payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
+        pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
     utils::{
         admin::AdminCanisters,
@@ -158,6 +159,7 @@ cfg_if! {
             // start this notifier in app_state so that you have only one event bus with notifier running
             let notifier = state.notifier_for_pipeline;
             let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
+            let book_room_step = SSRBookingPipelineStep::BookRoom(MakeBookingFromBookingProvider);
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
             let booking_id_result = BookingId::from_order_id(order_id);
@@ -187,13 +189,14 @@ cfg_if! {
                 user_email,
                 payment_status: None,
                 backend_payment_status: Some(String::from("started_processing")),
+                backend_booking_status: None,
             };
 
             let lock_manager = state.pipeline_lock_manager.clone();
             let order_id = order_id.to_string();
 
             tokio::spawn(async move {
-                let result = process_pipeline(event, &[payment_status_step, mock_step], Some(notifier)).await;
+                let result = process_pipeline(event, &[payment_status_step, book_room_step, mock_step], Some(notifier)).await;
 
                 lock_manager.release_lock(payment_id.as_deref(), &order_id);
 

@@ -22,7 +22,8 @@ mod a04_book_room;
 pub use a04_book_room::{
     book_room, BookRoomRequest, BookRoomResponse, BookingDetails, BookingDetailsContainer,
     BookingStatus, FailureBookRoomResponse, PassengerDetail, PaxType, RoomDetail,
-    SuccessBookRoomResponse, _default_passenger_age,
+    SuccessBookRoomResponse, _default_passenger_age, create_backend_book_room_response,
+    user_details_to_passenger_details,
 };
 
 mod a05_hotel_booking_detail;

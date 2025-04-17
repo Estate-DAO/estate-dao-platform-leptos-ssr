@@ -3,6 +3,7 @@ pub mod mock_handler;
 pub mod payment_handler;
 pub mod pipeline;
 pub mod pipeline_lock;
+use booking_handler::MakeBookingFromBookingProvider;
 pub use pipeline_lock::PipelineLockManager;
 
 mod pipeline_integration_test;
@@ -29,6 +30,7 @@ pub struct ServerSideBookingEvent {
     pub user_email: String,
     pub payment_status: Option<String>,
     pub backend_payment_status: Option<String>,
+    pub backend_booking_status: Option<String>,
 }
 
 // --------------------------
@@ -38,6 +40,7 @@ pub struct ServerSideBookingEvent {
 #[derive(Debug, Clone)]
 pub enum SSRBookingPipelineStep {
     PaymentStatus(GetPaymentStatusFromPaymentProvider),
+    BookRoom(MakeBookingFromBookingProvider),
     // BookingCall(CreateBookingCallForTravelProvider),
     /// for testing purposes
     Mock(MockStep),
@@ -51,6 +54,7 @@ impl SSRBookingPipelineStep {
     ) -> Result<PipelineDecision, String> {
         match self {
             SSRBookingPipelineStep::PaymentStatus(step) => step.validate(event).await,
+            SSRBookingPipelineStep::BookRoom(step) => step.validate(event).await,
             // SSRBookingPipelineStep::BookingCall(step) => step.validate(event).await,
             SSRBookingPipelineStep::Mock(step) => step.validate(event).await,
         }
@@ -65,6 +69,9 @@ impl SSRBookingPipelineStep {
         match self {
             SSRBookingPipelineStep::PaymentStatus(_) => {
                 GetPaymentStatusFromPaymentProvider::execute(event).await
+            }
+            SSRBookingPipelineStep::BookRoom(_) => {
+                MakeBookingFromBookingProvider::execute(event).await
             }
             // PipelineStep::BookingCall(_) => {
             //     CreateBookingCallForTravelProvider::execute(event).await
@@ -83,7 +90,7 @@ impl fmt::Display for &SSRBookingPipelineStep {
             SSRBookingPipelineStep::PaymentStatus(_) => {
                 write!(f, "GetPaymentStatusFromPaymentProvider")
             }
-            // SSRBookingPipelineStep::BookingCall(_) => write!(f, "CreateBookingCallForTravelProvider"),
+            SSRBookingPipelineStep::BookRoom(_) => write!(f, "MakeBookingFromBookingProvider"),
             SSRBookingPipelineStep::Mock(_) => write!(f, "MockStep"),
         }
     }

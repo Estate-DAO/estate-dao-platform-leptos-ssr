@@ -200,6 +200,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
         // Create updated event with payment status
         let mut updated_event = event;
         updated_event.payment_status = Some(payment_status.clone());
+        updated_event.payment_id = Some(payment_id.to_string());
         info!("Updated event: {:?}", updated_event);
 
         // step 2: write code to update payment status in backend using the function details in file memories/update_payment.md

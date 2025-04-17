@@ -5,6 +5,7 @@ use crate::api::{ApiError, Provab};
 use crate::canister::backend::{
     self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
 };
+// use crate::init::get_provab_client;
 // use leptos::logging::log;
 use crate::log;
 use leptos::*;
@@ -20,6 +21,10 @@ cfg_if::cfg_if! {
         use rand::SeedableRng;
     }
 }
+
+//
+//
+//
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
@@ -149,7 +154,7 @@ pub struct FailureBookRoomResponse {
     pub message: String,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
 // #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(untagged)]
 pub enum BookRoomResponse {
@@ -180,6 +185,69 @@ pub struct BookingDetails {
     pub booking_status: String,
 }
 
+//
+//
+//
+
+/// ResolvedBookState -- enum to handle the resolved booking status from API response
+#[derive(Serialize, PartialEq, Deserialize, Debug, Clone)]
+pub enum ResolvedBookState {
+    APIResponseBookingFailed,
+    APIResponseBookingConfirmed,
+    APIResponseBookingOnHold,
+
+    // fallback
+    #[serde(other)]
+    Unknown,
+}
+
+impl From<ResolvedBookState> for backend::ResolvedBookingStatus {
+    fn from(value: ResolvedBookState) -> Self {
+        match value {
+            ResolvedBookState::APIResponseBookingFailed => {
+                backend::ResolvedBookingStatus::BookingFailed
+            }
+            ResolvedBookState::APIResponseBookingConfirmed => {
+                backend::ResolvedBookingStatus::BookingConfirmed
+            }
+            ResolvedBookState::APIResponseBookingOnHold => {
+                backend::ResolvedBookingStatus::BookingOnHold
+            }
+            ResolvedBookState::Unknown => backend::ResolvedBookingStatus::Unknown,
+        }
+    }
+}
+
+impl BookingDetails {
+    pub fn parse_resolved_booking_status_from_api_response(&self) -> ResolvedBookState {
+        match self.booking_status.as_str() {
+            // these booking_status are given by Travel provider API - Provab
+            "BOOKING_CONFIRMED" => ResolvedBookState::APIResponseBookingConfirmed,
+            "BOOKING_FAILED" => ResolvedBookState::APIResponseBookingFailed,
+            "BOOKING_HOLD" => ResolvedBookState::APIResponseBookingOnHold,
+            unknown_value => {
+                tracing::error!("Unknown booking status: {}", unknown_value);
+                ResolvedBookState::Unknown
+            }
+        }
+    }
+}
+
+impl SuccessBookRoomResponse {
+    pub fn parse_resolved_booking_status_from_api_response(&self) -> ResolvedBookState {
+        self.commit_booking
+            .booking_details
+            .parse_resolved_booking_status_from_api_response()
+    }
+}
+
+//
+//
+//
+
+/// BookingStatus -- enum to handle of API status - 200 or not
+/// BookFailed - means provider API failed to give status 200
+/// Confirmed - means provider API gave status 200 - but the actual booking_status is to be judged from API response json (not API status <- this field)
 #[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 // #[repr(u8)]
@@ -217,6 +285,10 @@ impl Serialize for BookingStatus {
         value.map_err(|e| serde::ser::Error::custom(format!("Invalid BookingStatus value: {}", e)))
     }
 }
+
+//
+//
+//
 
 use colored::Colorize;
 use error_stack::{report, Report, ResultExt};
@@ -289,11 +361,15 @@ impl ProvabReq for BookRoomRequest {
     }
 }
 
+//
+//
+//
+
 #[server(BlockRoom)]
 pub async fn book_room(request: String) -> Result<String, ServerFnError> {
     // pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
     // let provab = Provab::default();
-    let provab: Provab = expect_context();
+    let provab: Provab = from_leptos_context_or_axum_ssr();
 
     let request_struct = serde_json::from_str::<BookRoomRequest>(&request)
         .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
@@ -317,6 +393,58 @@ pub async fn book_room(request: String) -> Result<String, ServerFnError> {
             Err(ServerFnError::ServerError(e.to_string()))
         }
     }
+}
+
+pub fn from_leptos_context_or_axum_ssr() -> Provab {
+    let context = use_context::<Provab>();
+    match context {
+        Some(provab) => provab,
+        None => Provab::default(),
+        // None => get_provab_client().clone()
+    }
+}
+
+//
+//
+//
+
+/// Converts backend::UserDetails into a Vec<PassengerDetail> for booking requests.
+pub fn user_details_to_passenger_details(
+    user_details: &crate::canister::backend::UserDetails,
+) -> Vec<PassengerDetail> {
+    let mut passengers = Vec::new();
+
+    // Convert adults
+    for (i, adult) in user_details.adults.iter().enumerate() {
+        passengers.push(PassengerDetail {
+            title: "Mr".to_string(), // or derive from input if available
+            first_name: adult.first_name.clone(),
+            middle_name: None,
+            last_name: adult.last_name.clone().unwrap_or_default(),
+            email: adult.email.clone().unwrap_or_default(),
+            pax_type: PaxType::Adult,
+            lead_passenger: i == 0, // First adult is lead
+            age: 0_u32,             // Default adult age
+            phone_number: adult.phone.clone().unwrap_or_default(),
+        });
+    }
+
+    // Convert children
+    for child in user_details.children.iter() {
+        passengers.push(PassengerDetail {
+            title: "".to_string(), // or derive from input if available
+            first_name: child.first_name.clone(),
+            middle_name: None,
+            last_name: child.last_name.clone().unwrap_or_default(),
+            email: "".to_string(),
+            pax_type: PaxType::Child,
+            lead_passenger: false,
+            age: child.age as u32,
+            phone_number: "".to_string(),
+        });
+    }
+
+    passengers
 }
 
 // ======================  custom serializer for the PassengerDetail ======================
@@ -451,8 +579,12 @@ impl From<BookingStatus> for backend::BookingStatus {
 impl From<backend::BookingStatus> for BookingStatus {
     fn from(status: backend::BookingStatus) -> Self {
         match status {
-            backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
+            // backend::BookingStatus::BookFailed => BookingStatus::BookFailed,
             backend::BookingStatus::Confirmed => BookingStatus::Confirmed,
+            _ => {
+                log!("backend booking status: {:?}", status);
+                BookingStatus::BookFailed
+            }
         }
     }
 }
@@ -488,6 +620,7 @@ impl Default for backend::BookingDetails {
             booking_id: backend::BookingId::default(),
             travelomatrix_id: String::default(),
             api_status: backend::BookingStatus::default(),
+            resolved_booking_status: backend::ResolvedBookingStatus::Unknown,
         }
     }
 }
@@ -593,6 +726,48 @@ impl From<UserDetails> for Vec<crate::state::view_state::ChildDetail> {
                 age: c.age,
             })
             .collect()
+    }
+}
+
+pub fn create_backend_book_room_response(
+    (email, app_reference): (String, String),
+    book_room_response: BookRoomResponse,
+) -> BeBookRoomResponse {
+    match book_room_response {
+        BookRoomResponse::Failure(fe_booking_details_fail) => BeBookRoomResponse {
+            commit_booking: backend::BookingDetails::default(),
+            status: fe_booking_details_fail.status.to_string(),
+            message: fe_booking_details_fail.message,
+        },
+        BookRoomResponse::Success(fe_booking_details_success) => {
+            let booking_details = fe_booking_details_success
+                .commit_booking
+                .booking_details
+                .clone();
+
+            let fe_booking_details: BookingDetails =
+                fe_booking_details_success.commit_booking.into();
+
+            let be_booking_details = backend::BookingDetails {
+                booking_id: backend::BookingId {
+                    email,
+                    app_reference,
+                },
+                travelomatrix_id: fe_booking_details.travelomatrix_id,
+                booking_ref_no: fe_booking_details.booking_ref_no,
+                booking_status: fe_booking_details.booking_status,
+                confirmation_no: fe_booking_details.confirmation_no,
+                api_status: fe_booking_details_success.status.clone().into(),
+                resolved_booking_status: booking_details
+                    .parse_resolved_booking_status_from_api_response()
+                    .into(),
+            };
+            BeBookRoomResponse {
+                commit_booking: be_booking_details,
+                status: fe_booking_details_success.status.to_string(),
+                message: fe_booking_details_success.message,
+            }
+        }
     }
 }
 
