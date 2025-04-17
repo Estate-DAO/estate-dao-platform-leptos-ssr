@@ -19,8 +19,9 @@ pub trait RetryableRequest: ProvabReq + Serialize + Clone + 'static {
         // let provab = Provab::default();
         // since this is working in SSR context, we need to get the provab instance from context
 
-        use leptos::expect_context;
-        let provab: Provab = expect_context();
+        use super::a04_book_room::from_leptos_context_or_axum_ssr;
+
+        let provab: Provab = from_leptos_context_or_axum_ssr();
 
         let mut attempts = 0;
         let max_attempts = retry_count as usize + 1; // +1 because we count the initial attempt

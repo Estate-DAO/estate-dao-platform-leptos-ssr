@@ -31,7 +31,8 @@ impl MockableResponse for BookRoomResponse {
         // randomly pick one of the three booking statuses
         let mut rng = rand::thread_rng();
 
-        let statuses = ["BOOKING_CONFIRMED", "BOOKING_FAILED", "BOOKING_HOLD"];
+        let statuses = ["BOOKING_CONFIRMED", "BOOKING_FAILED"];
+        // let statuses = ["BOOKING_CONFIRMED", "BOOKING_FAILED", "BOOKING_HOLD"];
         let idx = rng.gen_range(0..statuses.len());
         generate_success_response_with_status(statuses[idx])
     }

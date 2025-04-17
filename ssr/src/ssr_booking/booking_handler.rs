@@ -9,8 +9,9 @@ use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusRespo
 use crate::api::payments::NowPayments;
 use crate::api::{
     book_room as book_room_api, create_backend_book_room_response,
-    user_details_to_passenger_details, BookRoomRequest, BookRoomResponse, BookingDetails,
-    BookingStatus, RoomDetail,
+    get_hotel_booking_detail_from_travel_provider_v2, user_details_to_passenger_details,
+    BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, HotelBookingDetailRequest,
+    RoomDetail,
 };
 use crate::canister::backend::{self, BeBookRoomResponse, Booking};
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
@@ -113,6 +114,52 @@ async fn book_room_and_update_backend(
     Ok(event)
 }
 
+#[instrument(name = "book_room_hotel_details_looped", skip(event), err(Debug))]
+async fn book_room_hotel_details_looped(
+    event: ServerSideBookingEvent,
+) -> Result<ServerSideBookingEvent, String> {
+    // get app_reference from event.order_id
+    // 1. get the blocked room from backend (from event or by fetching booking details)
+    // For this example, assume booking details are already fetched and available in event or context
+
+    let app_ref =
+        PaymentIdentifiers::app_reference_from_order_id(&event.order_id).ok_or_else(|| {
+            format!(
+                "Failed to extract app_reference from order_id: {}",
+                event.order_id
+            )
+        })?;
+
+    let booking_id = BookingId {
+        app_reference: app_ref.clone(),
+        email: event.user_email.clone(),
+    };
+
+    let request = HotelBookingDetailRequest {
+        app_reference: app_ref.clone(),
+    };
+
+    let hotel_details_response = get_hotel_booking_detail_from_travel_provider_v2(request)
+        .await
+        .map_err(|e| format!("Failed to get hotel booking detail: {e}"))?;
+
+    if !hotel_details_response.status {
+        return Err(format!(
+            "Failed to get hotel booking detail: {}",
+            hotel_details_response.message
+        ));
+    }
+
+    // update_hold_booking vector length is zero => return error
+    if hotel_details_response.update_hold_booking.is_empty() {
+        return Err("Failed to get hotel booking detail: update_hold_booking is empty".to_string());
+    }
+
+    // todo (booking_hold) details are not present in the api
+
+    Ok(event)
+}
+
 // ---------------------
 // PIPELINE INTEGRATION for backend provider as a step in pipeline
 // ---------------------
@@ -199,9 +246,10 @@ impl MakeBookingFromBookingProvider {
                     backend::ResolvedBookingStatus::BookingOnHold => {
                         info!("Booking is on hold, proceeding with booking provider call");
                         // todo (booking_hold) fix this by doing a periodic call
-                        return Err(format!(
-                            "Booking is on hold, cannot proceed with booking provider call"
-                        ));
+                        book_room_hotel_details_looped(event).await
+                        // return Err(format!(
+                        //     "Booking is on hold, cannot proceed with booking provider call"
+                        // ));
                     }
                 }
             }

@@ -27,7 +27,10 @@ pub use a04_book_room::{
 };
 
 mod a05_hotel_booking_detail;
-pub use a05_hotel_booking_detail::{HotelBookingDetailRequest, HotelBookingDetailResponse};
+pub use a05_hotel_booking_detail::{
+    get_hotel_booking_detail_from_travel_provider_v2, HotelBookingDetailRequest,
+    HotelBookingDetailResponse,
+};
 
 // pub mod tower_client;
 // cfg_if! {
