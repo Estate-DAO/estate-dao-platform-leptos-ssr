@@ -168,7 +168,7 @@ pub fn SSEConfirmationPage() -> impl IntoView {
         ];
 
         view! {
-            <div class="flex items-center justify-center my-8">
+            <div class="flex flex-col md:flex-row items-center justify-center w-full py-8">
                 {move || {
                     steps
                     .clone()
@@ -176,7 +176,8 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                     .enumerate()
                     .map(|(index, (label, signal))| {
                         let is_active = move || signal.get();
-                        let circle_classes = move || format!("w-8 h-8 rounded-full flex flex-col items-center justify-center font-bold transition-colors {}", if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
+                        let circle_classes = move || format!("w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors {}",
+                            if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
 
                         let line_color = move || if is_active() {
                                 "bg-black"
@@ -185,14 +186,16 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         };
 
                         view! {
-                            <div class="flex items-center">
-                                <div class=circle_classes()>
-                                    <span class="mt-[123px]">{(index + 1).to_string()}</span>
-                                    <span class="p-8 text-sm text-gray-600">{move || label.get()}</span>
+                            <div class="flex items-start min-w-fit">
+                                <div class="flex flex-col items-center">
+                                    <div class=circle_classes()>
+                                        <span class="text-sm">{(index + 1).to_string()}</span>
+                                    </div>
+                                    <span class="mt-4 text-xs text-gray-600 whitespace-nowrap text-center max-w-[120px]">{move || label.get()}</span>
                                 </div>
                                 {if index < steps.len() - 1 {
                                     view! {
-                                        <div class=format!("h-1 w-96 transition-colors {}", line_color()) />
+                                        <div class=format!("h-[1px] w-24 md:w-32 lg:w-48 transition-colors mt-4 mx-2 {}", line_color()) />
                                     }
                                 } else {
                                     view! { <div /> }
@@ -207,148 +210,133 @@ pub fn SSEConfirmationPage() -> impl IntoView {
     };
 
     view! {
-        <section class="relative h-screen">
-            <Navbar />
-            <div class="flex flex-col items-center justify-center p-8">
-
-        // <div>
-            // <h2>"This is SSE Booking!"</h2>
+        <section class="flex flex-col items-center min-h-screen w-full">
+            <div class="w-full">
+                <Navbar />
+            </div>
             <NotificationListenerWrapper />
             <SSEBookingHandler />
 
-
-            // {move || {
-            //         let notifications = NotificationState::get_notifications();
-            //         log!("[SSEConfirmationPage] notifications: {:#?}", notifications.get());
-            //       {format!("{:#?}", notifications.get())}
-            //     }
-            // }
-            <div class="flex flex-col items-center justify-center p-8">
-                {render_progress_bar()}
-                <br />
-                <br />
-                <br />
-                <br />
-                <br />
-                <br />
-            </div>
-        </div>
-
-        <Show when= move ||(status_updates.p04_load_booking_details_from_backend.get()) fallback=SpinnerGray>
-
-        <div class="max-w-[500px] mx-auto border border-blue-400 rounded-lg p-6 space-y-4">
-            <div class="text-center text-2xl font-semibold">
-                Your Booking has been confirmed!
-            </div>
-            <Divider />
-            <div class="space-y-1">
-                <h2 class="text-xl font-semibold">{move || confirmation_page_state.hotel_name.get()}</h2>
-                <p class="text-gray-600 text-sm">
-                    <span>{move || confirmation_page_state.hotel_location.get()}</span>
-                    <span class="ml-1 text-gray-600 text-sm">{move || {
-                        ConfirmationResultsState::get_destination()
-                        .map(|dest| format!("{}, {}", dest.city, dest.country_name))
-                        .unwrap_or_else(|| "Location details not available".to_string())
-                    }}</span>
-                </p>
-            </div>
-
-            <div class="space-y-4">
-                <div class="space-y-2">
+            <div class="flex flex-col items-center w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-8">
+                <div class="w-full mb-16">
+                    {render_progress_bar()}
+                </div>
+                <Show when= move ||(status_updates.p04_load_booking_details_from_backend.get()) fallback=SpinnerGray>
+                <div class="w-full max-w-[500px] lg:max-w-[600px] border border-blue-400 rounded-lg p-3 sm:p-4 md:p-6 space-y-3 md:space-y-4">
+                    <div class="text-center text-xl md:text-2xl font-semibold">
+                        Your Booking has been confirmed!
+                    </div>
                     <Divider />
-                    <p class="text-gray-600 text-sm">Reference ID</p>
-                    <p class="font-mono">{move || {
-                        match confirmation_page_state.booking_details.get() {
-                            Some(details) => match details {
-                                backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { booking_ref_no, .. }, .. }), .. } =>
-                                    booking_ref_no.clone(),
-                                _ => "Data missing".to_string()
-                            },
-                            None => "Data missing".to_string()
-                        }
-                    }}</p>
-                </div>
-                <div class="space-y-2">
-                    <Divider />
-                    <p class="text-gray-600 text-sm">Booking ID</p>
-                    <p class="font-mono">{move || {
-                        match confirmation_page_state.booking_details.get() {
-                            Some(details) => match details {
-                                backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { travelomatrix_id, .. }, .. }), .. } =>
-                                    travelomatrix_id.clone(),
-                                _ => "Data missing".to_string()
-                            },
-                            None => "Data missing".to_string()
-                        }
-                    }}</p>
-                </div>
-            </div>
+                    <div class="space-y-1">
+                        <h2 class="text-lg md:text-xl font-semibold">{move || confirmation_page_state.hotel_name.get()}</h2>
+                        <p class="text-gray-600 text-xs md:text-sm">
+                            <span>{move || confirmation_page_state.hotel_location.get()}</span>
+                            <span class="ml-1 text-gray-600 text-xs md:text-sm">{move || {
+                                ConfirmationResultsState::get_destination()
+                                .map(|dest| format!("{}, {}", dest.city, dest.country_name))
+                                .unwrap_or_else(|| "Location details not available".to_string())
+                            }}</span>
+                        </p>
+                    </div>
 
-            <div class="flex justify-between items-center border-t border-b border-gray-200 py-4">
-                <div class="ml-2">
-                    <span class="text-gray-600 text-sm">Check-in</span>
-                    <p class="font-semibold">{move || {
-                        let date_range = confirmation_page_state.date_range.get();
-                        format_date_fn(date_range.start)
-                    }}</p>
-                </div>
-                <div class="text-center text-xs text-gray-600 rounded-lg bg-blue-100 px-2 py-1">
-                    {move || {
-                        let date_range = confirmation_page_state.date_range.get();
-                        let nights = (date_range.end.2 - date_range.start.2) as i32;
-                        format!("{} Nights", nights.max(0))
-                    }}
-                </div>
-                <div class="ml-2">
-                    <span class="text-gray-600 text-sm">Check-out</span>
-                    <p class="font-semibold">{move || {
-                        let date_range = confirmation_page_state.date_range.get();
-                        format_date_fn(date_range.end)
-                    }}</p>
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                <h3 class="text-xs text-gray-600">Guests & Rooms</h3>
-                <p class="text-sm">{move || {
-                    let adults = confirmation_page_state.adults.get();
-                    let children = confirmation_page_state.children.get();
-                    format!("{} Room, {} Adult{} • {} children",
-                        1,
-                        adults.len(),
-                        if adults.len() > 1 { "s" } else { "" },
-                        children.len())
-                }}</p>
-            </div>
-
-            <div class="space-y-2">
-                <h3 class="font-semibold mb-4">Guest Information</h3>
-                {move || {
-                    let adults = confirmation_page_state.adults.get();
-                    let primary_adult = adults.first().cloned().unwrap_or_default();
-                    view! {
-                        <div class="space-y-1">
-                            <p class="text-sm">{format!("{} {}",
-                                primary_adult.first_name,
-                                primary_adult.last_name.unwrap_or_default())
-                            }</p>
-                            <p class="text-sm text-gray-600">{
-                                primary_adult.email.unwrap_or("Email not provided".to_string())
-                            }</p>
-                            <p class="text-sm text-gray-600">{
-                                primary_adult.phone.unwrap_or("Phone not provided".to_string())
-                            }</p>
+                    <div class="space-y-3 md:space-y-4">
+                        <div class="space-y-1.5 md:space-y-2">
+                            <Divider />
+                            <p class="text-gray-600 text-xs md:text-sm">Reference ID</p>
+                            <p class="font-mono text-sm md:text-base break-all">{move || {
+                                match confirmation_page_state.booking_details.get() {
+                                    Some(details) => match details {
+                                        backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { booking_ref_no, .. }, .. }), .. } =>
+                                            booking_ref_no.clone(),
+                                        _ => "Data missing".to_string()
+                                    },
+                                    None => "Data missing".to_string()
+                                }
+                            }}</p>
                         </div>
-                    }
-                }}
+                        <div class="space-y-1.5 md:space-y-2">
+                            <Divider />
+                            <p class="text-gray-600 text-xs md:text-sm">Booking ID</p>
+                            <p class="font-mono text-sm md:text-base break-all">{move || {
+                                match confirmation_page_state.booking_details.get() {
+                                    Some(details) => match details {
+                                        backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { travelomatrix_id, .. }, .. }), .. } =>
+                                            travelomatrix_id.clone(),
+                                        _ => "Data missing".to_string()
+                                    },
+                                    None => "Data missing".to_string()
+                                }
+                            }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center border-t border-b border-gray-200 py-3 md:py-4">
+                        <div class="ml-1 md:ml-2">
+                            <span class="text-gray-600 text-xs md:text-sm">Check-in</span>
+                            <p class="font-semibold text-sm md:text-base">{move || {
+                                let date_range = confirmation_page_state.date_range.get();
+                                format_date_fn(date_range.start)
+                            }}</p>
+                        </div>
+                        <div class="text-center text-[10px] md:text-xs text-gray-600 rounded-lg bg-blue-100 px-1.5 md:px-2 py-1">
+                            {move || {
+                                let date_range = confirmation_page_state.date_range.get();
+                                let nights = (date_range.end.2 - date_range.start.2) as i32;
+                                format!("{} Nights", nights.max(0))
+                            }}
+                        </div>
+                        <div class="ml-1 md:ml-2">
+                            <span class="text-gray-600 text-xs md:text-sm">Check-out</span>
+                            <p class="font-semibold text-sm md:text-base">{move || {
+                                let date_range = confirmation_page_state.date_range.get();
+                                format_date_fn(date_range.end)
+                            }}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 md:space-y-2">
+                        <h3 class="text-[10px] md:text-xs text-gray-600">Guests & Rooms</h3>
+                        <p class="text-xs md:text-sm">{move || {
+                            let adults = confirmation_page_state.adults.get();
+                            let children = confirmation_page_state.children.get();
+                            format!("{} Room, {} Adult{} • {} children",
+                                1,
+                                adults.len(),
+                                if adults.len() > 1 { "s" } else { "" },
+                                children.len())
+                        }}</p>
+                    </div>
+
+                    <div class="space-y-1.5 md:space-y-2">
+                        <h3 class="font-semibold mb-2 md:mb-3 text-sm md:text-base">Guest Information</h3>
+                        {move || {
+                            let adults = confirmation_page_state.adults.get();
+                            let primary_adult = adults.first().cloned().unwrap_or_default();
+                            view! {
+                                <div class="space-y-1">
+                                    <p class="text-xs md:text-sm">{format!("{} {}",
+                                        primary_adult.first_name,
+                                        primary_adult.last_name.unwrap_or_default())
+                                    }</p>
+                                    <p class="text-xs md:text-sm text-gray-600">{
+                                        primary_adult.email.unwrap_or("Email not provided".to_string())
+                                    }</p>
+                                    <p class="text-xs md:text-sm text-gray-600">{
+                                        primary_adult.phone.unwrap_or("Phone not provided".to_string())
+                                    }</p>
+                                </div>
+                            }
+                        }}
+                    </div>
+
+                    <div class="text-center text-xs md:text-sm font-medium text-gray-600 pt-2">
+                        Please take a screenshot for your reference
+                    </div>
+                </div>
+            </Show>
             </div>
 
-            <div class="text-center text-sm font-medium text-gray-600 pt-2">
-                Please take a screenshot for your reference
-            </div>
-        </div>
-    </Show>
-    </section>
+        </section>
     }
 }
 
