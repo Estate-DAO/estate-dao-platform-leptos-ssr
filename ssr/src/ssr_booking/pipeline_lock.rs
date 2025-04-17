@@ -40,6 +40,20 @@ impl PipelineLockManager {
         self.active_pipelines.remove(&key);
         debug!("Lock released for key: {}", key);
     }
+
+    // Check if a lock exists for a given key
+    pub fn has_lock(&self, payment_id: Option<&str>, order_id: &str) -> bool {
+        let key = Self::create_lock_key(payment_id, order_id);
+        self.active_pipelines.contains_key(&key)
+    }
+
+    // Get a list of all currently locked keys
+    pub fn list_active_locks(&self) -> Vec<String> {
+        self.active_pipelines
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect()
+    }
 }
 
 impl Default for PipelineLockManager {
@@ -124,5 +138,53 @@ mod pipeline_lock_tests {
 
         // Should be able to acquire the lock now
         assert!(manager.try_acquire_lock(Some("pay_123"), "order_456"));
+    }
+
+    #[test]
+    fn test_has_lock() {
+        let manager = PipelineLockManager::new();
+
+        // Initially no lock
+        assert!(!manager.has_lock(Some("pay_123"), "order_456"));
+
+        // Acquire lock
+        manager.try_acquire_lock(Some("pay_123"), "order_456");
+        assert!(manager.has_lock(Some("pay_123"), "order_456"));
+
+        // Release lock
+        manager.release_lock(Some("pay_123"), "order_456");
+        assert!(!manager.has_lock(Some("pay_123"), "order_456"));
+    }
+
+    #[test]
+    fn test_list_active_locks() {
+        let manager = PipelineLockManager::new();
+
+        // Initially empty
+        assert!(manager.list_active_locks().is_empty());
+
+        // Add some locks
+        manager.try_acquire_lock(Some("pay_123"), "order_456");
+        manager.try_acquire_lock(Some("pay_789"), "order_789");
+
+        let active_locks = manager.list_active_locks();
+        assert_eq!(active_locks.len(), 2);
+        assert!(active_locks.contains(&PipelineLockManager::create_lock_key(
+            Some("pay_123"),
+            "order_456"
+        )));
+        assert!(active_locks.contains(&PipelineLockManager::create_lock_key(
+            Some("pay_789"),
+            "order_789"
+        )));
+
+        // Release one lock
+        manager.release_lock(Some("pay_123"), "order_456");
+        let active_locks = manager.list_active_locks();
+        assert_eq!(active_locks.len(), 1);
+        assert!(active_locks.contains(&PipelineLockManager::create_lock_key(
+            Some("pay_789"),
+            "order_789"
+        )));
     }
 }
