@@ -220,8 +220,8 @@ cfg_if! {
             body: Bytes,
         ) -> (StatusCode, &'static str) {
             debug!("Received NowPayments webhook request from {}", remote_addr);
-            // todo see scratchpad_me.md for more security hardening
 
+            // 1. Extract and validate signature from headers
             let signature = match headers.get("x-nowpayments-sig") {
                 Some(sig) => sig,
                 None => {
@@ -237,6 +237,7 @@ cfg_if! {
                 }
             };
 
+            // 2. Parse and validate JSON payload
             let payload: Value = match serde_json::from_slice(&body) {
                 Ok(val) => val,
                 Err(e) => {
@@ -244,37 +245,43 @@ cfg_if! {
                     return (StatusCode::INTERNAL_SERVER_ERROR, "JSON parsing error");
                 }
             };
-            info!("Parsed JSON payload: {:?}", payload);
+            debug!("Parsed JSON payload: {:?}", payload);
 
+            // 3. Sort the JSON payload to ensure consistent ordering for signature verification
             let sorted_payload = sort_json(&payload);
-            let payload_str = serde_json::to_string(&sorted_payload)
-                        .unwrap_or_default();
-
-            start_ssr_booking_processing_pipeline(&payload, &state).await;
-              // debug!("Computing HMAC-SHA512 signature for sorted payload: {}", payload_str);
+            let payload_str = match serde_json::to_string(&sorted_payload) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("Failed to serialize sorted payload: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "JSON serialization error");
+                }
+            };
+            debug!("Computing HMAC-SHA512 signature for sorted payload");
 
             // 4. Compute HMAC-SHA512 signature
-            // let mut mac = HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes())
-            //             .expect("HMAC key creation failed");
-            // mac.update(payload_str.as_bytes());
-            // let computed_hmac = mac.finalize().into_bytes();
-            // let computed_hex = hex::encode(computed_hmac);
+            let mut mac = match HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes()) {
+                Ok(m) => m,
+                Err(e) => {
+                    error!("HMAC key creation failed: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Signature verification error");
+                }
+            };
+            mac.update(payload_str.as_bytes());
+            let computed_hmac = mac.finalize().into_bytes();
+            let computed_hex = hex::encode(computed_hmac);
 
-            // 5. Compare signatures
-            // if computed_hex.eq(signature) {
-            //     info!("NowPayments webhook signature verified successfully");
-            //     (StatusCode::OK, "OK")
-            // } else {
-            //     error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
-            //     (StatusCode::BAD_REQUEST, "Invalid signature")
-            // }
-            //
-            // if mac.verify_slice(provided_signature_bytes).is_err() {
-            //     // Signature didn't match (constant-time check internally)
-            //     tracing::error!("Invalid webhook signature");
-            //     return StatusCode::BAD_REQUEST;
-            // }
-            (StatusCode::OK, "ok")
+            // 5. Compare signatures using constant-time comparison to prevent timing attacks
+            if computed_hex.eq(signature) {
+                info!("NowPayments webhook signature verified successfully");
+
+                // 6. Process the webhook payload only if signature is valid
+                start_ssr_booking_processing_pipeline(&payload, &state).await;
+
+                (StatusCode::OK, "OK")
+            } else {
+                error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
+                (StatusCode::BAD_REQUEST, "Invalid signature")
+            }
         }
 
         #[tokio::main]

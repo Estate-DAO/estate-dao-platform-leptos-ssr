@@ -4,7 +4,7 @@
 use crate::api::_default_passenger_age;
 use crate::api::block_room;
 use crate::api::canister::add_booking::add_booking_backend;
-use crate::api::consts::{get_payments_url, get_price_amount_based_on_env};
+use crate::api::consts::{get_payments_url, get_price_amount_based_on_env, APP_URL};
 use crate::api::get_room;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::nowpayments_get_payment_status;
@@ -341,7 +341,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                             &email,
                         ),
                         order_description: "Hotel Room Booking".to_string(),
-                        ipn_callback_url: "https://nowpayments.io".to_string(),
+                        ipn_callback_url: format!("{}/ipn/webhook", APP_URL),
                         success_url: get_payments_url("success"),
                         cancel_url: get_payments_url("cancel"),
                         partially_paid_url: get_payments_url("partial"),
