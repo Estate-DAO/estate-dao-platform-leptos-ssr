@@ -212,7 +212,7 @@ cfg_if! {
         }
 
 
-        #[instrument(skip(state, headers, body, remote_addr))]
+        #[instrument(skip(state, headers, body))]
         async fn nowpayments_webhook(
             ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
             State(state): State<AppState>,

@@ -39,14 +39,16 @@
 
 use once_cell::sync::OnceCell;
 use std::env;
-use tracing_appender::non_blocking::WorkerGuard;
-use tracing_appender::rolling;
 use tracing_subscriber::Layer;
 use tracing_subscriber::{
     filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry,
 };
 
+#[cfg(feature = "debug_log")]
+use tracing_appender::non_blocking::WorkerGuard;
+
 // Static to hold the guard and keep it alive for the lifetime of the app
+#[cfg(feature = "debug_log")]
 static FILE_GUARD: OnceCell<WorkerGuard> = OnceCell::new();
 
 fn create_env_filter() -> EnvFilter {
@@ -55,13 +57,6 @@ fn create_env_filter() -> EnvFilter {
 }
 
 pub fn init_tracing() {
-    // Create a rolling daily file appender under "logs/estate_fe_local.log.YYYY-MM-DD"
-    let file_appender = rolling::daily("logs", "estate_fe_local.log");
-    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
-
-    // Store the guard globally to keep it alive
-    let _ = FILE_GUARD.set(guard);
-
     // Layer for writing to terminal (stdout)
     let stdout_layer = fmt::layer()
         .with_target(true)
@@ -70,6 +65,15 @@ pub fn init_tracing() {
 
     #[cfg(feature = "debug_log")]
     {
+        use tracing_appender::rolling;
+        // Create a rolling daily file appender under "logs/estate_fe_local.log.YYYY-MM-DD"
+        let file_appender = rolling::daily("logs", "estate_fe_local.log");
+
+        let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+
+        // Store the guard globally to keep it alive
+        let _ = FILE_GUARD.set(guard);
+
         // Layer for writing to file
         let file_layer = fmt::layer()
             .with_writer(file_writer)

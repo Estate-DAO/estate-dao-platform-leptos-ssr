@@ -8,6 +8,7 @@ use crate::canister::backend::{
 // use crate::init::get_provab_client;
 // use leptos::logging::log;
 use crate::log;
+// use tracing;
 use leptos::*;
 use reqwest::Method;
 use serde::Deserializer;
@@ -226,7 +227,7 @@ impl BookingDetails {
             "BOOKING_FAILED" => ResolvedBookState::APIResponseBookingFailed,
             "BOOKING_HOLD" => ResolvedBookState::APIResponseBookingOnHold,
             unknown_value => {
-                tracing::error!("Unknown booking status: {}", unknown_value);
+                log!("Unknown booking status: {}", unknown_value);
                 ResolvedBookState::Unknown
             }
         }
