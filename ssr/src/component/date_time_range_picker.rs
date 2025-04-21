@@ -167,60 +167,53 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
             </button>
 
             <Show when=move || is_open()>
-                <div class="fixed inset-0 bg-white z-[100] md:absolute md:mt-6 md:min-w-[40rem] md:bg-white md:border md:border-gray-200 md:rounded-xl md:shadow-lg md:p-4 md:z-50">
-                    // <div class="flex items-center p-4 border-b border-gray-200 md:hidden">
-                    //     <button
-                    //         class="text-gray-800 mr-4"
-                    //         on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
-                    //     >
-                    //         <Icon icon=icondata::BsArrowLeft class="text-xl" />
-                    //     </button>
-                    //     <h2 class="text-lg font-medium">Select Dates</h2>
-                    // </div>
-                    <div class="p-4">
-                        <div id="date-prev-next" class="flex justify-between">
-                            <button
-                                on:click=move |_| {
-                                    let (current_year, current_month) = initial_date.get_untracked();
-                                    set_initial_date(prev_date(current_year, current_month))
-                                }
-                                class="hover:bg-gray-200 p-2 rounded-md"
-                            >
-                                <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
-                            </button>
+                <div class="fixed inset-0 bg-white z-[100] md:bg-black/30 md:backdrop-blur-sm">
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:fixed md:max-w-lg md:w-[28rem] md:rounded-2xl md:shadow-xl md:border md:border-gray-200 md:bg-white md:p-0 md:mx-auto md:my-auto md:z-50">
+                        <div class="bg-white p-4 md:p-8 rounded-t-2xl md:rounded-2xl h-full w-full flex flex-col justify-between">
+                            <div id="date-prev-next" class="flex justify-between">
+                                <button
+                                    on:click=move |_| {
+                                        let (current_year, current_month) = initial_date.get_untracked();
+                                        set_initial_date(prev_date(current_year, current_month))
+                                    }
+                                    class="hover:bg-gray-200 p-2 rounded-md"
+                                >
+                                    <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
+                                </button>
 
-                            <button
-                                on:click=move |_| {
-                                    let (current_year, current_month) = initial_date.get_untracked();
-                                    set_initial_date(next_date(current_year, current_month))
-                                }
-                                class="hover:bg-gray-200 p-2 rounded-md"
-                            >
-                                <Icon icon=icondata::BiChevronRightRegular class="text-black" />
-                            </button>
-                        </div>
-                        <div class="flex flex-col md:flex-row md:space-x-8 space-y-8 md:space-y-0">
-                            <DateCells year_month=initial_date.into() selected_range=selected_range />
-                            <DateCells
-                                year_month=next_month_date.into()
-                                selected_range=selected_range
-                            />
-                        </div>
+                                <button
+                                    on:click=move |_| {
+                                        let (current_year, current_month) = initial_date.get_untracked();
+                                        set_initial_date(next_date(current_year, current_month))
+                                    }
+                                    class="hover:bg-gray-200 p-2 rounded-md"
+                                >
+                                    <Icon icon=icondata::BiChevronRightRegular class="text-black" />
+                                </button>
+                            </div>
+                            <div class="flex flex-col md:flex-row md:space-x-8 space-y-8 md:space-y-0">
+                                <DateCells year_month=initial_date.into() selected_range=selected_range />
+                                <DateCells
+                                    year_month=next_month_date.into()
+                                    selected_range=selected_range
+                                />
+                            </div>
 
-                        <Show
-                            when=move || {
-                                let range = selected_range.get();
-                                range.start != (0, 0, 0) && range.end != (0, 0, 0)
-                            }
-                        >
-                            <button
-                                type="button"
-                                class="w-full mt-6 mb-4 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-black-2 py-3 md:py-2 rounded-full"
-                                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                            <Show
+                                when=move || {
+                                    let range = selected_range.get();
+                                    range.start != (0, 0, 0) && range.end != (0, 0, 0)
+                                }
                             >
-                                "Apply"
-                            </button>
-                        </Show>
+                                <button
+                                    type="button"
+                                    class="w-full mt-6 mb-4 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-black-2 py-3 md:py-2 rounded-full"
+                                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                >
+                                    "Apply"
+                                </button>
+                            </Show>
+                        </div>
                     </div>
                 </div>
             </Show>
@@ -276,7 +269,7 @@ fn DateCells(
                     format!("{} {}", month_names[(month_signal() - 1) as usize], year_signal())
                 }}
             </div>
-            <div class="grid grid-cols-7 gap-x-2 gap-y-2.5 justify-items-center">
+            <div class="grid grid-cols-7 gap-x-2 gap-y-2.5 md:gap-x-4 md:gap-y-3 justify-items-center">
 
                 {weekdays
                     .iter()

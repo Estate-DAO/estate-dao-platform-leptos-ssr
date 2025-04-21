@@ -42,7 +42,7 @@ pub fn HotelListPage() -> impl IntoView {
             </div>
 
             <div class="mx-auto">
-                <div class="px-20 grid justify-items-center grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="px-1 sm:px-2 md:px-8 grid justify-items-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
                     <Show
                         when=move || search_list_page.search_result.get().is_some()
@@ -191,12 +191,12 @@ pub fn HotelCard(
             search_hotel_room_action.dispatch(());
             search_hotel_info_action.dispatch(())
         }>
-            <div class="max-w-sm rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
-                <img class="w-80 h-64 object-cover" src=img alt=hotel_name.clone() />
+            <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
+                <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
 
                 <div class="h-24">
-                    <div class="flex items-center justify-between px-6 pt-4">
-                        <p>
+                    <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
+                        <p class="text-sm sm:text-base font-medium">
                             {if hotel_name.len() > 10 {
                                 format!("{}...", hotel_name.chars().take(10).collect::<String>())
                             } else {
@@ -206,9 +206,9 @@ pub fn HotelCard(
                         <StarRating rating=move || rating />
                     </div>
 
-                    <div class="flex items-center justify-between px-6 pt-2">
+                    <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
                         <PriceDisplay price=price />
-                        <button class="font-semibold underline underline-offset-2 decoration-solid text-xs">
+                        <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
                             "View details"
                         </button>
                     </div>
