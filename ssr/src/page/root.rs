@@ -7,7 +7,7 @@ use leptos_icons::*;
 use leptos_query::QueryResult;
 use leptos_router::use_navigate;
 
-use crate::component::{Footer, MostPopular, Navbar};
+use crate::component::{Footer, LiveSelectExample, MostPopular, Navbar};
 use crate::{
     api::{canister::greet_call::greet_backend, search_hotel},
     app::AppRoutes,
@@ -42,6 +42,7 @@ pub fn RootPage() -> impl IntoView {
             </div>
             // </FullScreenBannerForMobileModeNotReady>
             // <Footer />
+            // <LiveSelectExample />
         </main>
     }
 }

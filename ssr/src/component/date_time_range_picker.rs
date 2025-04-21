@@ -154,7 +154,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     });
 
     view! {
-        <div class="">
+        <div class="bg-white">
             <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
                 <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
             </div>
@@ -168,17 +168,18 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
             <Show when=move || is_open()>
                 <div class="fixed inset-0 bg-white z-[100] md:bg-black/30 md:backdrop-blur-sm">
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:fixed md:max-w-lg md:w-[28rem] md:rounded-2xl md:shadow-xl md:border md:border-gray-200 md:bg-white md:p-0 md:mx-auto md:my-auto md:z-50">
-                        <div class="bg-white p-4 md:p-8 rounded-t-2xl md:rounded-2xl h-full w-full flex flex-col justify-between">
-                            <div id="date-prev-next" class="flex justify-between">
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:fixed md:max-w-[600px] md:w-[600px] md:rounded-2xl md:shadow-xl md:border md:border-gray-200 md:p-0 md:mx-auto md:my-auto md:z-50">
+                        <div class="p-4 md:p-8 rounded-t-2xl md:rounded-2xl h-full w-full">
+                            {/* Calendar Header */}
+                            <div class="flex justify-between items-center mb-8">
                                 <button
                                     on:click=move |_| {
                                         let (current_year, current_month) = initial_date.get_untracked();
                                         set_initial_date(prev_date(current_year, current_month))
                                     }
-                                    class="hover:bg-gray-200 p-2 rounded-md"
+                                    class="hover:bg-gray-100 p-1.5 rounded-full"
                                 >
-                                    <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
+                                    <Icon icon=icondata::BiChevronLeftRegular class="text-black text-lg" />
                                 </button>
 
                                 <button
@@ -186,19 +187,26 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                         let (current_year, current_month) = initial_date.get_untracked();
                                         set_initial_date(next_date(current_year, current_month))
                                     }
-                                    class="hover:bg-gray-200 p-2 rounded-md"
+                                    class="hover:bg-gray-100 p-1.5 rounded-full"
                                 >
-                                    <Icon icon=icondata::BiChevronRightRegular class="text-black" />
+                                    <Icon icon=icondata::BiChevronRightRegular class="text-black text-lg" />
                                 </button>
                             </div>
-                            <div class="flex flex-col md:flex-row md:space-x-8 space-y-8 md:space-y-0">
-                                <DateCells year_month=initial_date.into() selected_range=selected_range />
-                                <DateCells
-                                    year_month=next_month_date.into()
-                                    selected_range=selected_range
-                                />
+
+                            {/* Calendar Grid */}
+                            <div class="flex flex-col md:flex-row md:gap-16 space-y-8 md:space-y-0">
+                                <div class="flex-1">
+                                    <DateCells year_month=initial_date.into() selected_range=selected_range />
+                                </div>
+                                <div class="flex-1">
+                                    <DateCells
+                                        year_month=next_month_date.into()
+                                        selected_range=selected_range
+                                    />
+                                </div>
                             </div>
 
+                            {/* Action Button */}
                             <Show
                                 when=move || {
                                     let range = selected_range.get();
@@ -207,7 +215,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                             >
                                 <button
                                     type="button"
-                                    class="w-full mt-6 mb-4 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-black-2 py-3 md:py-2 rounded-full"
+                                    class="w-full mt-8 mb-2 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-black-2 py-3 md:py-2 rounded-full"
                                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
                                 >
                                     "Apply"
@@ -263,23 +271,30 @@ fn DateCells(
     ];
 
     view! {
-        <div class="relative z-50">
-            <div class="text-center font-bold mb-2">
+        <div>
+            {/* Month Title */}
+            <div class="text-left font-semibold text-base mb-6">
                 {move || {
                     format!("{} {}", month_names[(month_signal() - 1) as usize], year_signal())
                 }}
             </div>
-            <div class="grid grid-cols-7 gap-x-2 gap-y-2.5 md:gap-x-4 md:gap-y-3 justify-items-center">
 
+            {/* Calendar Grid */}
+            <div class="grid grid-cols-7 gap-y-2">
+                {/* Weekday Headers */}
                 {weekdays
                     .iter()
-                    .map(|&day| view! { <div class="font-bold">{day}</div> })
+                    .map(|&day| view! { <div class="text-[11px] text-gray-500 font-medium text-center mb-1">{day}</div> })
                     .collect::<Vec<_>>()}
+
+                {/* Empty cells for month start alignment */}
                 {move || {
                     (0..calculate_starting_day_of_month(year_month, start_month_day))
-                        .map(|_| view! { <div></div> })
+                        .map(|_| view! { <div class="w-8 h-8"></div> })
                         .collect::<Vec<_>>()
                 }}
+
+                {/* Date Cells */}
                 {move || {
                     (1..=days_in_month())
                         .map(|day_num| {
@@ -333,10 +348,6 @@ fn DateCells(
                                 let updated_range = selected_range.get();
                             };
                             view! {
-                                // log!("Before update: start={:?}, end={:?}", range.start, range.end);
-                                // log!(
-                                // "After update: start={:?}, end={:?}", updated_range.start, updated_range.end
-                                // );
                                 <button
                                     class=move || class_signal(
                                         selected_range.into(),
@@ -346,7 +357,7 @@ fn DateCells(
                                     )
                                     on:click=on_click
                                 >
-                                    {day_num}
+                                    <span class="text-xs font-normal">{day_num}</span>
                                 </button>
                             }
                         })
@@ -365,30 +376,31 @@ pub fn class_signal(
 ) -> String {
     let range = selected_range.get();
     let date_tuple = (year, month, day_num);
+    let base_classes = "w-8 h-8 rounded-full flex items-center justify-center";
 
     // Check if date is in the past
     let is_past_date = is_date_in_past(year, month, day_num);
 
     if is_past_date {
-        return "w-8 h-8 rounded-full text-gray-300 cursor-not-allowed".to_string();
+        return format!("{} {} {}", base_classes, "text-gray-300 cursor-not-allowed", "bg-white");
     }
 
     if range.start == date_tuple {
-        return "w-8 h-8 rounded-full bg-black text-white".to_string();
+        return format!("{} {} {}", base_classes, "bg-black text-white", "hover:bg-gray-900");
     }
 
     if range.end == date_tuple {
-        return "w-8 h-8 rounded-full bg-black text-white".to_string();
+        return format!("{} {} {}", base_classes, "bg-black text-white", "hover:bg-gray-900");
     }
 
     if range.start != (0, 0, 0)
         && range.end != (0, 0, 0)
         && is_date_between(date_tuple, range.start, range.end)
     {
-        return "w-8 h-8 rounded-full bg-gray-200".to_string();
+        return format!("{} {} {}", base_classes, "bg-gray-100", "hover:bg-gray-200");
     }
 
-    "w-8 h-8 rounded-full hover:bg-gray-200".to_string()
+    format!("{} {} {}", base_classes, "bg-white", "hover:bg-gray-100")
 }
 
 /// Checks if a date is in the past (before today)
