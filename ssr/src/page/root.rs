@@ -197,14 +197,16 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
                 <div class="flex items-center h-[56px] px-6">
-                    <div class="text-xl flex items-center">
-                        <Icon icon=icondata::BsMap class="text-black" />
-                    </div>
+                    <Show when=move || !disabled.get()>
+                        <div class="absolute inset-0">
+                            <DestinationPicker />
+                        </div>
+                    </Show>
 
-                    <Show
-                        when=move || disabled.get()
-                        fallback=move || view! { <div class="flex-1"></div> }
-                    >
+                    <Show when=move || disabled.get()>
+                        <div class="text-xl flex items-center">
+                            <Icon icon=icondata::BsMap class="text-black" />
+                        </div>
                         <button
                             // <!-- Improved text styling and alignment -->
                             class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal"
@@ -214,12 +216,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         </button>
                     </Show>
                 </div>
-
-                <Show when=move || !disabled.get()>
-                    <div class="absolute inset-0">
-                        <DestinationPicker />
-                    </div>
-                </Show>
             </div>
 
             // <!-- Date range picker -->

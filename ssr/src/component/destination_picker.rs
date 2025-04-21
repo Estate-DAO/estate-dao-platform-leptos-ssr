@@ -114,8 +114,12 @@ pub fn DestinationPicker() -> impl IntoView {
         <div class="relative w-full">
             // !<-- Input slot with consistent height -->
             <div class="w-full h-10">
+                <div class="absolute inset-y-0 left-2 flex items-center text-xl">
+                    <Icon icon=icondata::BsMap class="text-black" />
+                </div>
+
                 <button
-                    class="w-full h-full flex items-center pl-12 text-black bg-transparent hover:bg-gray-50 rounded-full transition-colors text-sm"
+                    class="w-full h-full flex items-center pl-12 text-black bg-transparent rounded-full transition-colors text-sm"
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)
                 >
                     {display_value}
