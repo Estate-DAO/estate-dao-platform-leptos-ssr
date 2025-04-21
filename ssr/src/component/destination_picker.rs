@@ -110,50 +110,57 @@ pub fn DestinationPicker() -> impl IntoView {
     });
 
     view! {
+        <div class="absolute inset-0 flex items-center">
+            <button
+                class="w-full h-full flex items-center pl-12 text-black bg-transparent border-none focus:outline-none text-sm text-left"
+                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)
+            >
+                {display_value}
+            </button>
 
-        <div class="absolute inset-0 flex items-center justify-center">
-        <div class="w-full h-full flex items-center" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)>
-            <input
-                type="text"
-                placeholder=""
-                class="w-full h-full text-gray-800 bg-transparent border-none focus:outline-none text-sm font-semibold text-center"
-                prop:value=display_value
-                readonly=true
-            />
-        </div>
-
-        <Show when=move || is_open()>
-            <div class="absolute top-full left-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                <div class="p-4">
-                    <div class="space-y-4">
-                        <Suspense fallback=move || {
-                            view! { <p>"Loading..."</p> }
-                        }>
-                            {move || {
-                                destinations_resource
-                                    .get()
-                                    .map(|dest_vec| {
-                                        // log!("{dest_vec:?}");
-                                        view! {
-                                            <ShowDestinations
-                                                dest_vec=dest_vec.unwrap_or_default()
-                                            />
-                                        }
-                                    })
-                            }}
-                        </Suspense>
+            <Show when=move || is_open()>
+                <div class="fixed inset-0 bg-white z-[100] md:absolute md:top-[calc(100%+0.5rem)] md:left-0 md:mt-0 md:w-80 md:bg-white md:border md:border-gray-200 md:rounded-xl md:shadow-lg md:z-50">
+                    // <div class="flex items-center p-4 border-b border-gray-200 md:hidden">
+                    //     <button
+                    //         class="text-gray-800 mr-4"
+                    //         on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                    //     >
+                    //         <Icon icon=icondata::BsArrowLeft class="text-xl" />
+                    //     </button>
+                    //     <h2 class="text-lg font-medium">Select Destination</h2>
+                    // </div>
+                    <div class="p-4">
+                        <div class="space-y-4">
+                            <Suspense fallback=move || {
+                                view! { <p>"Loading..."</p> }
+                            }>
+                                {move || {
+                                    destinations_resource
+                                        .get()
+                                        .map(|dest_vec| {
+                                            // log!("{dest_vec:?}");
+                                            view! {
+                                                <ShowDestinations
+                                                    dest_vec=dest_vec.unwrap_or_default()
+                                                />
+                                            }
+                                        })
+                                }}
+                            </Suspense>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </Show>
-    </div>
+            </Show>
+        </div>
     }
 }
 
 #[component]
 fn ShowDestinations(dest_vec: Vec<Destination>) -> impl IntoView {
     view! {
-        <div class="h-80 custom-scrollbar">
+        // <!-- Changed from fixed height to full height on mobile -->
+        // <!-- Added proper padding and improved scrolling -->
+        <div class="h-[calc(100vh-4rem)] md:h-80 overflow-y-auto custom-scrollbar">
             {move || {
                 dest_vec
                     .clone()
@@ -163,17 +170,21 @@ fn ShowDestinations(dest_vec: Vec<Destination>) -> impl IntoView {
                         let city = dest.city.clone();
                         view! {
                             <div
-                                class="cursor-pointer hover:bg-gray-50 p-2 rounded"
+                                // <!-- Improved touch targets with larger padding -->
+                                // <!-- Added active state for better touch feedback -->
+                                class="cursor-pointer hover:bg-gray-50 active:bg-gray-100 py-4 md:py-3 px-4 md:px-2"
                                 on:click=move |_| {
                                     SearchCtx::set_destination(dest.clone());
                                     InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent);
                                 }
                             >
-                                <span class="text-gray-800">
+                                // <!-- Improved text size and weight for better readability -->
+                                <span class="text-gray-800 text-base md:text-sm">
                                     {format!("{}, {}", &city, &country)}
                                 </span>
+                                // <!-- Added subtle divider that doesn't take up extra space -->
+                                <Divider />
                             </div>
-                            <Divider />
                         }
                     })
                     .collect_view()

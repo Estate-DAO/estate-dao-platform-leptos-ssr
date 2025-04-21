@@ -167,35 +167,45 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
             </button>
 
             <Show when=move || is_open()>
-                <div class="absolute mt-6  min-w-[40rem] bg-white border border-gray-200 rounded-xl shadow-lg p-4  z-50">
-                    <div id="date-prev-next" class="flex justify-between">
+                <div class="fixed inset-0 bg-white z-[100] md:absolute md:mt-6 md:min-w-[40rem] md:bg-white md:border md:border-gray-200 md:rounded-xl md:shadow-lg md:p-4 md:z-50">
+                    // <div class="flex items-center p-4 border-b border-gray-200 md:hidden">
+                    //     <button
+                    //         class="text-gray-800 mr-4"
+                    //         on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                    //     >
+                    //         <Icon icon=icondata::BsArrowLeft class="text-xl" />
+                    //     </button>
+                    //     <h2 class="text-lg font-medium">Select Dates</h2>
+                    // </div>
+                    <div class="p-4">
+                        <div id="date-prev-next" class="flex justify-between">
+                            <button
+                                on:click=move |_| {
+                                    let (current_year, current_month) = initial_date.get_untracked();
+                                    set_initial_date(prev_date(current_year, current_month))
+                                }
+                                class="hover:bg-gray-200 p-2 rounded-md"
+                            >
+                                <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
+                            </button>
 
-                        <button
-                            on:click=move |_| {
-                                let (current_year, current_month) = initial_date.get_untracked();
-                                set_initial_date(prev_date(current_year, current_month))
-                            }
-                            class="hover:bg-gray-200 p-2 rounded-md"
-                        >
-                            <Icon icon=icondata::BiChevronLeftRegular class="text-black" />
-                        </button>
-
-                        <button
-                            on:click=move |_| {
-                                let (current_year, current_month) = initial_date.get_untracked();
-                                set_initial_date(next_date(current_year, current_month))
-                            }
-                            class="hover:bg-gray-200 p-2 rounded-md"
-                        >
-                            <Icon icon=icondata::BiChevronRightRegular class="text-black" />
-                        </button>
-                    </div>
-                    <div class="flex space-x-8">
-                        <DateCells year_month=initial_date.into() selected_range=selected_range />
-                        <DateCells
-                            year_month=next_month_date.into()
-                            selected_range=selected_range
-                        />
+                            <button
+                                on:click=move |_| {
+                                    let (current_year, current_month) = initial_date.get_untracked();
+                                    set_initial_date(next_date(current_year, current_month))
+                                }
+                                class="hover:bg-gray-200 p-2 rounded-md"
+                            >
+                                <Icon icon=icondata::BiChevronRightRegular class="text-black" />
+                            </button>
+                        </div>
+                        <div class="flex flex-col md:flex-row md:space-x-8 space-y-8 md:space-y-0">
+                            <DateCells year_month=initial_date.into() selected_range=selected_range />
+                            <DateCells
+                                year_month=next_month_date.into()
+                                selected_range=selected_range
+                            />
+                        </div>
                     </div>
                 </div>
             </Show>

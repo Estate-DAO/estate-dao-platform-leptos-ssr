@@ -197,75 +197,87 @@ fn PeopleOptions() -> impl IntoView {
         <div class="p-4">
             <div
                 id="guestsDropdownContent"
-                class="absolute right-0 bg-white shadow-lg mt-10 borderSortOptions border-gray-300 rounded-xl border px-4"
+                class="fixed inset-0 bg-white z-[100] md:absolute md:right-0 md:bg-white md:shadow-lg md:mt-10 md:borderSortOptions md:border-gray-300 md:rounded-xl md:border md:px-4"
             >
-                <NumberCounter
-                    label="Adults"
-                    counter=guest_selection.get().adults
-                    class="mt-2"
-                    on_increment=move || {
-                        guest_selection.get().adults.update(|n| *n += 1);
-                    }
-                />
-                <Divider />
+                // <div class="flex items-center p-4 border-b border-gray-200 md:hidden">
+                //     <button
+                //         class="text-gray-800 mr-4"
+                //         on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                //     >
+                //         <Icon icon=icondata::BsArrowLeft class="text-xl" />
+                //     </button>
+                //     <h2 class="text-lg font-medium">Select Guests</h2>
+                // </div>
 
-                <NumberCounter
-                    label="Children"
-                    counter=guest_selection.get().children
-                    class="mt-2"
-                    on_increment=move || {
-                        guest_selection.get().children.update(|n| *n += 1);
-                    }
-                />
-                <div class="flex flex-wrap">
-                    // Add number input fields for children ages
-                    {move || {
-                        (0..guest_selection.get().children.get())
-                            .map(|i| {
-                                view! {
-                                    <input
-                                        type="number"
-                                        min=1
-                                        max=18
-                                        class="mt-2 ml-3 p-2 border border-gray-300 w-16"
-                                        name=format!("child_age[{}]", i)
-                                        value=move || {
-                                            guest_selection.get().children_ages.get_value_at(i)
-                                        }
-                                        placeholder="Age"
-                                        on:input=move |e| {
-                                            let age = event_target_value(&e);
-                                            log!("{}",age);
-                                            guest_selection
-                                                .get()
-                                                .children_ages
-                                                .update_children_ages(i as u32, age.parse().unwrap_or(10));
-                                        }
-                                    />
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                            .into_view()
-                    }}
+                <div class="p-4 md:p-0">
+                    <NumberCounter
+                        label="Adults"
+                        counter=guest_selection.get().adults
+                        class="mt-2"
+                        on_increment=move || {
+                            guest_selection.get().adults.update(|n| *n += 1);
+                        }
+                    />
+                    <Divider />
+
+                    <NumberCounter
+                        label="Children"
+                        counter=guest_selection.get().children
+                        class="mt-2"
+                        on_increment=move || {
+                            guest_selection.get().children.update(|n| *n += 1);
+                        }
+                    />
+                    <div class="flex flex-wrap">
+                        // Add number input fields for children ages
+                        {move || {
+                            (0..guest_selection.get().children.get())
+                                .map(|i| {
+                                    view! {
+                                        <input
+                                            type="number"
+                                            min=1
+                                            max=18
+                                            class="mt-2 ml-3 p-2 border border-gray-300 w-16"
+                                            name=format!("child_age[{}]", i)
+                                            value=move || {
+                                                guest_selection.get().children_ages.get_value_at(i)
+                                            }
+                                            placeholder="Age"
+                                            on:input=move |e| {
+                                                let age = event_target_value(&e);
+                                                log!("{}",age);
+                                                guest_selection
+                                                    .get()
+                                                    .children_ages
+                                                    .update_children_ages(i as u32, age.parse().unwrap_or(10));
+                                            }
+                                        />
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                                .into_view()
+                        }}
+                    </div>
+                    <Divider />
+
+                    <NumberCounter
+                        label="Rooms"
+                        counter=guest_selection.get().rooms
+                        class="mt-2"
+                        on_increment=move || {
+                            guest_selection.get().rooms.update(|n| *n += 1);
+                        }
+                    />
+                    // <!-- Modified button to be more prominent on mobile -->
+                    <button
+                        type="button"
+                        class="w-full mt-6 mb-4 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-black-2 py-3 md:py-2 rounded-full"
+                        on:click=apply_selection
+                    >
+                        "Apply"
+                    </button>
                 </div>
-                <Divider />
-
-                <NumberCounter
-                    label="Rooms"
-                    counter=guest_selection.get().rooms
-                    class="mt-2"
-                    on_increment=move || {
-                        guest_selection.get().rooms.update(|n| *n += 1);
-                    }
-                />
-                // <br />
-                <button
-                    type="button"
-                    class="w-full mb-4 bg-white border border-black-2 text-black py-2 rounded-full"
-                    on:click=apply_selection
-                >
-                    "Apply"
-                </button>
             </div>
         </div>
     }
