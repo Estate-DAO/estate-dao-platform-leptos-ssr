@@ -157,14 +157,14 @@ pub fn MostPopular() -> impl IntoView {
     } = destinations_query().use_query(move || true);
 
     view! {
-        <div class="bg-white rounded-[45px] p-4 w-full -mt-8">
-            <div class="py-16 px-20">
-                <div class="text-2xl font-semibold text-left mb-6">Most popular destinations</div>
+        <div class="bg-white rounded-[45px] p-2 md:p-4 w-full -mt-8">
+            <div class="py-8 px-4 md:py-16 md:px-20">
+                <div class="text-xl md:text-2xl font-semibold text-left mb-6">Most popular destinations</div>
 
                     <Suspense fallback=move || {
                         view! { <p>"Loading..."</p> }
                     }>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
 
                         {move || {
                             destinations_resource
@@ -186,7 +186,7 @@ pub fn MostPopular() -> impl IntoView {
                                         };
                                         view! {
                                             <div
-                                                class="rounded-lg overflow-hidden border border-gray-300 h-4/5 cursor-pointer hover:shadow-lg transition-shadow m-2"
+                                                class="rounded-xl overflow-hidden border border-gray-300 h-full cursor-pointer hover:shadow-lg transition-shadow m-1 md:m-2 bg-white flex flex-col"
                                                 on:click=move |_| {
                                                     SearchCtx::set_destination(dest.clone().into());
                                                     SearchCtx::set_date_range(date_range.clone());
@@ -197,11 +197,11 @@ pub fn MostPopular() -> impl IntoView {
                                                 <img
                                                     src=img_url
                                                     alt=format!("{}, {}", city_name, country_name)
-                                                    class="w-full object-cover h-56"
+                                                    class="w-full object-cover h-40 md:h-56"
                                                 />
-                                                <div class="p-5 bg-white">
-                                                    <p class="text-lg font-semibold mb-1">{city_name}</p>
-                                                    <p class="text-sm text-gray-600 pb-4">{country_name}</p>
+                                                <div class="p-4 md:p-5 bg-white flex-1 flex flex-col justify-end">
+                                                    <p class="text-base md:text-lg font-semibold mb-1">{city_name}</p>
+                                                    <p class="text-xs md:text-sm text-gray-600 pb-2 md:pb-4">{country_name}</p>
                                                 </div>
                                             </div>
                                         }
