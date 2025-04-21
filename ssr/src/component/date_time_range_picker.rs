@@ -154,7 +154,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     });
 
     view! {
-        <div class="bg-white">
+        <div class="relative">
             <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
                 <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
             </div>
@@ -169,14 +169,14 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
             <Show when=move || is_open()>
                 // !<-- Main Modal Container -->
                 <div class="fixed inset-0 z-[9999]">
-                    // !<-- Backdrop -->
-                    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+                    // !<-- `Backdrop` -->
+                    <div class="absolute inset-0"></div>
 
                     // !<-- Content Container -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-[600px] md:w-[600px] bg-white md:rounded-2xl md:shadow-xl md:border md:border-gray-200 z-[9999]">
-                        <div class="relative p-4">
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1 md:max-w-[600px] md:w-[600px] z-[9999]">
+                        <div class="relative md:border-1 md:border-gray-400 md:rounded-2xl md:shadow-xl md:z-[9999] ">
                             // !<-- Calendar Header -->
-                            <div class="absolute left-0 right-0 top-4 flex justify-between px-2">
+                            <div class="bg-white flex  justify-between px-2">
                                 <button
                                     on:click=move |_| {
                                         let (current_year, current_month) = initial_date.get_untracked();
@@ -199,7 +199,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                             </div>
 
                             // !<-- Calendar Grid -->
-                            <div class="flex flex-col md:flex-row md:gap-16 space-y-6 md:space-y-0 mt-8">
+                            <div class="flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999]">
                                 <div class="flex-1">
                                     <DateCells year_month=initial_date.into() selected_range=selected_range />
                                 </div>
@@ -212,22 +212,24 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                             </div>
 
                             // !<-- Action Button -->
-                            <Show
-                                when=move || {
-                                    let range = selected_range.get();
-                                    range.start != (0, 0, 0) && range.end != (0, 0, 0)
-                                }
-                            >
-                                <div class="flex justify-center">
-                                    <button
-                                        type="button"
-                                        class="w-full md:w-48 mt-6 mb-2 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-gray-900 py-3 md:py-2 rounded-full hover:bg-blue-600 md:hover:bg-gray-100 transition-colors"
-                                        on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
-                                    >
-                                        "Apply"
-                                    </button>
-                                </div>
-                            </Show>
+                            <div class="bg-white px-2 py-2">
+                                <Show
+                                    when=move || {
+                                        let range = selected_range.get();
+                                        range.start != (0, 0, 0) && range.end != (0, 0, 0)
+                                    }
+                                >
+                                    <div class="flex justify-center">
+                                        <button
+                                            type="button"
+                                            class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-gray-900 py-3 md:py-2 rounded-full hover:bg-blue-600 md:hover:bg-gray-100 transition-colors"
+                                            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                        >
+                                            "Apply"
+                                        </button>
+                                    </div>
+                                </Show>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -280,7 +282,7 @@ fn DateCells(
     view! {
         <div>
             // !<-- Month Title -->
-            <div class="text-center font-medium text-lg mb-6">
+            <div class="text-center font-medium text-lg mb-4">
                 {move || {
                     let month_name = month_names[(month_signal() - 1) as usize];
                     format!("{} {}", month_name, year_signal())
@@ -288,17 +290,17 @@ fn DateCells(
             </div>
 
             // !<-- Calendar Grid -->
-            <div class="grid grid-cols-7 gap-y-2 md:gap-1">
+            <div class="grid grid-cols-7 gap-0.5">
                 // !<-- Weekday Headers -->
                 {weekdays
                     .iter()
-                    .map(|&day| view! { <div class="text-[11px] text-gray-500 font-medium text-center mb-1">{day}</div> })
+                    .map(|&day| view! { <div class="text-xs text-gray-500 font-medium text-center mb-2">{day}</div> })
                     .collect::<Vec<_>>()}
 
                 // !<-- Empty Cells -->
                 {move || {
                     (0..calculate_starting_day_of_month(year_month, start_month_day))
-                        .map(|_| view! { <div class="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center"></div> })
+                        .map(|_| view! { <div class="w-9 h-9 flex items-center justify-center"></div> })
                         .collect::<Vec<_>>()
                 }}
 
@@ -383,7 +385,8 @@ pub fn class_signal(
 ) -> String {
     let range = selected_range.get();
     let date_tuple = (year, month, day_num);
-    let base_classes = "w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs md:text-sm transition-colors";
+    let base_classes =
+        "w-9 h-9 rounded-full flex items-center justify-center text-sm transition-colors";
 
     // !<-- Past dates -->
     if is_date_in_past(year, month, day_num) {
@@ -392,7 +395,7 @@ pub fn class_signal(
 
     // !<-- Selected dates -->
     if range.start == date_tuple || range.end == date_tuple {
-        return format!("{} bg-black text-white hover:bg-gray-800", base_classes);
+        return format!("{} bg-black text-white", base_classes);
     }
 
     // !<-- Dates in range -->
@@ -400,7 +403,7 @@ pub fn class_signal(
         && range.end != (0, 0, 0)
         && is_date_between(date_tuple, range.start, range.end)
     {
-        return format!("{} bg-gray-100 hover:bg-gray-200", base_classes);
+        return format!("{} bg-gray-100", base_classes);
     }
 
     // !<-- Default state -->
