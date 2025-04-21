@@ -206,6 +206,21 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                 selected_range=selected_range
                             />
                         </div>
+
+                        <Show
+                            when=move || {
+                                let range = selected_range.get();
+                                range.start != (0, 0, 0) && range.end != (0, 0, 0)
+                            }
+                        >
+                            <button
+                                type="button"
+                                class="w-full mt-6 mb-4 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-black-2 py-3 md:py-2 rounded-full"
+                                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                            >
+                                "Apply"
+                            </button>
+                        </Show>
                     </div>
                 </div>
             </Show>
