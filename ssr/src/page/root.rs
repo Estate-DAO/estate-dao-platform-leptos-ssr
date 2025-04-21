@@ -35,12 +35,12 @@ use std::time::Duration;
 pub fn RootPage() -> impl IntoView {
     view! {
         <main>
-            <FullScreenBannerForMobileModeNotReady>
-                <div>
-                    <HeroSection />
-                    <MostPopular />
-                </div>
-            </FullScreenBannerForMobileModeNotReady>
+            // <FullScreenBannerForMobileModeNotReady>
+            <div>
+                <HeroSection />
+                <MostPopular />
+            </div>
+            // </FullScreenBannerForMobileModeNotReady>
             // <Footer />
         </main>
     }
@@ -113,9 +113,11 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
     let bg_class = move || {
         if disabled.get() {
-            "bg-gray-300 bg-opacity-[40%]"
+            // <!-- Updated disabled state to be more subtle on mobile -->
+            "bg-gray-100 md:bg-gray-300 md:bg-opacity-[40%]"
         } else {
-            "bg-white bg-opacity-[40%]"
+            // <!-- Removed opacity for mobile to match screenshot -->
+            "bg-white md:bg-white md:bg-opacity-[40%]"
         }
     };
 
@@ -123,7 +125,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         if disabled.get() {
             "bg-gray-300"
         } else {
-            "bg-white text-white hover:bg-blue-200"
+            // <!-- Updated search button to be blue on mobile to match screenshot -->
+            "bg-blue-500 md:bg-white text-white hover:bg-blue-600 md:hover:bg-blue-200"
         }
     };
 
@@ -131,7 +134,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         if disabled.get() {
             "text-gray-400"
         } else {
-            "text-blue-600 "
+            // <!-- Updated icon color to white for mobile to match screenshot -->
+            "text-white md:text-blue-600"
         }
     };
 
@@ -180,14 +184,18 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         <div
             class=move || {
                 format!(
-                    " {} md:backdrop-blur md:rounded-full flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-2 md:space-y-0 md:bg-transparent border border-gray-400 shadow-sm",
+                    // <!-- Changed mobile styling to use solid white background instead of transparent/backdrop-blur -->
+                    // <!-- Added more rounded corners for mobile and better spacing -->
+                    // <!-- Improved shadow for better card-like appearance on mobile -->
+                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white md:bg-transparent rounded-xl md:rounded-full border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
                     bg_class(),
                 )
             }
         >
             // <!-- Destination input -->
-            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 md:border-0 rounded-full md:rounded-none">
-                <div class="flex items-center h-[56px] px-4 md:px-6">
+            // <!-- Improved mobile styling with better rounded corners and spacing -->
+            <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
+                <div class="flex items-center h-[56px] px-6">
                     <div class="text-xl flex items-center">
                         <Icon icon=icondata::BsMap class="text-black" />
                     </div>
@@ -197,7 +205,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         fallback=move || view! { <div class="flex-1"></div> }
                     >
                         <button
-                            class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-sm text-left flex items-center"
+                            // <!-- Improved text styling and alignment -->
+                            class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal"
                             disabled=disabled.get()
                         >
                             {move || destination_display.get()}
@@ -213,24 +222,27 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             </div>
 
             // <!-- Date range picker -->
-            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 md:border-0 rounded-full md:rounded-none">
-                <div class="flex items-center h-[56px] px-4 md:px-6">
+            // <!-- Improved mobile styling with better rounded corners and spacing -->
+            <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
+                <div class="flex items-center h-[56px] px-6">
                     <DateTimeRangePickerCustom />
                 </div>
             </div>
 
             // <!-- Guests dropdown -->
-            <div class="relative flex-1 backdrop-blur md:backdrop-blur-none border border-gray-300 md:border-0 rounded-full md:rounded-none">
-                <div class="flex items-center h-[56px] px-4 md:px-6">
+            // <!-- Improved mobile styling with better rounded corners and spacing -->
+            <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
+                <div class="flex items-center h-[56px] px-6">
                     <GuestQuantity />
                 </div>
             </div>
 
             // <!-- Search button -->
+            // <!-- Completely redesigned for mobile to match screenshot with full-width button at bottom -->
             <button
                 on:click=move |_| search_action.dispatch(())
                 class=move || {
-                    format!(" {} text-2xl rounded-full w-full md:w-auto focus:outline-none backdrop-blur flex items-center justify-center h-[56px] px-4", bg_search_class())
+                    format!(" {} text-2xl rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-4 md:mb-0 md:w-auto md:mx-0", bg_search_class())
                 }
             >
                 <div class="flex justify-center">
@@ -239,16 +251,18 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         when=move || disabled.get()
                         fallback=move || {
                             view! {
+                                // <!-- Adjusted icon size and padding for better visibility -->
                                 <Icon
                                     icon=icondata::AiSearchOutlined
-                                    class=format!("{} p-[1px]", bg_search_icon_class())
+                                    class=format!("{} p-1 text-2xl", bg_search_icon_class())
                                 />
                             }
                         }
                     >
+                        // <!-- Adjusted icon size and padding for better visibility -->
                         <Icon
                             icon=icondata::AiSearchOutlined
-                            class=format!("{} p-[1px]", bg_search_icon_class())
+                            class=format!("{} p-1 text-2xl", bg_search_icon_class())
                         />
                     </Show>
                 </div>
