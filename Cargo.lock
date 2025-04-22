@@ -757,6 +757,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "circular-buffer"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b67261db007b5f4cf8cba393c1a5c511a5cc072339ce16e12aeba1d7b9b77946"
+
+[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1487,6 +1493,7 @@ dependencies = [
  "candid_parser",
  "cfg-if 1.0.0",
  "chrono",
+ "circular-buffer",
  "coarsetime",
  "codee",
  "colored",
@@ -1501,6 +1508,7 @@ dependencies = [
  "futures",
  "getrandom 0.3.1",
  "gloo-net",
+ "gloo-utils",
  "hex",
  "hmac",
  "http",

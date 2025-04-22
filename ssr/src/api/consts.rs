@@ -26,6 +26,8 @@ const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app"
 // const for local environment
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
+pub const GTAG_MEASUREMENT_ID: Lazy<&str> = Lazy::new(|| "GTM-PFCRL3ZG");
+
 cfg_if! {
     if #[cfg(feature = "local-consts")] {
         pub const APP_URL: &str = LOCALHOST_APP_URL;
@@ -62,6 +64,7 @@ pub fn get_default_provab_base_url() -> &'static str {
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
+use once_cell::sync::Lazy;
 // use dotenvy::dotenv;
 // use leptos::logging::log;
 use crate::log;

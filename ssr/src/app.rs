@@ -96,7 +96,6 @@ pub fn App() -> impl IntoView {
         query_persister::LocalStoragePersister,
     );
 
-
     // Analytics
     let enable_ga4_script = create_rw_signal(false);
     #[cfg(feature = "ga4")]

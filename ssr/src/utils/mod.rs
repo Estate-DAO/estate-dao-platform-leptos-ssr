@@ -4,6 +4,7 @@ pub mod backend_default_impl;
 pub mod booking_id;
 mod colored_print;
 pub mod date;
+pub mod host;
 pub mod ic;
 pub mod icon;
 pub mod parent_resource;

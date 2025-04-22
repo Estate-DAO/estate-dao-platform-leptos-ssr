@@ -11,6 +11,9 @@ pub mod page;
 pub mod state;
 pub mod utils;
 
+#[cfg(feature = "ga4")]
+pub mod event_streaming;
+
 cfg_if::cfg_if! {
     if #[cfg(feature =   "ssr")]{
         pub mod fallback;
