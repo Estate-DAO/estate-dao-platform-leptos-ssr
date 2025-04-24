@@ -111,16 +111,22 @@ pub fn DestinationPicker() -> impl IntoView {
 
     view! {
         // !<-- Main wrapper with relative positioning -->
-        <div class="relative w-full">
+        <div class="relative w-full h-full">
             // !<-- Input slot with consistent height -->
-            <div class="w-full h-10">
-                <div class="absolute inset-y-0 left-2 flex items-center text-xl">
+            <div class="w-full h-full px-4">
+                <div class="absolute inset-y-0 left-2 flex items-center text-xl px-2">
                     <Icon icon=icondata::BsMap class="text-black" />
                 </div>
 
                 <button
                     class="w-full h-full flex items-center pl-12 text-black bg-transparent rounded-full transition-colors text-sm"
-                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)
+                    on:click=move |_| {
+                        // if InputGroupState::is_destination_open() {
+                        //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
+                        // } else {
+                            InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent);
+                    //     }
+                    }
                 >
                     {display_value}
                 </button>
@@ -133,7 +139,7 @@ pub fn DestinationPicker() -> impl IntoView {
                     <div class="absolute inset-0 bg-black/20 backdrop-blur-sm md:hidden"></div>
 
                     // !<-- Content Container -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-full md:w-full z-[9999]">
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[33%] md:w-1/3 z-[9999]">
                         <div class="bg-white md:mt-1 md:rounded-lg md:border md:border-gray-200 md:shadow-lg">
                             // !<-- Mobile Header -->
                             <div class="flex items-center justify-between p-4 border-b border-gray-200 md:hidden">
@@ -183,7 +189,7 @@ pub fn DestinationPicker() -> impl IntoView {
 fn ShowDestinations(dest_vec: Vec<Destination>) -> impl IntoView {
     view! {
         // !<-- Scrollable container -->
-        <div class="h-[calc(100vh-8rem)] md:h-auto overflow-y-auto">
+        <div class="h-[calc(100vh-8rem)] md:h-auto overflow-y-auto hide-scrollbar">
             {move || {
                 dest_vec
                     .clone()
