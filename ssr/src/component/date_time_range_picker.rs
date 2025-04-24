@@ -172,64 +172,62 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                     // !<-- `Backdrop` -->
                     <div class="absolute inset-0"></div>
 
-                    // !<-- Content Container -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]">
-                        <div class="relative md:border-1 md:border-gray-400 md:rounded-2xl md:shadow-xl md:z-[9999] ">
-                            // !<-- Calendar Header -->
-                            <div class="bg-white flex  justify-between px-2">
-                                <button
-                                    on:click=move |_| {
-                                        let (current_year, current_month) = initial_date.get_untracked();
-                                        set_initial_date(prev_date(current_year, current_month))
-                                    }
-                                    class="p-2 rounded-full hover:bg-gray-50 transition-colors"
-                                >
-                                    <Icon icon=icondata::BiChevronLeftRegular class="text-gray-600 text-2xl" />
-                                </button>
+                    // !<-- Centering Wrapper for Desktop -->
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]">
+                        // !<-- Calendar Header -->
+                        <div class="bg-white flex  justify-between px-2">
+                            <button
+                                on:click=move |_| {
+                                    let (current_year, current_month) = initial_date.get_untracked();
+                                    set_initial_date(prev_date(current_year, current_month))
+                                }
+                                class="p-2 rounded-full hover:bg-gray-50 transition-colors"
+                            >
+                                <Icon icon=icondata::BiChevronLeftRegular class="text-gray-600 text-2xl" />
+                            </button>
 
-                                <button
-                                    on:click=move |_| {
-                                        let (current_year, current_month) = initial_date.get_untracked();
-                                        set_initial_date(next_date(current_year, current_month))
-                                    }
-                                    class="p-2 rounded-full hover:bg-gray-50 transition-colors"
-                                >
-                                    <Icon icon=icondata::BiChevronRightRegular class="text-gray-600 text-2xl" />
-                                </button>
+                            <button
+                                on:click=move |_| {
+                                    let (current_year, current_month) = initial_date.get_untracked();
+                                    set_initial_date(next_date(current_year, current_month))
+                                }
+                                class="p-2 rounded-full hover:bg-gray-50 transition-colors"
+                            >
+                                <Icon icon=icondata::BiChevronRightRegular class="text-gray-600 text-2xl" />
+                            </button>
+                        </div>
+
+                        // !<-- Calendar Grid -->
+                        <div class="flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999]">
+                            <div class="flex-1">
+                                <DateCells year_month=initial_date.into() selected_range=selected_range />
                             </div>
+                            <div class="flex-1">
+                                <DateCells
+                                    year_month=next_month_date.into()
+                                    selected_range=selected_range
+                                />
+                            </div>
+                        </div>
 
-                            // !<-- Calendar Grid -->
-                            <div class="flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999]">
-                                <div class="flex-1">
-                                    <DateCells year_month=initial_date.into() selected_range=selected_range />
+                        // !<-- Action Button -->
+                        <div class="bg-white px-2 py-2">
+                            <Show
+                                when=move || {
+                                    let range = selected_range.get();
+                                    range.start != (0, 0, 0) && range.end != (0, 0, 0)
+                                }
+                            >
+                                <div class="flex justify-center">
+                                    <button
+                                        type="button"
+                                        class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-gray-900 py-3 md:py-2 rounded-full hover:bg-blue-600 md:hover:bg-gray-100 transition-colors"
+                                        on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                    >
+                                        "Apply"
+                                    </button>
                                 </div>
-                                <div class="flex-1">
-                                    <DateCells
-                                        year_month=next_month_date.into()
-                                        selected_range=selected_range
-                                    />
-                                </div>
-                            </div>
-
-                            // !<-- Action Button -->
-                            <div class="bg-white px-2 py-2">
-                                <Show
-                                    when=move || {
-                                        let range = selected_range.get();
-                                        range.start != (0, 0, 0) && range.end != (0, 0, 0)
-                                    }
-                                >
-                                    <div class="flex justify-center">
-                                        <button
-                                            type="button"
-                                            class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-gray-900 py-3 md:py-2 rounded-full hover:bg-blue-600 md:hover:bg-gray-100 transition-colors"
-                                            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
-                                        >
-                                            "Apply"
-                                        </button>
-                                    </div>
-                                </Show>
-                            </div>
+                            </Show>
                         </div>
                     </div>
                 </div>
