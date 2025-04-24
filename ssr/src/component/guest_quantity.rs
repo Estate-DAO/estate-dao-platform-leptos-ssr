@@ -154,7 +154,7 @@ pub fn GuestQuantity() -> impl IntoView {
                     <div class="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
 
                     // !<-- Content Container - Centered on desktop, bottom sheet on mobile -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-[400px] md:w-[400px] z-[9999]">
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:right-0 md:left-auto md:bottom-auto md:max-w-[400px] md:w-[400px] z-[9999]">
                         <div class="relative md:border-1 md:border-gray-400 md:rounded-2xl md:shadow-xl md:z-[9999]">
                             <div class="bg-white px-4 py-6 md:rounded-2xl">
                                 // !<-- Guest Selection Section -->
