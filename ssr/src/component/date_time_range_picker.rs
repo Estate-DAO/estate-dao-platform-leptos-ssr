@@ -173,7 +173,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                     <div class="absolute inset-0"></div>
 
                     // !<-- Content Container -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1 md:max-w-[600px] md:w-[600px] z-[9999]">
+                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]">
                         <div class="relative md:border-1 md:border-gray-400 md:rounded-2xl md:shadow-xl md:z-[9999] ">
                             // !<-- Calendar Header -->
                             <div class="bg-white flex  justify-between px-2">
