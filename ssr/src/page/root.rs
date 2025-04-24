@@ -196,7 +196,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Destination input -->
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-                <div class="flex items-center h-[56px] px-6">
+                <div class="flex items-center h-[56px] px-4">
                     <Show when=move || !disabled.get()>
                         <div class="absolute inset-0">
                             <DestinationPicker />
@@ -229,7 +229,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Guests dropdown -->
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-                <div class="flex items-center h-[56px] px-6">
+                <div class="flex h-[56px] px-6">
                     <GuestQuantity />
                 </div>
             </div>

@@ -128,11 +128,12 @@ pub fn GuestQuantity() -> impl IntoView {
     });
 
     view! {
-        <div class="relative">
+        <div class="relative w-full h-full">
             <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
                 <Icon icon=icondata::BsPerson class="text-black font-light" />
             </div>
 
+            <div class="flex items-center h-full">
             <button
                 id="guestsDropdown"
                 class="w-full flex-0 py-2 pl-10 text-left text-gray-700 text-sm font-light bg-transparent rounded-full focus:outline-none"
@@ -141,6 +142,7 @@ pub fn GuestQuantity() -> impl IntoView {
                 {{ move || guest_count_display }}
             </button>
 
+            </div>
             <div class="absolute inset-y-2 text-xl right-3 flex items-center">
                 <Icon icon=icon class="text-black" />
             </div>
