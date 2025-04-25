@@ -25,15 +25,10 @@ pub fn InputGroupMobile() -> impl IntoView {
         } else {
             let normalized = date_range.normalize();
             let nights = normalized.no_of_nights();
-            let formatted = normalized.format_as_human_readable_date();
+            let formatted = normalized.format_mmm_dd();
 
             if nights > 0 {
-                format!(
-                    "{} ({} {})",
-                    formatted,
-                    nights,
-                    pluralize(nights, "Night", "Nights")
-                )
+                format!("{} ({})", formatted, pluralize(nights, "d", "d"))
             } else {
                 formatted
             }
@@ -48,10 +43,8 @@ pub fn InputGroupMobile() -> impl IntoView {
         let rooms = guest_selection.rooms.get();
 
         format!(
-            "{} {}, {} {}",
-            rooms,
+            "{}, {}",
             pluralize(rooms, "Room", "Rooms"),
-            adults + children,
             pluralize(adults + children, "Guest", "Guests")
         )
     });

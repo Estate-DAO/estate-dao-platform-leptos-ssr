@@ -111,6 +111,17 @@ impl SelectedDateRange {
 
         format!("{} - {}", format_date(self.start), format_date(self.end))
     }
+
+    // <!-- Added: Returns date range in format 'Apr, 26 - Apr, 27' (MMM, DD - MMM, DD) -->
+    pub fn format_mmm_dd(&self) -> String {
+        use chrono::NaiveDate;
+        let format_md = |(year, month, day): (u32, u32, u32)| {
+            NaiveDate::from_ymd_opt(year as i32, month, day)
+                .map(|d| d.format("%b, %d").to_string())
+                .unwrap_or_default()
+        };
+        format!("{} - {}", format_md(self.start), format_md(self.end))
+    }
 }
 
 #[component]
