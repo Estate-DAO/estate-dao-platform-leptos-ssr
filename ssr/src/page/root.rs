@@ -196,7 +196,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Destination input -->
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-                <div class="flex items-center h-[56px] px-4">
+                <div class="flex items-center h-[56px] px-6">
                     <Show when=move || !disabled.get()>
                         <div class="absolute inset-0">
                             <DestinationPicker />
@@ -239,7 +239,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <button
                 on:click=move |_| search_action.dispatch(())
                 class=move || {
-                    format!(" {} text-2xl rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-4 md:mb-0 md:w-auto md:mx-0", bg_search_class())
+                    format!(" {} text-2xl rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
                 }
             >
                 <div class="flex justify-center">
@@ -264,6 +264,9 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     </Show>
                 </div>
             </button>
+
+            <div class="h-2 block md:hidden"></div>
+
         </div>
         </OutsideClickDetector>
     }
