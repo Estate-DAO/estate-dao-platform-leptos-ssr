@@ -168,12 +168,15 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
             <Show when=move || is_open()>
                 // !<-- Main Modal Container -->
-                <div class="fixed inset-0 z-[9999]">
-                    // !<-- `Backdrop` -->
-                    <div class="absolute inset-0"></div>
-
+                <div
+                    class="fixed inset-0 z-[9999]"
+                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
+                >
                     // !<-- Centering Wrapper for Desktop -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]">
+                    <div
+                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]"
+                        on:click=|e| e.stop_propagation()
+                    >
                         // !<-- Calendar Header -->
                         <div class="bg-white flex  justify-between px-2">
                             <button

@@ -149,12 +149,15 @@ pub fn GuestQuantity() -> impl IntoView {
 
             <Show when=move || is_open()>
                 // !<-- Main Modal Container -->
-                <div class="fixed inset-0 z-[9999]">
-                    // !<-- Backdrop - Transparent overlay -->
-                    <div class="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
-
+                <div
+                    class="fixed inset-0 z-[9999]"
+                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
+                >
                     // !<-- Content Container - Centered on desktop, bottom sheet on mobile -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:right-0 md:left-auto md:bottom-auto md:max-w-[400px] md:w-[400px] z-[9999]">
+                    <div
+                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:right-0 md:left-auto md:bottom-auto md:max-w-[400px] md:w-[400px] z-[9999]"
+                        on:click=|e| e.stop_propagation()
+                    >
                         <div class="relative md:border-1 md:border-gray-400 md:rounded-2xl md:shadow-xl md:z-[9999]">
                             <div class="bg-white px-4 py-6 md:rounded-2xl">
                                 // !<-- Guest Selection Section -->

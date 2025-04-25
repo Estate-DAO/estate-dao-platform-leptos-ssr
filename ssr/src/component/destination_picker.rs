@@ -90,8 +90,6 @@ pub fn DestinationPicker() -> impl IntoView {
     });
     let search_ctx: SearchCtx = expect_context();
 
-    // let destinations_resource = create_resource(is_open , move  |_| async move { read_destinations_from_file("city.json".into()).await});
-
     let QueryResult {
         data: destinations_resource,
         state,
@@ -114,18 +112,15 @@ pub fn DestinationPicker() -> impl IntoView {
         <div class="relative w-full h-full">
             // !<-- Input slot with consistent height -->
             <div class="w-full h-full px-4">
-                <div class="absolute inset-y-0 left-2 flex items-center text-xl px-2">
+                <div class="absolute inset-y-0 left-2 flex items-center text-xl pl-6">
                     <Icon icon=icondata::BsMap class="text-black" />
                 </div>
 
                 <button
                     class="w-full h-full flex items-center pl-12 text-black bg-transparent rounded-full transition-colors text-sm"
                     on:click=move |_| {
-                        // if InputGroupState::is_destination_open() {
-                        //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
-                        // } else {
-                            InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent);
-                    //     }
+                        log!("clicked CityListComponent");
+                        InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent);
                     }
                 >
                     {display_value}
@@ -134,18 +129,21 @@ pub fn DestinationPicker() -> impl IntoView {
 
             <Show when=move || is_open()>
                 // !<-- Main Modal Container -->
-                <div class="fixed inset-0 z-[9999]">
-                    // !<-- Backdrop - Only visible on mobile -->
-                    <div class="absolute inset-0 bg-black/20 backdrop-blur-sm md:hidden"></div>
-
+                <div
+                    class="fixed inset-0 z-[9999]"
+                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)
+                >
                     // !<-- Content Container -->
-                    <div class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[33%] md:w-1/3 z-[9999]">
+                    <div
+                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[33%] md:w-1/3 z-[9999]"
+                        on:click=|e| e.stop_propagation()
+                    >
                         <div class="bg-white md:mt-1 md:rounded-lg md:border md:border-gray-200 md:shadow-lg">
                             // !<-- Mobile Header -->
                             <div class="flex items-center justify-between p-4 border-b border-gray-200 md:hidden">
                                 <button
                                     class="text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-colors"
-                                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)
                                 >
                                     <Icon icon=icondata::BiXRegular class="text-2xl" />
                                 </button>
