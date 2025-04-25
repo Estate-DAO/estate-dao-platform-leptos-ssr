@@ -3,6 +3,7 @@ use crate::component::loading_button::LoadingButton;
 use crate::component::{
     FullScreenSpinnerGray, Navbar, PriceDisplayV2, SkeletonPricing, SpinnerGray,
 };
+use crate::page::InputGroupContainer;
 use crate::state::hotel_details_state::{PricingBookNowState, RoomDetailsForPricingComponent};
 use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::utils::pluralize;
@@ -139,7 +140,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
         <section class="relative h-screen">
             <Navbar />
             <div class="flex flex-col items-center mt-6 p-4">
-                <InputGroup />
+                <InputGroupContainer default_expanded=false  allow_outside_click_collapse=true />
             // <FilterAndSortBy />
             </div>
             <Show when=loaded fallback=FullScreenSpinnerGray>
