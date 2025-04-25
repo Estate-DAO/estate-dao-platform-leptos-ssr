@@ -3,7 +3,7 @@ use leptos::*;
 #[component]
 pub fn SkeletonCards() -> impl IntoView {
     view! {
-        <div class="w-full grid grid-cols-1 sm:grid-cols-2  md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 items-center justify-center self-center">
+        <div class="w-full grid grid-cols-1 sm:grid-cols-2  md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 items-center justify-items-center self-center">
             // // First Skeleton Card
             // <div class="w-64 h-80 bg-gray-200 rounded-md shadow-lg animate-pulse">
             // <div class="h-4 bg-gray-300 rounded mt-4 mx-4"></div>

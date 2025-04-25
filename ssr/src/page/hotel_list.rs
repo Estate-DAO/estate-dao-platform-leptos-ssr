@@ -32,47 +32,35 @@ pub fn HotelListPage() -> impl IntoView {
         val
     });
 
-    let fallback = move || (1..10).map(|_| view! { <SkeletonCards /> }).collect_view();
+    let fallback = move || {
+        (1..10)
+            .map(|_| {
+                view! {
+                    <div class="flex items-center justify-center w-full">
+                        <SkeletonCards />
+                    </div>
+                }
+            })
+            .collect_view()
+    };
 
     view! {
         <section class="relative h-screen">
             <Navbar />
-            <div class="flex flex-col items-center mt-6 p-4">
+            <div class="flex flex-col items-center mt-2 sm:mt-6 p-2 sm:p-4">
                 // <InputGroup given_disabled=disabled_input_group />
                 <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
             // <FilterAndSortBy />
             </div>
 
-            <div class="mx-auto">
-                <div class="px-1 sm:px-2 md:px-8 grid justify-items-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="w-full max-w-xl sm:max-w-4xl mx-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
                     <Show
                         when=move || search_list_page.search_result.get().is_some()
                         fallback=fallback
                     >
-                        // <Transition fallback=fallback>
-                        // {move || {
-                        // search_list_page
-                        // .search_result
-                        // .get()
-                        // .unwrap()
-                        // .hotel_results()
-                        // .iter()
-                        // .map(|hotel_result| {
-                        // view! {
-                        // <HotelCard
-                        // img=hotel_result.hotel_picture.clone()
-                        // rating=hotel_result.star_rating
-                        // hotel_name=hotel_result.hotel_name.clone()
-                        // price=hotel_result.price.room_price
-                        // hotel_code=hotel_result.hotel_code.clone()
-                        // />
-                        // }
-                        // })
-                        // .collect::<Vec<_>>()
-                        // }}
 
-                        // </Transition>
                         {move || {
                             let hotel_results = search_list_page
                                 .search_result
@@ -82,7 +70,7 @@ pub fn HotelListPage() -> impl IntoView {
                             if hotel_results.is_empty() {
 
                                 view! {
-                                    <div class="flex flex-col items-center justify-center mt-6 p-4 col-span-full min-h-[200px]">
+                                    <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
                                         <p class="text-center">
                                             No hotels found for your search criteria.
                                         </p>
@@ -100,6 +88,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                 hotel_name=hotel_result.hotel_name.clone()
                                                 price=hotel_result.price.room_price
                                                 hotel_code=hotel_result.hotel_code.clone()
+                                                class="w-full max-w-xs mx-auto px-2 sm:px-0".to_string()
                                             />
                                         }
                                     })
@@ -120,6 +109,7 @@ pub fn HotelCard(
     price: f64,
     hotel_code: String,
     hotel_name: String,
+    class: String,
 ) -> impl IntoView {
     let price = create_rw_signal(price);
 
@@ -193,26 +183,28 @@ pub fn HotelCard(
             search_hotel_room_action.dispatch(());
             search_hotel_info_action.dispatch(())
         }>
-            <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
-                <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
+            <div class={class}>
+                <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
+                    <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
 
-                <div class="h-24">
-                    <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
-                        <p class="text-sm sm:text-base font-medium">
-                            {if hotel_name.len() > 10 {
-                                format!("{}...", hotel_name.chars().take(10).collect::<String>())
-                            } else {
-                                hotel_name.clone()
-                            }}
-                        </p>
-                        <StarRating rating=move || rating />
-                    </div>
+                    <div class="h-24">
+                        <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
+                            <p class="text-sm sm:text-base font-medium">
+                                {if hotel_name.len() > 10 {
+                                    format!("{}...", hotel_name.chars().take(10).collect::<String>())
+                                } else {
+                                    hotel_name.clone()
+                                }}
+                            </p>
+                            <StarRating rating=move || rating />
+                        </div>
 
-                    <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
-                        <PriceDisplay price=price />
-                        <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
-                            "View details"
-                        </button>
+                        <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
+                            <PriceDisplay price=price />
+                            <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
+                                "View details"
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

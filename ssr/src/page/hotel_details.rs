@@ -128,13 +128,6 @@ pub fn HotelDetailsPage() -> impl IntoView {
     };
 
     let loaded = move || hotel_info_results.search_result.get().is_some();
-    // create_reactive_value!( address_signal, hotel_info_results, get_address );
-    // create_reactive_value!( description_signal, hotel_info_results, get_description );
-
-    // on_cleanup(|| {
-    //     // ensure that all the user selected rooms (from previous visits) are cleaned up
-    //     PricingBookNowState::reset_room_counters();
-    // });
 
     view! {
         <section class="relative h-screen">
@@ -144,41 +137,40 @@ pub fn HotelDetailsPage() -> impl IntoView {
             // <FilterAndSortBy />
             </div>
             <Show when=loaded fallback=FullScreenSpinnerGray>
-                <div class="max-w-4xl mx-auto py-8">
+                <div class="w-full max-w-4xl mx-auto py-4 px-4 md:py-8 md:px-0">
                     <div class="flex flex-col">
                         {move || view! { <StarRating rating=star_rating_signal /> }}
-                        <div class="text-3xl font-semibold">{hotel_name_signal}</div>
+                        <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
                     </div>
 
                     <br />
                     // <div class="flex space-x-3 h-1/2 w-full">
-                    <div class="space-y-3">
-
+                    <div class="mt-4 md:mt-6">
                         <HotelImages />
                     </div>
 
                     // bottom half
 
-                    <div class="flex mt-8 space-x-2">
+                    <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-2">
 
                         // left side div
-                        <div class="basis-3/5">
+                        <div class="w-full md:w-3/5">
                             // About component
-                            <div class="flex flex-col space-y-4">
+                            <div class="flex flex-col space-y-3 md:space-y-4">
                                 <div class="text-xl">About</div>
-                                <div class="mb-8">{description_signal}</div>
+                                <div class="mb-4 md:mb-8">{description_signal}</div>
                             </div>
-                            <hr class="mt-14 mb-5 border-t border-gray-300" />
+                            <hr class="my-6 md:mt-14 md:mb-5 border-t border-gray-300" />
                             // Address bar component
-                            <div class=" flex flex-col space-y-8 mt-8">
+                            <div class="flex flex-col space-y-3 md:space-y-8 mt-4 md:mt-8">
                                 <div class="text-xl">Address</div>
                                 <div>{address_signal}</div>
                             </div>
-                            <hr class="mt-14 mb-5 border-t border-gray-300" />
+                            <hr class="my-6 md:mt-14 md:mb-5 border-t border-gray-300" />
                             // amenities component
-                            <div class=" flex flex-col space-y-8 mt-8">
+                            <div class="flex flex-col space-y-3 md:space-y-8 mt-4 md:mt-8">
                                 <div class="text-xl">Amenities</div>
-                                <div class="grid grid-cols-3 gap-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                     <For
                                         each=amenities_signal
                                         key=|amenity| amenity.text.clone()
@@ -191,7 +183,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
                         </div>
 
                         // right side div
-                        <div class="basis-2/5">
+                        <div class="w-full md:w-2/5 mt-8 md:mt-0">
                             // pricing component
                             // card component
                             <PricingBookNow />
@@ -228,48 +220,57 @@ pub fn HotelImages() -> impl IntoView {
                 view! { <div>No images</div> }
             } else {
                 view! {
-                    <div class="flex flex-col space-y-3">
-                        <div class="flex space-x-3  space-y-2 h-1/2 w-full">
+                    <div>
+                        <div class="block sm:hidden">
                             <img
                                 src=move || images_signal()[0].clone()
                                 alt="Destination"
-                                class="w-3/5 h-96 rounded-xl"
+                                class="w-full h-64 rounded-xl object-cover"
                             />
-                            <div class=" flex flex-col space-y-3 w-2/5">
-                                <img
-                                    src=move || images_signal()[1].clone()
-                                    alt="Destination"
-                                    class="object-fill h-[186px] w-full rounded-xl"
-                                />
-                                <img
-                                    src=move || images_signal()[2].clone()
-                                    alt="Destination"
-                                    class="object-fill h-[186px] w-full rounded-xl"
-                                />
-                            </div>
                         </div>
-                        <div class="flex justify-between space-x-3">
-                            <img
-                                src=move || images_signal()[3].clone()
-                                alt="Destination"
-                                class="w-72 h-48 rounded-xl"
-                            />
-                            <img
-                                src=move || images_signal()[4].clone()
-                                alt="Destination"
-                                class="w-72 h-48 rounded-xl"
-                            />
-                            <div class="relative w-72 h-48 rounded-xl">
+                        <div class="hidden sm:flex flex-col space-y-3">
+                            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
                                 <img
-                                    src=move || images_signal()[5].clone()
+                                    src=move || images_signal()[0].clone()
                                     alt="Destination"
-                                    class="object-cover h-full w-full rounded-xl"
+                                    class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover"
                                 />
-                                // <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
-                                //     <span class="text-white text-lg font-semibold py-16 px-16">
-                                //         See all photos
-                                //     </span>
-                                // </div>
+                                <div class="flex flex-row sm:flex-col space-x-3 sm:space-x-0 sm:space-y-3 w-full sm:w-2/5">
+                                    <img
+                                        src=move || images_signal()[1].clone()
+                                        alt="Destination"
+                                        class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill"
+                                    />
+                                    <img
+                                        src=move || images_signal()[2].clone()
+                                        alt="Destination"
+                                        class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill"
+                                    />
+                                </div>
+                            </div>
+                            <div class="flex justify-between space-x-3">
+                                <img
+                                    src=move || images_signal()[3].clone()
+                                    alt="Destination"
+                                    class="w-72 h-48 rounded-xl"
+                                />
+                                <img
+                                    src=move || images_signal()[4].clone()
+                                    alt="Destination"
+                                    class="w-72 h-48 rounded-xl"
+                                />
+                                <div class="relative w-72 h-48 rounded-xl">
+                                    <img
+                                        src=move || images_signal()[5].clone()
+                                        alt="Destination"
+                                        class="object-cover h-full w-full rounded-xl"
+                                    />
+                                    // <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl flex items-end p-4">
+                                    //     <span class="text-white text-lg font-semibold py-16 px-16">
+                                    //         See all photos
+                                    //     </span>
+                                    // </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -358,16 +359,16 @@ pub fn PricingBookNow() -> impl IntoView {
     // let hotel_info_results: HotelInfoResults = expect_context();
 
     view! {
-        <div class="flex flex-col space-y-4 shadow-lg rounded-xl border border-gray-200 p-8">
+        <div class="flex flex-col space-y-4 shadow-lg rounded-xl border border-gray-200 p-4 md:p-8">
             <Show when=move || (price() > 0.0)>
                 <PriceDisplayV2
                     price=move || price()
-                    price_class="text-2xl font-semibold"
+                    price_class="text-xl md:text-2xl font-semibold"
                 />
             </Show>
 
             <div class="flex items-center space-x-2">
-                <Icon icon=icondata::AiCalendarOutlined class="text-black text-xl" />
+                <Icon icon=icondata::AiCalendarOutlined class="text-black text-lg md:text-xl" />
                 <div>
                     {move || {
                         let search_ctx: SearchCtx = expect_context();
@@ -378,13 +379,13 @@ pub fn PricingBookNow() -> impl IntoView {
             </div>
 
             <div class="flex items-center space-x-2">
-                <Icon icon=icondata::BsPerson class="text-black text-xl" />
-                <div>{move || pluralize(num_adults.get(), "adult", "adults")}</div>
+            <Icon icon=icondata::BsPerson class="text-black text-lg md:text-xl" />
+            <div>{move || pluralize(num_adults.get(), "adult", "adults")}</div>
             </div>
 
             <div class="flex items-center space-x-2">
-                <Icon icon=icondata::LuSofa class="text-black text-xl" />
-                <div>{move || pluralize(num_rooms.get(), "room", "rooms")}</div>
+            <Icon icon=icondata::LuSofa class="text-black text-lg md:text-xl" />
+            <div>{move || pluralize(num_rooms.get(), "room", "rooms")}</div>
             </div>
 
             <div class="flex flex-col space-y-2">
@@ -409,13 +410,13 @@ pub fn PricingBookNow() -> impl IntoView {
 
                             view! {
                                 <div class="flex justify-between items-center border-b border-gray-300 py-2">
-                                    <span class="font-medium">
+                                    <p class="font-medium text-sm md:text-base">
                                         {format!("{} - ${:.2}/night", room_type, room_price)}
-                                    </span>
+                                    </p>
                                     <NumberCounterWrapperV2
                                         label=""
                                         // counter=counter
-                                        class="mt-4"
+                                        class="mt-2 md:mt-4"
                                         value=room_unique_id
                                         // set_value=value_signal
                                         // max_rooms=num_rooms.get_untracked()
@@ -446,7 +447,7 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
     // #[prop(into)] room_counters: RwSignal<HashMap<String, RoomCounterKeyValue>>,
     // #[prop(into)] sorted_rooms: Vec<SortedRoom>,
 ) -> impl IntoView {
-    let row_format_class = "flex justify-between";
+    let row_format_class = "flex flex-row justify-between items-center w-full";
 
     let search_ctx: SearchCtx = expect_context();
     let num_nights = move || search_ctx.date_range.get().no_of_nights();
@@ -544,7 +545,8 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
     });
 
     view! {
-        <div class="flex flex-col space-y-2 mt-4">
+        <div class="flex flex-col space-y-2 mt-4 px-2 sm:px-0">
+            // {/* Per-night breakdown row: label left, price right, always aligned */}
             <div class=row_format_class>
 
             // <DebugDisplay label="Total Price" value=move || format!("{:#?}", total_calc.get()) />
@@ -553,40 +555,41 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
                 <PriceDisplayV2
                     price=move || PricingBookNowState::total_room_price_for_all_user_selected_rooms()
                     appended_text=Some(format!(" x {} nights", num_nights()))
-                    price_class=""
-                    base_class="inline"
+                    price_class="font-normal text-sm sm:text-base"
+                    base_class=""
                     subtext_class="font-normal"
                 />
-                <div class="">
+                <div class="mt-2 sm:mt-0 text-right sm:text-left">
                     {move ||
                        view!{
                         <PriceDisplayV2
                             price=move || total_calc()
-                            price_class=""
+                            price_class="font-normal text-sm sm:text-base"
+                            base_class=""
+                            subtext_class="font-normal"
                             appended_text=Some("".into())
-                        />
+                />
                        }
                     }
                 </div>
             </div>
-
-            // Total
-            <div class=row_format_class>
-                <div class="font-semibold">Total</div>
-                <div class="flex-none">
+            {/* Total row, visually separated */}
+            <div class="flex flex-row justify-between items-center border-t border-gray-200 pt-4 mt-2 w-full">
+                <div class="font-semibold text-base sm:text-lg">Total</div>
+                <div class="text-right font-semibold text-lg sm:text-xl">
                     {move ||
                         view!{
-                            <PriceDisplayV2
-                                price=move || total_calc()
-                                appended_text=Some("".into())
-                            />
+                    <PriceDisplayV2
+                        price=move || total_calc()
+                        price_class=""
+                        appended_text=Some("".into())
+                    />
                         }
                     }
                 </div>
             </div>
-
-            <div class="flex flex-col space-y-8">
-                <div class="text-sm text-right font-semibold">
+            <div class="flex flex-col space-y-4 mt-4">
+                <div class="text-sm sm:text-base text-right sm:text-left font-semibold">
                     "Cryptocurrency payments accepted!"
                 </div>
                 <LoadingButton
@@ -596,6 +599,7 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
                     block_room_action.dispatch(())
                 }
                 loading_text="Booking..."
+                class="w-full sm:w-auto px-4 py-2 text-base sm:text-lg"
                 >
                 "Book Now"
                 </LoadingButton>
@@ -643,9 +647,13 @@ pub fn NumberCounterWrapperV2(
     let can_decrement = move || counter.get() > 0;
     // let can_decrement_clone = move || counter() > 0;
 
+    let label_clone = label.clone();
+
     view! {
         <div class=format!("flex items-center justify-between {}", class)>
-            <p>{label}</p>
+            <Show when=move || !label.is_empty()>
+                <p>{label_clone.clone()}</p>
+            </Show>
             <div class="flex items-center space-x-1">
                 <button
                     class="ps-2 py-1 text-2xl"
