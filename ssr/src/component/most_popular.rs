@@ -8,6 +8,7 @@ use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
 use serde::{Deserialize, Serialize};
 
 use crate::component::GuestSelection;
+use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::{
     api::search_hotel,
     app::AppRoutes,
@@ -19,6 +20,9 @@ use crate::{
 use super::Destination;
 use leptos_query::{query_persister, *};
 use std::time::Duration;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
+use web_sys::window;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct City {
@@ -157,7 +161,7 @@ pub fn MostPopular() -> impl IntoView {
     } = destinations_query().use_query(move || true);
 
     view! {
-        <div class="bg-white rounded-[45px] p-2 md:p-4 w-full -mt-8">
+        <div class="bg-white rounded-[45px] p-2 md:p-4 w-full -mt-8 most-popular-card">
             <div class="py-8 px-4 md:py-16 md:px-20">
                 <div class="text-xl md:text-2xl font-semibold text-left mb-6">Most popular destinations</div>
 
@@ -187,11 +191,49 @@ pub fn MostPopular() -> impl IntoView {
                                         view! {
                                             <div
                                                 class="rounded-xl overflow-hidden border border-gray-300 h-full cursor-pointer hover:shadow-lg transition-shadow m-1 md:m-2 bg-white flex flex-col"
-                                                on:click=move |_| {
+                                                on:click=move |ev| {
+                                                    // Prevent default behavior and stop propagation
+                                                    log!("[most_popular.rs] Card clicked - BEFORE prevent_default");
+                                                    ev.prevent_default();
+                                                    log!("[most_popular.rs] Card clicked - AFTER prevent_default");
+                                                    ev.stop_propagation();
+                                                    log!("[most_popular.rs] Card clicked - AFTER stop_propagation");
+
+                                                    // Directly update search context
+                                                    log!("[most_popular.rs] Setting destination");
                                                     SearchCtx::set_destination(dest.clone().into());
+                                                    log!("[most_popular.rs] Setting date range");
                                                     SearchCtx::set_date_range(date_range.clone());
+                                                    log!("[most_popular.rs] Setting guests");
+
                                                     SearchCtx::set_guests(GuestSelection::default());
-                                                    search_action.dispatch(())
+                                                    log!("[most_popular.rs] ABOUT TO dispatch search action");
+                                                    search_action.dispatch(());
+                                                    log!("[most_popular.rs] AFTER dispatching search action");
+                                                    // // Get a reference to navigate
+                                                    // let nav = use_navigate();
+
+                                                    // // Reset search results
+                                                    // log!("[most_popular.rs] Resetting search results");
+                                                    // SearchListResults::reset();
+
+                                                    // // Directly navigate to hotel list page
+                                                    // log!("[most_popular.rs] Navigating to hotel list page");
+                                                    // nav(AppRoutes::HotelList.to_string(), Default::default());
+
+                                                    // // Directly log the search button clicked message
+                                                    // log!("Search button clicked");
+
+                                                    // // Get search context for API call
+                                                    // let search_ctx_clone = search_ctx.clone();
+
+                                                    // // Perform search in a spawn_local
+                                                    // spawn_local(async move {
+                                                    //     log!("[most_popular.rs] Calling search_hotel API");
+                                                    //     let result = search_hotel(search_ctx_clone.into()).await.ok();
+                                                    //     log!("[most_popular.rs] Setting search results");
+                                                    //     SearchListResults::set_search_results(result);
+                                                    // });
                                                 }
                                             >
                                                 <img

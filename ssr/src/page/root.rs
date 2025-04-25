@@ -53,6 +53,10 @@ pub fn HeroSection() -> impl IntoView {
     // reset the search bar
     InputGroupState::toggle_dialog(OpenDialogComponent::None);
 
+    // Define whether outside click collapse is allowed
+    // On root page we don't want it enabled
+    let allow_outside_click = create_rw_signal(false);
+
     view! {
         <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')]">
             <Navbar />
@@ -62,7 +66,7 @@ pub fn HeroSection() -> impl IntoView {
                         Hey! Where are you off to?
                     </h1>
 
-                    <InputGroupContainer default_expanded=true given_disabled=false />
+                    <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click />
                     <br />
                     // todo: uncomment in v2 when implementing filtering and sorting
                     // <FilterAndSortBy />
@@ -153,25 +157,36 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
     let navigate = use_navigate();
     let search_action = create_action(move |_| {
+        log!("[root.rs] search_action create_action callback started");
         SearchListResults::reset();
+        log!("[root.rs] SearchListResults reset");
 
         // close all the dialogs
         InputGroupState::toggle_dialog(OpenDialogComponent::None);
+        log!("[root.rs] Dialogs closed");
 
         let nav = navigate.clone();
         let search_ctx = search_ctx.clone();
         local_disabled.set(true);
+        log!("[root.rs] local_disabled set to true");
+
         async move {
             log!("Search button clicked");
+            log!("[root.rs] About to navigate to hotel list page");
             //  move to the hotel listing page
             nav(AppRoutes::HotelList.to_string(), Default::default());
+            log!("[root.rs] Navigation triggered");
 
             // call server function inside action
             spawn_local(async move {
+                log!("[root.rs] spawn_local started for search_hotel");
                 let result = search_hotel(search_ctx.into()).await.ok();
+                log!("[root.rs] search_hotel completed");
                 // log!("SEARCH_HOTEL_API: {result:?}");
                 SearchListResults::set_search_results(result);
+                log!("[root.rs] SearchListResults set");
                 local_disabled.set(false);
+                log!("[root.rs] local_disabled set to false");
             });
         }
     });
@@ -182,7 +197,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     };
 
     view! {
-        <OutsideClickDetector debug=true on_outside_click=Callback::new(close_closure)>
+        <OutsideClickDetector debug=true on_outside_click=Callback::new(close_closure) exclude_selectors=vec![".most-popular-card".to_string()]>
         <div
             class=move || {
                 format!(

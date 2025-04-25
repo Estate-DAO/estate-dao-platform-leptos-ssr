@@ -4,6 +4,7 @@ use leptos_router::use_navigate;
 use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
 use crate::log;
+use crate::page::InputGroupContainer;
 use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::state::search_state::HotelInfoResults;
 use crate::{
@@ -37,7 +38,8 @@ pub fn HotelListPage() -> impl IntoView {
         <section class="relative h-screen">
             <Navbar />
             <div class="flex flex-col items-center mt-6 p-4">
-                <InputGroup given_disabled=disabled_input_group />
+                // <InputGroup given_disabled=disabled_input_group />
+                <InputGroupContainer default_expanded=true given_disabled=disabled_input_group />
             // <FilterAndSortBy />
             </div>
 
