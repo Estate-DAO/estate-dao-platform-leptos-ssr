@@ -19,6 +19,7 @@ use crate::{
     state::search_state::{SearchCtx, SearchListResults},
 };
 // use chrono::{Datelike, NaiveDate};
+use crate::page::InputGroupContainer;
 use crate::utils::date::*;
 use leptos::ev::MouseEvent;
 use leptos_query::{query_persister, *};
@@ -61,7 +62,7 @@ pub fn HeroSection() -> impl IntoView {
                         Hey! Where are you off to?
                     </h1>
 
-                    <InputGroup />
+                    <InputGroupContainer default_expanded=true given_disabled=false />
                     <br />
                     // todo: uncomment in v2 when implementing filtering and sorting
                     // <FilterAndSortBy />

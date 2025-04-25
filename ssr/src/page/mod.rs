@@ -13,3 +13,9 @@ pub use block_room::*;
 
 mod confirm_booking;
 pub use confirm_booking::*;
+
+mod input_group_mobile;
+pub use input_group_mobile::*;
+
+mod input_group_container;
+pub use input_group_container::*;
