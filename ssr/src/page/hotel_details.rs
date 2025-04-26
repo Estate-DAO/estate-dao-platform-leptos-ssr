@@ -594,7 +594,7 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
                     block_room_action.dispatch(())
                 }
                 loading_text="Booking..."
-                class="w-full sm:w-auto px-4 py-2 text-base sm:text-lg"
+                class="w-full sm:w-full px-4 py-2 text-base sm:text-lg"
                 >
                 "Book Now"
                 </LoadingButton>

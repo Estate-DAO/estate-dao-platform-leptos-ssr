@@ -1,5 +1,5 @@
 use super::{ApiClientResult, ApiError, Provab, ProvabReq, ProvabReqMeta};
-use crate::log;
+use crate::{error, log};
 use async_trait::async_trait;
 use error_stack::ResultExt;
 use leptos::ServerFnError;
@@ -72,6 +72,7 @@ pub trait RetryableRequest: ProvabReq + Serialize + Clone + 'static {
 
     #[cfg(not(feature = "ssr"))]
     async fn retry_with_backoff(self, retry_count: u8) -> Result<Self::Response, ServerFnError> {
+        error!("retry_with_backoff - unreachable!");
         Err(ServerFnError::ServerError(
             "Environment Not supported".to_string(),
         ))

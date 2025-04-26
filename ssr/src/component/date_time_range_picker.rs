@@ -122,6 +122,40 @@ impl SelectedDateRange {
         };
         format!("{} - {}", format_md(self.start), format_md(self.end))
     }
+
+    // <!-- Returns date in format '04 April 2025' given (year, month, day) -->
+    fn dd_month_yyyy(date: (u32, u32, u32)) -> String {
+        use chrono::NaiveDate;
+        NaiveDate::from_ymd_opt(date.0 as i32, date.1, date.2)
+            .map(|d| d.format("%d %B %Y").to_string())
+            .unwrap_or("-".to_string())
+    }
+
+    pub fn dd_month_yyyy_start(&self) -> String {
+        Self::dd_month_yyyy(self.start)
+    }
+
+    pub fn dd_month_yyyy_end(&self) -> String {
+        Self::dd_month_yyyy(self.end)
+    }
+
+    pub fn format_dd_month_yyyy(&self) -> String {
+        format!(
+            "{} - {}",
+            Self::dd_month_yyyy(self.start),
+            Self::dd_month_yyyy(self.end)
+        )
+    }
+
+    // <!-- Returns formatted nights string, e.g. '2 Nights' or '-' if none -->
+    pub fn formatted_nights(&self) -> String {
+        let nights = self.no_of_nights();
+        if nights > 0 {
+            format!("{} Night{}", nights, if nights > 1 { "s" } else { "" })
+        } else {
+            "-".to_string()
+        }
+    }
 }
 
 #[component]
