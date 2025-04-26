@@ -51,7 +51,7 @@ pub fn InputGroupMobile() -> impl IntoView {
 
     view! {
         // Main wrapper (rounded, shadow, border, white bg)
-        <div class="flex flex-col w-full max-w-xl bg-white rounded-full shadow-md border border-gray-200 px-4 py-3 items-center">
+        <div class="flex flex-col mb-4 w-full max-w-xl bg-white rounded-full shadow-md border border-gray-200 px-4 py-3 items-center">
             <div class="flex items-center w-full">
                 <span class="text-2xl text-gray-400 mr-3">
                     <Icon icon=icondata::BsSearch />

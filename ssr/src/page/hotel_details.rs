@@ -179,7 +179,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
                         // {/* Right side */}
                         <div class="w-full md:w-2/5 mt-8 md:mt-0 flex flex-col">
                             // {/* Pricing Card */}
-                            <div class="bg-white rounded-xl shadow-md p-2 mb-2">
+                            <div class="bg-white rounded-xl shadow-md mb-2">
                                 <PricingBookNow />
                             </div>
                         </div>
@@ -353,7 +353,7 @@ pub fn PricingBookNow() -> impl IntoView {
     // let hotel_info_results: HotelInfoResults = expect_context();
 
     view! {
-        <div class="flex flex-col space-y-4 shadow-lg rounded-xl border border-gray-200 p-4 md:p-8">
+        <div class="flex flex-col space-y-4 shadow-lg rounded-xl p-4 md:p-8">
             <Show when=move || (price() > 0.0)>
                 <PriceDisplayV2
                     price=move || price()

@@ -168,43 +168,45 @@ pub fn SSEConfirmationPage() -> impl IntoView {
         ];
 
         view! {
-            <div class="flex flex-col md:flex-row items-center justify-center w-full py-8">
-                {move || {
-                    steps
-                    .clone()
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, (label, signal))| {
-                        let is_active = move || signal.get();
-                        let circle_classes = move || format!("w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors {}",
-                            if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
+            <div class="flex flex-col items-center justify-center w-full py-4 sm:py-6 md:py-8">
+                <div class="flex flex-row items-center justify-center w-full overflow-x-auto px-2 pb-2">
+                    {move || {
+                        steps
+                        .clone()
+                        .into_iter()
+                        .enumerate()
+                        .map(|(index, (label, signal))| {
+                            let is_active = move || signal.get();
+                            let circle_classes = move || format!("min-w-[2rem] w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-medium transition-colors {}",
+                                if is_active() { "bg-black text-white" } else { "bg-gray-300 text-black" });
 
-                        let line_color = move || if is_active() {
-                                "bg-black"
-                        } else {
-                                "bg-gray-300"
-                        };
+                            let line_color = move || if is_active() {
+                                    "bg-black"
+                            } else {
+                                    "bg-gray-300"
+                            };
 
-                        view! {
-                            <div class="flex items-start min-w-fit">
-                                <div class="flex flex-col items-center">
-                                    <div class=circle_classes()>
-                                        <span class="text-sm">{(index + 1).to_string()}</span>
+                            view! {
+                                <div class="flex items-start shrink-0">
+                                    <div class="flex flex-col items-center">
+                                        <div class=circle_classes()>
+                                            <span class="text-xs sm:text-sm">{(index + 1).to_string()}</span>
+                                        </div>
+                                        <span class="mt-2 sm:mt-3 md:mt-4 text-[10px] sm:text-xs text-gray-600 text-center break-words max-w-[80px] sm:max-w-[100px] md:max-w-[120px]">{move || label.get()}</span>
                                     </div>
-                                    <span class="mt-4 text-xs text-gray-600 whitespace-nowrap text-center max-w-[120px]">{move || label.get()}</span>
+                                    {if index < steps.len() - 1 {
+                                        view! {
+                                            <div class=format!("h-[1px] w-12 sm:w-16 md:w-24 lg:w-40 transition-colors mt-3 sm:mt-4 mx-1 sm:mx-2 {}", line_color()) />
+                                        }
+                                    } else {
+                                        view! { <div /> }
+                                    }}
                                 </div>
-                                {if index < steps.len() - 1 {
-                                    view! {
-                                        <div class=format!("h-[1px] w-24 md:w-32 lg:w-48 transition-colors mt-4 mx-2 {}", line_color()) />
-                                    }
-                                } else {
-                                    view! { <div /> }
-                                }}
-                            </div>
-                        }
-                    })
-                    .collect::<Vec<_>>()}
-                }
+                            }
+                        })
+                        .collect::<Vec<_>>()}
+                    }
+                </div>
             </div>
         }
     };
@@ -217,18 +219,18 @@ pub fn SSEConfirmationPage() -> impl IntoView {
             <NotificationListenerWrapper />
             <SSEBookingHandler />
 
-            <div class="flex flex-col items-center w-full max-w-4xl mx-auto px-4 sm:px-6 md:px-8 pt-8">
-                <div class="w-full mb-16">
+            <div class="flex flex-col items-center w-full max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8">
+                <div class="w-full mb-8 sm:mb-12 md:mb-16">
                     {render_progress_bar()}
                 </div>
                 <Show when= move ||(status_updates.p04_load_booking_details_from_backend.get()) fallback=SpinnerGray>
-                <div class="w-full max-w-[500px] lg:max-w-[600px] border border-blue-400 rounded-lg p-3 sm:p-4 md:p-6 space-y-3 md:space-y-4">
-                    <div class="text-center text-xl md:text-2xl font-semibold">
+                <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-blue-400 rounded-lg p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4">
+                    <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold">
                         Your Booking has been confirmed!
                     </div>
                     <Divider />
                     <div class="space-y-1">
-                        <h2 class="text-lg md:text-xl font-semibold">{move || confirmation_page_state.hotel_name.get()}</h2>
+                        <h2 class="text-base sm:text-lg md:text-xl font-semibold">{move || confirmation_page_state.hotel_name.get()}</h2>
                         <p class="text-gray-600 text-xs md:text-sm">
                             <span>{move || confirmation_page_state.hotel_location.get()}</span>
                             <span class="ml-1 text-gray-600 text-xs md:text-sm">{move || {
@@ -239,11 +241,11 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         </p>
                     </div>
 
-                    <div class="space-y-3 md:space-y-4">
-                        <div class="space-y-1.5 md:space-y-2">
+                    <div class="space-y-2 sm:space-y-3 md:space-y-4">
+                        <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
                             <Divider />
                             <p class="text-gray-600 text-xs md:text-sm">Reference ID</p>
-                            <p class="font-mono text-sm md:text-base break-all">{move || {
+                            <p class="font-mono text-xs sm:text-sm md:text-base break-all">{move || {
                                 match confirmation_page_state.booking_details.get() {
                                     Some(details) => match details {
                                         backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { booking_ref_no, .. }, .. }), .. } =>
@@ -254,10 +256,10 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                                 }
                             }}</p>
                         </div>
-                        <div class="space-y-1.5 md:space-y-2">
+                        <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
                             <Divider />
                             <p class="text-gray-600 text-xs md:text-sm">Booking ID</p>
-                            <p class="font-mono text-sm md:text-base break-all">{move || {
+                            <p class="font-mono text-xs sm:text-sm md:text-base break-all">{move || {
                                 match confirmation_page_state.booking_details.get() {
                                     Some(details) => match details {
                                         backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { travelomatrix_id, .. }, .. }), .. } =>
@@ -270,15 +272,15 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-center border-t border-b border-gray-200 py-3 md:py-4">
+                    <div class="flex justify-between items-center border-t border-b border-gray-200 py-2 sm:py-3 md:py-4">
                         <div class="ml-1 md:ml-2">
-                            <span class="text-gray-600 text-xs md:text-sm">Check-in</span>
-                            <p class="font-semibold text-sm md:text-base">{move || {
+                            <span class="text-gray-600 text-[10px] sm:text-xs md:text-sm">Check-in</span>
+                            <p class="font-semibold text-xs sm:text-sm md:text-base">{move || {
                                 let date_range = confirmation_page_state.date_range.get();
                                 format_date_fn(date_range.start)
                             }}</p>
                         </div>
-                        <div class="text-center text-[10px] md:text-xs text-gray-600 rounded-lg bg-blue-100 px-1.5 md:px-2 py-1">
+                        <div class="text-center text-[8px] sm:text-[10px] md:text-xs text-gray-600 rounded-lg bg-blue-100 px-1 sm:px-1.5 md:px-2 py-1">
                             {move || {
                                 let date_range = confirmation_page_state.date_range.get();
                                 let nights = (date_range.end.2 - date_range.start.2) as i32;
@@ -286,17 +288,17 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                             }}
                         </div>
                         <div class="ml-1 md:ml-2">
-                            <span class="text-gray-600 text-xs md:text-sm">Check-out</span>
-                            <p class="font-semibold text-sm md:text-base">{move || {
+                            <span class="text-gray-600 text-[10px] sm:text-xs md:text-sm">Check-out</span>
+                            <p class="font-semibold text-xs sm:text-sm md:text-base">{move || {
                                 let date_range = confirmation_page_state.date_range.get();
                                 format_date_fn(date_range.end)
                             }}</p>
                         </div>
                     </div>
 
-                    <div class="space-y-1.5 md:space-y-2">
-                        <h3 class="text-[10px] md:text-xs text-gray-600">Guests & Rooms</h3>
-                        <p class="text-xs md:text-sm">{move || {
+                    <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
+                        <h3 class="text-[8px] sm:text-[10px] md:text-xs text-gray-600">Guests & Rooms</h3>
+                        <p class="text-[10px] sm:text-xs md:text-sm">{move || {
                             let adults = confirmation_page_state.adults.get();
                             let children = confirmation_page_state.children.get();
                             format!("{} Room, {} Adult{} • {} children",
@@ -307,21 +309,21 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         }}</p>
                     </div>
 
-                    <div class="space-y-1.5 md:space-y-2">
-                        <h3 class="font-semibold mb-2 md:mb-3 text-sm md:text-base">Guest Information</h3>
+                    <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
+                        <h3 class="font-semibold mb-1 sm:mb-2 md:mb-3 text-xs sm:text-sm md:text-base">Guest Information</h3>
                         {move || {
                             let adults = confirmation_page_state.adults.get();
                             let primary_adult = adults.first().cloned().unwrap_or_default();
                             view! {
-                                <div class="space-y-1">
-                                    <p class="text-xs md:text-sm">{format!("{} {}",
+                                <div class="space-y-0.5 sm:space-y-1">
+                                    <p class="text-[10px] sm:text-xs md:text-sm">{format!("{} {}",
                                         primary_adult.first_name,
                                         primary_adult.last_name.unwrap_or_default())
                                     }</p>
-                                    <p class="text-xs md:text-sm text-gray-600">{
+                                    <p class="text-[10px] sm:text-xs md:text-sm text-gray-600">{
                                         primary_adult.email.unwrap_or("Email not provided".to_string())
                                     }</p>
-                                    <p class="text-xs md:text-sm text-gray-600">{
+                                    <p class="text-[10px] sm:text-xs md:text-sm text-gray-600">{
                                         primary_adult.phone.unwrap_or("Phone not provided".to_string())
                                     }</p>
                                 </div>
@@ -329,7 +331,7 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         }}
                     </div>
 
-                    <div class="text-center text-xs md:text-sm font-medium text-gray-600 pt-2">
+                    <div class="text-center text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 pt-2">
                         Please take a screenshot for your reference
                     </div>
                 </div>
