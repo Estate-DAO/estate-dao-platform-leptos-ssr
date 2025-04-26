@@ -23,6 +23,7 @@ use crate::{
 };
 use chrono::NaiveDate;
 use leptos::*;
+use leptos_icons::*;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 
@@ -224,28 +225,28 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                     {render_progress_bar()}
                 </div>
                 <Show when= move ||(status_updates.p04_load_booking_details_from_backend.get()) fallback=SpinnerGray>
-                <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-blue-400 rounded-lg p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4">
+                <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-blue-100 md:border-blue-200 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-8 lg:p-10 bg-white shadow-md md:shadow-lg space-y-4 sm:space-y-6 md:space-y-8 mx-auto mt-4 md:mt-10">
                     <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold">
                         Your Booking has been confirmed!
                     </div>
                     <Divider />
                     <div class="space-y-1">
-                        <h2 class="text-base sm:text-lg md:text-xl font-semibold">{move || confirmation_page_state.hotel_name.get()}</h2>
-                        <p class="text-gray-600 text-xs md:text-sm">
+                        <h2 class="text-left text-base sm:text-lg md:text-xl font-semibold">{move || confirmation_page_state.hotel_name.get()}</h2>
+                        <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">
                             <span>{move || confirmation_page_state.hotel_location.get()}</span>
-                            <span class="ml-1 text-gray-600 text-xs md:text-sm">{move || {
+                            <span class="ml-1 text-gray-600 text-xs md:text-sm lg:text-base">{move || {
                                 ConfirmationResultsState::get_destination()
-                                .map(|dest| format!("{}, {}", dest.city, dest.country_name))
-                                .unwrap_or_else(|| "Location details not available".to_string())
+                                .map(|dest| format!(", {}", dest.city))
+                                .unwrap_or_else(|| "".to_string())
                             }}</span>
                         </p>
                     </div>
 
-                    <div class="space-y-2 sm:space-y-3 md:space-y-4">
+                    <div class="space-y-3 sm:space-y-4 md:space-y-6">
                         <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
                             <Divider />
-                            <p class="text-gray-600 text-xs md:text-sm">Reference ID</p>
-                            <p class="font-mono text-xs sm:text-sm md:text-base break-all">{move || {
+                            <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">Reference ID</p>
+                            <p class="font-mono text-xs sm:text-sm md:text-base lg:text-lg break-all">{move || {
                                 match confirmation_page_state.booking_details.get() {
                                     Some(details) => match details {
                                         backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { booking_ref_no, .. }, .. }), .. } =>
@@ -258,8 +259,8 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         </div>
                         <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
                             <Divider />
-                            <p class="text-gray-600 text-xs md:text-sm">Booking ID</p>
-                            <p class="font-mono text-xs sm:text-sm md:text-base break-all">{move || {
+                            <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">Booking ID</p>
+                            <p class="font-mono text-xs sm:text-sm md:text-base lg:text-lg break-all">{move || {
                                 match confirmation_page_state.booking_details.get() {
                                     Some(details) => match details {
                                         backend::Booking { book_room_status: Some(backend::BeBookRoomResponse { commit_booking: backend::BookingDetails { travelomatrix_id, .. }, .. }), .. } =>
@@ -272,24 +273,31 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-center border-t border-b border-gray-200 py-2 sm:py-3 md:py-4">
-                        <div class="ml-1 md:ml-2">
-                            <span class="text-gray-600 text-[10px] sm:text-xs md:text-sm">Check-in</span>
-                            <p class="font-semibold text-xs sm:text-sm md:text-base">{move || {
+                    <div class="flex flex-row justify-between items-center border-t border-b border-gray-200 py-2 sm:py-3 md:py-6 gap-2 md:gap-0">
+                        <div class="flex flex-col items-start flex-1">
+                            <span class="flex items-center text-gray-400 font-light text-xs sm:text-sm md:text-base lg:text-base">
+                                <Icon icon=icondata::AiCalendarOutlined class="text-gray-400 font-light w-4 h-4 mr-1" />
+                                Check-in
+                            </span>
+                            <p class="font-normal text-xs sm:text-sm md:text-base lg:text-lg">{move || {
                                 let date_range = confirmation_page_state.date_range.get();
                                 format_date_fn(date_range.start)
                             }}</p>
                         </div>
-                        <div class="text-center text-[8px] sm:text-[10px] md:text-xs text-gray-600 rounded-lg bg-blue-100 px-1 sm:px-1.5 md:px-2 py-1">
-                            {move || {
-                                let date_range = confirmation_page_state.date_range.get();
-                                let nights = (date_range.end.2 - date_range.start.2) as i32;
-                                format!("{} Nights", nights.max(0))
-                            }}
+                        <div class="flex-shrink-0 flex flex-col items-center justify-center w-1/3">
+                            <div class="w-full flex justify-center">
+                                <span class="text-center text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 rounded-lg bg-blue-100 px-4 py-1 font-medium">
+                                    {move || {
+                                        let date_range = confirmation_page_state.date_range.get();
+                                        let nights = (date_range.end.2 - date_range.start.2) as i32;
+                                        format!("{} Nights", nights.max(0))
+                                    }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="ml-1 md:ml-2">
-                            <span class="text-gray-600 text-[10px] sm:text-xs md:text-sm">Check-out</span>
-                            <p class="font-semibold text-xs sm:text-sm md:text-base">{move || {
+                        <div class="flex flex-col items-end flex-1">
+                            <span class="text-gray-400 font-light text-xs sm:text-sm md:text-base lg:text-base">Check-out</span>
+                            <p class="font-normal text-xs sm:text-sm md:text-base lg:text-lg">{move || {
                                 let date_range = confirmation_page_state.date_range.get();
                                 format_date_fn(date_range.end)
                             }}</p>
@@ -297,8 +305,11 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                     </div>
 
                     <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                        <h3 class="text-[8px] sm:text-[10px] md:text-xs text-gray-600">Guests & Rooms</h3>
-                        <p class="text-[10px] sm:text-xs md:text-sm">{move || {
+                        <h3 class="flex items-center text-xs sm:text-sm md:text-base lg:text-base text-gray-400 font-light">
+                            <Icon icon=icondata::SiHomeassistantcommunitystore class="text-gray-400 font-light w-4 h-4 mr-1" />
+                            Guests & Rooms
+                        </h3>
+                        <p class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-700 font-normal">{move || {
                             let adults = confirmation_page_state.adults.get();
                             let children = confirmation_page_state.children.get();
                             format!("{} Room, {} Adult{} • {} children",
@@ -310,28 +321,27 @@ pub fn SSEConfirmationPage() -> impl IntoView {
                     </div>
 
                     <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                        <h3 class="font-semibold mb-1 sm:mb-2 md:mb-3 text-xs sm:text-sm md:text-base">Guest Information</h3>
+                        <h3 class="font-semibold mb-1 sm:mb-2 md:mb-3 text-xs sm:text-sm md:text-base lg:text-lg">Guest Information</h3>
                         {move || {
                             let adults = confirmation_page_state.adults.get();
                             let primary_adult = adults.first().cloned().unwrap_or_default();
                             view! {
                                 <div class="space-y-0.5 sm:space-y-1">
-                                    <p class="text-[10px] sm:text-xs md:text-sm">{format!("{} {}",
+                                    <p class="text-[10px] sm:text-xs md:text-sm lg:text-base font-medium">{format!("{} {}",
                                         primary_adult.first_name,
                                         primary_adult.last_name.unwrap_or_default())
                                     }</p>
-                                    <p class="text-[10px] sm:text-xs md:text-sm text-gray-600">{
+                                    <p class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600">{
                                         primary_adult.email.unwrap_or("Email not provided".to_string())
                                     }</p>
-                                    <p class="text-[10px] sm:text-xs md:text-sm text-gray-600">{
+                                    <p class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600">{
                                         primary_adult.phone.unwrap_or("Phone not provided".to_string())
                                     }</p>
                                 </div>
                             }
                         }}
                     </div>
-
-                    <div class="text-center text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 pt-2">
+                    <div class="text-center text-[10px] sm:text-xs md:text-sm lg:text-base font-medium text-gray-600 pt-2">
                         Please take a screenshot for your reference
                     </div>
                 </div>
