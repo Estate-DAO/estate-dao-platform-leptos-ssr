@@ -571,22 +571,16 @@ pub fn BlockRoomPage() -> impl IntoView {
     <section class="relative min-h-screen bg-gray-50">
         <Navbar />
         <ErrorPopup />
-        <div class="relative mt-20 flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-6">
+        <div class="max-w-5xl mx-auto px-2 sm:px-6">
+            <div class="flex items-center py-8">
+                <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
+                    <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
+                </span>
+                <h1 class="ml-2 sm:ml-4 text-2xl sm:text-3xl font-bold">"You're just one step away!"</h1>
+            </div>
+        </div>
+        <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-6">
             <div class="w-full lg:w-3/5 flex flex-col gap-8 order-1">
-                <button
-                    type="text"
-                    class="text-lg sm:text-2xl font-bold pb-2 flex items-center"
-                    on:click=go_back_to_details
-                >
-                    // "<- You're just one step away!"
-                    <span class="inline-flex items-center">
-                        <Icon
-                            icon=icondata::AiArrowLeftOutlined
-                            class="text-black font-light"
-                        />
-                    </span>
-                    <div class="ml-2 sm:ml-4">"You're just one step away!"</div>
-                </button>
                 <div class="p-2 sm:p-6 bg-white rounded-2xl shadow w-full">
                     <div class="flex items-center gap-3 mb-2">
                         <img
