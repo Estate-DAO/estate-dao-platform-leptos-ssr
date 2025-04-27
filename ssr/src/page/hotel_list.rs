@@ -172,6 +172,7 @@ pub fn HotelCard(
         <div // href=AppRoutes::HotelDetails.to_string()
         on:click=move |ev| {
             ev.prevent_default();
+            ev.stop_propagation();
             // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);

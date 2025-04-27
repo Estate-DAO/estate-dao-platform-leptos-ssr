@@ -8,6 +8,7 @@ pub mod host;
 pub mod ic;
 pub mod icon;
 pub mod parent_resource;
+pub mod responsive;
 pub mod route;
 pub mod sort_json;
 

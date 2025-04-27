@@ -1,6 +1,8 @@
 use crate::log;
 use crate::page::{InputGroup, InputGroupMobile};
+use crate::utils::responsive::use_is_desktop;
 use leptos::*;
+use web_sys;
 
 #[component]
 pub fn InputGroupContainer(
@@ -9,12 +11,17 @@ pub fn InputGroupContainer(
     #[prop(optional, into)] allow_outside_click_collapse: MaybeSignal<bool>, // New prop
 ) -> impl IntoView {
     // Signal to track if the detailed input group is open on mobile
-    let show_full_input = create_rw_signal(default_expanded.get());
+    let is_desktop = use_is_desktop();
 
-    log!(
-        "[input_group_container.rs] Initial show_full_input: {}",
-        show_full_input.get()
-    );
+    let (show_full_input_read, show_full_input_write) = create_signal(default_expanded.get());
+
+    let show_full_input = create_memo(move |_prev| {
+        log!(
+            "[input_group_container.rs] Derived show_full_input: {}",
+            is_desktop.get() || default_expanded.get()
+        );
+        is_desktop.get() || default_expanded.get() || show_full_input_read.get()
+    });
 
     view! {
             <Show when=move || show_full_input.get()>
@@ -26,11 +33,12 @@ pub fn InputGroupContainer(
                     <Show when=move || allow_outside_click_collapse.get()>
                         <div
                             class="fixed inset-0"
+                            style="pointer-events: none;"
                             on:click=move |ev| {
-                                // Stop propagation to prevent interference with other click handlers
-                                ev.stop_propagation();
-                                log!("[input_group_container.rs] Overlay clicked, setting show_full_input to false");
-                                show_full_input.set(false);
+                                // ev.prevent_default();
+                                // ev.stop_propagation();
+                                log!("[input_group_container.rs] Overlay clicked");
+                                show_full_input_write.set(false);
                             }
                         ></div>
                     </Show>
@@ -41,7 +49,7 @@ pub fn InputGroupContainer(
                 <div
                     on:click=move |_| {
                         log!("[input_group_container.rs] Mobile view clicked, setting show_full_input to true");
-                        show_full_input.set(true);
+                        show_full_input_write.set(true);
                     }
                 >
                     <InputGroupMobile />
