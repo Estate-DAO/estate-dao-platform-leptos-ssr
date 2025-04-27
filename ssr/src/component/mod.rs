@@ -78,3 +78,6 @@ pub use live_select::*;
 
 pub mod gtag;
 pub use gtag::*;
+
+mod live_select_example;
+pub use live_select_example::*;
