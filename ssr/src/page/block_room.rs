@@ -625,6 +625,30 @@ pub fn BlockRoomPage() -> impl IntoView {
                         <span class="font-bold text-sm ml-2 text-right">{move || format!("{} Room{}{} {} Adult{}{} {} child{}", num_rooms.get(), if num_rooms.get() == 1 { "" } else { "s" }, if num_rooms.get() > 0 { "," } else { "" }, adult_count.get(), if adult_count.get() == 1 { "" } else { "s" }, if child_count.get() > 0 { "," } else { "" }, child_count.get(), if child_count.get() == 1 { "" } else { "ren" })}</span>
                     </div>
                 </div>
+                // <!-- Payment summary card for mobile -->
+                <div class=" lg:hidden mb-6 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex flex-col items-stretch">
+                    <h2 class="mb-4 text-2xl font-bold flex items-end">
+                        <span class="text-3xl font-bold">{move || format!("${:.3}", room_price.get())}</span>
+                        <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+                    </h2>
+                    <Divider class="my-4".into() />
+                    <div class="price-breakdown space-y-4 mt-4">
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
+                            <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-gray-700">Taxes and fees</span>
+                            <span class="font-semibold">$0.00</span>
+                        </div>
+                    </div>
+                    <Divider class="my-4".into() />
+                    <div class="flex justify-between items-center font-bold text-lg mb-2">
+                        <span>Total</span>
+                        <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
+                    </div>
+                </div>
+                // <!-- End payment summary card for mobile -->
                 <div class="guest-form mt-4 space-y-6">
                     {(0..adult_count.get())
                         .map(|i| {
@@ -780,7 +804,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                     Confirm & Book
                 </button>
             </div>
-            <div class="w-full lg:w-2/5 mb-8 lg:mb-0 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex flex-col items-stretch order-2 lg:sticky lg:top-28">
+            <div class="hidden lg:flex w-full lg:w-2/5 mb-8 lg:mb-0 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex-col items-stretch order-2 lg:sticky lg:top-28">
                 <h2 class="mb-4 text-2xl font-bold flex items-end">
                     <span class="text-3xl font-bold">{move || format!("${:.3}", room_price.get())}</span>
                     <span class="ml-1 text-base font-normal text-gray-600">/night</span>
