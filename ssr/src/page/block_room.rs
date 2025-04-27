@@ -587,47 +587,37 @@ pub fn BlockRoomPage() -> impl IntoView {
                     </span>
                     <div class="ml-2 sm:ml-4">"You're just one step away!"</div>
                 </button>
-                <div class="p-4 sm:p-8 bg-white rounded-2xl shadow-xl">
-                    <h3 class="text-xl sm:text-2xl font-bold mb-4">"Your Booking Details"</h3>
-                    <div class="details mb-6 flex flex-col sm:flex-row items-center gap-4">
+                <div class="p-4 sm:p-6 bg-white rounded-2xl shadow w-full max-w-sm mx-auto">
+                    <div class="flex items-center gap-3 mb-2">
                         <img
                             src=insert_real_image_or_default
                             alt=move || hotel_info_ctx.selected_hotel_name.get()
-                            class="h-24 w-24 sm:h-28 sm:w-28 rounded-lg object-cover mb-2 sm:mb-0 shadow"
+                            class="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
                         />
-                        <div class="sm:pt-6 sm:p-2 text-center sm:text-left">
-                            <h3 class="font-semibold text-lg">{move || hotel_info_ctx.selected_hotel_name.get()}</h3>
-                            <p class="text-gray-600 text-base">{move || hotel_info_ctx.selected_hotel_location.get()}</p>
+                        <div>
+                            <div class="font-bold text-base sm:text-lg">{move || hotel_info_ctx.selected_hotel_name.get()}</div>
+                            <div class="text-gray-500 text-sm">{move || hotel_info_ctx.selected_hotel_location.get()}</div>
                         </div>
                     </div>
-                    <div class="details grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                        <p class="text-sm sm:text-base">
-                            <strong>"Dates: "</strong>
-                            {move || {
-                                let date_range = search_ctx.date_range.get();
-                                date_range.format_as_human_readable_date()
-                            }}
-                        </p>
-                        <p class="text-sm sm:text-base">
-                            <strong>"Guests: "</strong>
-                            {move || {
-                                format!(
-                                    "{} adults, {} children",
-                                    adult_count.get(),
-                                    child_count.get(),
-                                )
-                            }}
-                        </p>
-                        <p class="text-sm sm:text-base">
-                            <strong>"Rooms: "</strong>
-                            {move || {
-                                format!(
-                                    "{} {}",
-                                    num_rooms.get(),
-                                    if num_rooms.get() == 1 { "room" } else { "rooms" },
-                                )
-                            }}
-                        </p>
+                    <hr class="my-3 border-gray-200" />
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex flex-col items-start">
+                            <span class="text-xs text-gray-400">Check-in</span>
+                            <span class="font-semibold text-base">{move || search_ctx.date_range.get().dd_month_yyyy_start()}</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="bg-gray-100 rounded-full px-3 py-1 text-xs font-semibold text-gray-700 mb-1">{move || search_ctx.date_range.get().formatted_nights()}</span>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="text-xs text-gray-400">Check-out</span>
+                            <span class="font-semibold text-base">{move || search_ctx.date_range.get().dd_month_yyyy_end()}</span>
+                        </div>
+                    </div>
+                    <hr class="my-3 border-gray-200" />
+                    <div class="flex items-center gap-2 mt-2">
+                        <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-lg" />
+                        <span class="text-xs text-gray-400 font-semibold">Guests & Rooms</span>
+                        <span class="font-bold text-sm ml-2">{move || format!("{} Room{}{} {} Adult{}{} {} child{}", num_rooms.get(), if num_rooms.get() == 1 { "" } else { "s" }, if num_rooms.get() > 0 { "," } else { "" }, adult_count.get(), if adult_count.get() == 1 { "" } else { "s" }, if child_count.get() > 0 { "," } else { "" }, child_count.get(), if child_count.get() == 1 { "" } else { "ren" })}</span>
                     </div>
                 </div>
                 <div class="guest-form mt-4 space-y-6">
