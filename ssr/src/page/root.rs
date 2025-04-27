@@ -1,4 +1,4 @@
-use crate::component::outside_click_detector::OutsideClickDetector;
+// use crate::component::outside_click_detector::OutsideClickDetector;
 // use leptos::logging::log;
 use crate::log;
 use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
@@ -23,7 +23,7 @@ use crate::page::InputGroupContainer;
 use crate::utils::date::*;
 use leptos::ev::MouseEvent;
 use leptos_query::{query_persister, *};
-use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
+use leptos_use::{on_click_outside, use_timestamp_with_controls, UseTimestampReturn};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -196,9 +196,14 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         InputGroupState::toggle_dialog(OpenDialogComponent::None);
     };
 
+    let parent_div_ref: NodeRef<html::Div> = create_node_ref();
+
+    let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
+
     view! {
-        <OutsideClickDetector debug=true on_outside_click=Callback::new(close_closure) exclude_selectors=vec![".most-popular-card".to_string()]>
+        // <OutsideClickDetector debug=true on_outside_click=Callback::new(close_closure) exclude_selectors=vec![".most-popular-card".to_string()]>
         <div
+            node_ref=parent_div_ref
             class=move || {
                 format!(
                     // <!-- Changed mobile styling to use solid white background instead of transparent/backdrop-blur -->
@@ -253,7 +258,10 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Search button -->
             // <!-- Completely redesigned for mobile to match screenshot with full-width button at bottom -->
             <button
-                on:click=move |_| search_action.dispatch(())
+                on:click=move |ev| {
+                    ev.prevent_default();
+                    search_action.dispatch(())
+                }
                 class=move || {
                     format!(" {} text-2xl rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
                 }
@@ -284,6 +292,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <div class="h-2 block md:hidden"></div>
 
         </div>
-        </OutsideClickDetector>
+        // </OutsideClickDetector>
     }
 }

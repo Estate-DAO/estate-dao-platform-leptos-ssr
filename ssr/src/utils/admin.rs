@@ -4,6 +4,7 @@ use candid::Principal;
 use ic_agent::identity::{self, BasicIdentity};
 use ic_agent::{Agent, Identity};
 use leptos::{expect_context, use_context};
+use log::info;
 
 use super::ic::AgentWrapper;
 use crate::canister::backend::Backend;
@@ -72,7 +73,13 @@ fn create_identity_from_admin_principal_axum_ssr() -> impl Identity {
 pub fn admin_canister() -> AdminCanisters {
     let admin_canisters = use_context::<AdminCanisters>();
     match admin_canisters {
-        Some(admin_canisters_leptos) => admin_canisters_leptos,
-        None => AdminCanisters::from_env_axum_ssr(),
+        Some(admin_canisters_leptos) => {
+            info!("admin_canister: Using AdminCanisters from leptos context");
+            admin_canisters_leptos
+        }
+        None => {
+            info!("admin_canister: Using AdminCanisters from env/axum SSR");
+            AdminCanisters::from_env_axum_ssr()
+        }
     }
 }

@@ -1,365 +1,242 @@
-use crate::log;
-use crate::state::GlobalStateForLeptos;
-use leptos::ev::MouseEvent;
+use leptos::ev::{FocusEvent, MouseEvent};
 use leptos::html::{Div, Input};
 use leptos::*;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{Event, KeyboardEvent, Node};
 
-// impl<T: Clone + PartialEq + 'static> GlobalStateForLeptos for LiveSelectState<T> {}
+use crate::log;
 
-// Global state management for LiveSelect
-pub struct LiveSelectState<T>
-where
-    T: Clone + PartialEq + 'static,
-{
-    // Core state
-    search_text: RwSignal<String>,
-    is_open: RwSignal<bool>,
-    active_index: RwSignal<usize>,
-    selected_value: Signal<Option<T>>,
-    set_value: Callback<T>,
-
-    // References
-    input_ref: NodeRef<Input>,
-    dropdown_ref: NodeRef<Div>,
-    container_ref: NodeRef<Div>,
-
-    // Options and callbacks
+/// A customizable dropdown select component with search functionality
+#[component]
+pub fn LiveSelect<T>(
+    /// List of options to show in the dropdown
+    #[prop(optional)]
     options: MaybeSignal<Vec<T>>,
+    /// Currently selected value
+    value: Signal<Option<T>>,
+    /// Callback to set the selected value
+    set_value: Callback<T>,
+    /// Function to convert an option to a display label
     label_fn: Callback<T, String>,
+    /// Function to convert an option to a unique identifier
     value_fn: Callback<T, String>,
-
-    // Configuration
+    /// Placeholder text for the input field
+    #[prop(optional)]
+    placeholder: MaybeSignal<String>,
+    /// HTML id for the component
+    #[prop(optional)]
+    id: MaybeSignal<String>,
+    /// Custom CSS classes
+    #[prop(optional)]
+    class: MaybeSignal<String>,
+    /// Enable debug logging
+    #[prop(optional)]
     debug: bool,
-}
-
-impl<T> LiveSelectState<T>
+) -> impl IntoView
 where
     T: Clone + PartialEq + 'static,
 {
-    fn get() -> Self {
-        expect_context()
-        // let this = use_context::<Self>();
-        // match this {
-        //     Some(x) => x,
-        //     None => {
-        //         Self::set_global();
-        //     }
-        // }
-    }
+    // Core state signals
+    let search_text = create_rw_signal(String::new());
+    let is_open = create_rw_signal(false);
+    let active_index = create_rw_signal(0);
 
-    pub fn new(
-        options: MaybeSignal<Vec<T>>,
-        value: Signal<Option<T>>,
-        set_value: Callback<T>,
-        label_fn: Callback<T, String>,
-        value_fn: Callback<T, String>,
-        debug: bool,
-    ) -> Self {
-        let this = Self {
-            search_text: create_rw_signal(String::new()),
-            is_open: create_rw_signal(false),
-            active_index: create_rw_signal(0),
-            selected_value: value,
-            set_value,
-            input_ref: create_node_ref(),
-            dropdown_ref: create_node_ref(),
-            container_ref: create_node_ref(),
-            options,
-            label_fn,
-            value_fn,
-            debug,
-        };
-        let cloned = this.clone();
-        // Set up event handlers and effects
-        this.setup_keyboard_navigation();
-        this.setup_outside_click_detection();
+    // Element references
+    let input_ref = create_node_ref::<Input>();
+    let dropdown_ref = create_node_ref::<Div>();
+    let container_ref = create_node_ref::<Div>();
 
-        // set this up for all components downstream?
-        provide_context(this);
-        cloned
-    }
+    // Computed: filtered options based on search text
+    let filtered_options = create_memo(move |_| {
+        let search = search_text.get().to_lowercase();
+        let all_options = options.get();
 
-    // Getter methods
-    pub fn get_search_text() -> Signal<String> {
-        let this = Self::get();
-        this.search_text.into()
-    }
+        if search.is_empty() {
+            return all_options;
+        }
 
-    pub fn get_is_open() -> Signal<bool> {
-        let this = Self::get();
-        this.is_open.into()
-    }
+        all_options
+            .into_iter()
+            .filter(|opt| label_fn(opt.clone()).to_lowercase().contains(&search))
+            .collect::<Vec<T>>()
+    });
 
-    pub fn get_active_index() -> Signal<usize> {
-        let this = Self::get();
-        this.active_index.into()
-    }
+    // Actions
+    let close_dropdown = move || is_open.set(false);
+    let open_dropdown = move || is_open.set(true);
+    let toggle_dropdown = move || is_open.update(|v| *v = !*v);
 
-    pub fn get_selected_value() -> Signal<Option<T>> {
-        let this = Self::get();
-        this.selected_value
-    }
-
-    pub fn get_input_ref() -> NodeRef<Input> {
-        let this = Self::get();
-        this.input_ref
-    }
-
-    pub fn get_dropdown_ref() -> NodeRef<Div> {
-        let this = Self::get();
-        this.dropdown_ref
-    }
-
-    pub fn get_container_ref(&self) -> NodeRef<Div> {
-        let this = self;
-        // let this  = Self::get();
-        this.container_ref
-    }
-
-    // Action methods
-    pub fn set_search_text(text: String) {
-        let this = Self::get();
-        this.search_text.set(text);
-    }
-
-    pub fn open_dropdown() {
-        let this = Self::get();
-        this.is_open.set(true);
-    }
-
-    pub fn close_dropdown() {
-        let this = Self::get();
-        this.is_open.set(false);
-    }
-
-    pub fn toggle_dropdown() {
-        let this = Self::get();
-        this.is_open.update(|v| *v = !*v);
-    }
-
-    pub fn set_active_index(index: usize) {
-        let this = Self::get();
-        this.active_index.set(index);
-    }
-
-    pub fn select_option(opt: T) {
-        let this = Self::get();
-        Callable::call(&this.set_value, opt);
-        Self::close_dropdown();
-        Self::set_search_text(String::new());
+    let select_option = move |opt: T| {
+        set_value(opt);
+        close_dropdown();
+        search_text.set(String::new());
 
         // Focus the input after selection
-        if let Some(input) = this.input_ref.get() {
+        if let Some(input) = input_ref.get() {
             let _ = input.focus();
         }
-    }
+    };
 
     // Event handlers
-    pub fn handle_input(ev: Event) {
+    let handle_input = move |ev: Event| {
         let value = event_target_value(&ev);
-        let this = Self::get();
-        Self::set_search_text(value);
-        Self::open_dropdown();
-        Self::set_active_index(0);
-    }
+        search_text.set(value);
+        open_dropdown();
+        active_index.set(0);
+    };
 
-    pub fn handle_focus(_: Event) {
-        Self::open_dropdown();
-    }
+    let handle_focus = move |_: FocusEvent| {
+        open_dropdown();
+    };
 
-    pub fn handle_toggle_click(ev: MouseEvent) {
+    let handle_toggle_click = move |ev: MouseEvent| {
         ev.prevent_default();
         ev.stop_propagation();
-        Self::toggle_dropdown();
+        toggle_dropdown();
 
         // Focus input when opening
-        if !Self::get_is_open().get() {
-            if let Some(input) = Self::get_input_ref().get() {
+        if !is_open.get() {
+            if let Some(input) = input_ref.get() {
                 let _ = input.focus();
             }
         }
-    }
-
-    // Computed values
-    pub fn filtered_options() -> Memo<Vec<T>> {
-        let this = Self::get();
-        let options = this.options;
-        let search_text = this.search_text;
-        let label_fn = this.label_fn.clone();
-
-        create_memo(move |_| {
-            let search = search_text.get().to_lowercase();
-            if search.is_empty() {
-                return options.get();
-            }
-
-            options
-                .get()
-                .into_iter()
-                .filter(|opt| label_fn(opt.clone()).to_lowercase().contains(&search))
-                .collect::<Vec<T>>()
-        })
-    }
+    };
 
     // Set up keyboard navigation
-    pub fn setup_keyboard_navigation(&self) {
-        let this = self;
-        // let this = Self::get();
-        let input_ref = this.input_ref;
-        let active_index = this.active_index;
-        let is_open = this.is_open;
-        let dropdown_ref = this.dropdown_ref;
-        let state = this.clone();
+    create_effect(move |_| {
+        if let Some(input) = input_ref.get_untracked() {
+            let handler = Closure::wrap(Box::new(move |ev: KeyboardEvent| {
+                match ev.key().as_str() {
+                    "ArrowDown" => {
+                        ev.prevent_default();
+                        if !is_open.get() {
+                            open_dropdown();
+                        } else {
+                            let filtered = filtered_options.get();
+                            let max = filtered.len().saturating_sub(1);
+                            let next = (active_index.get() + 1).min(max);
+                            active_index.set(next);
 
-        create_effect(move |_| {
-            if let Some(input) = input_ref.get_untracked() {
-                let handler = Closure::wrap(Box::new(move |ev: KeyboardEvent| {
-                    match ev.key().as_str() {
-                        "ArrowDown" => {
-                            ev.prevent_default();
-                            if !is_open.get() {
-                                Self::open_dropdown();
-                            } else {
-                                let filtered = Self::filtered_options().get();
-                                let max = filtered.len().saturating_sub(1);
-                                let next = (active_index.get() + 1).min(max);
-                                Self::set_active_index(next);
-
-                                // Scroll to view if needed
-                                if let Some(dropdown) = dropdown_ref.get() {
-                                    if let Some(active_item) = dropdown
-                                        .query_selector(&format!("[data-index=\"{}\"]", next))
-                                        .ok()
-                                        .flatten()
-                                    {
-                                        let _ = active_item.scroll_into_view();
-                                    }
+                            // Scroll to view if needed
+                            if let Some(dropdown) = dropdown_ref.get() {
+                                if let Some(active_item) = dropdown
+                                    .query_selector(&format!("[data-index=\"{}\"]", next))
+                                    .ok()
+                                    .flatten()
+                                {
+                                    let _ = active_item.scroll_into_view();
                                 }
                             }
                         }
-                        "ArrowUp" => {
-                            ev.prevent_default();
-                            if is_open.get() {
-                                let prev = active_index.get().saturating_sub(1);
-                                Self::set_active_index(prev);
-
-                                // Scroll to view if needed
-                                if let Some(dropdown) = dropdown_ref.get() {
-                                    if let Some(active_item) = dropdown
-                                        .query_selector(&format!("[data-index=\"{}\"]", prev))
-                                        .ok()
-                                        .flatten()
-                                    {
-                                        let _ = active_item.scroll_into_view();
-                                    }
-                                }
-                            }
-                        }
-                        "Escape" => {
-                            ev.prevent_default();
-                            Self::close_dropdown();
-                        }
-                        "Enter" => {
-                            if Self::get_is_open().get() {
-                                ev.prevent_default();
-                                let filtered = Self::filtered_options().get();
-                                if !filtered.is_empty() {
-                                    let index = active_index.get().min(filtered.len() - 1);
-                                    Self::select_option(filtered[index].clone());
-                                }
-                            }
-                        }
-                        _ => {}
                     }
-                }) as Box<dyn FnMut(KeyboardEvent)>);
+                    "ArrowUp" => {
+                        ev.prevent_default();
+                        if is_open.get() {
+                            let prev = active_index.get().saturating_sub(1);
+                            active_index.set(prev);
 
-                // Add event listener
-                input
-                    .add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
-                    .expect("should add keydown event listener");
-
-                // Clean up on drop
-                on_cleanup(move || {
-                    if let Some(input_elem) = input_ref.get() {
-                        input_elem
-                            .remove_event_listener_with_callback(
-                                "keydown",
-                                handler.as_ref().unchecked_ref(),
-                            )
-                            .expect("should remove keydown event listener");
+                            // Scroll to view if needed
+                            if let Some(dropdown) = dropdown_ref.get() {
+                                if let Some(active_item) = dropdown
+                                    .query_selector(&format!("[data-index=\"{}\"]", prev))
+                                    .ok()
+                                    .flatten()
+                                {
+                                    let _ = active_item.scroll_into_view();
+                                }
+                            }
+                        }
                     }
-                    // Handler will be dropped here
-                });
-            }
-        });
-    }
+                    "Escape" => {
+                        ev.prevent_default();
+                        close_dropdown();
+                    }
+                    "Enter" => {
+                        if is_open.get() {
+                            ev.prevent_default();
+                            let filtered = filtered_options.get();
+                            if !filtered.is_empty() {
+                                let index = active_index.get().min(filtered.len() - 1);
+                                select_option(filtered[index].clone());
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }) as Box<dyn FnMut(KeyboardEvent)>);
+
+            // Add event listener
+            input
+                .add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref())
+                .expect("should add keydown event listener");
+
+            // Clean up on drop
+            on_cleanup(move || {
+                if let Some(input_elem) = input_ref.get() {
+                    input_elem
+                        .remove_event_listener_with_callback(
+                            "keydown",
+                            handler.as_ref().unchecked_ref(),
+                        )
+                        .expect("should remove keydown event listener");
+                }
+            });
+        }
+    });
 
     // Set up outside click detection
-    pub fn setup_outside_click_detection(&self) {
-        let this = self;
-        // let this = Self::get();
-        let container_ref = this.container_ref;
-        let is_open = this.is_open;
-        let debug = this.debug;
-        let state = this.clone();
+    create_effect(move |_| {
+        if is_open.get() {
+            let container = container_ref.get_untracked();
+            if let Some(container) = container {
+                let container_clone = container.clone();
 
-        create_effect(move |_| {
-            if is_open.get() {
-                let container = container_ref.get_untracked();
-                if let Some(container) = container {
-                    let container_clone = container.clone();
+                // Create the event handler for outside clicks
+                let handler = Closure::wrap(Box::new(move |event: Event| {
+                    let target = event.target();
+                    let target_element = target
+                        .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                        .map(|e| e.dyn_into::<Node>().unwrap());
 
-                    // Create the event handler for outside clicks
-                    let handler = Closure::wrap(Box::new(move |event: Event| {
-                        let target = event.target();
-                        let target_element = target
-                            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                            .map(|e| e.dyn_into::<Node>().unwrap());
+                    // Check if the click was outside our container
+                    let outside_click = match target_element {
+                        Some(element) => !container_clone.contains(Some(&element)),
+                        None => true,
+                    };
 
-                        // Check if the click was outside our container
-                        let outside_click = match target_element {
-                            Some(element) => !container_clone.contains(Some(&element)),
-                            None => true,
-                        };
-
-                        if outside_click {
-                            if debug {
-                                log!("Clicked outside the LiveSelect");
-                            }
-                            Self::close_dropdown();
+                    if outside_click {
+                        if debug {
+                            log!("Clicked outside the LiveSelect");
                         }
-                    }) as Box<dyn FnMut(Event)>);
+                        close_dropdown();
+                    }
+                }) as Box<dyn FnMut(Event)>);
 
-                    // Add event listener to document
-                    let document = web_sys::window()
-                        .expect("window should exist")
-                        .document()
-                        .expect("document should exist");
+                // Add event listener to document
+                let document = web_sys::window()
+                    .expect("window should exist")
+                    .document()
+                    .expect("document should exist");
 
+                document
+                    .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
+                    .expect("should add event listener");
+
+                // Store the handler in a closure that will be called during cleanup
+                on_cleanup(move || {
                     document
-                        .add_event_listener_with_callback("click", handler.as_ref().unchecked_ref())
-                        .expect("should add event listener");
-
-                    // Store the handler in a closure that will be called during cleanup
-                    on_cleanup(move || {
-                        document
-                            .remove_event_listener_with_callback(
-                                "click",
-                                handler.as_ref().unchecked_ref(),
-                            )
-                            .expect("should remove event listener");
-                        // Handler will be dropped here, automatically cleaning up the closure
-                    });
-                }
+                        .remove_event_listener_with_callback(
+                            "click",
+                            handler.as_ref().unchecked_ref(),
+                        )
+                        .expect("should remove event listener");
+                });
             }
-        });
-    }
+        }
+    });
 
-    // Text highlighting function
-    pub fn highlight_text(text: &str, search: &str) -> Vec<View> {
-        let this = Self::get();
+    // Highlight function to show search matches
+    let highlight_text = |text: &str, search: &str| -> Vec<View> {
         if search.is_empty() {
             return vec![text.to_string().into_view()];
         }
@@ -397,90 +274,47 @@ where
         }
 
         parts
-    }
-}
-
-// Add Clone implementation for LiveSelectState
-impl<T> Clone for LiveSelectState<T>
-where
-    T: Clone + PartialEq + 'static,
-{
-    fn clone(&self) -> Self {
-        Self {
-            search_text: self.search_text,
-            is_open: self.is_open,
-            active_index: self.active_index,
-            selected_value: self.selected_value,
-            set_value: self.set_value.clone(),
-            input_ref: self.input_ref,
-            dropdown_ref: self.dropdown_ref,
-            container_ref: self.container_ref,
-            options: self.options.clone(),
-            label_fn: self.label_fn.clone(),
-            value_fn: self.value_fn.clone(),
-            debug: self.debug,
-        }
-    }
-}
-
-type LSS<T> = LiveSelectState<T>;
-
-#[component]
-pub fn LiveSelect<T>(
-    #[prop(optional)] options: MaybeSignal<Vec<T>>,
-    value: Signal<Option<T>>,
-    set_value: Callback<T>,
-    label_fn: Callback<T, String>,
-    value_fn: Callback<T, String>,
-    #[prop(optional)] placeholder: MaybeSignal<String>,
-    #[prop(optional)] id: MaybeSignal<String>,
-    #[prop(optional)] class: MaybeSignal<String>,
-    #[prop(optional)] debug: bool,
-) -> impl IntoView
-where
-    T: Clone + PartialEq + 'static,
-{
-    // Create a state management instance
-    let state = LiveSelectState::new(options, value, set_value, label_fn, value_fn, debug);
-
-    // Get computed/derived values
-    let filtered_options = LSS::<T>::filtered_options();
+    };
 
     view! {
         <div
-            _ref=state.get_container_ref()
+            _ref=container_ref
             class=move || format!("relative w-full {}", class.get())
             id=move || id.get()
         >
-            <div class="relative">
+            <div class="relative" aria-haspopup="listbox" aria-owns="dropdown-listbox">
                 <input
                     type="text"
-                    class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-base placeholder-gray-400 shadow-sm"
                     placeholder=move || placeholder.get()
-                    value=move || LSS::<T>::get_search_text().get()
-                    on:input=move |ev| LSS::<T>::handle_input(ev)
-                    on:focus=move |ev| LSS::<T>::handle_focus(ev)
-                    _ref=LSS::<T>::get_input_ref()
-                    aria-expanded=move || LSS::<T>::get_is_open().get().to_string()
+                    value=move || search_text.get()
+                    on:input=handle_input
+                    on:focus=handle_focus
+                    _ref=input_ref
+                    aria-expanded=move || is_open.get().to_string()
                     aria-autocomplete="list"
-                    role="combobox"></input>
+                    aria-controls="dropdown-listbox"
+                    role="combobox"
+                />
+
                 <button
                     type="button"
-                    class="absolute inset-y-0 right-0 flex items-center pr-2"
-                    on:click=move |ev| LSS::<T>::handle_toggle_click(ev)
+                    class="absolute inset-y-0 right-0 flex items-center pr-3"
+                    on:click=handle_toggle_click
                     aria-label="Toggle dropdown"
                 >
                     <svg
-                        class="w-5 h-5 text-gray-400"
+                        class="w-6 h-6 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
+                        aria-hidden="true"
                     >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d=move || if LSS::<T>::get_is_open().get() {
+                            d=move || if is_open.get() {
                                 "M5 15l7-7 7 7"
                             } else {
                                 "M19 9l-7 7-7-7"
@@ -490,87 +324,96 @@ where
                 </button>
             </div>
 
-            <Show when=move || LSS::<T>::get_is_open().get()>
+            <Show when=move || is_open.get()>
                 <div
-                    class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
-                    _ref=LSS::<T>::get_dropdown_ref()
+                    id="dropdown-listbox"
+                    class="absolute z-30 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-[280px] overflow-auto"
+                    _ref=dropdown_ref
                     role="listbox"
+                    aria-label="Options"
                 >
-                    <Show
-                        when=move || !filtered_options.get().is_empty()
-                        fallback=move || view! {
-                            <div class="px-3 py-2 text-gray-500">No results found</div>
-                        }
-                    >
-                        <For
-                            each=move || filtered_options.get()
-                            key=move |opt| LSS::<T>::value_fn(opt.clone())
-                            let:item
+                    <div class="p-2">
+                        <Show
+                            when=move || !filtered_options.get().is_empty()
+                            fallback=move || view! {
+                                <div class="flex justify-center items-center h-20 text-gray-400 text-base" role="status">No results found</div>
+                            }
                         >
-                            {move || {
-                                let opt = item.clone();
-                                let opt_for_select = opt.clone();
-                                let opt_for_compare = opt.clone();
-                                let index = filtered_options.get()
-                                    .iter()
-                                    .position(|x| x == &opt)
-                                    .unwrap_or(0);
-                                let is_active = create_memo(move |_| LSS::<T>::get_active_index().get() == index);
-                                let label = LSS::<T>::label_fn(opt.clone());
-                                let state_clone = state.clone();
+                            <For
+                                each=move || filtered_options.get()
+                                key=move |opt| value_fn(opt.clone())
+                                let:item
+                            >
+                                {move || {
+                                    let opt = item.clone();
+                                    let opt_for_select = opt.clone();
+                                    let opt_for_compare = opt.clone();
+                                    let index = filtered_options.get()
+                                        .iter()
+                                        .position(|x| x == &opt)
+                                        .unwrap_or(0);
+                                    let is_active = create_memo(move |_| active_index.get() == index);
+                                    let is_selected = create_memo(move |_| value.get().as_ref() == Some(&opt_for_compare));
+                                    let label = label_fn(opt.clone());
+                                    let current_search = create_memo(move |_| search_text.get());
 
-                                view! {
-                                    <div
-                                        class=move || format!(
-                                            "px-3 py-2 cursor-pointer hover:bg-gray-100 {} {}",
-                                            if is_active.get() { "bg-blue-50" } else { "" },
-                                            if LSS::<T>::get_selected_value().get().as_ref() == Some(&opt_for_compare) { "font-medium" } else { "" }
-                                        )
-                                        on:click=move |_| state_clone.select_option(opt_for_select.clone())
-                                        data-index=index.to_string()
-                                        role="option"
-                                        aria-selected=move || (LSS::<T>::get_selected_value().get().as_ref() == Some(&opt)).to_string()
-                                    >
-                                        {LSS::<T>::highlight_text(&label, &LSS::<T>::get_search_text().get())}
-                                    </div>
-                                }
-                            }}
-                        </For>
-                    </Show>
+                                    view! {
+                                        <div
+                                            class=move || format!(
+                                                "px-4 py-3 my-1 rounded-lg cursor-pointer transition-all text-base flex items-center gap-2 {} {}",
+                                                if is_active.get() { "bg-blue-50 shadow border border-blue-200" } else { "hover:bg-gray-100" },
+                                                if is_selected.get() { "font-semibold text-blue-700" } else { "text-gray-800" }
+                                            )
+                                            on:click=move |_| select_option(opt_for_select.clone())
+                                            data-index=index.to_string()
+                                            role="option"
+                                            id=format!("option-{}", index)
+                                            aria-selected=move || is_selected.get().to_string()
+                                            tabindex=move || if is_active.get() { "0".to_string() } else { "-1".to_string() }
+                                        >
+                                            {highlight_text(&label, &current_search.get())}
+                                        </div>
+                                    }
+                                }}
+                            </For>
+                        </Show>
+                    </div>
                 </div>
             </Show>
         </div>
     }
 }
 
-// Example usage
 #[component]
 pub fn LiveSelectExample() -> impl IntoView {
     // Example data
-    let options = vec![
-        "Afghanistan".to_string(),
-        "Albania".to_string(),
-        "Algeria".to_string(),
-        "Andorra".to_string(),
-        "Angola".to_string(),
-        "Antigua and Barbuda".to_string(),
-        "Argentina".to_string(),
-        "Armenia".to_string(),
-        "Australia".to_string(),
-        "Austria".to_string(),
-        "Azerbaijan".to_string(),
-        "Bahamas".to_string(),
-        "Bahrain".to_string(),
-        "Bangladesh".to_string(),
-        "Barbados".to_string(),
-        "Belarus".to_string(),
-        "Belgium".to_string(),
-        "Belize".to_string(),
-        "Benin".to_string(),
-        "Bhutan".to_string(),
-    ];
+    let countries = vec![
+        "Afghanistan",
+        "Albania",
+        "Algeria",
+        "Andorra",
+        "Angola",
+        "Antigua and Barbuda",
+        "Argentina",
+        "Armenia",
+        "Australia",
+        "Austria",
+        "Azerbaijan",
+        "Bahamas",
+        "Bahrain",
+        "Bangladesh",
+        "Barbados",
+        "Belarus",
+        "Belgium",
+        "Belize",
+        "Benin",
+        "Bhutan",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect::<Vec<String>>();
 
-    let options_sig = create_rw_signal(options);
+    let options_sig = create_rw_signal(countries);
     let (selected_country, set_selected_country) = create_signal(None::<String>);
 
     view! {

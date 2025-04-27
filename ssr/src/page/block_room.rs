@@ -571,8 +571,8 @@ pub fn BlockRoomPage() -> impl IntoView {
     <section class="relative min-h-screen bg-gray-50">
         <Navbar />
         <ErrorPopup />
-        <div class="relative mt-20 flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start lg:items-center justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-6">
-            <div class="w-full lg:w-3/5 flex flex-col gap-8">
+        <div class="relative mt-20 flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-6">
+            <div class="w-full lg:w-3/5 flex flex-col gap-8 order-1">
                 <button
                     type="text"
                     class="text-lg sm:text-2xl font-bold pb-2 flex items-center"
@@ -629,206 +629,189 @@ pub fn BlockRoomPage() -> impl IntoView {
                             }}
                         </p>
                     </div>
-                    <div class="pay-section mt-4 space-y-6">
-                        // <span class="font-semibold text-base">Pay with</span>
-                        // <div class="flex flex-wrap gap-4 mt-3 items-center">
-                        //     <span class="text-indigo-700 font-bold text-lg">stripe</span>
-                        //     <span class="text-yellow-600 font-bold text-lg">bitcoin</span>
-                        //     <span class="text-blue-700 font-bold text-lg">VISA</span>
-                        //     <span class="text-blue-600 font-bold text-lg">RuPay</span>
-                        //     <span class="text-blue-400 font-bold text-lg">AMEX</span>
-                        // </div>
-                        // {/* Guest Details Form (adults/children) */}
-                        <div class="guest-form mt-4 space-y-6">
-                            {(0..adult_count.get())
-                                .map(|i| {
-                                    let i_usize = i as usize;
-                                    view! {
-                                        <div class="person-details mb-2">
-                                            <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
-                                                {if i == 0 {
-                                                    String::from("Primary Adult")
-                                                } else {
-                                                    format!("Adult {}", i + 1)
-                                                }}
-                                            </h3>
-                                            <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                                                <input
-                                                    type="text"
-                                                    placeholder="First Name *"
-                                                    class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
-                                                    required=true
-                                                    on:input=move |ev| {
-                                                        update_adult(
-                                                            i_usize,
-                                                            "first_name",
+                </div>
+                <div class="guest-form mt-4 space-y-6">
+                    {(0..adult_count.get())
+                        .map(|i| {
+                            let i_usize = i as usize;
+                            view! {
+                                <div class="person-details mb-2">
+                                    <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
+                                        {if i == 0 {
+                                            String::from("Primary Adult")
+                                        } else {
+                                            format!("Adult {}", i + 1)
+                                        }}
+                                    </h3>
+                                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                                        <input
+                                            type="text"
+                                            placeholder="First Name *"
+                                            class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+                                            required=true
+                                            on:input=move |ev| {
+                                                update_adult(
+                                                    i_usize,
+                                                    "first_name",
+                                                    event_target_value(&ev),
+                                                );
+                                                validate_form();
+                                            }
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Last Name"
+                                            class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+                                            required=true
+                                            on:input=move |ev| {
+                                                update_adult(i_usize, "last_name", event_target_value(&ev));
+                                                validate_form();
+                                            }
+                                        />
+                                    </div>
+                                    {move || {
+                                        if i == 0 {
+                                            view! {
+                                                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2">
+                                                    <input
+                                                        type="email"
+                                                        placeholder="Email *"
+                                                        class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+                                                        required=true
+                                                        on:input=move |ev| update_adult(
+                                                            0,
+                                                            "email",
                                                             event_target_value(&ev),
-                                                        );
-                                                        validate_form();
-                                                    }
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Last Name"
-                                                    class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
-                                                    required=true
-                                                    on:input=move |ev| {
-                                                        update_adult(i_usize, "last_name", event_target_value(&ev));
-                                                        validate_form();
-                                                    }
-                                                />
-                                            </div>
-                                            {move || {
-                                                if i == 0 {
-                                                    view! {
-                                                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2">
-                                                            <input
-                                                                type="email"
-                                                                placeholder="Email *"
-                                                                class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
-                                                                required=true
-                                                                on:input=move |ev| update_adult(
-                                                                    0,
-                                                                    "email",
-                                                                    event_target_value(&ev),
-                                                                )
-                                                            />
-                                                            <input
-                                                                type="tel"
-                                                                placeholder="Phone *"
-                                                                class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
-                                                                required=true
-                                                                on:input=move |ev| update_adult(
-                                                                    0,
-                                                                    "phone",
-                                                                    event_target_value(&ev),
-                                                                )
-                                                            />
-                                                        </div>
-                                                    }
-                                                        .into_view()
-                                                } else {
-                                                    view! { <div></div> }.into_view()
-                                                }
-                                            }}
-                                        </div>
-                                    }
-                                })
-                                .collect::<Vec<_>>()}
+                                                        )
+                                                    />
+                                                    <input
+                                                        type="tel"
+                                                        placeholder="Phone *"
+                                                        class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+                                                        required=true
+                                                        on:input=move |ev| update_adult(
+                                                            0,
+                                                            "phone",
+                                                            event_target_value(&ev),
+                                                        )
+                                                    />
+                                                </div>
+                                            }
+                                                .into_view()
+                                        } else {
+                                            view! { <div></div> }.into_view()
+                                        }
+                                    }}
+                                </div>
+                            }
+                        })
+                        .collect::<Vec<_>>()}
                         // Loop for children
-                            {(0..child_count.get())
-                                .map(|i| {
-                                    let i_usize = i as usize;
-                                    let age_value = children_ages.get_value_at(i as u32);
+                    {(0..child_count.get())
+                        .map(|i| {
+                            let i_usize = i as usize;
+                            let age_value = children_ages.get_value_at(i as u32);
                                 // Get the age for the current child
 
-                                    view! {
-                                        <div class="person-details mb-2">
-                                            <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
-                                                {format!("Child {}", i + 1)}
-                                            </h3>
-                                            <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                                                <input
-                                                    type="text"
-                                                    placeholder="First Name *"
-                                                    class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
-                                                    required=true
-                                                    on:input=move |ev| {
-                                                        update_child(
-                                                            i_usize,
-                                                            "first_name",
-                                                            event_target_value(&ev),
-                                                        );
-                                                        validate_form();
+                            view! {
+                                <div class="person-details mb-2">
+                                    <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
+                                        {format!("Child {}", i + 1)}
+                                    </h3>
+                                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                                        <input
+                                            type="text"
+                                            placeholder="First Name *"
+                                            class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
+                                            required=true
+                                            on:input=move |ev| {
+                                                update_child(
+                                                    i_usize,
+                                                    "first_name",
+                                                    event_target_value(&ev),
+                                                );
+                                                validate_form();
+                                            }
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Last Name"
+                                            class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
+                                        />
+                                        <select
+                                            class="w-full sm:w-1/5 rounded-md border border-gray-300 bg-white p-3"
+                                            required=true
+                                            on:input=move |ev| {
+                                                update_child(i_usize, "age", event_target_value(&ev));
+                                                validate_form();
+                                            }
+                                        >
+                                            <option disabled selected>{age_value}</option>
+                                            {(1..18)
+                                                .map(|age| {
+                                                    let selected = if age == age_value {
+                                                        "selected"
+                                                    } else {
+                                                        ""
+                                                    };
+                                                    view! {
+                                                        <option value=age.to_string() {selected}>{age}</option>
                                                     }
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Last Name"
-                                                    class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
-                                                />
-                                                <select
-                                                    class="w-full sm:w-1/5 rounded-md border border-gray-300 bg-white p-3"
-                                                    required=true
-                                                    on:input=move |ev| {
-                                                        update_child(i_usize, "age", event_target_value(&ev));
-                                                        validate_form();
-                                                    }
-                                                >
-                                                    <option disabled selected>{age_value}</option>
-                                                    {(1..18)
-                                                        .map(|age| {
-                                                            let selected = if age == age_value {
-                                                                "selected"
-                                                            } else {
-                                                                ""
-                                                            };
-                                                            view! {
-                                                                <option value=age.to_string() {selected}>{age}</option>
-                                                            }
-                                                        })
-                                                        .collect::<Vec<_>>()}
-                                                </select>
-                                            </div>
-                                        </div>
-                                    }
-                                })
-                                .collect::<Vec<_>>()}
-                        </div>
-                    </div>
-                    // <Divider />
-                    // <div class="flex flex-col sm:flex-row gap-4 mt-4">
-                    //     <input type="text" placeholder="Coupon code" class="flex-1 rounded-md border border-gray-300 p-3" />
-                    //     <button class="rounded-md bg-blue-600 text-white px-6 py-3 font-semibold hover:bg-blue-700">Apply</button>
-                    // </div>
-                    // <div class="text-xs text-gray-500 mt-1 mb-2">Only 1 coupon code may be used!</div>
-                    <Divider />
-                    <h2 class="text-lg sm:text-2xl font-bold mt-4">"Cancellation Policy"</h2>
-                    // <div class="cancellation-policy mt-6 text-sm text-gray-600">
-                    //     <a href="#" class="text-blue-500 hover:underline">
-                    //         "Read more"
-                    //     </a>.
-                    // </div>
-                    <Divider />
-                    <div class="mt-2 flex items-start">
-                        <input
-                            type="checkbox"
-                            id="agree"
-                            class="mr-2 mt-1"
-                            on:change=move |ev| update_terms(event_target_checked(&ev))
-                        />
-                        <label for="agree" class="text-xs sm:text-sm text-gray-600">
-                            "Property once booked cannot be cancelled. Confirm the details before making payment."
-                        </label>
-                    </div>
+                                                })
+                                                .collect::<Vec<_>>()}
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+                        })
+                        .collect::<Vec<_>>()}
                 </div>
-            </div>
-            <div class="w-full lg:w-2/5 mb-8 lg:mb-0 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex flex-col justify-between items-start">
-                <h2 class="mb-4 text-xl sm:text-2xl font-bold">
-                    {move || format!("${:.3}/night", room_price.get())}
-                </h2>
-                <Divider />
-                <div class="price-breakdown space-y-2">
-                    <div class="flex justify-between text-base">
-                        <span>{move || format!("${:.3} x {}", room_price.get(), pluralize(num_nights.get(), "night", "nights"))}</span>
-                        <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
-                    </div>
-                    <div class="flex justify-between text-base">
-                        <span>Taxes and fees</span>
-                        <span class="font-semibold">$0.00</span>
-                    </div>
-                    <Divider />
-                    <div class="price-total flex justify-between font-bold text-lg mt-4">
-                        <span>Total</span>
-                        <span>{move || format!("${:.3}", total_price.get())}</span>
-                    </div>
+                <div class="mt-2 flex items-start">
+                    <input
+                        type="checkbox"
+                        id="agree"
+                        class="mr-2 mt-1"
+                        on:change=move |ev| update_terms(event_target_checked(&ev))
+                    />
+                    <label for="agree" class="text-xs sm:text-sm text-gray-600">
+                        "Property once booked cannot be cancelled. Confirm the details before making payment."
+                    </label>
                 </div>
                 <button
-                    class="mt-8 w-full rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300 text-base sm:text-lg font-bold shadow-lg"
+                    class="mt-6 w-full rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300 text-base sm:text-lg font-bold shadow-lg block lg:hidden"
                     disabled=move || !is_form_valid.get()
                     on:click=open_modal
                 >
-                    "Confirm & Book"
+                    Confirm & Book
+                </button>
+            </div>
+            <div class="w-full lg:w-2/5 mb-8 lg:mb-0 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex flex-col items-stretch order-2 lg:sticky lg:top-28">
+                <h2 class="mb-4 text-2xl font-bold flex items-end">
+                    <span class="text-3xl font-bold">{move || format!("${:.3}", room_price.get())}</span>
+                    <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+                </h2>
+                <Divider class="my-4".into() />
+                <div class="price-breakdown space-y-4 mt-4">
+                    <div class="flex justify-between items-center text-base">
+                        <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
+                        <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-base">
+                        <span class="text-gray-700">Taxes and fees</span>
+                        <span class="font-semibold">$0.00</span>
+                    </div>
+                </div>
+                <Divider class="my-4".into() />
+                <div class="flex justify-between items-center font-bold text-lg mb-2">
+                    <span>Total</span>
+                    <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
+                </div>
+                <button
+                    class="mt-6 w-full rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300 text-base sm:text-lg font-bold shadow-lg hidden lg:block"
+                    disabled=move || !is_form_valid.get()
+                    on:click=open_modal
+                >
+                    Confirm & Book
                 </button>
             </div>
         </div>
@@ -848,19 +831,26 @@ pub fn BlockRoomPage() -> impl IntoView {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-                    <h2 class="text-lg sm:text-xl font-bold text-center mb-4 sm:mb-6">Payment</h2>
-                    <div class="flex flex-col sm:flex-row sm:justify-between items-center mb-2 sm:mb-4 gap-2">
-                        <h2 class="text-base sm:text-xl font-bold">
-                            {move || format!("${:.3}/night", room_price.get())}
-                        </h2>
-                        <span class="text-sm sm:text-base">{move || format!("x {}", pluralize(num_nights.get(), "night", "nights"))}</span>
+                    <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
+                    <div class="flex flex-col gap-2 mb-6">
+                        <div class="flex justify-between items-end">
+                            <span class="text-lg font-bold">{move || format!("${:.3}", room_price.get())}</span>
+                            <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+                        </div>
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
+                            <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-base">
+                            <span class="text-gray-700">Taxes and fees</span>
+                            <span class="font-semibold">$0.00</span>
+                        </div>
+                        <Divider class="my-2".into() />
+                        <div class="flex justify-between items-center font-bold text-lg mb-2">
+                            <span>Total</span>
+                            <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
+                        </div>
                     </div>
-                    <Divider />
-                    <div class="price-breakdown price-total mt-2 sm:mt-4 flex justify-between font-bold text-base sm:text-lg">
-                        <span>"Total"</span>
-                        <span>{move || format!("${:.3}", total_price.get())}</span>
-                    </div>
-                    <Divider />
                     <Show when=move || { should_not_have_loading_spinner.get() } fallback=SpinnerGray>
                         <div class="font-bold">
                             <label>"Pay with"</label>

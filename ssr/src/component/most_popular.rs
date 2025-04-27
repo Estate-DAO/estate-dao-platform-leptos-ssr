@@ -125,10 +125,11 @@ pub fn MostPopular() -> impl IntoView {
         set_initial_date((year, month, day));
     });
 
-    let date_range = SelectedDateRange {
+    // Use a memo for date_range so it's reactive and tracked
+    let date_range = create_memo(move |_| SelectedDateRange {
         start: next_date.get(),
         end: next_2_next_date.get(),
-    };
+    });
 
     let navigate = use_navigate();
     let search_action = create_action(move |()| {
@@ -184,10 +185,6 @@ pub fn MostPopular() -> impl IntoView {
                                         let country_name = dest.country_name.clone();
                                         let city_name = dest.city_name.clone();
                                         let img_url = dest.image_url.clone();
-                                        let date_range = SelectedDateRange {
-                                            start: next_date.get(),
-                                            end: next_2_next_date.get(),
-                                        };
                                         view! {
                                             <div
                                                 class="rounded-xl overflow-hidden border border-gray-300 h-full cursor-pointer hover:shadow-lg transition-shadow m-1 md:m-2 bg-white flex flex-col"
@@ -203,7 +200,7 @@ pub fn MostPopular() -> impl IntoView {
                                                     log!("[most_popular.rs] Setting destination");
                                                     SearchCtx::set_destination(dest.clone().into());
                                                     log!("[most_popular.rs] Setting date range");
-                                                    SearchCtx::set_date_range(date_range.clone());
+                                                    SearchCtx::set_date_range(date_range.get());
                                                     log!("[most_popular.rs] Setting guests");
 
                                                     SearchCtx::set_guests(GuestSelection::default());
