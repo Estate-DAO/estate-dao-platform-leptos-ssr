@@ -590,13 +590,24 @@ pub fn BlockRoomPage() -> impl IntoView {
                 <div class="p-4 sm:p-6 bg-white rounded-2xl shadow w-full max-w-sm mx-auto">
                     <div class="flex items-center gap-3 mb-2">
                         <img
-                            src=insert_real_image_or_default
-                            alt=move || hotel_info_ctx.selected_hotel_name.get()
+                            src={move || {
+                                let imgs = images_signal();
+                                if !imgs.is_empty() {
+                                    imgs[0].clone()
+                                } else {
+                                    "/img/home.webp".to_string()
+                                }
+                            }}
+                            alt={move || hotel_info_results.search_result.get().as_ref().map(|r| r.get_hotel_name()).unwrap_or_default()}
                             class="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
                         />
-                        <div>
-                            <div class="font-bold text-base sm:text-lg">{move || hotel_info_ctx.selected_hotel_name.get()}</div>
-                            <div class="text-gray-500 text-sm">{move || hotel_info_ctx.selected_hotel_location.get()}</div>
+                        <div class="flex flex-col justify-center min-h-[2.5rem]">
+                            <div class="font-bold text-base sm:text-lg min-h-[1.25rem]">
+                                {move || hotel_info_results.search_result.get().as_ref().map(|r| r.get_hotel_name()).unwrap_or_default()}
+                            </div>
+                            <div class="text-gray-500 text-sm min-h-[1rem]">
+                                {move || hotel_info_results.search_result.get().as_ref().map(|r| r.get_address()).unwrap_or_default()}
+                            </div>
                         </div>
                     </div>
                     <hr class="my-3 border-gray-200" />
@@ -617,7 +628,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                     <div class="flex items-center gap-2 mt-2">
                         <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-lg" />
                         <span class="text-xs text-gray-400 font-semibold">Guests & Rooms</span>
-                        <span class="font-bold text-sm ml-2">{move || format!("{} Room{}{} {} Adult{}{} {} child{}", num_rooms.get(), if num_rooms.get() == 1 { "" } else { "s" }, if num_rooms.get() > 0 { "," } else { "" }, adult_count.get(), if adult_count.get() == 1 { "" } else { "s" }, if child_count.get() > 0 { "," } else { "" }, child_count.get(), if child_count.get() == 1 { "" } else { "ren" })}</span>
+                        <span class="font-bold text-sm ml-2 text-right">{move || format!("{} Room{}{} {} Adult{}{} {} child{}", num_rooms.get(), if num_rooms.get() == 1 { "" } else { "s" }, if num_rooms.get() > 0 { "," } else { "" }, adult_count.get(), if adult_count.get() == 1 { "" } else { "s" }, if child_count.get() > 0 { "," } else { "" }, child_count.get(), if child_count.get() == 1 { "" } else { "ren" })}</span>
                     </div>
                 </div>
                 <div class="guest-form mt-4 space-y-6">
