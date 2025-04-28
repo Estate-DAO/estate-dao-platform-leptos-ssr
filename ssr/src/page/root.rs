@@ -7,7 +7,7 @@ use leptos_icons::*;
 use leptos_query::QueryResult;
 use leptos_router::use_navigate;
 
-use crate::component::{Footer, MostPopular, Navbar};
+use crate::component::{Footer, LiveSelectExample, MostPopular, Navbar};
 use crate::{
     api::{canister::greet_call::greet_backend, search_hotel},
     app::AppRoutes,
@@ -39,11 +39,11 @@ pub fn RootPage() -> impl IntoView {
             // <FullScreenBannerForMobileModeNotReady>
             <div>
                 <HeroSection />
+                // <LiveSelectExample />
                 <MostPopular />
             </div>
             // </FullScreenBannerForMobileModeNotReady>
             // <Footer />
-            // <LiveSelectExample />
         </main>
     }
 }
@@ -201,7 +201,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
 
     view! {
-        // <OutsideClickDetector debug=true on_outside_click=Callback::new(close_closure) exclude_selectors=vec![".most-popular-card".to_string()]>
         <div
             node_ref=parent_div_ref
             class=move || {
@@ -292,6 +291,5 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <div class="h-2 block md:hidden"></div>
 
         </div>
-        // </OutsideClickDetector>
     }
 }

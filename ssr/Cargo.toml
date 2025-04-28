@@ -153,14 +153,17 @@ ssr = [
     # "dep:reqwest"
 ]
 
-# setup the localhost url for dev env
+# for capturing certain events / logs - turn on debug_log flag
 debug_log = []
 # for the DebugDisplay component 
 debug_display = []
 
+# for generating logfiles in log/ directory from captured logs 
+debug_log_file = ["dep:tracing-appender"]
+
 local-consts = []
 local-lib = ["local-consts", "hydrate", "debug_log"]
-local-bin = ["ssr","local-consts", "debug_log", "dep:tracing-appender"]
+local-bin = ["ssr","local-consts", "debug_log", "debug_log_file"]
 
 # local-lib-with-debug-display = ["local-lib", "debug_display" ]
 # local-bin-with-debug-display = ["local-bin","debug_display"]

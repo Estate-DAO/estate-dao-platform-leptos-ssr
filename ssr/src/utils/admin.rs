@@ -37,7 +37,7 @@ impl AdminCanisters {
         #[cfg(feature = "debug_log")]
         {
             let agent_principal = agent.get_principal().expect("Failed to get principal");
-            println!("agent_principal - {:#?}", agent_principal.to_text());
+            // println!("agent_principal - {:#?}", agent_principal.to_text());
         }
         Backend(principal, agent)
     }
