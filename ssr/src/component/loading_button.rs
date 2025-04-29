@@ -66,6 +66,10 @@ pub fn LoadingButton<F>(
     #[prop(optional, into)]
     content_class: Option<String>,
 
+    /// Whether the button is disabled (in addition to loading)
+    #[prop(optional, into)]
+    disabled: MaybeSignal<bool>,
+
     /// Button content (children)
     children: ChildrenFn,
 ) -> impl IntoView
@@ -76,16 +80,18 @@ where
         <button
             type=button_type
             class={move || {
-                let base = "w-full py-3 rounded-full text-white".to_string();
+                let base = "w-full py-3 rounded-full text-white transition-colors duration-150".to_string();
                 let additional = class.clone().unwrap_or_default();
-                if is_loading.get() {
-                    format!("{base} bg-blue-400 cursor-not-allowed {additional}")
+                let is_disabled = is_loading.get() || disabled.get();
+                if is_disabled {
+                    format!("{base} bg-blue-400 cursor-not-allowed opacity-60 {additional}")
                 } else {
                     format!("{base} bg-blue-600 hover:bg-blue-800 {additional}")
                 }
             }}
-            disabled=move || is_loading.get()
+            disabled=move || is_loading.get() || disabled.get()
             aria-busy={move || is_loading.get().to_string()}
+            aria-disabled={move || (is_loading.get() || disabled.get()).to_string()}
             on:click=on_click
         >
             {move || if is_loading.get() {
