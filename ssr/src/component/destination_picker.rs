@@ -135,12 +135,12 @@ pub fn DestinationPicker() -> impl IntoView {
                 >
                     // !<-- Content Container -->
                     <div
-                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[33%] md:w-1/3 z-[9999]"
+                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-0 md:right-0 md:bottom-auto md:max-w-[33%] md:w-1/3 z-[9999] max-h-[90vh] overflow-y-auto rounded-t-lg md:rounded-lg box-border"
                         on:click=|e| e.stop_propagation()
                     >
                         <div class="bg-white md:mt-1 md:rounded-lg md:border md:border-gray-200 md:shadow-lg">
                             // !<-- Mobile Header -->
-                            <div class="flex items-center justify-between p-4 border-b border-gray-200 md:hidden">
+                            <div class="flex items-center justify-between p-4 border-b border-gray-200 md:hidden sticky top-0 bg-white z-10 rounded-t-lg">
                                 <button
                                     class="text-gray-800 hover:bg-gray-100 p-2 rounded-full transition-colors"
                                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent)
