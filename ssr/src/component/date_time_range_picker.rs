@@ -198,6 +198,21 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
         set_initial_date((year, month));
     });
 
+    // --- Calendar Modal Scroll Lock Effect ---
+
+    create_effect(move |_| {
+        use web_sys::window;
+        let is_open = is_open.get();
+        let document = window().and_then(|w| w.document());
+        if let Some(body) = document.and_then(|d| d.body()) {
+            if is_open {
+                let _ = body.class_list().add_1("overflow-hidden");
+            } else {
+                let _ = body.class_list().remove_1("overflow-hidden");
+            }
+        }
+    });
+
     view! {
         <div class="relative">
             <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
