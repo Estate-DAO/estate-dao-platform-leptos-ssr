@@ -541,6 +541,9 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
         }
     });
 
+    let can_book_now_memo = create_memo(move |_| total_room_price.get() > 0.0);
+    let can_book_now = Signal::derive(move || can_book_now_memo.get());
+
     view! {
         <div class="flex flex-col space-y-2 mt-4 px-2 sm:px-0">
             // <!-- Per-night breakdown row: label left, price right, always aligned -->
@@ -595,6 +598,7 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
                 }
                 loading_text="Booking..."
                 class="w-full sm:w-full px-4 py-2 text-base sm:text-lg"
+                disabled=can_book_now
                 >
                 "Book Now"
                 </LoadingButton>
