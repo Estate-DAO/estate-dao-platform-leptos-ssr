@@ -567,9 +567,8 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     };
 
-    let show_payment_pricing_details  = Signal::derive(move || {
-       BlockRoomResults::has_valid_room_price() 
-    });
+    let show_payment_pricing_details =
+        Signal::derive(move || BlockRoomResults::has_valid_room_price());
 
     view! {
     <section class="relative min-h-screen bg-gray-50">
