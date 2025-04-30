@@ -36,9 +36,7 @@ pub fn HotelListPage() -> impl IntoView {
         (1..10)
             .map(|_| {
                 view! {
-                    <div class="flex items-center justify-center w-full">
-                        <SkeletonCards />
-                    </div>
+                    <SkeletonCards />
                 }
             })
             .collect_view()
@@ -47,13 +45,12 @@ pub fn HotelListPage() -> impl IntoView {
     view! {
         <section class="relative h-screen">
             <Navbar />
-            <div class="flex flex-col items-center mt-2 sm:mt-6 p-2 sm:p-4">
-                // <InputGroup given_disabled=disabled_input_group />
-                <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
-            // <FilterAndSortBy />
-            </div>
-
             <div class="w-full max-w-xl sm:max-w-4xl mx-auto">
+                <div class="flex flex-col items-center mt-2 sm:mt-6 p-2 sm:p-4">
+                    <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
+                    // <FilterAndSortBy />
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
                     <Show
