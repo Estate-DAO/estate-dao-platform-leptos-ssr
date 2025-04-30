@@ -8,7 +8,11 @@ use crate::utils::date::*;
 use chrono::{Local, NaiveDate, TimeZone, Utc};
 // use leptos::logging::log;
 use crate::log;
-use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
+use leptos_use::{
+    core::Position, use_scroll, use_throttle_fn, use_throttle_fn_with_arg,
+    use_timestamp_with_controls, UseScrollReturn, UseTimestampReturn,
+};
+use web_sys::{Element, TouchEvent};
 
 /// year,  month, day
 /// Struct is stored in the global search state - SearchCtx and accessed from there
@@ -160,17 +164,11 @@ impl SelectedDateRange {
 
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
-    // let (is_open, set_is_open) = create_signal(false);
-    let is_open = create_memo(move |_| {
-        // log!("is_open called");
-        InputGroupState::is_date_open()
-    });
-
+    let is_open = create_memo(move |_| InputGroupState::is_date_open());
     let search_ctx: SearchCtx = expect_context();
-
     let selected_range = search_ctx.date_range;
-
     let (initial_date, set_initial_date) = create_signal((2024_u32, 1_u32));
+    let calendar_ref = create_node_ref::<leptos::html::Div>();
 
     let next_month_date = Signal::derive(move || {
         let (current_year, current_month) = initial_date.get();
@@ -182,25 +180,60 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
         range.display_string()
     });
 
-    // todo: find a way to not set signal from effect
+    // Create scroll handler using use_scroll
+    let UseScrollReturn { y, .. } = use_scroll(calendar_ref);
+
+    // Track last scroll position
+    let last_scroll_position = create_rw_signal(0.0);
+
+    // Throttle scroll changes
+    let throttled_scroll = use_throttle_fn(
+        move || {
+            let current_y = y.get();
+            log!("[Scroll] position y = {:?}", current_y);
+            let last_y = last_scroll_position.get();
+            log!("[Scroll] last y = {:?}", last_y);
+            let delta_y = current_y - last_y;
+            log!("[Scroll] delta_y = {}", delta_y);
+            // Only handle significant scroll (>50px)
+            if delta_y.abs() > 50.0 {
+                let (year, month) = initial_date.get_untracked();
+                if delta_y < 0.0 {
+                    log!("[Scroll] scrolling up: next month");
+                    set_initial_date(next_date(year, month));
+                } else {
+                    log!("[Scroll] scrolling down: prev month");
+                    set_initial_date(prev_date(year, month));
+                }
+                last_scroll_position.set(current_y);
+            }
+        },
+        300.0,
+    );
+
     create_effect(move |_| {
-        let UseTimestampReturn {
-            timestamp,
-            is_active,
-            pause,
-            resume,
-        } = use_timestamp_with_controls();
-
-        // pause.pause();
-        log!("timestamp: {:?}", timestamp.get_untracked());
-
-        let (year, month) = get_year_month(timestamp.get_untracked());
-        set_initial_date((year, month));
+        // reactive dependency on scroll position
+        let _ = y.get();
+        throttled_scroll();
     });
+
+    let UseTimestampReturn {
+        timestamp,
+        is_active,
+        pause,
+        resume,
+    } = use_timestamp_with_controls();
+
+    // pause.pause();
+    log!("timestamp: {:?}", timestamp.get_untracked());
+
+    let (year, month) = get_year_month(timestamp.get_untracked());
+    set_initial_date((year, month));
 
     // --- Calendar Modal Scroll Lock Effect ---
 
     create_effect(move |_| {
+        log!("[Dialog] open state = {:?}", is_open.get());
         use web_sys::window;
         let is_open = is_open.get();
         let document = window().and_then(|w| w.document());
@@ -211,7 +244,38 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                 let _ = body.class_list().remove_1("overflow-hidden");
             }
         }
+        // // Clear calendar_ref when dialog is closed to allow re-binding
+        // if !is_open {
+        //     calendar_ref.set(None);
+        // }
     });
+
+    // Touch swipe handling for mobile
+    let touch_start_y = create_rw_signal(0.0);
+    let touch_throttled = move |delta: f64| {
+        if delta.abs() > 50.0 {
+            let (year, month) = initial_date.get_untracked();
+            if delta < 0.0 {
+                set_initial_date(next_date(year, month));
+            } else {
+                set_initial_date(prev_date(year, month));
+            }
+        }
+    };
+
+    // let touch_throttled = use_throttle_fn_with_arg(
+    //     move |delta: f64| {
+    //         if delta.abs() > 50.0 {
+    //             let (year, month) = initial_date.get_untracked();
+    //             if delta < 0.0 {
+    //                 set_initial_date(next_date(year, month));
+    //             } else {
+    //                 set_initial_date(prev_date(year, month));
+    //             }
+    //         }
+    //     },
+    //     300.0,
+    // );
 
     view! {
         <div class="relative">
@@ -227,18 +291,15 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
             </button>
 
             <Show when=move || is_open()>
-                // !<-- Main Modal Container -->
                 <div
                     class="fixed inset-0 z-[9999]"
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
                 >
-                    // !<-- Centering Wrapper for Desktop -->
                     <div
                         class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]"
                         on:click=|e| e.stop_propagation()
                     >
-                        // !<-- Calendar Header -->
-                        <div class="bg-white flex  justify-between px-2">
+                        <div class="bg-white flex justify-between px-2">
                             <button
                                 on:click=move |_| {
                                     let (current_year, current_month) = initial_date.get_untracked();
@@ -260,8 +321,22 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                             </button>
                         </div>
 
-                        // !<-- Calendar Grid -->
-                        <div class="flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999]">
+                        <div
+                            _ref=calendar_ref
+                            class="flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
+                            on:touchstart=move |ev: TouchEvent| {
+                                if let Some(t) = ev.touches().item(0) {
+                                    touch_start_y.set(t.client_y() as f64);
+                                }
+                            }
+                            on:touchend=move |ev: TouchEvent| {
+                                if let Some(t) = ev.changed_touches().item(0) {
+                                    let delta = (t.client_y() as f64) - touch_start_y.get();
+                                    log!("[Touch] delta_y = {}", delta);
+                                    touch_throttled(delta);
+                                }
+                            }
+                        >
                             <div class="flex-1">
                                 <DateCells year_month=initial_date.into() selected_range=selected_range />
                             </div>
@@ -273,7 +348,6 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                             </div>
                         </div>
 
-                        // !<-- Action Button -->
                         <div class="bg-white px-2 py-2">
                             <Show
                                 when=move || {

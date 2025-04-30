@@ -40,7 +40,7 @@ axum-extra = { version = "0.9.3", optional = true, features = [
 ] }
 simple_logger = "5.0.0"
 web-sys = { version = "0.3.70", features = ["Element", "Event", "EventTarget", "Document", "Window", "HtmlElement"] }
-leptos-use = { version = "0.13.11", features = ["use_timestamp", "use_timeout_fn", "use_breakpoints"] }
+leptos-use = { version = "0.13.11", features = ["use_timestamp", "use_timeout_fn", "use_breakpoints", "use_scroll", "use_throttle_fn"] }
 chrono = {version =  "0.4.39", features = ["serde"]}
 anyhow = "1.0.89"
 derive_more = { version = "1.0.0", features = ["display"] }

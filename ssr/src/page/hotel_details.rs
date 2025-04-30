@@ -155,7 +155,7 @@ pub fn HotelDetailsPage() -> impl IntoView {
                             // {/* About Card */}
                             <div class="bg-white rounded-xl shadow-md p-6 mb-2">
                                 <div class="text-xl mb-2 font-semibold">About</div>
-                                <div class="mb-2 text-gray-700">{description_signal}</div>
+                                <div class="mb-2 text-gray-700">{move || clip_to_30_words(&description_signal())}</div>
                             </div>
                             // {/* Address Card */}
                             <div class="bg-white rounded-xl shadow-md p-6 mb-2">
@@ -187,6 +187,16 @@ pub fn HotelDetailsPage() -> impl IntoView {
                 </div>
             </Show>
         </section>
+    }
+}
+
+fn clip_to_30_words(text: &str) -> String {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.len() <= 30 {
+        text.to_string()
+    } else {
+        let clipped = words[..30].join(" ");
+        format!("{}...", clipped)
     }
 }
 
@@ -541,8 +551,8 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
         }
     });
 
-    let can_book_now_memo = create_memo(move |_| total_room_price.get() > 0.0);
-    let can_book_now = Signal::derive(move || can_book_now_memo.get());
+    let can_book_now_memo = create_memo(move |_| total_room_price.get() > 0.001);
+    let cannot_book_now = Signal::derive(move || !can_book_now_memo.get());
 
     view! {
         <div class="flex flex-col space-y-2 mt-4 px-2 sm:px-0">
@@ -585,6 +595,8 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
                     }
                 </div>
             </div>
+            // <DebugDisplay label="cannot_book_now" value=move || cannot_book_now.get().to_string() />
+            // <DebugDisplay label="total_calc" value=move || total_calc().to_string() />
             // <!-- Payment info and Book Now button, centered and spaced -->
             <div class="flex flex-col space-y-4 mt-4 items-center">
                 <div class="text-sm sm:text-base font-semibold text-center">
@@ -598,7 +610,7 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
                 }
                 loading_text="Booking..."
                 class="w-full sm:w-full px-4 py-2 text-base sm:text-lg"
-                disabled=can_book_now
+                disabled=cannot_book_now
                 >
                 "Book Now"
                 </LoadingButton>

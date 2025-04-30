@@ -426,6 +426,10 @@ impl BlockRoomResults {
             .get_room_price_summed()
     }
 
+    pub fn has_valid_room_price() -> bool {
+        Self::get_room_price().abs() > 0.001
+    }
+
     // todo caution - do not generate app reference here please.
     // it is already generated in block room, and saved in backend. use it from there.
     // pub fn book_room_request(&self) -> BookRoomRequest {

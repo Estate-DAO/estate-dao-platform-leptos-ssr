@@ -567,6 +567,10 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     };
 
+    let show_payment_pricing_details  = Signal::derive(move || {
+       BlockRoomResults::has_valid_room_price() 
+    });
+
     view! {
     <section class="relative min-h-screen bg-gray-50">
         <Navbar />
@@ -850,6 +854,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                    <Show when=show_payment_pricing_details>
                     <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                     <div class="flex flex-col gap-2 mb-6">
                         <div class="flex justify-between items-end">
@@ -860,17 +865,20 @@ pub fn BlockRoomPage() -> impl IntoView {
                             <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
                             <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
                         </div>
-                        <div class="flex justify-between items-center text-base">
-                            <span class="text-gray-700">Taxes and fees</span>
-                            <span class="font-semibold">$0.00</span>
-                        </div>
+                        // <div class="flex justify-between items-center text-base">
+                        //     <span class="text-gray-700">Taxes and fees</span>
+                        //     <span class="font-semibold">$0.00</span>
+                        // </div>
                         <Divider class="my-2".into() />
                         <div class="flex justify-between items-center font-bold text-lg mb-2">
                             <span>Total</span>
                             <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
                         </div>
                     </div>
-                    <Show when=move || { should_not_have_loading_spinner.get() } fallback=SpinnerGray>
+                    </Show>
+                    <Show when=move || { should_not_have_loading_spinner.get() } fallback={move || view!{
+                        <div class="flex justify-center items-center h-full"> <SpinnerGray /> </div>
+                    }}>
                         <div class="font-bold">
                             <label>"Pay with"</label>
                             <div class="flex flex-col w-full mt-4">
