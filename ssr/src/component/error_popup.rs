@@ -1,3 +1,57 @@
+/// Error popup components for displaying error messages and handling navigation.
+///
+/// This module provides two types of error popups:
+/// 1. `ErrorPopup` - A basic error popup with dismiss functionality
+/// 2. `NavigatingErrorPopup` - An error popup that automatically navigates to a specified route
+///
+/// # Basic Error Popup Usage
+/// ```rust
+/// use crate::component::error_popup::ErrorPopup;
+///
+/// // In your component:
+/// view! {
+///     <ErrorPopup />
+/// }
+///
+/// // To show an error:
+/// let api_error_state = ApiErrorState::from_leptos_context();
+/// api_error_state.set_error("Error message".to_string(), ApiErrorType::Generic);
+/// ```
+///
+/// # Navigating Error Popup Usage
+/// ```rust
+/// use crate::component::error_popup::NavigatingErrorPopup;
+///
+/// // Basic usage with default label ("Dismiss"):
+/// view! {
+///     <NavigatingErrorPopup
+///         route="/home"
+///     />
+/// }
+///
+/// // With custom label and error type:
+/// view! {
+///     <NavigatingErrorPopup
+///         route="/dashboard"
+///         label="Go to Dashboard"
+///         error_type=ApiErrorType::Payment
+///     />
+/// }
+/// ```
+///
+/// # Features
+/// - `ErrorPopup`:
+///   - Displays error messages with type
+///   - Dismissible via button
+///   - Automatically hides when error is resolved
+///
+/// - `NavigatingErrorPopup`:
+///   - All features of basic ErrorPopup
+///   - Auto-navigates to specified route after 5 seconds
+///   - Shows countdown timer
+///   - Customizable button label
+///   - Configurable error type
+///
 use crate::state::api_error_state::{ApiErrorState, ApiErrorType};
 use leptos::*;
 use leptos_router::use_navigate;
@@ -101,7 +155,7 @@ pub fn NavigatingErrorPopup(
                 //  else {
                 //     dismiss_and_navigate(());
                 //  }
-                println!("Redirecting in 5 seconds...");
+                // println!("Redirecting in 5 seconds...");
             },
             1000.0,
         );

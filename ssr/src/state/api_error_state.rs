@@ -1,4 +1,5 @@
-use crate::api::ApiError;
+use crate::api::{ApiError, BlockRoomResponse};
+use crate::log;
 use crate::state::GlobalStateForLeptos;
 use leptos::*;
 use std::fmt;
@@ -79,5 +80,52 @@ impl ApiErrorState {
         } else {
             false
         }
+    }
+
+    /// Handles error state for BlockRoomResponse with optional custom error message
+    pub fn handle_block_room_response(
+        &self,
+        result: Option<BlockRoomResponse>,
+        custom_message: Option<String>,
+    ) -> bool {
+        if result.is_none() {
+            let message =
+                custom_message.unwrap_or_else(|| "API returned an empty response".to_string());
+            self.set_error(ApiErrorType::BlockRoom, message);
+            return true;
+        }
+
+        if let Some(BlockRoomResponse::Success(response)) = &result {
+            if response.status == 400 {
+                log!(
+                    "[ApiErrorState] BlockRoom API error: {:?}",
+                    &response.message
+                );
+                let message = custom_message.unwrap_or_else(|| {
+                    "Selected room is already booked. Please choose another room.".to_string()
+                });
+                self.set_error(ApiErrorType::BlockRoom, message);
+                return true;
+            }
+        }
+
+        if let Some(BlockRoomResponse::Failure(failure_response)) = &result {
+            if failure_response.status == 400 {
+                log!(
+                    "[ApiErrorState] BlockRoom API failure: {:?}",
+                    &failure_response.message
+                );
+                let message = custom_message.unwrap_or_else(|| {
+                    failure_response
+                        .message
+                        .clone()
+                        .unwrap_or("Room is no longer available".to_string())
+                });
+                self.set_error(ApiErrorType::BlockRoom, message);
+                return true;
+            }
+        }
+
+        false
     }
 }

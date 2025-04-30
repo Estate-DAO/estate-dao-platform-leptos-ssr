@@ -18,6 +18,7 @@ use crate::canister::backend::HotelRoomDetails;
 use crate::canister::backend::RoomDetails;
 use crate::canister::backend::UserDetails;
 use crate::component::code_print::DebugDisplay;
+use crate::component::NavigatingErrorPopup;
 use crate::component::{Divider, FilterAndSortBy, PriceDisplay, StarRating};
 use crate::component::{ErrorPopup, Navbar, SkeletonCards, SpinnerGray};
 use crate::page::InputGroup;
@@ -57,7 +58,7 @@ pub fn BlockRoomPage() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
 
     let confirmation_results: ConfirmationResults = expect_context();
-    let api_error_state = ApiErrorState::from_leptos_context();
+    // let api_error_state = ApiErrorState::from_leptos_context();
 
     let navigate = use_navigate();
 
@@ -253,6 +254,14 @@ pub fn BlockRoomPage() -> impl IntoView {
 
                     let result = block_room(block_room_request).await.ok();
                     let res = result.clone();
+
+                    // Get the API error state and handle any errors
+                    let api_error_state = ApiErrorState::from_leptos_context();
+                    if api_error_state.handle_block_room_response(result.clone(), None) {
+                        BlockRoomResults::reset();
+                        return;
+                    }
+
                     let block_room_id = res.and_then(|resp| resp.get_block_room_id());
                     let res2 = result.clone();
                     BlockRoomResults::set_results(result);
@@ -573,7 +582,13 @@ pub fn BlockRoomPage() -> impl IntoView {
     view! {
     <section class="relative min-h-screen bg-gray-50">
         <Navbar />
-        <ErrorPopup />
+        // <ErrorPopup />
+       <NavigatingErrorPopup
+          route="/"
+          label="Go to Home"
+          error_type=ApiErrorType::BlockRoom
+        />
+
         <div class="max-w-5xl mx-auto px-2 sm:px-6">
             <div class="flex items-center py-8">
                 <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>

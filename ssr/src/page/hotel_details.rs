@@ -1,7 +1,9 @@
+use crate::api::BlockRoomResponse;
 use crate::component::code_print::DebugDisplay;
 use crate::component::loading_button::LoadingButton;
 use crate::component::{
-    FullScreenSpinnerGray, Navbar, PriceDisplayV2, SkeletonPricing, SpinnerGray,
+    FullScreenSpinnerGray, Navbar, NavigatingErrorPopup, PriceDisplayV2, SkeletonPricing,
+    SpinnerGray,
 };
 use crate::page::InputGroupContainer;
 use crate::state::hotel_details_state::{PricingBookNowState, RoomDetailsForPricingComponent};
@@ -523,18 +525,9 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
             let result = block_room(block_room_request).await.ok();
             log!("[pricing_component_not_loading] BLOCK_ROOM_API: {result:?}");
 
-            // Handle error if the API call failed
-            if result.is_none() {
-                // Get the API error state
-                let api_error_state = ApiErrorState::from_leptos_context();
-
-                // Set error message
-                api_error_state.set_error(
-                    ApiErrorType::BlockRoom,
-                    "Selected room is already booked. Please choose another room.".to_string(),
-                );
-
-                // Update loading state
+            // Get the API error state and handle any errors
+            let api_error_state = ApiErrorState::from_leptos_context();
+            if api_error_state.handle_block_room_response(result.clone(), None) {
                 loading_state.set(false);
                 BlockRoomResults::reset();
                 return;
@@ -558,6 +551,12 @@ pub fn PricingBreakdownV2(// #[prop(into)] price_per_night: Signal<f64>,
         <div class="flex flex-col space-y-2 mt-4 px-2 sm:px-0">
             // <!-- Per-night breakdown row: label left, price right, always aligned -->
             <div class="flex flex-row justify-between items-center w-full py-2">
+
+                <NavigatingErrorPopup
+                    route="/"
+                    label="Go to Home"
+                    error_type=ApiErrorType::BlockRoom
+                />
                 // <!-- Room price and nights, always left aligned -->
                 <PriceDisplayV2
                     price=move || PricingBookNowState::total_room_price_for_all_user_selected_rooms()
