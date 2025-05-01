@@ -25,21 +25,20 @@ pub fn GoogleTagManagerScriptAsync() -> impl IntoView {
     {
         enable_ga4_script.set(true);
     }
-
     view! {
-        // Google Tag Manager (GTM) Script
+        // GA4 Script
+
         <Show when=enable_ga4_script>
-            <Script async_="true">
+            <Script
+                async_="true"
+                src=concat!("https://www.googletagmanager.com/gtag/js?id=", "G-BPRVSPTP2T")
+            />
+            <Script>
                 {r#"
-                (function(w,d,s,l,i){
-                  w[l]=w[l]||[];
-                  w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});
-                  var f=d.getElementsByTagName(s)[0],
-                      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
-                  j.async=true;
-                  j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
-                  f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','GTM-PFCRL3ZG');
+                    window.dataLayer = window.dataLayer || []; 
+                    function gtag(){dataLayer.push(arguments);} 
+                    gtag('js', new Date()); 
+                    gtag('config', 'G-BPRVSPTP2T'); 
                 "#}
             </Script>
         </Show>

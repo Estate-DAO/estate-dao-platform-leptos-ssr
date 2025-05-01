@@ -26,7 +26,7 @@ const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app"
 // const for local environment
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
-pub const GTAG_MEASUREMENT_ID: Lazy<&str> = Lazy::new(|| "GTM-PFCRL3ZG");
+pub const GTAG_MEASUREMENT_ID: Lazy<&str> = Lazy::new(|| "G-BPRVSPTP2T");
 
 cfg_if! {
     if #[cfg(feature = "local-consts")] {
