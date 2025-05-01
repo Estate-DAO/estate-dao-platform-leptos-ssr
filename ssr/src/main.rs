@@ -58,6 +58,9 @@ cfg_if! {
 
         use tracing::instrument;
         use tracing::Level;
+        mod sitemap;
+
+        use sitemap::sitemap_handler;
 
 
 
@@ -314,6 +317,7 @@ cfg_if! {
                 )
                 .route("/ipn/webhook", post(nowpayments_webhook))
                 .route("/api/events", get(event_stream_handler))
+                .route("/sitemap-index.xml", get(sitemap_handler))
                 // .route("/api/counter-events", get(counter_events))  // For backward compatibility
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)

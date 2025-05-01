@@ -1,5 +1,8 @@
 use crate::{
-    api::{consts::EnvVarConfig, payments::ports::GetPaymentStatusResponse},
+    api::{
+        consts::{EnvVarConfig, APP_URL},
+        payments::ports::GetPaymentStatusResponse,
+    },
     component::{
         ErrorPopup, GoogleTagManagerIFrame, GoogleTagManagerScriptAsync, NotificationExample,
         NotificationState,
@@ -20,11 +23,16 @@ use crate::{
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
 };
+use chrono::prelude::*;
 use leptos::*;
 use leptos_meta::*;
 use leptos_query::{query_persister, *};
 use leptos_query_devtools::LeptosQueryDevtools;
 use leptos_router::*;
+use sitewriter::{ChangeFreq, UrlEntry};
+use std::sync::OnceLock;
+
+static SITEMAP: OnceLock<String> = OnceLock::new();
 
 #[component]
 fn NotFound() -> impl IntoView {
@@ -44,7 +52,7 @@ pub enum AppRoutes {
     HotelDetails,
     BlockRoom,
     Confirmation,
-    Notifications,
+    // Notifications
 }
 
 impl AppRoutes {
@@ -55,8 +63,53 @@ impl AppRoutes {
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
             AppRoutes::Confirmation => "/confirmation",
-            AppRoutes::Notifications => "/notifications",
+            // AppRoutes::Notifications => "/notifications"
         }
+    }
+
+    pub fn all() -> impl Iterator<Item = Self> {
+        [
+            Self::Root,
+            Self::HotelList,
+            Self::HotelDetails,
+            Self::BlockRoom,
+            Self::Confirmation,
+            // Self::Notifications,
+        ]
+        .into_iter()
+    }
+
+    fn get_priority(&self) -> f32 {
+        match self {
+            AppRoutes::Root => 1.0,
+            AppRoutes::HotelList => 0.9,
+            AppRoutes::HotelDetails => 0.8,
+            AppRoutes::BlockRoom => 0.7,
+            AppRoutes::Confirmation => 0.6,
+            // AppRoutes::Notifications => 0.5,
+        }
+    }
+
+    fn get_change_freq(&self) -> ChangeFreq {
+        match self {
+            // AppRoutes::Notifications => ChangeFreq::Weekly,
+            _ => ChangeFreq::Weekly,
+        }
+    }
+
+    pub fn generate_sitemap() -> &'static str {
+        SITEMAP.get_or_init(|| {
+            let urls: Vec<UrlEntry> = Self::all()
+                .map(|route| UrlEntry {
+                    loc: format!("{}{}", APP_URL, route.to_string()).parse().unwrap(),
+                    changefreq: Some(route.get_change_freq()),
+                    priority: Some(route.get_priority()),
+                    lastmod: Some(Utc::now()),
+                })
+                .collect();
+
+            sitewriter::generate_str(&urls)
+        })
     }
 }
 
@@ -90,7 +143,7 @@ pub fn App() -> impl IntoView {
 
     provide_context(ApiErrorState::default());
 
-    provide_context(NotificationState::default());
+    // provide_context(NotificationState::default());
 
     // Provides Query Client for entire app.
     // leptos_query::provide_query_client();
@@ -129,7 +182,7 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomPage />
                     <Route path=AppRoutes::Confirmation.to_string() view=SSEConfirmationPage />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
-                    <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
+                    // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>
         </Router>
         </main>
