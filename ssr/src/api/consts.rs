@@ -61,6 +61,7 @@ pub fn get_default_provab_base_url() -> &'static str {
     }
 }
 
+use crate::ssr_booking::email_handler::EmailConfig;
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
@@ -121,6 +122,7 @@ pub struct EnvVarConfig {
     provab_headers: HashMap<String, String>,
     pub nowpayments_api_key: String,
     pub admin_private_key: String,
+    pub email_client_config: EmailConfig,
     pub ipn_secret: String, // skip the payment on localhost using environment variable
                             // pub payment_skip_local: String
 }
@@ -157,6 +159,7 @@ impl EnvVarConfig {
             ),
             // todo add secret when available in gh actions
             ipn_secret: env_w_default("NOWPAYMENTS_IPN_SECRET", "dummy-secret-for-now").unwrap(),
+            email_client_config: EmailConfig::from_env().unwrap(),
             // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 
@@ -166,6 +169,22 @@ impl EnvVarConfig {
 
     pub fn get_headers(&self) -> HeaderMap {
         transform_headers(&self.provab_headers)
+    }
+}
+
+impl ConfigLoader for EmailConfig {
+    fn from_env() -> Result<Self, String> {
+        let client_id = env_or_panic("EMAIL_CLIENT_ID");
+        let client_secret = env_or_panic("EMAIL_CLIENT_SECRET");
+        let refresh_token = env_or_panic("EMAIL_REFRESH_TOKEN");
+        let token_expiry = env_or_panic("EMAIL_TOKEN_EXPIRY");
+        Ok(EmailConfig {
+            client_id: Some(client_id),
+            client_secret: Some(client_secret),
+            access_token: None,
+            refresh_token: Some(refresh_token),
+            token_expiry: token_expiry.parse().unwrap(),
+        })
     }
 }
 
@@ -240,4 +259,14 @@ pub enum EstateEnvConfigError {
     // ConfigError(String),
     #[error("Config Error: {0}")]
     EnvVarError(String),
+}
+
+/// A trait for loading configuration from the environment or another source.
+pub trait ConfigLoader: Sized {
+    /// Initialize the configuration by reading from the environment.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if any required parameter is missing or invalid.
+    fn from_env() -> Result<Self, String>;
 }

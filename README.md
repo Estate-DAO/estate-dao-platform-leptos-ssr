@@ -107,3 +107,42 @@ _______________________________________________________________________
 [] Destination - In a separate Branch - destination_dynamic
 
 [] sort_by -- component -- in separate branch -- filters_sort_dynamic
+
+
+
+
+Toggle dialog - Current: None, Requested: CityListComponent
+ Dialog matches current - closing
+ Setting dialog to: None
+ is_open called
+ Checking if destination is open: false
+ is_open called
+ Checking if destination is open: false
+
+
+
+
+
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum OpenDialogComponent{
+    CityListComponent,   
+    DateComponent, 
+    GuestComponent,
+    #[default] 
+    None, 
+}
+
+impl OpenDialogComponent{
+    pub fn matches(&self, other: OpenDialogComponent) -> bool {
+    }
+
+    pub fn is_destination_open(&self) -> bool {
+    }
+
+    pub fn is_date_open(&self) -> bool {
+    }
+
+    pub fn is_guest_open(&self) -> bool {
+    }
+}

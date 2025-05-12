@@ -1,4 +1,5 @@
 pub mod booking_handler;
+pub mod email_handler;
 pub mod get_booking_from_backend;
 pub mod mock_handler;
 pub mod payment_handler;

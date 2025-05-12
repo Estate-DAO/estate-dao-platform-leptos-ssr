@@ -1518,6 +1518,7 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-extra",
+ "base64",
  "better-panic",
  "broadcaster",
  "candid",

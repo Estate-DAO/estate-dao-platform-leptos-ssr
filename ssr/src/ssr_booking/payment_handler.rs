@@ -6,7 +6,7 @@ use tracing::{debug, error, info, instrument, warn};
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
 use crate::api::payments::NowPayments;
 use crate::canister::backend::{
-    BackendPaymentStatus, BePaymentApiResponse, BookingId, PaymentDetails, Result2,
+    BackendPaymentStatus, BePaymentApiResponse, BookingId, PaymentDetails, Result2, Result3,
 };
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
@@ -249,13 +249,13 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
 
         // Verify that payment status is correctly set to Paid
         match updated_booking {
-            Result2::Ok(booking) => {
+            Result3::Ok(booking) => {
                 info!(
                     "Payment details updated successfully. Payment status: {:?}",
                     booking.payment_details.payment_status
                 );
             }
-            Result2::Err(e) => {
+            Result3::Err(e) => {
                 return Err(format!("Failed to update payment details: {}", e));
             }
         }

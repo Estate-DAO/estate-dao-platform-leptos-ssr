@@ -26,6 +26,7 @@ cargo leptos build --lib-features "local-lib${DEBUG_DISPLAY}" --bin-features "lo
 export LEPTOS_SITE_ROOT="target/site"
 export PAYMENTS_SKIP_LOCAL="true"
 export LEPTOS_SITE_ADDR="0.0.0.0:3000"
+export NOWPAYMENTS_API_HOST="http://localhost:3001"
 
 ./target/debug/estate-fe
 

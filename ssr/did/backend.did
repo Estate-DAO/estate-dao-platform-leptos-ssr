@@ -84,7 +84,8 @@ type ResolvedBookingStatus = variant {
 };
 type Result = variant { Ok : text; Err : text };
 type Result_1 = variant { Ok; Err : text };
-type Result_2 = variant { Ok : Booking; Err : text };
+type Result_2 = variant { Ok : bool; Err : text };
+type Result_3 = variant { Ok : Booking; Err : text };
 type RoomDetails = record {
   room_price : float32;
   room_unique_id : text;
@@ -102,10 +103,12 @@ service : {
   add_booking : (text, Booking) -> (Result);
   add_controller : (principal) -> (Result_1);
   get_controllers : () -> (vec principal) query;
+  get_email_sent : (BookingId) -> (Result_2) query;
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;
   is_booking_paid : (BookingId) -> (bool) query;
   remove_controller : (principal) -> (Result_1);
   update_book_room_response : (BookingId, BEBookRoomResponse) -> (Result);
-  update_payment_details : (BookingId, PaymentDetails) -> (Result_2);
+  update_email_sent : (BookingId, bool) -> (Result_1) query;
+  update_payment_details : (BookingId, PaymentDetails) -> (Result_3);
 }
