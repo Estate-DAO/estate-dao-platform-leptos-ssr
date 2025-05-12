@@ -1,121 +1,1605 @@
 [
-    {
-        "city_code": "53301",
-        "city_name": "Bali",
-        "country_name": "Indonesia",
-        "country_code": "ID",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Besakih_Bali_Indonesia_Pura-Besakih-02.jpg/640px-Besakih_Bali_Indonesia_Pura-Besakih-02.jpg"
-    },
-    {
-        "city_code": "461",
-        "city_name": "Geneva",
-        "country_name": "Switzerland",
-        "country_code": "CH",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Geneva_From_Cathedral.JPG/640px-Geneva_From_Cathedral.JPG"
-    },
-    {
-        "city_code": "970",
-        "city_name": "Rome",
-        "country_name": "Italy",
-        "country_code": "IT",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg/640px-Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg"
-    },
-    {
-        "city_code": "53331",
-        "city_name": "Dubai",
-        "country_name": "United Arab Emirates",
-        "country_code": "AE",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg/640px-Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg"
-    },
-    {
-        "city_code": "14",
-        "city_name": "Sydney",
-        "country_name": "Australia",
-        "country_code": "AU",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Sydneyoperahouse_at_night.jpg/640px-Sydneyoperahouse_at_night.jpg"
-    },
-    {
-        "city_code": "737",
-        "city_name": "Phuket",
-        "country_name": "Thailand",
-        "country_code": "TH",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Phuket_Aerial.jpg/640px-Phuket_Aerial.jpg"
-    },
-    {
-        "city_code": "53342",
-        "city_name": "Maldives",
-        "country_name": "Maldives",
-        "country_code": "MV",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Maldives_Resort%2C_Indian_Ocean.jpg/640px-Maldives_Resort%2C_Indian_Ocean.jpg"
-    },
-    {
-        "city_code": "1254",
-        "city_name": "Goa",
-        "country_name": "India",
-        "country_code": "IN",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg/640px-Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg"
-    },
-    {
-        "city_code": "5200",
-        "city_name": "Bombay/ Mumbai",
-        "country_name": "India",
-        "country_code": "IN",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Mumbai_03-2016_52_Dharavi_near_Mahim_Junction.jpg/640px-Mumbai_03-2016_52_Dharavi_near_Mahim_Junction.jpg"
-    },
-    {
-        "city_code": "5100",
-        "city_name": "Delhi",
-        "country_name": "India",
-        "country_code": "IN",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Tomb_of_Humayun%2C_Delhi.jpg/640px-Tomb_of_Humayun%2C_Delhi.jpg"
-    },
-    {
-        "city_code": "82",
-        "city_name": "Paris",
-        "country_name": "France",
-        "country_code": "FR",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/640px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg"
-    },
-    {
-        "city_code": "2320",
-        "city_name": "Zermatt",
-        "country_name": "Switzerland",
-        "country_code": "CH",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/1_zermatt_night_2012.jpg/640px-1_zermatt_night_2012.jpg"
-    },
-    {
-        "city_code": "484",
-        "city_name": "Barcelona",
-        "country_name": "Spain",
-        "country_code": "ES",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Blick_vom_Palau_Nacional_Barcelona_2013.jpg/640px-Blick_vom_Palau_Nacional_Barcelona_2013.jpg"
-    },
-    {
-        "city_code": "527",
-        "city_name": "Seville",
-        "country_name": "Spain",
-        "country_code": "ES",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg/640px-Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg"
-    },
-    {
-        "city_code": "501",
-        "city_name": "Granada",
-        "country_name": "Spain",
-        "country_code": "ES",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/The_whole_Alhambra_Granada_Spain.jpg/640px-The_whole_Alhambra_Granada_Spain.jpg"
-    },
-    {
-        "city_code": "534",
-        "city_name": "Valencia",
-        "country_name": "Spain",
-        "country_code": "ES",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg/640px-Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg"
-    },
-    {
-        "city_code": "2178",
-        "city_name": "Zurich",
-        "country_name": "Switzerland",
-        "country_code": "CH",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg/640px-Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg"
-    }
+  {
+    "city_code": "3086",
+    "city_name": "Aachen",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "248",
+    "city_name": "Aberdeen",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "10368",
+    "city_name": "Aguascalientes",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "14060",
+    "city_name": "Ahmedabad",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": ""
+  },
+  {
+    "city_code": "4305",
+    "city_name": "Aix-en-Provence",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "6868",
+    "city_name": "Alicante",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "10320",
+    "city_name": "Amiens",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "2180",
+    "city_name": "Amsterdam",
+    "country_name": "Netherlands",
+    "country_code": "NL",
+    "image_url": ""
+  },
+  {
+    "city_code": "7761",
+    "city_name": "Angers",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "10255",
+    "city_name": "Annecy",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "5479",
+    "city_name": "Augsburg",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "3336",
+    "city_name": "Austin",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "31845",
+    "city_name": "Badalona",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "53301",
+    "city_name": "Bali",
+    "country_name": "Indonesia",
+    "country_code": "ID",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Besakih_Bali_Indonesia_Pura-Besakih-02.jpg/640px-Besakih_Bali_Indonesia_Pura-Besakih-02.jpg"
+  },
+  {
+    "city_code": "906",
+    "city_name": "Baltimore",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "6743",
+    "city_name": "Bangalore",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": ""
+  },
+  {
+    "city_code": "715",
+    "city_name": "Bangkok",
+    "country_name": "Thailand",
+    "country_code": "TH",
+    "image_url": ""
+  },
+  {
+    "city_code": "484",
+    "city_name": "Barcelona",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Blick_vom_Palau_Nacional_Barcelona_2013.jpg/640px-Blick_vom_Palau_Nacional_Barcelona_2013.jpg"
+  },
+  {
+    "city_code": "5396",
+    "city_name": "Bari",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "6394",
+    "city_name": "Belfast",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "2163",
+    "city_name": "Berlin",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "11280",
+    "city_name": "Bielefeld",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "4102",
+    "city_name": "Bilbao",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "249",
+    "city_name": "Birmingham",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "40",
+    "city_name": "Bochum",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "3450",
+    "city_name": "Bologna",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "5200",
+    "city_name": "Bombay/ Mumbai",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Mumbai_03-2016_52_Dharavi_near_Mahim_Junction.jpg/640px-Mumbai_03-2016_52_Dharavi_near_Mahim_Junction.jpg"
+  },
+  {
+    "city_code": "3087",
+    "city_name": "Bonn",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "2172",
+    "city_name": "Bordeaux",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "907",
+    "city_name": "Boston",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "12603",
+    "city_name": "Bradford",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "2168",
+    "city_name": "Bremen",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "5279",
+    "city_name": "Brescia",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "8165",
+    "city_name": "Brest",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "6321",
+    "city_name": "Bristol",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "11523",
+    "city_name": "Cagliari",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "250",
+    "city_name": "Cardiff",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "1086",
+    "city_name": "Cartagena",
+    "country_name": "Colombia",
+    "country_code": "CO",
+    "image_url": ""
+  },
+  {
+    "city_code": "2585",
+    "city_name": "Catania",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "14544",
+    "city_name": "Celaya",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "909",
+    "city_name": "Charlotte",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "42",
+    "city_name": "Chemnitz",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "13607",
+    "city_name": "Chiba",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "910",
+    "city_name": "Chicago",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "2828",
+    "city_name": "Chihuahua",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "66668",
+    "city_name": "Clermont-Ferrand",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "2169",
+    "city_name": "Cologne",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "12876",
+    "city_name": "Columbus",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "10336",
+    "city_name": "Coventry",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "60852",
+    "city_name": "Dallas",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "5100",
+    "city_name": "Delhi",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Tomb_of_Humayun%2C_Delhi.jpg/640px-Tomb_of_Humayun%2C_Delhi.jpg"
+  },
+  {
+    "city_code": "913",
+    "city_name": "Denver",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "5509",
+    "city_name": "Derby",
+    "country_name": "Australia",
+    "country_code": "AU",
+    "image_url": ""
+  },
+  {
+    "city_code": "6301",
+    "city_name": "Detroit",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "7863",
+    "city_name": "Dijon",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "44",
+    "city_name": "Dortmund",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "2166",
+    "city_name": "Dresden",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "53331",
+    "city_name": "Dubai",
+    "country_name": "United Arab Emirates",
+    "country_code": "AE",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg/640px-Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg"
+  },
+  {
+    "city_code": "6150",
+    "city_name": "Duisburg",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "7463",
+    "city_name": "Dundee",
+    "country_name": "Canada",
+    "country_code": "CA",
+    "image_url": ""
+  },
+  {
+    "city_code": "3297",
+    "city_name": "Durango",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "1218",
+    "city_name": "El Paso",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "4947",
+    "city_name": "Elche",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "14870",
+    "city_name": "Ensenada",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "2170",
+    "city_name": "Essen",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "3447",
+    "city_name": "Ferrara",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "4576",
+    "city_name": "Florence",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "5450",
+    "city_name": "Foggia",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "5121",
+    "city_name": "Fort Worth",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "67841",
+    "city_name": "Frankfurt",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "5249",
+    "city_name": "Fukuoka",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "23328",
+    "city_name": "Funabashi",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "5504",
+    "city_name": "Gelsenkirchen",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "461",
+    "city_name": "Geneva",
+    "country_name": "Switzerland",
+    "country_code": "CH",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Geneva_From_Cathedral.JPG/640px-Geneva_From_Cathedral.JPG"
+  },
+  {
+    "city_code": "3455",
+    "city_name": "Genoa",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "15058",
+    "city_name": "Gifu",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "256",
+    "city_name": "Glasgow",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "1254",
+    "city_name": "Goa",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg/640px-Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg"
+  },
+  {
+    "city_code": "501",
+    "city_name": "Granada",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/The_whole_Alhambra_Granada_Spain.jpg/640px-The_whole_Alhambra_Granada_Spain.jpg"
+  },
+  {
+    "city_code": "11142",
+    "city_name": "Grenoble",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "2825",
+    "city_name": "Guadalajara",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "24884",
+    "city_name": "Hachioji",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "23330",
+    "city_name": "Hamamatsu",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "2167",
+    "city_name": "Hamburg",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "13381",
+    "city_name": "Hanover",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "16685",
+    "city_name": "Hermosillo",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "5248",
+    "city_name": "Hiroshima",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "18374",
+    "city_name": "Hongkong",
+    "country_name": "Hong Kong",
+    "country_code": "HK",
+    "image_url": ""
+  },
+  {
+    "city_code": "920",
+    "city_name": "Houston",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "13567",
+    "city_name": "Hyderabad",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": ""
+  },
+  {
+    "city_code": "3299",
+    "city_name": "Indianapolis",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "21647",
+    "city_name": "Irapuato",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "12547",
+    "city_name": "Jacksonville",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "45837",
+    "city_name": "Jerez",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "20486",
+    "city_name": "Kagoshima",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "8279",
+    "city_name": "Karlsruhe",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "21597",
+    "city_name": "Kawasaki",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "5481",
+    "city_name": "Kiel",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "21599",
+    "city_name": "Kitakyushu",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "9214",
+    "city_name": "Kobe",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "14102",
+    "city_name": "Kumamoto",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "1389",
+    "city_name": "Kyoto",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "564",
+    "city_name": "Las Palmas",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "923",
+    "city_name": "Las Vegas",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "10633",
+    "city_name": "Le Havre",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "10321",
+    "city_name": "Le Mans",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "10207",
+    "city_name": "Leeds",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "11180",
+    "city_name": "Leicester",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "48",
+    "city_name": "Leipzig",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "10322",
+    "city_name": "Lille",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "4264",
+    "city_name": "Limoges",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "4591",
+    "city_name": "Liverpool",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "5277",
+    "city_name": "Livorno",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "251",
+    "city_name": "London",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "797",
+    "city_name": "Los Angeles",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "13487",
+    "city_name": "Louisville",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "11219",
+    "city_name": "Luton",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "2171",
+    "city_name": "Lyon",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "510",
+    "city_name": "Madrid",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "53342",
+    "city_name": "Maldives",
+    "country_name": "Maldives",
+    "country_code": "MV",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Maldives_Resort%2C_Indian_Ocean.jpg/640px-Maldives_Resort%2C_Indian_Ocean.jpg"
+  },
+  {
+    "city_code": "252",
+    "city_name": "Manchester",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "5486",
+    "city_name": "Mannheim",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "5587",
+    "city_name": "Marseille",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "949",
+    "city_name": "Memphis",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "4889",
+    "city_name": "Messina",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "6983",
+    "city_name": "Metz",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "1069",
+    "city_name": "Mexico City",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "1032",
+    "city_name": "Milan",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "10961",
+    "city_name": "Milton Keynes",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "5356",
+    "city_name": "Modena",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "10371",
+    "city_name": "Monterrey",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "4304",
+    "city_name": "Montpellier",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "5815",
+    "city_name": "Morelia",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "50",
+    "city_name": "Munich",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "515",
+    "city_name": "Murcia",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "6931",
+    "city_name": "Nagasaki",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "5247",
+    "city_name": "Nagoya",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "3743",
+    "city_name": "Nantes",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "968",
+    "city_name": "Naples",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "21614",
+    "city_name": "Nara",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "925",
+    "city_name": "Nashville",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "798",
+    "city_name": "New York",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "18979",
+    "city_name": "Newcastle",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "28762",
+    "city_name": "Nice",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "20494",
+    "city_name": "Niigata",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "10349",
+    "city_name": "Norwich",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "7497",
+    "city_name": "Nottingham",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "68047",
+    "city_name": "Nuremberg",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "1070",
+    "city_name": "Oaxaca",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "21618",
+    "city_name": "Oita",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "21619",
+    "city_name": "Okayama",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "4633",
+    "city_name": "Oklahoma City",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "1390",
+    "city_name": "Osaka",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "7990",
+    "city_name": "Oviedo",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "5334",
+    "city_name": "Padua",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "872",
+    "city_name": "Palermo",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "82",
+    "city_name": "Paris",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/640px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg"
+  },
+  {
+    "city_code": "3448",
+    "city_name": "Parma",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "5941",
+    "city_name": "Perpignan",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "1404",
+    "city_name": "Perugia",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "931",
+    "city_name": "Philadelphia",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "932",
+    "city_name": "Phoenix",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "737",
+    "city_name": "Phuket",
+    "country_name": "Thailand",
+    "country_code": "TH",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Phuket_Aerial.jpg/640px-Phuket_Aerial.jpg"
+  },
+  {
+    "city_code": "253",
+    "city_name": "Plymouth",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "3302",
+    "city_name": "Portland",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "10352",
+    "city_name": "Portsmouth",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "10364",
+    "city_name": "Prato",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "2831",
+    "city_name": "Puebla",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "16914",
+    "city_name": "Pune",
+    "country_name": "India",
+    "country_code": "IN",
+    "image_url": ""
+  },
+  {
+    "city_code": "5285",
+    "city_name": "Ravenna",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "10353",
+    "city_name": "Reading",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "18634",
+    "city_name": "Reggio Emilia",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "4266",
+    "city_name": "Reims",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "11841",
+    "city_name": "Rennes",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "17060",
+    "city_name": "Reynosa",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "308",
+    "city_name": "Rimini",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "970",
+    "city_name": "Rome",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg/640px-Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg"
+  },
+  {
+    "city_code": "10689",
+    "city_name": "Sabadell",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "23352",
+    "city_name": "Sakai",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "10365",
+    "city_name": "Salerno",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "15653",
+    "city_name": "Saltillo",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "587",
+    "city_name": "San Antonio",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "939",
+    "city_name": "San Diego",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "940",
+    "city_name": "San Francisco",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "39",
+    "city_name": "San Jose",
+    "country_name": "Costa Rica",
+    "country_code": "CR",
+    "image_url": ""
+  },
+  {
+    "city_code": "455",
+    "city_name": "Santa Cruz",
+    "country_name": "Portugal",
+    "country_code": "PT",
+    "image_url": ""
+  },
+  {
+    "city_code": "15921",
+    "city_name": "Sapporo",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "946",
+    "city_name": "Seattle",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "20498",
+    "city_name": "Sendai",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "527",
+    "city_name": "Seville",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg/640px-Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg"
+  },
+  {
+    "city_code": "10354",
+    "city_name": "Sheffield",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "16272",
+    "city_name": "Shizuoka",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "996",
+    "city_name": "Southampton",
+    "country_name": "Bermuda",
+    "country_code": "BM",
+    "image_url": ""
+  },
+  {
+    "city_code": "10357",
+    "city_name": "Stoke-on-Trent",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "2173",
+    "city_name": "Strasbourg",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "52",
+    "city_name": "Stuttgart",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "5567",
+    "city_name": "Swansea",
+    "country_name": "Australia",
+    "country_code": "AU",
+    "image_url": ""
+  },
+  {
+    "city_code": "14",
+    "city_name": "Sydney",
+    "country_name": "Australia",
+    "country_code": "AU",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Sydneyoperahouse_at_night.jpg/640px-Sydneyoperahouse_at_night.jpg"
+  },
+  {
+    "city_code": "15672",
+    "city_name": "Tampico",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "68032",
+    "city_name": "Taranto",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "10508",
+    "city_name": "Terrassa",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "8485",
+    "city_name": "Tijuana",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "1388",
+    "city_name": "Tokyo",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "2431",
+    "city_name": "Toronto",
+    "country_name": "Canada",
+    "country_code": "CA",
+    "image_url": ""
+  },
+  {
+    "city_code": "11165",
+    "city_name": "Toulon",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "10324",
+    "city_name": "Toulouse",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "8447",
+    "city_name": "Tours",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "21630",
+    "city_name": "Toyama",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "5282",
+    "city_name": "Trieste",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "5258",
+    "city_name": "Turin",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "21635",
+    "city_name": "Utsunomiya",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "534",
+    "city_name": "Valencia",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg/640px-Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg"
+  },
+  {
+    "city_code": "535",
+    "city_name": "Valladolid",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "1033",
+    "city_name": "Venice",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "1075",
+    "city_name": "Veracruz",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "2179",
+    "city_name": "Verona",
+    "country_name": "Italy",
+    "country_code": "IT",
+    "image_url": ""
+  },
+  {
+    "city_code": "8225",
+    "city_name": "Vigo",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "1076",
+    "city_name": "Villahermosa",
+    "country_name": "Mexico",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "30010",
+    "city_name": "Villeurbanne",
+    "country_name": "France",
+    "country_code": "FR",
+    "image_url": ""
+  },
+  {
+    "city_code": "12721",
+    "city_name": "Washington",
+    "country_name": "United States",
+    "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "3088",
+    "city_name": "Wiesbaden",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "10360",
+    "city_name": "Wolverhampton",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "5483",
+    "city_name": "Wuppertal",
+    "country_name": "Germany",
+    "country_code": "DE",
+    "image_url": ""
+  },
+  {
+    "city_code": "67265",
+    "city_name": "Xalapa",
+    "country_name": "MEXICO",
+    "country_code": "MX",
+    "image_url": ""
+  },
+  {
+    "city_code": "10234",
+    "city_name": "Yokohama",
+    "country_name": "Japan",
+    "country_code": "JP",
+    "image_url": ""
+  },
+  {
+    "city_code": "6346",
+    "city_name": "York",
+    "country_name": "United Kingdom",
+    "country_code": "GB",
+    "image_url": ""
+  },
+  {
+    "city_code": "66585",
+    "city_name": "Zaragoza",
+    "country_name": "Spain",
+    "country_code": "ES",
+    "image_url": ""
+  },
+  {
+    "city_code": "2320",
+    "city_name": "Zermatt",
+    "country_name": "Switzerland",
+    "country_code": "CH",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/1_zermatt_night_2012.jpg/640px-1_zermatt_night_2012.jpg"
+  },
+  {
+    "city_code": "2178",
+    "city_name": "Zurich",
+    "country_name": "Switzerland",
+    "country_code": "CH",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg/640px-Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg"
+  }
 ]
