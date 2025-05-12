@@ -239,9 +239,11 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
         let document = window().and_then(|w| w.document());
         if let Some(body) = document.and_then(|d| d.body()) {
             if is_open {
-                let _ = body.class_list().add_1("overflow-hidden");
+                let _ = body.class_list().add_1("overflow-hidden md:overflow-auto");
             } else {
-                let _ = body.class_list().remove_1("overflow-hidden");
+                let _ = body
+                    .class_list()
+                    .remove_1("overflow-hidden md:overflow-auto");
             }
         }
         // // Clear calendar_ref when dialog is closed to allow re-binding

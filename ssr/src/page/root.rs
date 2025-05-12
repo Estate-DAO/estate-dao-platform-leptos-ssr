@@ -7,7 +7,7 @@ use leptos_icons::*;
 use leptos_query::QueryResult;
 use leptos_router::use_navigate;
 
-use crate::component::{Footer, LiveSelectExample, MostPopular, Navbar};
+use crate::component::{DestinationPickerV2, Footer, MostPopular, Navbar};
 use crate::{
     api::{canister::greet_call::greet_backend, search_hotel},
     app::AppRoutes,
@@ -219,7 +219,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                 <div class="flex items-center h-[56px] px-6">
                     <Show when=move || !disabled.get()>
                         <div class="absolute inset-0">
-                            <DestinationPicker />
+                            <DestinationPickerV2 />
                         </div>
                     </Show>
 

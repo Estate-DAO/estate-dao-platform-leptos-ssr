@@ -2,7 +2,7 @@ use leptos::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    component::{Divider, HSettingIcon},
+    component::{Divider, HSettingIcon, LiveSelect},
     state::{
         input_group_state::{InputGroupState, OpenDialogComponent},
         search_state::SearchCtx,
@@ -217,6 +217,42 @@ fn ShowDestinations(dest_vec: Vec<Destination>) -> impl IntoView {
                     })
                     .collect_view()
             }}
+        </div>
+    }
+}
+
+#[component]
+pub fn DestinationPickerV2() -> impl IntoView {
+    let search_ctx: SearchCtx = expect_context();
+
+    let QueryResult {
+        data: destinations_resource,
+        ..
+    } = destinations_query().use_query(|| true); // Query runs when component renders
+
+    view! {
+        <div class="relative w-full md:w-[274px] h-full mx-auto"> // Main container
+            <div class="absolute inset-y-0 left-2 flex items-center text-lg pl-6 pointer-events-none">
+                <Icon icon=icondata::BsMap class="text-gray-600" />
+            </div>
+            <LiveSelect<Destination>
+                options=Signal::derive(move || {
+                    destinations_resource.get().flatten().unwrap_or_default()
+                })
+                value=search_ctx.destination
+                set_value=Callback::new(move |dest: Destination| {
+                    let _ = SearchCtx::set_destination(dest);
+                })
+                label_fn=Callback::new(|dest: Destination| format!("{}, {}", dest.city, dest.country_name))
+                value_fn=Callback::new(|dest: Destination| dest.city_id.clone())
+                placeholder="Where to?"
+                id="destination-live-select"
+                class="w-full h-full relative"
+                input_class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-4"
+                dropdown_class="mt-2"
+            />
+            // The <Show> block and its modal contents are removed.
+            // LiveSelect manages its own dropdown.
         </div>
     }
 }

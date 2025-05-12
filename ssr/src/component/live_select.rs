@@ -3,6 +3,8 @@ use leptos::html::{Div, Input};
 use leptos::*;
 use leptos_use::{on_click_outside, use_event_listener};
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
+// use crate::utils::string_ext::StringExt;
+// use std::fmt::Debug;
 
 /// Select hook implemented as a struct to manage dropdown state and behavior
 pub struct SelectHook<T>
@@ -99,7 +101,11 @@ where
 
             all_options
                 .into_iter()
-                .filter(|opt| label_fn.call(opt.clone()).to_lowercase().contains(&search))
+                .filter(|opt| {
+                    leptos::Callable::call(&label_fn, opt.clone())
+                        .to_lowercase()
+                        .contains(&search)
+                })
                 .collect::<Vec<T>>()
         });
 
@@ -165,11 +171,13 @@ where
         let close_dropdown = self.close_dropdown();
         let set_search_text = self.set_search_text();
         let input_ref = self.input_ref;
+        let label_fn = self.label_fn.clone();
 
         Callback::new(move |opt: T| {
-            set_value.call(opt);
-            close_dropdown.call(());
-            set_search_text.call(String::new());
+            let label = leptos::Callable::call(&label_fn, opt.clone());
+            leptos::Callable::call(&set_value, opt);
+            leptos::Callable::call(&close_dropdown, ());
+            leptos::Callable::call(&set_search_text, label.clone());
 
             // Focus the input after selection
             if let Some(input) = input_ref.get() {
@@ -186,9 +194,9 @@ where
 
         Callback::new(move |ev: Event| {
             let value = event_target_value(&ev);
-            set_search_text.call(value);
-            open_dropdown.call(());
-            set_active_index.call(0);
+            leptos::Callable::call(&set_search_text, value);
+            leptos::Callable::call(&open_dropdown, ());
+            leptos::Callable::call(&set_active_index, 0);
         })
     }
 
@@ -199,9 +207,12 @@ where
         let label_fn = self.label_fn.clone();
 
         Callback::new(move |_: FocusEvent| {
-            // Select all text when focused
-            if let Some(value) = selected_value.get() {
-                search_text.set(label_fn.call(value));
+            // Only set search text if it's empty and there's a selected value
+            if search_text.get().is_empty() {
+                if let Some(value) = selected_value.get() {
+                    let label = leptos::Callable::call(&label_fn, value);
+                    search_text.set(label);
+                }
             }
         })
     }
@@ -211,8 +222,9 @@ where
         let toggle_dropdown = self.toggle_dropdown();
         let input_ref = self.input_ref;
 
-        Callback::new(move |_: MouseEvent| {
-            toggle_dropdown.call(());
+        Callback::new(move |ev: MouseEvent| {
+            ev.stop_propagation();
+            leptos::Callable::call(&toggle_dropdown, ());
 
             // Focus the input when toggling
             if let Some(input) = input_ref.get() {
@@ -236,7 +248,7 @@ where
                 ev.prevent_default();
 
                 if !is_open.get() {
-                    open_dropdown.call(());
+                    leptos::Callable::call(&open_dropdown, ());
                     return;
                 }
 
@@ -252,13 +264,13 @@ where
                     current + 1
                 };
 
-                set_active_index.call(next);
+                leptos::Callable::call(&set_active_index, next);
             }
             "ArrowUp" => {
                 ev.prevent_default();
 
                 if !is_open.get() {
-                    open_dropdown.call(());
+                    leptos::Callable::call(&open_dropdown, ());
                     return;
                 }
 
@@ -274,7 +286,7 @@ where
                     current - 1
                 };
 
-                set_active_index.call(next);
+                leptos::Callable::call(&set_active_index, next);
             }
             "Enter" => {
                 if is_open.get() {
@@ -284,25 +296,25 @@ where
                     let current = active_index.get();
 
                     if !filtered.is_empty() && current < filtered.len() {
-                        select_option.call(filtered[current].clone());
+                        leptos::Callable::call(&select_option, filtered[current].clone());
                     }
                 }
             }
             "Escape" => {
                 if is_open.get() {
                     ev.prevent_default();
-                    close_dropdown.call(());
+                    leptos::Callable::call(&close_dropdown, ());
                 }
             }
             "Tab" => {
                 if is_open.get() {
-                    close_dropdown.call(());
+                    leptos::Callable::call(&close_dropdown, ());
                 }
             }
             "Home" => {
                 if is_open.get() {
                     ev.prevent_default();
-                    set_active_index.call(0);
+                    leptos::Callable::call(&set_active_index, 0);
                 }
             }
             "End" => {
@@ -310,7 +322,7 @@ where
                     ev.prevent_default();
                     let filtered = filtered_options.get();
                     if !filtered.is_empty() {
-                        set_active_index.call(filtered.len() - 1);
+                        leptos::Callable::call(&set_active_index, filtered.len() - 1);
                     }
                 }
             }
@@ -361,11 +373,15 @@ where
         let close_dropdown = self.close_dropdown();
         let is_open = self.is_open;
 
-        on_click_outside(container, move |_| {
+        let close_fn = move |_| {
             if is_open.get() {
-                close_dropdown.call(());
+                leptos::Callable::call(&close_dropdown, ());
             }
-        });
+        };
+
+        if let Some(_) = container.get() {
+            on_click_outside(container, close_fn);
+        }
     }
 
     /// Get all the hooks state and handlers for use in components
@@ -413,26 +429,26 @@ where
     T: Clone + PartialEq + 'static,
 {
     let option_id = format!("option-{index}");
-    let label = label_fn.call(option.clone());
+    let label = leptos::Callable::call(&label_fn, option.clone());
 
     view! {
         <li
             id=option_id
             class=move || {
-                let base = "px-3 py-2 cursor-pointer rounded";
+                let base = "list-none px-4 py-2.5 cursor-pointer hover:bg-blue-50/50";
                 if active.get() {
-                    format!("{base} bg-primary-100 text-primary-900")
+                    format!("{} bg-blue-50/50", base)
                 } else {
-                    format!("{base} hover:bg-gray-100")
+                    base.to_string()
                 }
             }
             role="option"
             aria-selected=move || active.get().to_string()
-            on:click=move |_| on_select.call(option.clone())
+            on:click=move |_| leptos::Callable::call(&on_select, option.clone())
             on:mouseenter=move |_| { }
         >
             {move || {
-                highlight_text.call((label.clone(), search_text.get()))
+                leptos::Callable::call(&highlight_text, (label.clone(), search_text.get()))
             }}
         </li>
     }
@@ -448,49 +464,60 @@ fn LiveSelectDropdown<T>(
     highlight_text: Callback<(String, String), Vec<View>>,
     #[prop(into)] dropdown_id: String,
     dropdown_ref: NodeRef<Div>,
+    #[prop(optional, into)] dropdown_class: MaybeSignal<String>,
 ) -> impl IntoView
 where
     T: Clone + PartialEq + 'static,
 {
     view! {
         <div
-            id=dropdown_id
-            class="absolute w-full mt-1 border border-gray-300 bg-white rounded-md shadow-lg z-10 overflow-auto max-h-60"
-            role="listbox"
             _ref=dropdown_ref
+            id=dropdown_id
+            class=move || format!("live-select-dropdown fixed left-0 top-[56px] w-full h-[calc(100%-56px)] md:absolute md:left-0 md:top-full md:w-full md:max-h-[320px] md:h-auto bg-white shadow-lg rounded-lg overflow-y-auto z-[9999] {}", dropdown_class.get())
+            role="listbox"
         >
-            <ul class="py-1 divide-y divide-gray-200">
-                {move || {
-                    let options = filtered_options.get();
-                    let active_idx = active_index.get();
-
-                    options.iter().enumerate().map(|(i, opt)| {
-                        view! {
-                            <LiveSelectOption
-                                option=opt.clone()
-                                active=Signal::derive(move || i == active_idx)
-                                on_select=select_option.clone()
-                                label_fn=label_fn.clone()
-                                search_text=search_text
-                                highlight_text=highlight_text.clone()
-                                index=i
-                            />
-                        }
-                    }).collect_view()
-                }}
-                {move || {
-                    let options = filtered_options.get();
-                    if options.is_empty() {
-                        view! {
-                            <li class="px-3 py-2 text-gray-500 italic">
-                                "No results found"
-                            </li>
-                        }.into_view()
-                    } else {
-                        view! { <></> }.into_view()
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center">
+                <h2 class="text-lg font-semibold flex-1">Select Destination</h2>
+                <button
+                    class="text-gray-500 hover:text-gray-700"
+                    aria-label="Close"
+                    on:click=move |_| {
+                        // Close dropdown functionality will be handled by click outside
                     }
-                }}
-            </ul>
+                >
+                "x"
+                </button>
+            </div>
+            {move || {
+                let options = filtered_options.get();
+                let active_idx = active_index.get();
+
+                options.iter().enumerate().map(|(i, opt)| {
+                    view! {
+                        <LiveSelectOption
+                            option=opt.clone()
+                            active=Signal::derive(move || i == active_idx)
+                            on_select=select_option.clone()
+                            label_fn=label_fn.clone()
+                            search_text=search_text
+                            highlight_text=highlight_text.clone()
+                            index=i
+                        />
+                    }
+                }).collect_view()
+            }}
+            {move || {
+                let options = filtered_options.get();
+                if options.is_empty() {
+                    view! {
+                        <li class="list-none px-4 py-2.5 text-gray-400 text-[15px]">
+                            "No results found"
+                        </li>
+                    }.into_view()
+                } else {
+                    view! { <></> }.into_view()
+                }
+            }}
         </div>
     }
 }
@@ -508,29 +535,29 @@ fn LiveSelectInput(
     #[prop(into)] dropdown_id: String,
     #[prop(into)] active_index: Signal<usize>,
     input_ref: NodeRef<Input>,
+    #[prop(optional, into)] input_class: MaybeSignal<String>,
 ) -> impl IntoView {
+    let input_placeholder = create_memo(move |_| placeholder.get());
+
     view! {
-        <div class="relative flex items-center" on:focus=handle_focus>
+        <div class="relative flex items-center z-[100]" on:focus=handle_focus on:click=move |ev| ev.stop_propagation()>
             <input
                 type="text"
-                class="w-full py-2 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                value=move || search_text.get()
-                placeholder=move || placeholder.get()
-                aria-expanded=move || is_open.get().to_string()
-                aria-autocomplete="list"
-                role="combobox"
-                id=id.clone()
-                aria-controls=dropdown_id.clone()
-                aria-haspopup="listbox"
-                aria-activedescendant=move || if is_open.get() {
-                    format!("option-{}", active_index.get())
-                } else {
-                    String::new()
-                }
-                on:input=handle_input
-                on:keydown=handle_key_down
-                autocomplete="off"
                 _ref=input_ref
+                id=id.clone()
+                class=move || format!("live-select-input {}", input_class.get())
+                placeholder=input_placeholder
+                autocomplete="off"
+                aria-autocomplete="list"
+                aria-controls=dropdown_id.clone()
+                aria-expanded=move || is_open.get().to_string()
+                aria-activedescendant=move || format!("{}-option-{}", id, active_index.get())
+                role="combobox"
+                value=search_text
+                on:input=move |ev| leptos::Callable::call(&handle_input, ev)
+                on:focus=move |ev| leptos::Callable::call(&handle_focus, ev)
+                on:keydown=move |ev| leptos::Callable::call(&handle_key_down, ev)
+                on:click=move |ev| leptos::Callable::call(&handle_toggle_click, ev)
             />
             <button
                 type="button"
@@ -569,13 +596,14 @@ pub fn LiveSelect<T>(
     #[prop(optional, into)] placeholder: MaybeSignal<String>,
     #[prop(optional, into)] id: MaybeSignal<String>,
     #[prop(optional, into)] class: MaybeSignal<String>,
+    #[prop(optional, into)] input_class: MaybeSignal<String>,
+    #[prop(optional, into)] dropdown_class: MaybeSignal<String>,
     #[prop(optional)] debug: bool,
 ) -> impl IntoView
 where
     T: Clone + PartialEq + 'static,
 {
     let id_value = id.get_untracked();
-    // .unwrap_or_else(|| format!("select-{}", leptos::create_render_effect(|_| ()).id()));
     let dropdown_id = format!("{}-dropdown", id_value);
 
     // Create the hook
@@ -590,9 +618,9 @@ where
     // Set initial search text based on selected value
     create_effect(move |_| {
         if let Some(opt) = state.selected_value.get() {
-            let selected_label = hook.label_fn.call(opt);
+            let selected_label = leptos::Callable::call(&hook.label_fn, opt);
             if state.search_text.get().is_empty() {
-                state.set_search_text.call(selected_label);
+                leptos::Callable::call(&state.set_search_text, selected_label);
             }
         }
     });
@@ -601,7 +629,7 @@ where
     create_effect(move |_| {
         let options_list = hook.options.get();
         if options_list.is_empty() && state.is_open.get() {
-            state.close_dropdown.call(());
+            leptos::Callable::call(&state.close_dropdown, ());
         }
     });
 
@@ -613,17 +641,19 @@ where
             log!("Active index: {}", state.active_index.get());
             log!(
                 "Selected value: {:?}",
-                state.selected_value.get().map(|v| hook.label_fn.call(v))
+                state
+                    .selected_value
+                    .get()
+                    .map(|v| leptos::Callable::call(&hook.label_fn, v))
             );
-            log!("Filtered options: {}", state.filtered_options.get().len());
+            log!("Filtered options: {:?}", state.filtered_options.get().len());
         });
     }
 
     view! {
         <div
-            class=move || format!("relative {}", class.get())
+            class=move || format!("relative z-[99] {}", class.get())
             // _ref=state.container_ref
-            // node_ref=state.container_ref
         >
             <LiveSelectInput
                 search_text=state.search_text
@@ -637,20 +667,22 @@ where
                 dropdown_id=dropdown_id.clone()
                 active_index=state.active_index
                 input_ref=state.input_ref
+                input_class=input_class
             />
             {move || {
                 if state.is_open.get() {
                     view! {
-                        <LiveSelectDropdown
-                            filtered_options=Signal::derive(move || state.filtered_options.get())
-                            active_index=state.active_index
-                            select_option=state.select_option
-                            label_fn=hook.label_fn.clone()
-                            search_text=state.search_text
-                            highlight_text=state.highlight_text
-                            dropdown_id=dropdown_id.clone()
-                            dropdown_ref=state.dropdown_ref
-                        />
+                <LiveSelectDropdown
+                    filtered_options=Signal::derive(move || state.filtered_options.get())
+                    active_index=state.active_index
+                    select_option=state.select_option
+                    label_fn=hook.label_fn.clone()
+                    search_text=state.search_text
+                    highlight_text=state.highlight_text
+                    dropdown_id=dropdown_id.clone()
+                    dropdown_ref=state.dropdown_ref
+                    dropdown_class=dropdown_class.clone()
+                />
                     }.into_view()
                 } else {
                     view! { <></> }.into_view()
