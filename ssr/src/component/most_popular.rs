@@ -180,6 +180,7 @@ pub fn MostPopular() -> impl IntoView {
                                     .unwrap_or_default()
                                     .clone()
                                     .into_iter()
+                                    .filter(|dest| !dest.image_url.is_empty())
                                     .take(3)
                                     .map(|dest| {
                                         let country_name = dest.country_name.clone();
