@@ -100,6 +100,8 @@ impl EmailClient {
         }
     }
 
+    // #[tracing::instrument(skip(self, ssb_event))]
+    // use tracing to add more logs to this function
     pub async fn send_email_gmail(&self, ssb_event: &ServerSideBookingEvent) -> Result<(), String> {
         // Check if the access token is expired
         if self.is_token_expired().map_err(|f| f.to_string())? {
@@ -111,10 +113,10 @@ impl EmailClient {
         // get booking details from backend
         let admin_canister = AdminCanisters::from_env_axum_ssr();
         let backend = admin_canister.backend_canister().await;
-        let booking_id = BookingId {
-            app_reference: ssb_event.order_id.clone(),
-            email: ssb_event.user_email.clone(),
-        };
+        let booking_id = BookingId::from_order_id(&ssb_event.order_id).ok_or(format!(
+            "Failed to parse booking id: {}",
+            ssb_event.order_id
+        ))?;
         let booking = backend
             .get_booking_by_id(booking_id.into())
             .await
@@ -137,32 +139,35 @@ impl EmailClient {
         match mail_state {
             Some(state) => {
                 let access_token = state.access_token;
-                let subject = "Booking Confirmed with FuelEV";
+                let subject = "Booking Confirmed with Nofeebooking";
 
+                // are you sure that this created a valid good string in email body? in my email, I see some space on the left with this. can you fix that?
                 let body = format!(
                     r#"
-                Hey {username},
-                
-                The adventure begins! Your hotel booking is confirmed and we'’re just as excited as you are! 👻🎒
-                
-                Here are your booking details:
-                
-                🏨 Hotel: {hotel_name}
-                📍 Location: {hotel_location}
-                🆔 Booking ID / App Reference: {booking_id}
-                📅 Stay Dates: {check_in_date} to {check_out_date}
-                👥 Guests: {number_of_adults} Adults, {number_of_children} Children
-                💳 Amount Paid: {amount_paid}
-                
-                ⚡ Note: This booking is non-cancellable!! So pack those bags and bring your best vacay mode vibes! 😎
-                
-                We can't wait for you to check in, chill out, and make awesome memories. 🌴✨  
-                If you need anything, we’re just an email away.
-                
-                Sending best wanderlust wishes,  
-                Team Nofeebooking 🥳
+Hey {username},
+
+The adventure begins! Your hotel booking is confirmed and we'’re just as excited as you are! 👻🎒
+
+Here are your booking details:
+
+🏨 Hotel: {hotel_name}
+📍 Location: {hotel_location}
+🆔 Booking ID / App Reference: {booking_id}
+📅 Stay Dates: {check_in_date} to {check_out_date}
+👥 Guests: {number_of_adults} Adults, {number_of_children} Children
+💳 Amount Paid: {amount_paid}
+
+⚡ Note: This booking is non-cancellable!! So pack those bags and bring your best vacay mode vibes! 😎
+
+We can't wait for you to check in, chill out, and make awesome memories. 🌴✨  
+If you need anything, we’re just an email away.
+
+Sending best wanderlust wishes,  
+Team Nofeebooking 🥳
                 "#,
                 );
+
+                tracing::debug!("Email body: {}", body);
 
                 let url = "https://www.googleapis.com/gmail/v1/users/me/messages/send";
 
@@ -309,10 +314,8 @@ async fn check_email_sent_status_from_canister(
 ) -> Result<bool, String> {
     let admin_canister = AdminCanisters::from_env_axum_ssr();
     let backend = admin_canister.backend_canister().await;
-    let booking_id = BookingId {
-        app_reference: event.order_id.clone(),
-        email: event.user_email.clone(),
-    };
+    let booking_id = BookingId::from_order_id(&event.order_id)
+        .ok_or(format!("Failed to parse booking id: {}", event.order_id))?;
     let email_sent_status = backend
         .get_email_sent(booking_id.into())
         .await
@@ -324,11 +327,38 @@ async fn check_email_sent_status_from_canister(
     }
 }
 
+async fn update_email_sent_status_in_canister(
+    event: &ServerSideBookingEvent,
+) -> Result<(), String> {
+    let admin_canister = AdminCanisters::from_env_axum_ssr();
+    let backend = admin_canister.backend_canister().await;
+    let booking_id = BookingId::from_order_id(&event.order_id)
+        .ok_or(format!("Failed to parse booking id: {}", event.order_id))?;
+
+    let update_result = backend
+        .update_email_sent(booking_id.into(), true)
+        .await
+        .map_err(|e| format!("Failed to update email_sent: {}", e))?;
+
+    match update_result {
+        // Replace Result1::Ok/Err with your actual backend response types
+        Result1::Ok => {
+            info!("Email sent and backend updated with email_sent = true");
+            Ok(())
+        }
+        Result1::Err(e) => {
+            error!("Failed to update email_sent in backend: {:?}", e);
+            Err(format!("Failed to update email_sent in backend: {:?}", e))
+        }
+    }
+}
+
 impl SendEmailAfterSuccessfullBooking {
     async fn run(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
         let config = EnvVarConfig::try_from_env();
         let email_client = EmailClient::new(config.email_client_config);
-        let _ = email_client.send_email_gmail(&event).await;
+        let _ = email_client.send_email_gmail(&event).await?;
+        update_email_sent_status_in_canister(&event).await?;
         Ok(event)
     }
 }
