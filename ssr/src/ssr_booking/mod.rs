@@ -6,6 +6,7 @@ pub mod payment_handler;
 pub mod pipeline;
 pub mod pipeline_lock;
 use booking_handler::MakeBookingFromBookingProvider;
+use email_handler::SendEmailAfterSuccessfullBooking;
 use get_booking_from_backend::GetBookingFromBackend;
 pub use pipeline_lock::PipelineLockManager;
 
@@ -47,6 +48,7 @@ pub enum SSRBookingPipelineStep {
     PaymentStatus(GetPaymentStatusFromPaymentProvider),
     BookRoom(MakeBookingFromBookingProvider),
     GetBookingFromBackend(GetBookingFromBackend),
+    SendEmail(SendEmailAfterSuccessfullBooking),
     // BookingCall(CreateBookingCallForTravelProvider),
     /// for testing purposes
     Mock(MockStep),
@@ -62,6 +64,7 @@ impl SSRBookingPipelineStep {
             SSRBookingPipelineStep::PaymentStatus(step) => step.validate(event).await,
             SSRBookingPipelineStep::BookRoom(step) => step.validate(event).await,
             SSRBookingPipelineStep::GetBookingFromBackend(step) => step.validate(event).await,
+            SSRBookingPipelineStep::SendEmail(step) => step.validate(event).await,
             // SSRBookingPipelineStep::BookingCall(step) => step.validate(event).await,
             SSRBookingPipelineStep::Mock(step) => step.validate(event).await,
         }
@@ -83,6 +86,9 @@ impl SSRBookingPipelineStep {
             SSRBookingPipelineStep::BookRoom(_) => {
                 MakeBookingFromBookingProvider::execute(event).await
             }
+            SSRBookingPipelineStep::SendEmail(_) => {
+                SendEmailAfterSuccessfullBooking::execute(event).await
+            }
             // PipelineStep::BookingCall(_) => {
             //     CreateBookingCallForTravelProvider::execute(event).await
             // }
@@ -102,6 +108,7 @@ impl fmt::Display for &SSRBookingPipelineStep {
             }
             SSRBookingPipelineStep::BookRoom(_) => write!(f, "MakeBookingFromBookingProvider"),
             SSRBookingPipelineStep::GetBookingFromBackend(_) => write!(f, "GetBookingFromBackend"),
+            SSRBookingPipelineStep::SendEmail(_) => write!(f, "SendEmailAfterSuccessfullBooking"),
             SSRBookingPipelineStep::Mock(_) => write!(f, "MockStep"),
         }
     }

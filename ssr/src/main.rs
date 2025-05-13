@@ -7,6 +7,7 @@ use estate_fe::{
     init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
+        email_handler::SendEmailAfterSuccessfullBooking,
         get_booking_from_backend::GetBookingFromBackend, mock_handler::MockStep,
         payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
         pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
@@ -62,8 +63,31 @@ cfg_if! {
 
         use sitemap::sitemap_handler;
 
+        // Helper: verify NowPayments HMAC-SHA512 signature (gated by feature)
+        #[cfg(not(feature = "debug_log"))]
+        fn verify_ipn_signature(state: &AppState, payload: &serde_json::Value, signature: &str) -> bool {
+            let sorted = sort_json(payload);
+            let s = match serde_json::to_string(&sorted) {
+                Ok(s) => s,
+                Err(e) => { error!("JSON serialization error: {}", e); return false; }
+            };
+            let mut mac = match HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes()) {
+                Ok(m) => m,
+                Err(e) => { error!("HMAC key creation failed: {}", e); return false; }
+            };
 
+            let computed_hmac = mac.finalize().into_bytes();
+            let computed_hex = hex::encode(computed_hmac);
 
+            // 5. Compare signatures using constant-time comparison to prevent timing attacks
+            computed_hex.eq(signature)
+        }
+
+        #[cfg(feature = "debug_log")]
+        fn verify_ipn_signature(_state: &AppState, _payload: &serde_json::Value, _signature: &str) -> bool {
+            debug!("Skipping signature verification (debug_log)");
+            true
+        }
 
         pub async fn server_fn_handler(
             State(app_state): State<AppState>,
@@ -164,6 +188,7 @@ cfg_if! {
             let notifier = state.notifier_for_pipeline;
             let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
             let book_room_step = SSRBookingPipelineStep::BookRoom(MakeBookingFromBookingProvider);
+            let send_email_step = SSRBookingPipelineStep::SendEmail(SendEmailAfterSuccessfullBooking);
             // let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
@@ -202,7 +227,7 @@ cfg_if! {
             let order_id = order_id.to_string();
 
             tokio::spawn(async move {
-                let result = process_pipeline(event, &[payment_status_step, book_room_step, mock_step], Some(notifier)).await;
+                let result = process_pipeline(event, &[payment_status_step, book_room_step, send_email_step, mock_step], Some(notifier)).await;
                 // let result = process_pipeline(event, &[payment_status_step, book_room_step, get_booking_step, mock_step], Some(notifier)).await;
 
                 lock_manager.release_lock(payment_id.as_deref(), &order_id);
@@ -250,41 +275,15 @@ cfg_if! {
             };
             debug!("Parsed JSON payload: {:?}", payload);
 
-            // 3. Sort the JSON payload to ensure consistent ordering for signature verification
-            let sorted_payload = sort_json(&payload);
-            let payload_str = match serde_json::to_string(&sorted_payload) {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("Failed to serialize sorted payload: {}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, "JSON serialization error");
-                }
-            };
-            debug!("Computing HMAC-SHA512 signature for sorted payload");
-
-            // 4. Compute HMAC-SHA512 signature
-            let mut mac = match HmacSha512::new_from_slice(state.env_var_config.ipn_secret.as_bytes()) {
-                Ok(m) => m,
-                Err(e) => {
-                    error!("HMAC key creation failed: {}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, "Signature verification error");
-                }
-            };
-            mac.update(payload_str.as_bytes());
-            let computed_hmac = mac.finalize().into_bytes();
-            let computed_hex = hex::encode(computed_hmac);
-
-            // 5. Compare signatures using constant-time comparison to prevent timing attacks
-            if computed_hex.eq(signature) {
-                info!("NowPayments webhook signature verified successfully");
-
-                // 6. Process the webhook payload only if signature is valid
-                start_ssr_booking_processing_pipeline(&payload, &state).await;
-
-                (StatusCode::OK, "OK")
-            } else {
-                error!("Signature verification failed: expected {}, got {}", computed_hex, signature);
-                (StatusCode::BAD_REQUEST, "Invalid signature")
+            // 3-5. Verify signature (skipped if debug_log)
+            if !verify_ipn_signature(&state, &payload, &signature) {
+                error!("Invalid signature");
+                return (StatusCode::BAD_REQUEST, "Invalid signature");
             }
+            info!("NowPayments webhook signature verified successfully");
+            // 6. Process pipeline
+            start_ssr_booking_processing_pipeline(&payload, &state).await;
+            (StatusCode::OK, "OK")
         }
 
         #[tokio::main]

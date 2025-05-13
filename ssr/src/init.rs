@@ -66,6 +66,10 @@ impl AppStateBuilder {
 
         #[cfg(feature = "debug_log")]
         {
+            use crate::log;
+            // print env vars
+            log!("app_state.env_var_config = {:#?}", app_state.env_var_config);
+
             // Setup debug event subscriber
             let debug_state = app_state_clone;
             tokio::spawn(async move {

@@ -1,4 +1,4 @@
-use crate::canister::backend::{self, Booking, BookingId, PaymentDetails, Result1, Result2};
+use crate::canister::backend::{self, Booking, BookingId, PaymentDetails, Result1, Result3};
 use crate::utils::admin::admin_canister;
 use leptos::logging::log;
 use leptos::*;
@@ -33,7 +33,7 @@ pub async fn call_update_payment_details_backend(
     log!("call_update_payment_details_backend - result - {result:#?}");
 
     match result {
-        Result2::Ok(booking) => Ok(booking),
-        Result2::Err(e) => Err(e),
+        Result3::Ok(booking) => Ok(booking),
+        Result3::Err(e) => Err(e),
     }
 }

@@ -61,7 +61,6 @@ pub fn get_default_provab_base_url() -> &'static str {
     }
 }
 
-use crate::ssr_booking::email_handler::EmailConfig;
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
@@ -70,7 +69,7 @@ use once_cell::sync::Lazy;
 // use leptos::logging::log;
 use crate::log;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env::VarError;
 use thiserror::Error;
@@ -172,16 +171,26 @@ impl EnvVarConfig {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EmailConfig {
+    pub client_id: Option<String>,
+    pub client_secret: Option<String>,
+    pub access_token: Option<String>,
+    pub refresh_token: Option<String>,
+    pub token_expiry: u64, // Store the token expiration timestamp
+}
+
 impl ConfigLoader for EmailConfig {
     fn from_env() -> Result<Self, String> {
         let client_id = env_or_panic("EMAIL_CLIENT_ID");
         let client_secret = env_or_panic("EMAIL_CLIENT_SECRET");
         let refresh_token = env_or_panic("EMAIL_REFRESH_TOKEN");
         let token_expiry = env_or_panic("EMAIL_TOKEN_EXPIRY");
+        let access_token = env_or_panic("EMAIL_ACCESS_TOKEN");
         Ok(EmailConfig {
             client_id: Some(client_id),
             client_secret: Some(client_secret),
-            access_token: None,
+            access_token: Some(access_token),
             refresh_token: Some(refresh_token),
             token_expiry: token_expiry.parse().unwrap(),
         })

@@ -54,6 +54,17 @@ impl Default for BackendPaymentStatus {
     }
 }
 
+impl Default for backend::AdultDetail {
+    fn default() -> Self {
+        Self {
+            email: None,
+            first_name: String::default(),
+            last_name: None,
+            phone: None,
+        }
+    }
+}
+
 impl BackendPaymentStatus {
     // todo: log actual status / reason
     pub fn to_string(&self) -> String {
@@ -68,12 +79,87 @@ impl Booking {
     pub fn get_destination(&self) -> Option<Destination> {
         self.user_selected_hotel_room_details.get_destination()
     }
+    pub fn get_user_email(&self) -> String {
+        self.booking_id.email.clone()
+    }
+    pub fn get_user_name(&self) -> String {
+        self.guests.get_first_name()
+    }
+    /// Hotel name for emails
+    pub fn get_hotel_name(&self) -> String {
+        self.user_selected_hotel_room_details
+            .hotel_details
+            .hotel_name
+            .clone()
+    }
+    /// Hotel location for emails
+    pub fn get_hotel_location(&self) -> String {
+        self.user_selected_hotel_room_details
+            .hotel_details
+            .hotel_location
+            .clone()
+    }
+    /// Booking reference/app id
+    pub fn get_booking_ref(&self) -> String {
+        self.booking_id.app_reference.clone()
+    }
+    /// Check-in date as YYYY-MM-DD
+    pub fn get_check_in_date(&self) -> String {
+        let (y, m, d) = self.user_selected_hotel_room_details.date_range.start;
+        format!("{:04}-{:02}-{:02}", y, m, d)
+    }
+    /// Check-out date as YYYY-MM-DD
+    pub fn get_check_out_date(&self) -> String {
+        let (y, m, d) = self.user_selected_hotel_room_details.date_range.end;
+        format!("{:04}-{:02}-{:02}", y, m, d)
+    }
+    /// Number of adults
+    pub fn get_number_of_adults(&self) -> usize {
+        self.guests.adults.len()
+    }
+    /// Number of children
+    pub fn get_number_of_children(&self) -> usize {
+        self.guests.children.len()
+    }
+    /// Amount paid by user
+    pub fn get_amount_paid(&self) -> f64 {
+        self.payment_details.payment_api_response.actually_paid
+    }
+    /// Email of the first adult guest
+    pub fn get_first_adult_email(&self) -> Option<String> {
+        self.guests
+            .adults
+            .first()
+            .unwrap_or(&backend::AdultDetail::default())
+            .email
+            .clone()
+    }
+    /// Email of the last adult guest
+    pub fn get_last_adult_email(&self) -> Option<String> {
+        self.guests
+            .adults
+            .last()
+            .unwrap_or(&backend::AdultDetail::default())
+            .email
+            .clone()
+    }
 }
 
 impl HotelRoomDetails {
     /// Returns a reference to the destination if it exists
     pub fn get_destination(&self) -> Option<Destination> {
         self.destination.clone()
+    }
+}
+
+impl backend::UserDetails {
+    /// Returns the first name of the first adult guest or an empty string if none
+    pub fn get_first_name(&self) -> String {
+        self.adults
+            .first()
+            .unwrap_or(&backend::AdultDetail::default())
+            .first_name
+            .clone()
     }
 }
 
