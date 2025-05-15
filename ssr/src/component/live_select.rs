@@ -473,10 +473,12 @@ where
         <div
             _ref=dropdown_ref
             id=dropdown_id
-            class=move || format!("live-select-dropdown fixed left-0 top-[56px] w-full h-[calc(100%-56px)] md:absolute md:left-0 md:top-full md:w-full md:max-h-[320px] md:h-auto bg-white shadow-lg rounded-lg overflow-y-auto z-[9999] {}", dropdown_class.get())
+            class=move || format!("fixed z-[200] left-0 top-[33vh] w-full h-[67vh] md:top-16 md:w-1/3 md:h-[40vh] bg-white shadow-lg rounded-lg overflow-y-auto {}", dropdown_class.get())
+            // class=move || format!("fixed z-[200] left-0 top-[56px] w-full h-[calc(100%-56px)] md:absolute md:left-0 md:top-full md:w-full md:max-h-[320px] md:h-[90vh] bg-white shadow-lg rounded-lg overflow-y-auto {}", dropdown_class.get())
+            // class=move || format!("fixed left-0 top-[56px] w-full h-[calc(100%-56px)] md:absolute md:left-0 md:top-full md:w-full md:max-h-[320px] md:h-auto bg-white shadow-lg rounded-lg overflow-y-auto {}", dropdown_class.get())
             role="listbox"
         >
-            <div class="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center">
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center md:hidden">
                 <h2 class="text-lg font-semibold flex-1">Select Destination</h2>
                 <button
                     class="text-gray-500 hover:text-gray-700"
@@ -488,6 +490,7 @@ where
                 "x"
                 </button>
             </div>
+            <Suspense fallback=move || view! { <div>Loading...</div> }>
             {move || {
                 let options = filtered_options.get();
                 let active_idx = active_index.get();
@@ -506,18 +509,17 @@ where
                     }
                 }).collect_view()
             }}
+            </Suspense>
+
+            <Show when=move || filtered_options.get().is_empty()>
             {move || {
-                let options = filtered_options.get();
-                if options.is_empty() {
-                    view! {
-                        <li class="list-none px-4 py-2.5 text-gray-400 text-[15px]">
-                            "No results found"
-                        </li>
-                    }.into_view()
-                } else {
-                    view! { <></> }.into_view()
+                view! {
+                    <li class="list-none px-4 py-2.5 text-gray-400 text-[15px]">
+                        "No results found"
+                    </li>
                 }
             }}
+            </Show>
         </div>
     }
 }
@@ -540,7 +542,7 @@ fn LiveSelectInput(
     let input_placeholder = create_memo(move |_| placeholder.get());
 
     view! {
-        <div class="relative flex items-center z-[100]" on:focus=handle_focus on:click=move |ev| ev.stop_propagation()>
+        <div class="relative flex items-center z-[103]" on:focus=handle_focus on:click=move |ev| ev.stop_propagation()>
             <input
                 type="text"
                 _ref=input_ref
@@ -625,13 +627,13 @@ where
         }
     });
 
-    // Close dropdown when options change to empty
-    create_effect(move |_| {
-        let options_list = hook.options.get();
-        if options_list.is_empty() && state.is_open.get() {
-            leptos::Callable::call(&state.close_dropdown, ());
-        }
-    });
+    // // Close dropdown when options change to empty
+    // create_effect(move |_| {
+    //     let options_list = hook.options.get();
+    //     if options_list.is_empty() && state.is_open.get() {
+    //         leptos::Callable::call(&state.close_dropdown, ());
+    //     }
+    // });
 
     // Debug mode
     if debug {
