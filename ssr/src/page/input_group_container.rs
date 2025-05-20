@@ -1,5 +1,6 @@
 use crate::log;
 use crate::page::{InputGroup, InputGroupMobile};
+use crate::state::input_group_state::InputGroupState;
 use crate::utils::responsive::use_is_desktop;
 use leptos::*;
 use web_sys;
@@ -13,14 +14,14 @@ pub fn InputGroupContainer(
     // Signal to track if the detailed input group is open on mobile
     let is_desktop = use_is_desktop();
 
-    let (show_full_input_read, show_full_input_write) = create_signal(default_expanded.get());
+    InputGroupState::set_show_full_input(default_expanded.get());
 
     let show_full_input = create_memo(move |_prev| {
         log!(
             "[input_group_container.rs] Derived show_full_input: {}",
             is_desktop.get() || default_expanded.get()
         );
-        is_desktop.get() || default_expanded.get() || show_full_input_read.get()
+        is_desktop.get() || default_expanded.get() || InputGroupState::is_open_show_full_input()
     });
 
     view! {
@@ -38,7 +39,7 @@ pub fn InputGroupContainer(
                                 // ev.prevent_default();
                                 // ev.stop_propagation();
                                 log!("[input_group_container.rs] Overlay clicked");
-                                show_full_input_write.set(false);
+                                InputGroupState::set_show_full_input(false);
                             }
                         ></div>
                     </Show>
@@ -49,7 +50,7 @@ pub fn InputGroupContainer(
                 <div
                     on:click=move |_| {
                         log!("[input_group_container.rs] Mobile view clicked, setting show_full_input to true");
-                        show_full_input_write.set(true);
+                        InputGroupState::set_show_full_input(true);
                     }
                 >
                     <InputGroupMobile />

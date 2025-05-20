@@ -12,7 +12,7 @@ use crate::{
     api::{canister::greet_call::greet_backend, search_hotel},
     app::AppRoutes,
     component::{
-        DateTimeRangePickerCustom, Destination, DestinationPicker, EstateDaoIcon, FilterAndSortBy,
+        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy,
         FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
         SelectedDateRange,
     },
@@ -179,6 +179,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
             // call server function inside action
             spawn_local(async move {
+                // on mobile, collapse the full input and goback to InputGroupMobile component
+                InputGroupState::set_show_full_input(false);
                 log!("[root.rs] spawn_local started for search_hotel");
                 let result = search_hotel(search_ctx.into()).await.ok();
                 log!("[root.rs] search_hotel completed");
@@ -191,14 +193,14 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         }
     });
 
-    let close_closure = move |_: ()| {
-        log!("[root.rs] close panel");
-        InputGroupState::toggle_dialog(OpenDialogComponent::None);
-    };
+    // let close_closure = move |_: ()| {
+    //     log!("[root.rs] close panel");
+    //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
+    // };
 
     let parent_div_ref: NodeRef<html::Div> = create_node_ref();
 
-    let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
+    // let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
 
     view! {
         <div

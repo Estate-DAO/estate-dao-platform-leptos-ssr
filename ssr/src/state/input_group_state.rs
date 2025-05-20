@@ -6,6 +6,8 @@ use crate::log;
 #[derive(Clone, Debug, Default)]
 pub struct InputGroupState {
     pub open_dialog: RwSignal<OpenDialogComponent>,
+    /// this prop enables switching between compact and full input group in mobile mode (InputGroupMobile component).
+    pub show_full_input: RwSignal<bool>,
 }
 
 impl GlobalStateForLeptos for InputGroupState {}
@@ -61,6 +63,21 @@ impl InputGroupState {
         } else {
             Self::set_open_dialog(dialog);
         }
+    }
+
+    pub fn toggle_show_full_input() {
+        let current = Self::get().show_full_input.get_untracked();
+        Self::get().show_full_input.update(|d| *d = !current);
+    }
+
+    pub fn is_open_show_full_input() -> bool {
+        let is_open = Self::get().show_full_input.get();
+        // log!("Checking if show_full_input is open: {}", is_open);
+        is_open
+    }
+
+    pub fn set_show_full_input(show_full_input: bool) {
+        Self::get().show_full_input.update(|d| *d = show_full_input);
     }
 }
 
