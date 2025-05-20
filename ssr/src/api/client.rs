@@ -289,7 +289,7 @@ impl Provab {
 
         use std::time::Duration;
         #[cfg(all(feature = "ssr", feature = "mock-provab"))]
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        tokio::time::sleep(Duration::from_millis(1000)).await;
 
         Ok(Req::Response::generate_mock_response(0.5))
     }

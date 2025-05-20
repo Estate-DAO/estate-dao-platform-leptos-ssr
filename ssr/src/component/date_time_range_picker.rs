@@ -246,7 +246,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                     .remove_1("overflow-hidden md:overflow-auto");
             }
         }
-        // // Clear calendar_ref when dialog is closed to allow re-binding
+        // Clear calendar_ref when dialog is closed to allow re-binding
         // if !is_open {
         //     calendar_ref.set(None);
         // }
@@ -281,20 +281,20 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
     view! {
         <div class="relative">
-            <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
-                <Icon icon=icondata::AiCalendarOutlined class="text-black font-light" />
+            <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
+                <Icon icon=icondata::AiCalendarOutlined class="text-black font-extralight" />
             </div>
 
             <button
-                class="w-full ml-2 py-2 pl-8 text-black bg-transparent border-none focus:outline-none text-sm text-left"
+                class="w-full py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left"
                 on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
             >
-                {{ move || date_range_display() }}
+                {{ move || view! { <span class="text-gray-500">{date_range_display()}</span> } }}
             </button>
 
             <Show when=move || is_open()>
                 <div
-                    class="fixed inset-0 z-[9999] bg-black/50"
+                    class="fixed inset-0 z-[9999] bg-black/50 md:bg-transparent"
                     style="touch-action: none; overscroll-behavior: contain;"
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
                 >
@@ -327,32 +327,32 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                         <div
                             _ref=calendar_ref
                             class="rounded-b-lg flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
-                            style="max-height: 70vh; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;"
+                            style="max-height: 70vh; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;"
                             on:touchstart=move |ev: TouchEvent| {
-                                ev.prevent_default();
-                                ev.stop_propagation();
+                                // ev.prevent_default();
+                                // ev.stop_propagation();
                                 if let Some(t) = ev.touches().item(0) {
                                     touch_start_y.set(t.client_y() as f64);
                                 }
                             }
                             on:touchend=move |ev: TouchEvent| {
-                                ev.prevent_default();
-                                ev.stop_propagation();
+                                // ev.prevent_default();
+                                // ev.stop_propagation();
                                 if let Some(t) = ev.changed_touches().item(0) {
                                     let delta = (t.client_y() as f64) - touch_start_y.get();
                                     log!("[Touch] delta_y = {}", delta);
                                     touch_throttled(delta);
                                 }
                             }
-                            on:touchmove=move |ev: web_sys::TouchEvent| {
-                                ev.prevent_default();
-                                ev.stop_propagation();
-                            }
+                            // on:touchmove=move |ev: web_sys::TouchEvent| {
+                            //     ev.prevent_default();
+                            //     ev.stop_propagation();
+                            // }
                             // For Leptos 0.6, the correct way to handle wheel events is:
-                            on:wheel=move |ev: web_sys::WheelEvent| {
-                                ev.prevent_default();
-                                ev.stop_propagation();
-                            }
+                            // on:wheel=move |ev: web_sys::WheelEvent| {
+                            //     ev.prevent_default();
+                            //     ev.stop_propagation();
+                            // }
                         >
                             <div class="flex-1">
                                 <DateCells year_month=initial_date.into() selected_range=selected_range />
@@ -376,7 +376,11 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                     <button
                                         type="button"
                                         class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 text-white  py-3 md:py-2 rounded-full hover:bg-blue-600 transition-colors"
-                                        on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                        on:click=move |ev: _| {
+                                            // ev.prevent_default();
+                                            // ev.stop_propagation();
+                                            InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                        }
                                     >
                                         "Apply"
                                     </button>
