@@ -157,6 +157,7 @@ pub fn App() -> impl IntoView {
 
         // sets the document title
         <Title text="NoFeeBooking" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
         // import Figtree font
         <Link rel="preconnect" href="https://fonts.googleapis.com" />
