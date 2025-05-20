@@ -2,7 +2,7 @@ use crate::api::BlockRoomResponse;
 use crate::component::code_print::DebugDisplay;
 use crate::component::loading_button::LoadingButton;
 use crate::component::{
-    FullScreenSpinnerGray, Navbar, NavigatingErrorPopup, PriceDisplayV2, SkeletonPricing,
+    FullScreenSpinnerGray, GymIcon, Navbar, NavigatingErrorPopup, PriceDisplayV2, SkeletonPricing,
     SpinnerGray,
 };
 use crate::page::InputGroupContainer;
@@ -34,7 +34,6 @@ use web_sys::MouseEvent;
 struct Amenity {
     icon: icondata::Icon,
     text: String,
-    // text: &'static str,
 }
 
 // let icon_map = HashMap::from([
@@ -63,12 +62,34 @@ pub fn ShowHotelInfoValues() -> impl IntoView {
 }
 
 fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
+    // Define the icon mappings directly in the function
+    let icon_mappings = [
+        ("wifi", icondata::IoWifi),
+        ("parking", icondata::LuParkingCircle),
+        ("pool", icondata::BiSwimRegular),
+        ("swim", icondata::BiSwimRegular),
+        ("spa", icondata::BiSpaRegular),
+        ("beach", icondata::BsUmbrella),
+        ("umbrella", icondata::BsUmbrella),
+        ("bar", icondata::IoWineSharp),
+        ("pub", icondata::IoWineSharp),
+        ("family", icondata::RiHomeSmile2BuildingsLine),
+        ("room", icondata::RiHomeSmile2BuildingsLine),
+    ];
+
     amenities
         .into_iter()
         .take(8)
-        .map(|text| Amenity {
-            icon: icondata::IoWifiSharp,
-            text: text.clone(),
+        .map(|text| {
+            let lower_text = text.to_lowercase();
+            // Find the first matching icon or default to wifi icon
+            let icon = icon_mappings
+                .iter()
+                .find(|(key, _)| lower_text.contains(*key))
+                .map(|(_, icon)| *icon)
+                .unwrap_or(icondata::IoWifi);
+
+            Amenity { icon, text }
         })
         .collect()
 }
