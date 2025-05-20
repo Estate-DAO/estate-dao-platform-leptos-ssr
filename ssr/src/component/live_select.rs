@@ -1,7 +1,14 @@
 use crate::log;
 use leptos::html::{Div, Input};
 use leptos::*;
-use leptos_use::{on_click_outside, use_event_listener};
+use leptos_icons::*;
+use leptos_use::{
+    on_click_outside, use_event_listener, use_event_listener_with_options, use_window,
+};
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::JsCast;
+use web_sys::wasm_bindgen::JsValue;
+use web_sys::EventTarget;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 // use crate::utils::string_ext::StringExt;
 // use std::fmt::Debug;
@@ -349,7 +356,7 @@ where
                 let end_idx = start_idx + search.len();
                 result.push(
                     view! {
-                        <span class="font-bold text-primary-600 underline">
+                        <span class="font-bold text-blue-600">
                             {remaining[start_idx..end_idx].to_string()}
                         </span>
                     }
@@ -380,7 +387,36 @@ where
         };
 
         if let Some(_) = container.get() {
-            on_click_outside(container, close_fn);
+            // Use capture phase to ensure our handler runs before parent handlers
+            let _ = on_click_outside(container, close_fn);
+
+            // Also listen for clicks on the document to handle cases where the dropdown is open
+            // but the click is outside the container
+            if let Some(window) = web_sys::window() {
+                let document = window.document().expect("no global `document` exists");
+
+                let closure = Closure::<dyn Fn(web_sys::Event)>::new(move |ev: web_sys::Event| {
+                    if is_open.get() {
+                        if let Some(target) = ev.target() {
+                            if let Ok(element) = target.dyn_into::<web_sys::Element>() {
+                                if container
+                                    .get()
+                                    .map_or(false, |c| !c.contains(Some(&element)))
+                                {
+                                    leptos::Callable::call(&close_dropdown, ());
+                                    ev.stop_propagation();
+                                }
+                            }
+                        }
+                    }
+                });
+
+                let _ = document
+                    .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());
+
+                // Store the closure so it's not dropped
+                closure.forget();
+            }
         }
     }
 
@@ -437,7 +473,7 @@ where
             class=move || {
                 let base = "list-none px-4 py-2.5 cursor-pointer hover:bg-blue-50/50";
                 if active.get() {
-                    format!("{} bg-blue-50/50", base)
+                    format!("{} bg-blue-50 text-blue-500", base)
                 } else {
                     base.to_string()
                 }
@@ -474,8 +510,6 @@ where
             _ref=dropdown_ref
             id=dropdown_id
             class=move || format!("fixed z-[200] left-0 top-[33vh] w-full h-[67vh] md:top-16 md:w-1/3 md:h-[40vh] bg-white shadow-lg rounded-lg overflow-y-auto {}", dropdown_class.get())
-            // class=move || format!("fixed z-[200] left-0 top-[56px] w-full h-[calc(100%-56px)] md:absolute md:left-0 md:top-full md:w-full md:max-h-[320px] md:h-[90vh] bg-white shadow-lg rounded-lg overflow-y-auto {}", dropdown_class.get())
-            // class=move || format!("fixed left-0 top-[56px] w-full h-[calc(100%-56px)] md:absolute md:left-0 md:top-full md:w-full md:max-h-[320px] md:h-auto bg-white shadow-lg rounded-lg overflow-y-auto {}", dropdown_class.get())
             role="listbox"
         >
             <div class="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center md:hidden">
@@ -540,9 +574,17 @@ fn LiveSelectInput(
     #[prop(optional, into)] input_class: MaybeSignal<String>,
 ) -> impl IntoView {
     let input_placeholder = create_memo(move |_| placeholder.get());
+    let icon = create_memo(move |_| {
+        if is_open.get() {
+            icondata::BiChevronUpRegular
+        } else {
+            icondata::BiChevronDownRegular
+        }
+    });
 
     view! {
-        <div class="relative flex items-center z-[103]" on:focus=handle_focus on:click=move |ev| ev.stop_propagation()>
+        <div class="relative flex items-center w-full h-full z-[103] px-6" on:focus=handle_focus on:click=move |ev| ev.stop_propagation()>
+        <div>
             <input
                 type="text"
                 _ref=input_ref
@@ -561,30 +603,23 @@ fn LiveSelectInput(
                 on:keydown=move |ev| leptos::Callable::call(&handle_key_down, ev)
                 on:click=move |ev| leptos::Callable::call(&handle_toggle_click, ev)
             />
-            <button
-                type="button"
-                class="absolute right-2 p-1 text-gray-400 hover:text-gray-600 focus:outline-none"
-                tabindex="-1"
-                aria-label="Toggle dropdown"
-                on:click=handle_toggle_click
-            >
-                <span class="block w-4 h-4">
-                    {move || if is_open.get() {
-                        view! {
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clip-rule="evenodd" />
-                            </svg>
-                        }
-                    } else {
-                        view! {
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                            </svg>
-                        }
-                    }}
-                </span>
-            </button>
         </div>
+
+
+        <div
+        class="ml-auto right-3 p-1 text-xl focus:outline-none"
+        tabindex="-1"
+        aria-label="Toggle dropdown"
+        on:click=handle_toggle_click
+    >
+        {move || {
+            view! {
+                <Icon icon=icon class="w-4 h-4" />
+            }
+        }}
+    </div>
+    </div>
+
     }
 }
 
@@ -627,13 +662,13 @@ where
         }
     });
 
-    // // Close dropdown when options change to empty
-    // create_effect(move |_| {
-    //     let options_list = hook.options.get();
-    //     if options_list.is_empty() && state.is_open.get() {
-    //         leptos::Callable::call(&state.close_dropdown, ());
-    //     }
-    // });
+    // Close dropdown when options change to empty
+    create_effect(move |_| {
+        let options_list = hook.options.get();
+        if options_list.is_empty() && state.is_open.get() {
+            leptos::Callable::call(&state.close_dropdown, ());
+        }
+    });
 
     // Debug mode
     if debug {
@@ -655,7 +690,6 @@ where
     view! {
         <div
             class=move || format!("relative z-[99] {}", class.get())
-            // _ref=state.container_ref
         >
             <LiveSelectInput
                 search_text=state.search_text

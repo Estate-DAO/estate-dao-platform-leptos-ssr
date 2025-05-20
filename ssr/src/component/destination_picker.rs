@@ -231,10 +231,34 @@ pub fn DestinationPickerV2() -> impl IntoView {
         ..
     } = destinations_query().use_query(|| true); // Query runs when component renders
 
+    // Create signals to manage dropdown state
+    let is_open = create_rw_signal(false);
+
+    // Create effects to sync LiveSelect state with InputGroupState
+    create_effect(move |_| {
+        if is_open.get() {
+            // When dropdown opens, update InputGroupState
+            InputGroupState::set_destination_open();
+        } else {
+            // When dropdown closes, update InputGroupState if it was already open
+            if InputGroupState::is_destination_open() {
+                InputGroupState::set_close_dialog();
+            }
+        }
+    });
+
+    // Also create an effect to sync InputGroupState with LiveSelect
+    create_effect(move |_| {
+        let is_destination_open = InputGroupState::is_destination_open();
+        if is_destination_open != is_open.get_untracked() {
+            is_open.set(is_destination_open);
+        }
+    });
+
     view! {
-        <div class="relative w-full md:w-[274px] h-full mx-auto"> // Main container
-            <div class="absolute inset-y-0 left-2 py-6 text-lg pl-6 pointer-events-none">
-                <Icon icon=icondata::BsMap class="text-gray-600" />
+        <div class="relative flex w-full md:w-[274px] h-full"> // Main container
+            <div class="absolute inset-y-0 left-2 py-6 text-xl px-6 pointer-events-none">
+                <Icon icon=icondata::BsMap class="text-black font-bold" />
             </div>
             <LiveSelect<Destination>
                 options=Signal::derive(move || {
@@ -243,17 +267,18 @@ pub fn DestinationPickerV2() -> impl IntoView {
                 value=search_ctx.destination
                 set_value=Callback::new(move |dest: Destination| {
                     let _ = SearchCtx::set_destination(dest);
+                    // Close the dropdown after selection
+                    InputGroupState::toggle_dialog(OpenDialogComponent::None);
                 })
                 label_fn=Callback::new(|dest: Destination| format!("{}, {}", dest.city, dest.country_name))
                 value_fn=Callback::new(|dest: Destination| dest.city_id.clone())
                 placeholder="Where to?"
                 id="destination-live-select"
-                class="w-full h-full relative"
-                input_class="w-full h-full pl-16 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-6"
+                class="w-full h-full items-center"
+                input_class="w-full h-full pl-10 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-6"
                 dropdown_class="mt-2"
             />
-            // The <Show> block and its modal contents are removed.
-            // LiveSelect manages its own dropdown.
+            // LiveSelect manages its own dropdown, but we sync with InputGroupState
         </div>
     }
 }
