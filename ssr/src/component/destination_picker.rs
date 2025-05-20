@@ -233,7 +233,7 @@ pub fn DestinationPickerV2() -> impl IntoView {
 
     view! {
         <div class="relative w-full md:w-[274px] h-full mx-auto"> // Main container
-            <div class="absolute inset-y-0 left-2 flex items-center text-lg pl-6 pointer-events-none">
+            <div class="absolute inset-y-0 left-2 py-6 text-lg pl-6 pointer-events-none">
                 <Icon icon=icondata::BsMap class="text-gray-600" />
             </div>
             <LiveSelect<Destination>
@@ -249,8 +249,7 @@ pub fn DestinationPickerV2() -> impl IntoView {
                 placeholder="Where to?"
                 id="destination-live-select"
                 class="w-full h-full relative"
-                input_class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-4"
-                // input_class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-4"
+                input_class="w-full h-full pl-16 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-6"
                 dropdown_class="mt-2"
             />
             // The <Show> block and its modal contents are removed.

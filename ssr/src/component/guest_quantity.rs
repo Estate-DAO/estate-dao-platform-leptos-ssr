@@ -129,7 +129,7 @@ pub fn GuestQuantity() -> impl IntoView {
 
     view! {
         <div class="relative w-full h-full">
-            <div class="absolute inset-y-0 left-2 flex items-center text-2xl">
+            <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
                 <Icon icon=icondata::BsPerson class="text-black font-light" />
             </div>
 

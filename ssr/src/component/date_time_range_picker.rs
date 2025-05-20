@@ -294,7 +294,8 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
             <Show when=move || is_open()>
                 <div
-                    class="fixed inset-0 z-[9999]"
+                    class="fixed inset-0 z-[9999] bg-black/50"
+                    style="touch-action: none; overscroll-behavior: contain;"
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
                 >
                     <div
@@ -326,17 +327,31 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                         <div
                             _ref=calendar_ref
                             class="rounded-b-lg flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
+                            style="max-height: 70vh; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;"
                             on:touchstart=move |ev: TouchEvent| {
+                                ev.prevent_default();
+                                ev.stop_propagation();
                                 if let Some(t) = ev.touches().item(0) {
                                     touch_start_y.set(t.client_y() as f64);
                                 }
                             }
                             on:touchend=move |ev: TouchEvent| {
+                                ev.prevent_default();
+                                ev.stop_propagation();
                                 if let Some(t) = ev.changed_touches().item(0) {
                                     let delta = (t.client_y() as f64) - touch_start_y.get();
                                     log!("[Touch] delta_y = {}", delta);
                                     touch_throttled(delta);
                                 }
+                            }
+                            on:touchmove=move |ev: web_sys::TouchEvent| {
+                                ev.prevent_default();
+                                ev.stop_propagation();
+                            }
+                            // For Leptos 0.6, the correct way to handle wheel events is:
+                            on:wheel=move |ev: web_sys::WheelEvent| {
+                                ev.prevent_default();
+                                ev.stop_propagation();
                             }
                         >
                             <div class="flex-1">
