@@ -298,10 +298,10 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
                 >
                     <div
-                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]"
+                        class=" fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]"
                         on:click=|e| e.stop_propagation()
                     >
-                        <div class="bg-white flex justify-between px-2">
+                        <div class="bg-white rounded-t-lg flex justify-between px-2">
                             <button
                                 on:click=move |_| {
                                     let (current_year, current_month) = initial_date.get_untracked();
@@ -325,7 +325,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
                         <div
                             _ref=calendar_ref
-                            class="flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
+                            class="rounded-b-lg flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
                             on:touchstart=move |ev: TouchEvent| {
                                 if let Some(t) = ev.touches().item(0) {
                                     touch_start_y.set(t.client_y() as f64);
@@ -360,7 +360,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                 <div class="flex justify-center">
                                     <button
                                         type="button"
-                                        class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 md:bg-white text-white md:text-black md:border md:border-gray-900 py-3 md:py-2 rounded-full hover:bg-blue-600 md:hover:bg-gray-100 transition-colors"
+                                        class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 text-white  py-3 md:py-2 rounded-full hover:bg-blue-600 transition-colors"
                                         on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
                                     >
                                         "Apply"
