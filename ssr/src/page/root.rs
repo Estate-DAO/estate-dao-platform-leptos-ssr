@@ -264,11 +264,12 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     search_action.dispatch(())
                 }
                 class=move || {
-                    format!(" {} text-2xl rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
+                    format!(" {} rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
                 }
             >
-                <div class="flex justify-center">
+                <div class="flex justify-center text-2xl ">
                     // done with tricks shared by generous Prakash!
+                    <div class="hidden md:block">
                     <Show
                         when=move || disabled.get()
                         fallback=move || {
@@ -282,11 +283,32 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         }
                     >
                         // <!-- Adjusted icon size and padding for better visibility -->
+                        // Show Search icon for desktop, Search word for mobile
                         <Icon
                             icon=icondata::AiSearchOutlined
                             class=format!("{} p-1 text-2xl", bg_search_icon_class())
                         />
+
                     </Show>
+                    </div>
+                    <div class="block md:hidden text-lg">
+
+                    <Show
+                    when=move || disabled.get()
+                    fallback=move || {
+                        view! {
+                            // <!-- Adjusted icon size and padding for better visibility -->
+                            <div class="disabled">Search</div>
+                        }
+                    }
+                >
+                    // <!-- Adjusted icon size and padding for better visibility -->
+                    // Show Search icon for desktop, Search word for mobile
+
+                        Search
+                </Show>
+                </div>
+
                 </div>
             </button>
 
