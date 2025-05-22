@@ -17,8 +17,36 @@ pub fn GoogleTagManagerIFrame() -> impl IntoView {
     }
 }
 
+// #[component]
+// pub fn GoogleTagManagerScriptAsync() -> impl IntoView {
+//     // Analytics
+//     let enable_ga4_script = create_rw_signal(false);
+//     #[cfg(feature = "ga4")]
+//     {
+//         enable_ga4_script.set(true);
+//     }
+//     view! {
+//         // GA4 Script
+
+//         <Show when=enable_ga4_script>
+//             <Script
+//                 async_="true"
+//                 src=concat!("https://www.googletagmanager.com/gtag/js?id=", "G-BPRVSPTP2T")
+//             />
+//             <Script>
+//                 {r#"
+//                     window.dataLayer = window.dataLayer || [];
+//                     function gtag(){dataLayer.push(arguments);}
+//                     gtag('js', new Date());
+//                     gtag('config', 'G-BPRVSPTP2T');
+//                 "#}
+//             </Script>
+//         </Show>
+//     }
+// }
+
 #[component]
-pub fn GoogleTagManagerScriptAsync() -> impl IntoView {
+pub fn GA4ScriptAsync() -> impl IntoView {
     // Analytics
     let enable_ga4_script = create_rw_signal(false);
     #[cfg(feature = "ga4")]

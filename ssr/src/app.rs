@@ -4,8 +4,7 @@ use crate::{
         payments::ports::GetPaymentStatusResponse,
     },
     component::{
-        ErrorPopup, GoogleTagManagerIFrame, GoogleTagManagerScriptAsync, NotificationExample,
-        NotificationState,
+        ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample, NotificationState,
     },
     error_template::{AppError, ErrorTemplate},
     page::{
@@ -168,11 +167,11 @@ pub fn App() -> impl IntoView {
         />
         <LeptosQueryDevtools />
 
-        <GoogleTagManagerScriptAsync />
+        <GA4ScriptAsync />
 
         // <Body>
         <main>
-            <GoogleTagManagerIFrame />
+            // <GoogleTagManagerIFrame />
 
         // content for this welcome page
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
