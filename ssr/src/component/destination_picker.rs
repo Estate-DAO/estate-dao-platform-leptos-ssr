@@ -257,7 +257,7 @@ pub fn DestinationPickerV2() -> impl IntoView {
 
     view! {
         <div class="relative flex w-full md:w-[274px] h-full"> // Main container
-            <div class="absolute inset-y-0 left-2 py-6 text-xl px-6 pointer-events-none">
+            <div class="absolute inset-y-0 left-2 py-6  px-6 md:py-4 text-xl pointer-events-none">
                 <Icon icon=icondata::BsMap class="text-black font-bold" />
             </div>
             <LiveSelect<Destination>

@@ -180,13 +180,15 @@ mock-block-room-fail = ["mock-provab"]
 local-lib-with-mock = ["local-lib", "mock-provab","mock-pipeline"]
 local-bin-with-mock = ["local-bin", "mock-provab","mock-pipeline"]
 
-# release features 
-stage-consts = []
-release-lib = ["stage-consts", "hydrate", "debug_log" ]
-release-bin = ["stage-consts","ssr", "debug_log"]
-
-# release features 
+# analytics features 
 ga4 = []
+
+# release features - staging 
+stage-consts = []
+release-lib = ["stage-consts", "hydrate", "debug_log",  "ga4"  ]
+release-bin = ["stage-consts","ssr", "debug_log", "ga4"]
+
+# release features - production 
 prod-consts = []
 release-lib-prod = [ "prod-consts","hydrate", "ga4" ]
 release-bin-prod = ["prod-consts","ssr", "ga4"]

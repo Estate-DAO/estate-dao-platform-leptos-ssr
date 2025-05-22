@@ -127,8 +127,8 @@ pub fn BlockRoomPage() -> impl IntoView {
         let is_valid_email = |email: &str| email.contains('@') && email.contains('.');
 
         // Helper function for phone validation
-        let is_valid_phone =
-            |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
+        let is_valid_phone = |phone: &str| phone.chars().all(|c| c.is_digit(10));
+        // |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
 
         // Validate primary adult
         let primary_adult_valid = adult_list.first().map_or(false, |adult| {

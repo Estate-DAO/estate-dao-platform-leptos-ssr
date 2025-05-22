@@ -123,7 +123,9 @@ pub struct EnvVarConfig {
     pub admin_private_key: String,
     pub email_client_config: EmailConfig,
     pub ipn_secret: String, // skip the payment on localhost using environment variable
-                            // pub payment_skip_local: String
+    // pub payment_skip_local: String
+    pub stripe_secret_key: String,
+    pub stripe_webhook_secret: String,
 }
 
 impl EnvVarConfig {
@@ -159,6 +161,9 @@ impl EnvVarConfig {
             // todo add secret when available in gh actions
             ipn_secret: env_w_default("NOWPAYMENTS_IPN_SECRET", "dummy-secret-for-now").unwrap(),
             email_client_config: EmailConfig::from_env().unwrap(),
+            stripe_secret_key: env_or_panic("STRIPE_SECRET_KEY"),
+            stripe_webhook_secret: env_w_default("STRIPE_WEBHOOK_SECRET", "dummy-secret-for-now")
+                .unwrap(),
             // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
         };
 

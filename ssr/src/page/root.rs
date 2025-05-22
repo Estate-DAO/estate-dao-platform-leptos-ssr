@@ -258,7 +258,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
             // <!-- Search button -->
             // <!-- Completely redesigned for mobile to match screenshot with full-width button at bottom -->
-            <div class="px-6">
+            <div class="px-6 md:px-0">
             <button
                 on:click=move |ev| {
                     ev.prevent_default();
