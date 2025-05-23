@@ -231,6 +231,12 @@ impl HotelInfoResponse {
             },
         )
     }
+    pub fn get_location(&self) -> String {
+        self.hotel_details.as_ref().map_or_else(
+            || "".to_owned(),
+            |details| details.hotel_info_result.hotel_details.address.clone(),
+        )
+    }
 }
 
 impl ProvabReq for HotelInfoRequest {

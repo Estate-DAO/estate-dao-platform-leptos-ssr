@@ -94,7 +94,19 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
                 .map(|(_, icon)| *icon)
                 .unwrap_or(icondata::IoWifi);
 
-            Amenity { icon, text }
+            // Truncate text to 10 characters
+            let display_text = if text.len() > 10 {
+                let mut s = text[..10].to_string();
+                s.push('…'); // Add ellipsis to indicate truncation
+                s
+            } else {
+                text
+            };
+
+            Amenity {
+                icon,
+                text: display_text,
+            }
         })
         .collect()
 }

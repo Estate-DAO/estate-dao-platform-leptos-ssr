@@ -37,6 +37,11 @@ impl HotelInfoCtx {
         this.selected_hotel_image.set(image);
         this.selected_hotel_location.set(location);
     }
+
+    pub fn get_hotel_code_untracked() -> String {
+        let this: Self = expect_context();
+        this.hotel_code.get_untracked()
+    }
 }
 
 #[derive(Clone, Default, Debug)]
@@ -142,5 +147,52 @@ impl BlockRoomCtx {
                 }
             }
         });
+    }
+
+    pub fn get_adults_untracked() -> Vec<AdultDetail> {
+        let this: Self = expect_context();
+        this.adults.get_untracked()
+    }
+
+    pub fn get_email_untracked() -> String {
+        let this: Self = expect_context();
+        this.adults
+            .get_untracked()
+            .first()
+            .and_then(|adult| adult.email.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn get_children_untracked() -> Vec<ChildDetail> {
+        let this: Self = expect_context();
+        this.children.get_untracked()
+    }
+
+    pub fn get_user_name_untracked() -> String {
+        let this: Self = expect_context();
+        this.adults
+            .get_untracked()
+            .first()
+            .map(|adult| adult.first_name.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn get_user_phone_untracked() -> String {
+        let this: Self = expect_context();
+        this.adults
+            .get_untracked()
+            .first()
+            .map(|adult| adult.phone.clone().unwrap_or_default())
+            .unwrap_or_default()
+    }
+
+    pub fn get_num_adults_untracked() -> u32 {
+        let this: Self = expect_context();
+        this.adults.get_untracked().len() as u32
+    }
+
+    pub fn get_num_children_untracked() -> u32 {
+        let this: Self = expect_context();
+        this.children.get_untracked().len() as u32
     }
 }

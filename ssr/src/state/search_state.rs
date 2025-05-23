@@ -4,8 +4,8 @@ use crate::{
         BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
         HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     },
+    canister::backend,
     component::{Destination, GuestSelection, SelectedDateRange},
-    // page::{RoomCounterKeyValue, RoomCounterKeyValueStatic, SortedRoom},
     state::{hotel_details_state::PricingBookNowState, view_state::BlockRoomCtx},
     utils::app_reference::generate_app_reference,
 };
@@ -74,6 +74,16 @@ impl SearchCtx {
             this.destination.get_untracked()
         );
     }
+
+    pub fn get_backend_compatible_date_range_untracked() -> backend::SelectedDateRange {
+        let this: Self = expect_context();
+        this.date_range.get_untracked().into()
+    }
+
+    pub fn get_backend_compatible_destination_untracked() -> Option<backend::Destination> {
+        let this: Self = expect_context();
+        this.destination.get_untracked().map(|dest| dest.into())
+    }
 }
 
 //  ==================================================================
@@ -103,20 +113,21 @@ impl SearchListResults {
             .map_or_else(HashMap::new, |response| response.get_results_token_map())
     }
 
-    pub fn get_result_token(&self, hotel_code: String) -> String {
-        self.get_hotel_code_results_token_map()
+    pub fn get_result_token(hotel_code: String) -> String {
+        let this: Self = expect_context();
+        this.get_hotel_code_results_token_map()
             .get(&hotel_code)
             .cloned()
             .unwrap_or_default()
     }
 
     pub fn hotel_info_request(&self, hotel_code: &str) -> HotelInfoRequest {
-        let token = self.get_result_token(hotel_code.into());
+        let token = Self::get_result_token(hotel_code.into());
         HotelInfoRequest { token }
     }
 
     pub fn hotel_room_request(&self, hotel_code: &str) -> HotelRoomRequest {
-        let token = self.get_result_token(hotel_code.into());
+        let token = Self::get_result_token(hotel_code.into());
         HotelRoomRequest { token }
     }
 }
@@ -224,6 +235,37 @@ impl HotelInfoResults {
         Self::from_leptos_context()
             .price_per_night
             .set(per_night_calc);
+    }
+
+    pub fn get_hotel_name_untracked() -> String {
+        Self::from_leptos_context()
+            .search_result
+            .get_untracked()
+            .map(|response| response.get_hotel_name())
+            .unwrap_or_default()
+    }
+
+    pub fn get_hotel_location_untracked() -> String {
+        Self::from_leptos_context()
+            .search_result
+            .get_untracked()
+            .map(|response| response.get_location())
+            .unwrap_or_default()
+    }
+
+    pub fn get_hotel_images_untracked() -> Vec<String> {
+        Self::from_leptos_context()
+            .search_result
+            .get_untracked()
+            .map(|response| response.get_images())
+            .unwrap_or_default()
+    }
+
+    pub fn get_at_least_one_hotel_image_untracked() -> String {
+        Self::get_hotel_images_untracked()
+            .get(0)
+            .cloned()
+            .unwrap_or_default()
     }
 
     // pub fn get_images(&self) -> Vec<String> {

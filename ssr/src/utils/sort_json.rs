@@ -78,4 +78,56 @@ mod tests {
         // Primitives should remain the same
         assert_eq!(sort_json(&input), expected);
     }
+
+    #[test]
+    fn test_json_compact_serialization() {
+        let input = json!({
+            "z": {
+                "y":    2,  // Extra spaces
+                "x": [
+                    {
+                        "b": 2,
+                        "a": 1
+                    },
+                    {
+                        "d": 4,
+                        "c": 3
+                    }
+                ]
+            },
+            "a": 1
+        });
+
+        // First sort the JSON
+        let sorted = sort_json(&input);
+
+        // Then serialize to compact string
+        let compact = serde_json::to_string(&sorted).unwrap();
+
+        // Expected compact form (no whitespace)
+        let expected = r#"{"a":1,"z":{"x":[{"a":1,"b":2},{"c":3,"d":4}],"y":2}}"#;
+
+        assert_eq!(compact, expected);
+    }
+
+    #[test]
+    fn test_nowpayments_example() {
+        // Example from NowPayments documentation
+        let input = json!({
+            "payment_id": 5524759,
+            "payment_status": "finished",
+            "pay_address": "0x123...",
+            "price_amount": 3999.5,
+            "price_currency": "usd",
+            "order_id": "ABC123"
+        });
+
+        let sorted = sort_json(&input);
+        let compact = serde_json::to_string(&sorted).unwrap();
+
+        // Verify keys are sorted and no whitespace
+        let expected = r#"{"order_id":"ABC123","pay_address":"0x123...","payment_id":5524759,"payment_status":"finished","price_amount":3999.5,"price_currency":"usd"}"#;
+
+        assert_eq!(compact, expected);
+    }
 }

@@ -8,6 +8,7 @@ use log::info;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+use crate::canister::backend;
 use crate::{canister::backend::Booking, state::local_storage::use_booking_id_store};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -44,6 +45,17 @@ impl BookingId {
     pub fn read_from_local_storage() -> Option<Self> {
         let (state, _, _) = use_booking_id_store();
         state.get_untracked()
+    }
+
+    pub fn get_backend_compatible_booking_id_untracked(email: String) -> backend::BookingId {
+        // Get stored booking id or generate new one
+        let booking_id = Self::read_from_local_storage().unwrap_or_else(|| {
+            generate_app_reference(email.clone())
+                .get_untracked()
+                .expect("Failed to generate booking id")
+        });
+
+        booking_id.into()
     }
 
     /// Attempts to read the booking details from local storage with fallback

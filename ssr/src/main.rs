@@ -76,8 +76,8 @@ cfg_if! {
                 Err(e) => { error!("HMAC key creation failed: {}", e); return false; }
             };
 
-            let computed_hmac = mac.finalize().into_bytes();
-            let computed_hex = hex::encode(computed_hmac);
+            mac.update(s.as_bytes());
+            let computed_hex = hex::encode(mac.finalize().into_bytes());
 
             // 5. Compare signatures using constant-time comparison to prevent timing attacks
             computed_hex.eq(signature)
@@ -240,7 +240,7 @@ cfg_if! {
         }
 
 
-        #[instrument(skip(state, headers, body))]
+        #[instrument(skip(state))]
         async fn nowpayments_webhook(
             ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
             State(state): State<AppState>,

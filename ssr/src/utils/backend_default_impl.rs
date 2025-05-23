@@ -1,9 +1,10 @@
 use crate::{
-    api::BookingDetails,
     canister::backend::{
         self, BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, Destination,
         HotelRoomDetails, PaymentDetails,
     },
+    component::{Destination as FrontendDestination, SelectedDateRange as FrontendDateRange},
+    state::view_state::{AdultDetail as FrontendAdultDetail, ChildDetail as FrontendChildDetail},
 };
 
 use crate::utils::app_reference::BookingId as AppReferenceBookingId;
@@ -29,11 +30,93 @@ impl Default for BePaymentApiResponse {
     }
 }
 
+impl From<backend::SelectedDateRange> for FrontendDateRange {
+    fn from(backend: backend::SelectedDateRange) -> Self {
+        Self {
+            start: (backend.start.0, backend.start.1, backend.start.2),
+            end: (backend.end.0, backend.end.1, backend.end.2),
+        }
+    }
+}
+
+impl From<FrontendDateRange> for backend::SelectedDateRange {
+    fn from(frontend: FrontendDateRange) -> Self {
+        Self {
+            start: frontend.start,
+            end: frontend.end,
+        }
+    }
+}
+
 impl Default for BookingId {
     fn default() -> Self {
         Self {
             app_reference: "".to_string(),
             email: "".to_string(),
+        }
+    }
+}
+
+impl From<backend::Destination> for FrontendDestination {
+    fn from(backend_destination: backend::Destination) -> Self {
+        Self {
+            city: backend_destination.city,
+            country_name: backend_destination.country_name,
+            country_code: backend_destination.country_code,
+            city_id: backend_destination.city_id,
+        }
+    }
+}
+
+impl From<FrontendDestination> for backend::Destination {
+    fn from(frontend_destination: FrontendDestination) -> Self {
+        Self {
+            city_id: frontend_destination.city_id,
+            city: frontend_destination.city,
+            country_code: frontend_destination.country_code,
+            country_name: frontend_destination.country_name,
+        }
+    }
+}
+
+impl From<FrontendAdultDetail> for crate::canister::backend::AdultDetail {
+    fn from(value: FrontendAdultDetail) -> Self {
+        Self {
+            email: value.email,
+            first_name: value.first_name,
+            last_name: value.last_name,
+            phone: value.phone,
+        }
+    }
+}
+
+impl From<backend::AdultDetail> for FrontendAdultDetail {
+    fn from(value: backend::AdultDetail) -> Self {
+        Self {
+            email: value.email,
+            first_name: value.first_name,
+            last_name: value.last_name,
+            phone: value.phone,
+        }
+    }
+}
+
+impl From<backend::ChildDetail> for FrontendChildDetail {
+    fn from(value: backend::ChildDetail) -> Self {
+        Self {
+            age: Some(value.age),
+            first_name: value.first_name,
+            last_name: value.last_name,
+        }
+    }
+}
+
+impl From<FrontendChildDetail> for backend::ChildDetail {
+    fn from(value: FrontendChildDetail) -> Self {
+        Self {
+            age: value.age.unwrap_or_default(),
+            first_name: value.first_name,
+            last_name: value.last_name,
         }
     }
 }
