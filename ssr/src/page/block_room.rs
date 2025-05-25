@@ -395,7 +395,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                     };
 
                     let hotel_token =
-                        search_list_results_cloned.get_result_token(hotel_code_cloned.clone());
+                        SearchListResults::get_result_token(hotel_code_cloned.clone());
 
                     let block_room_id = block_room_results_context_cloned
                         .block_room_id
