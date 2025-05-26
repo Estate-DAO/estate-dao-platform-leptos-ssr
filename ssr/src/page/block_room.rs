@@ -6,9 +6,11 @@ use crate::api::block_room;
 use crate::api::canister::add_booking::add_booking_backend;
 use crate::api::consts::{get_payments_url, get_price_amount_based_on_env, APP_URL};
 use crate::api::get_room;
+use crate::api::payments::create_stripe_checkout_session;
 use crate::api::payments::nowpayments_create_invoice;
 use crate::api::payments::nowpayments_get_payment_status;
 use crate::api::payments::ports::CreateInvoiceRequest;
+use crate::api::payments::ports::CreateInvoiceResponse;
 use crate::api::payments::ports::GetPaymentStatusRequest;
 use crate::api::payments::NowPayments;
 use crate::canister::backend;
@@ -310,6 +312,143 @@ pub fn BlockRoomPage() -> impl IntoView {
         }
     };
 
+    let call_add_booking_backend_action = create_action(
+        move |invoice_response_ref: &Option<CreateInvoiceResponse>| {
+            // Clone the input reference for use in the async block
+            let invoice_response = invoice_response_ref.clone();
+
+            // User's existing let bindings from Step 36 to define destination, date_range, etc.
+            // Ensure `email_cloned` and `booking` (including `booking_id_cloned`) are correctly defined here.
+            let destination = SearchCtx::get_backend_compatible_destination_untracked();
+            let date_range = SearchCtx::get_backend_compatible_date_range_untracked();
+            let num_adults = BlockRoomCtx::get_num_adults_untracked();
+            let num_children = BlockRoomCtx::get_num_children_untracked();
+
+            let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
+            let hotel_token = SearchListResults::get_result_token(hotel_code.clone());
+            let hotel_name = HotelInfoResults::get_hotel_name_untracked();
+            let hotel_location = HotelInfoResults::get_hotel_location_untracked();
+
+            let room_details: Vec<RoomDetails> = PricingBookNowState::get_room_counters().into();
+
+            let block_room_id = block_room_results_context_cloned
+                .block_room_id
+                .get()
+                .unwrap_or_default();
+
+            log!(
+                "[block_room_page] - handle_pay_click - block_room_id> {:?}",
+                block_room_id
+            );
+
+            let user_phone = BlockRoomCtx::get_user_phone_untracked();
+            let user_name = BlockRoomCtx::get_user_name_untracked();
+            let children_backend: Vec<backend::ChildDetail> =
+                BlockRoomCtx::get_children_untracked()
+                    .into_iter()
+                    .map(backend::ChildDetail::from)
+                    .collect();
+            let adults_backend: Vec<backend::AdultDetail> = BlockRoomCtx::get_adults_untracked()
+                .into_iter()
+                .map(backend::AdultDetail::from)
+                .collect();
+
+            let user_selected_hotel_room_details = HotelRoomDetails {
+                destination,
+                requested_payment_amount: total_price.get(),
+                date_range,
+                room_details,
+                hotel_details: HotelDetails {
+                    hotel_code: hotel_code.clone(),
+                    hotel_name: hotel_name.clone(),
+                    hotel_image: HotelInfoResults::get_at_least_one_hotel_image_untracked(),
+                    hotel_location: hotel_location.clone(),
+                    block_room_id,
+                    hotel_token,
+                },
+            };
+            log!(
+                "[block_room_page] - handle_pay_click - user_selected_hotel_room_details> {:?}",
+                user_selected_hotel_room_details
+            );
+
+            let guests = UserDetails {
+                children: children_backend,
+                adults: adults_backend,
+            };
+
+            // Define email_string from primary adult's details
+            let email_string = BlockRoomCtx::get_adults_untracked()
+            .first()
+            .and_then(|adult| adult.email.clone())
+            .unwrap_or_else(|| {{
+                warn!("[block_room_page] - call_add_booking_backend_action - Could not retrieve email from primary adult. Using empty string.");
+                String::new()
+            }});
+
+            let email = BlockRoomCtx::get_email_untracked();
+            let email_cloned = email.clone();
+
+            let booking_id = BookingId::get_backend_compatible_booking_id_untracked(email.clone());
+            let booking_id_clone = booking_id.clone();
+            let order_id =
+                PaymentIdentifiers::order_id_from_app_reference(&booking_id.app_reference, &email);
+
+            let app_reference = booking_id.app_reference;
+
+            // todo you were here. do this
+            let payment_details = crate::canister::backend::PaymentDetails {
+                booking_id: booking_id_clone.clone(),
+                ..Default::default()
+            };
+
+            let booking = crate::canister::backend::Booking {
+                user_selected_hotel_room_details,
+                guests,
+                booking_id: booking_id_clone.clone(),
+                book_room_status: None,
+                payment_details,
+            };
+
+            log!(
+                "[block_room_page] - handle_pay_click - booking - {:#?}",
+                booking
+            );
+
+            // spawn_local(
+            async move {
+                match invoice_response {
+                    None => {
+                        warn!("[block_room_page] - handle_pay_click - invoice_response is None");
+                    }
+
+                    Some(resp) => {
+                        log!("[block_room_page] - handle_pay_click - Processing CreateInvoiceResponse");
+                        let value_for_serverfn: String = serde_json::to_string(&booking).unwrap();
+
+                        match add_booking_backend(email_cloned, value_for_serverfn).await {
+                            Ok(response) => {
+                                log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+                                #[cfg(feature = "mock-provab")]
+                                {
+                                    let _ = window().location().assign(&get_payments_url(""));
+                                }
+                                #[cfg(not(feature = "mock-provab"))]
+                                {
+                                    let _ = window().location().assign(&resp.invoice_url);
+                                }
+                            }
+                            Err(e) => {
+                                warn!("[block_room_page] - handle_pay_click - Error add_booking_backend serverFn {:?}", e);
+                            }
+                        }
+                    }
+                }
+                // });
+            }
+        },
+    );
+
     let handle_pay_click = create_action(move |payment_method: &String| {
         // let handle_pay_click = create_resource(handle_pay_signal, move |payment_method: String| {
         let hotel_code_cloned = hotel_code.clone();
@@ -318,8 +457,8 @@ pub fn BlockRoomPage() -> impl IntoView {
 
         async move {
             match payment_method.as_str() {
-                "binance" => {
-                    todo!();
+                "stripe" => {
+                    let stripe_checkout_session = create_stripe_checkout_session(total_price.get());
                 }
                 "NOWPayments" => {
                     let email = adults
@@ -358,168 +497,12 @@ pub fn BlockRoomPage() -> impl IntoView {
                         is_fee_paid_by_user: false,
                     };
 
-                    // Log payment request for debugging
-                    log!(
-                        "[block_room_page] - Creating payment request with order_id: {}",
-                        invoice_request.order_id
-                    );
-
-                    // todo: [UAT]  feedback - select only those room which are selected by the user!!
-                    // let sorted_rooms = hotel_info_results.sorted_rooms.get();
-                    // log!("SORTED-----ROOM?>>>>>>>>>>>>>>>\n{:?}", sorted_rooms);
-
-                    // let room_details: Vec<RoomDetails> = sorted_rooms
-                    //     .into_iter()
-                    //     .map(|sorted_room| RoomDetails {
-                    //         room_price: sorted_room.room_price as f32,
-                    //         room_unique_id: sorted_room.room_unique_id,
-                    //         room_type_name: sorted_room.room_type,
-                    //     })
-                    //     .collect();
-
-                    let room_details: Vec<RoomDetails> =
-                        PricingBookNowState::get_room_counters().into();
-
-                    let destination = search_ctx.destination.get().map(|dest| {
-                        crate::canister::backend::Destination {
-                            city_id: dest.city_id,
-                            city: dest.city,
-                            country_code: dest.country_code,
-                            country_name: dest.country_name,
-                        }
-                    });
-                    let selected_date_range = search_ctx.date_range.get();
-                    let date_range = crate::canister::backend::SelectedDateRange {
-                        start: selected_date_range.start,
-                        end: selected_date_range.end,
-                    };
-
-                    let hotel_token =
-                        SearchListResults::get_result_token(hotel_code_cloned.clone());
-
-                    let block_room_id = block_room_results_context_cloned
-                        .block_room_id
-                        .get()
-                        .unwrap_or_default();
-
-                    log!(
-                        "[block_room_page] - handle_pay_click - block_room_id> {:?}",
-                        block_room_id
-                    );
-                    let user_selected_hotel_room_details = HotelRoomDetails {
-                        destination,
-                        requested_payment_amount: total_price.get(),
-                        date_range,
-                        room_details,
-                        hotel_details: HotelDetails {
-                            hotel_code: hotel_code_cloned.clone(),
-                            hotel_name: hotel_name_signal(),
-                            hotel_image: images_signal()
-                                .into_iter()
-                                .find(|s| !s.is_empty())
-                                .unwrap_or_else(|| String::new()),
-                            hotel_location: hotel_address_signal(),
-                            block_room_id,
-                            hotel_token,
-                        },
-                    };
-                    log!(
-                        "[block_room_page] - handle_pay_click - user_selected_hotel_room_details> {:?}",
-                        user_selected_hotel_room_details
-                    );
-
-                    let adults: Vec<crate::canister::backend::AdultDetail> = block_room_ctx
-                        .adults
-                        .get()
-                        .into_iter()
-                        .map(|adult| crate::canister::backend::AdultDetail {
-                            email: adult.email,
-                            first_name: adult.first_name,
-                            last_name: adult.last_name,
-                            phone: adult.phone,
-                        })
-                        .collect();
-                    let children: Vec<crate::canister::backend::ChildDetail> = block_room_ctx
-                        .children
-                        .get()
-                        .into_iter()
-                        .map(|child| crate::canister::backend::ChildDetail {
-                            age: child.age.unwrap(),
-                            first_name: child.first_name,
-                            last_name: child.last_name,
-                        })
-                        .collect();
-                    let guests = UserDetails { children, adults };
-
-                    let email_cloned = email.clone();
-                    let email_cloned_twice = email.clone();
-
-                    // Get stored booking id or generate new one
-                    let booking_id = BookingId::read_from_local_storage().unwrap_or_else(|| {
-                        generate_app_reference(email_cloned_twice)
-                            .get()
-                            .expect("Failed to generate booking id")
-                    });
-
-                    let backend_booking_id = backend::BookingId {
-                        app_reference: booking_id.app_reference,
-                        email: email_cloned.clone(),
-                    };
-                    let booking_id_cloned = backend_booking_id.clone();
-
-                    let payment_details = crate::canister::backend::PaymentDetails {
-                        booking_id: backend_booking_id,
-                        ..Default::default()
-                    };
-
-                    let booking = crate::canister::backend::Booking {
-                        user_selected_hotel_room_details,
-                        guests,
-                        booking_id: booking_id_cloned,
-                        book_room_status: None,
-                        payment_details,
-                    };
-
-                    log!(
-                        "[block_room_page] - handle_pay_click - booking - {:#?}",
-                        booking
-                    );
-
                     spawn_local(async move {
                         let create_invoice_response =
-                            nowpayments_create_invoice(invoice_request).await;
-                        log!("creating invoice");
-                        match create_invoice_response {
-                            Ok(resp) => {
-                                log!(
-                                    "[block_room_page] - handle_pay_click - CreateInvoiceResponse"
-                                );
-                                log!("{:?}\n{:?}", email_cloned, booking);
-                                let value_for_serverfn: String =
-                                    serde_json::to_string(&booking).unwrap();
-
-                                match add_booking_backend(email_cloned, value_for_serverfn).await {
-                                    Ok(response) => {
-                                        log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
-                                        #[cfg(feature = "mock-provab")]
-                                        {
-                                            let _ =
-                                                window().location().assign(&get_payments_url(""));
-                                        }
-                                        #[cfg(not(feature = "mock-provab"))]
-                                        {
-                                            let _ = window().location().assign(&resp.invoice_url);
-                                        }
-                                    }
-                                    Err(e) => {
-                                        warn!("[block_room_page] - handle_pay_click - Error add_booking_backend serverFn {:?}", e);
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                warn!("[block_room_page] - handle_pay_click - Error creating invoice: {:?}", e);
-                            }
-                        }
+                            nowpayments_create_invoice(invoice_request).await.ok();
+                        log!("initating add_booking_backend action");
+                        call_add_booking_backend_action.dispatch(create_invoice_response);
+                        log!("add_booking_backend action finished");
                     });
                 }
                 _ => { /* Handle other payment methods */ }

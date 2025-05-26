@@ -96,7 +96,7 @@ impl ApiErrorState {
         }
 
         if let Some(BlockRoomResponse::Success(response)) = &result {
-            if response.status == 400 {
+            if response.status == 400 || response.status == 0 {
                 log!(
                     "[ApiErrorState] BlockRoom API error: {:?}",
                     &response.message
