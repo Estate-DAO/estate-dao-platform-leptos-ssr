@@ -1,5 +1,5 @@
-
 use chrono::NaiveDate;
+use tracing::{info, instrument};
 // use sha2::digest::block_buffer::Block; // Removed as it's causing E0433 and seems unused
 use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
@@ -58,42 +58,57 @@ impl StripeEstate {
         Self::new(api_key, api_host, ipn_secret)
     }
 
-    pub async fn send<Req: PaymentGateway + PaymentGatewayParams + Serialize>(
+    #[instrument(skip(self))]
+    pub async fn send<Req: PaymentGateway + PaymentGatewayParams + Serialize + std::fmt::Debug>(
         &self,
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
         cfg_if::cfg_if! {
             if #[cfg(feature = "mock-provab")] {
                 let resp: Req::PaymentGatewayResponse = Faker.fake();
-                log!("Faker Response {:?}", resp);
+                log!("[Stripe] Faker Response {:?}", resp);
                 Ok(resp)
             } else {
                 let url = req.build_url(&self.api_host)?;
-                log!("stripe url = {url:#?}");
+                log!("[Stripe] url = {url:#?}");
+                // For debugging serialization issues with .form()
+                match serde_urlencoded::to_string(&req) {
+                    Ok(form_str) => info!("[Stripe] Serialized form data: {}", form_str),
+                    Err(e) => error!("[Stripe] Failed to serialize form data with serde_urlencoded: {:?}", e),
+                }
 
-                let response = self
+                let request = self
                     .client
                     .clone()
                     .request(Req::METHOD, url)
                     // todo(stripe) change this in prod
                     .basic_auth(&self.api_key, Some(""))
-                    .form(&req)
-                    // .json(&req)
-                    .send()
-                    .await?;
+                    .form(&req);
 
-                let body_string = response.text().await?;
-                log!("stripe response = {:#?}", body_string);
+                // log!("[Stripe] Request Headers = {:#?}", request.headers());
+
+                let response = request.send().await?;
+
+                let response_status = response.status();
+                log!("[Stripe] Response Status = {}", response_status);
+                let response_text_value = response.text().await?;
+
+                if !response_status.is_success() {
+                    log!("[Stripe] Error Response = {:#?}", response_text_value);
+                }
+
+                let body_string = response_text_value;
+                log!("[Stripe] stripe response = {:#?}", body_string);
 
                 let jd = &mut serde_json::Deserializer::from_str(&body_string);
                 let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
                     .map_err(|e| {
                         let total_error = format!("path: {} - inner: {}", e.path().to_string(), e.inner());
-                        error!("deserialize_response- JsonParseFailed: {:?}", total_error);
+                        error!("[Stripe] deserialize_response- JsonParseFailed: {:?}", total_error);
                         e
                     })?;
 
-                log!("stripe response struct = {response_struct:#?}");
+                log!("[Stripe] stripe response struct = {response_struct:#?}");
                 Ok(response_struct)
             }
         }
@@ -189,10 +204,11 @@ impl<'de> serde::Deserialize<'de> for StripeMetadata {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StripeCreateCheckoutSession {
     pub success_url: String,
     pub cancel_url: String,
+    #[serde(skip)]
     pub line_items: Vec<StripeLineItem>,
     // mod=payment
     #[serde(default = "default_payment_mode")]
@@ -200,14 +216,117 @@ pub struct StripeCreateCheckoutSession {
     /// You can specify up to 50 keys, with key names up to 40 characters long and values up to 500 characters long.
     /// Keys and values are stored as strings and can contain any characters
     /// with one exception: you can't use square brackets ([ and ]) in keys.
+    #[serde(skip)]
     pub metadata: Option<StripeMetadata>,
     /// this is order_id resp-encoded
     pub client_reference_id: String,
     /// we have this during hotel booking
     pub customer_email: String,
     pub ui_mode: StripeUIModeEnum,
+    #[serde(flatten)]
+    pub form_fields: HashMap<String, String>,
 }
-#[derive(Debug, Serialize, Default)]
+
+fn build_form_fields(
+    line_items_data: &Vec<StripeLineItem>, // Changed name to match struct field
+    metadata_data: Option<&StripeMetadata>, // Changed name to match struct field
+) -> HashMap<String, String> {
+    let mut fields = HashMap::new();
+
+    // --- Line Items ---
+    // This part remains the same as it correctly processes the Vec<StripeLineItem>
+    for (idx, item) in line_items_data.iter().enumerate() {
+        let line_item_base_key = format!("line_items[{}]", idx);
+
+        // Price Data for the current line item
+        let price_data_prefix = format!("{}[price_data]", line_item_base_key);
+        fields.insert(
+            format!("{}[currency]", price_data_prefix),
+            item.price_data.currency.clone(),
+        );
+        // Ensure item.price_data.unit_amount is i64 (integer cents)
+        fields.insert(
+            format!("{}[unit_amount]", price_data_prefix), // Using unit_amount
+            item.price_data.unit_amount.to_string(),
+        );
+
+        // Product Data for the current line item's price data
+        let product_data_prefix = format!("{}[product_data]", price_data_prefix);
+        fields.insert(
+            format!("{}[name]", product_data_prefix),
+            item.price_data.product_data.name.clone(),
+        );
+        if let Some(desc) = &item.price_data.product_data.description {
+            fields.insert(
+                format!("{}[description]", product_data_prefix),
+                desc.clone(),
+            );
+        }
+        // Optional: Handling metadata within product_data (if your StripeProductData has it)
+        if let Some(prod_meta) = &item.price_data.product_data.metadata {
+            for (meta_key, meta_val) in prod_meta.iter() {
+                fields.insert(
+                    format!("{}[metadata][{}]", product_data_prefix, meta_key),
+                    meta_val.clone(),
+                );
+            }
+        }
+
+        // Quantity for the current line item
+        fields.insert(
+            format!("{}[quantity]", line_item_base_key),
+            item.quantity.to_string(),
+        );
+    }
+
+    // --- Top-Level Metadata ---
+    // This part remains the same as it correctly processes Option<StripeMetadata>
+    if let Some(stripe_metadata) = metadata_data {
+        // StripeMetadata is a newtype `StripeMetadata(HashMap<String, String>)`
+        // So, access the inner HashMap using .0
+        for (key, value) in stripe_metadata.0.iter() {
+            // Stripe's form encoding for metadata is metadata[key]=value
+            fields.insert(format!("metadata[{}]", key), value.clone());
+        }
+    }
+
+    // Note: Fields like success_url, cancel_url, mode, client_reference_id, customer_email, ui_mode
+    // are part of the main StripeCreateCheckoutSession struct and will be serialized directly
+    // by serde_urlencoded because they are not marked #[serde(skip)].
+    // The #[serde(flatten)] on form_fields will merge this map with those direct fields.
+
+    fields
+}
+
+impl StripeCreateCheckoutSession {
+    pub fn new(
+        success_url: String,
+        cancel_url: String,
+        line_items_vec: Vec<StripeLineItem>, // Renamed to avoid confusion with field name
+        mode: String,
+        optional_metadata: Option<StripeMetadata>, // Renamed
+        client_reference_id: String,
+        customer_email: String,
+        ui_mode: StripeUIModeEnum,
+    ) -> Self {
+        // Call build_form_fields to populate the map
+        let generated_form_fields = build_form_fields(&line_items_vec, optional_metadata.as_ref());
+
+        Self {
+            success_url,
+            cancel_url,
+            line_items: line_items_vec, // Store the original data (it's skipped for serialization)
+            mode,                       // This will be serialized directly
+            metadata: optional_metadata, // Store the original data (skipped for serialization)
+            client_reference_id,        // This will be serialized directly
+            customer_email,             // This will be serialized directly
+            ui_mode,                    // This will be serialized directly
+            form_fields: generated_form_fields, // This map will be flattened
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Default, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum StripeUIModeEnum {
     #[default]
@@ -220,20 +339,21 @@ fn default_payment_mode() -> String {
     "payment".to_string()
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StripeLineItem {
     pub price_data: StripePriceData,
     pub quantity: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StripePriceData {
     pub currency: String,
     pub product_data: StripeProductData,
+    // pub unit_amount_decimal: f64,
     pub unit_amount: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StripeProductData {
     pub name: String,
     /// This is what is displayed to the user in the checkout page
@@ -253,6 +373,29 @@ pub struct StripeProductDescription {
     user_name: String,
     num_adults: u32,
     num_children: u32,
+}
+
+impl From<StripeProductDescription> for StripeProductData {
+    fn from(desc: StripeProductDescription) -> Self {
+        let mut metadata = HashMap::new();
+        metadata.insert("hotel_location".to_string(), desc.hotel_location);
+        metadata.insert("date_range".to_string(), desc.date_range.to_string());
+        metadata.insert("user_email".to_string(), desc.user_email);
+        metadata.insert("user_phone".to_string(), desc.user_phone);
+        metadata.insert("user_name".to_string(), desc.user_name);
+        metadata.insert("num_adults".to_string(), desc.num_adults.to_string());
+        metadata.insert("num_children".to_string(), desc.num_children.to_string());
+        metadata.insert("total_price".to_string(), desc.total_price.to_string());
+
+        Self {
+            name: desc.hotel_name,
+            description: Some(format!(
+                "Booking for {} nights",
+                desc.date_range.no_of_nights()
+            )),
+            metadata: Some(metadata),
+        }
+    }
 }
 
 impl StripeProductDescription {
@@ -339,7 +482,7 @@ impl PaymentGateway for StripeCreateCheckoutSession {
     type PaymentGatewayResponse = StripeCreateCheckoutSessionResponse;
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct StripeCreateCheckoutSessionResponse {
     id: String, // Session ID
@@ -361,7 +504,7 @@ pub struct StripeCreateCheckoutSessionResponse {
     client_reference_id: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(rename_all = "snake_case")]
 /// Use this status to fullfill the order
@@ -371,7 +514,7 @@ pub enum StripePaymentStatusEnum {
     NoPaymentRequired,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(rename_all = "snake_case")]
 pub enum StripeCheckoutSessionStatusEnum {
@@ -406,6 +549,22 @@ impl From<StripeCreateCheckoutSessionResponse> for CreateInvoiceResponse {
             is_fee_paid_by_user: false,               // Default to merchant pays fees
             source: Some("stripe".to_string()),
         }
+    }
+}
+
+#[server]
+pub async fn stripe_create_invoice(
+    request: String,
+) -> Result<StripeCreateCheckoutSessionResponse, ServerFnError> {
+    log!("[Stripe] PAYMENT_API: {request:?}");
+
+    let request: StripeCreateCheckoutSession = serde_json::from_str(&request)
+        .expect(format!("Failed to parse request. Got: {}", request).as_str());
+
+    let stripe = StripeEstate::default();
+    match stripe.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => Err(ServerFnError::ServerError(e.to_string())),
     }
 }
 
@@ -445,14 +604,23 @@ pub fn create_stripe_checkout_session(
         num_children,
     );
 
-    Ok(StripeCreateCheckoutSession {
-        success_url: get_payments_url("success"),
-        cancel_url: get_payments_url("cancel"),
-        line_items: vec![],
-        mode: "payment".to_string(),
-        client_reference_id: order_id,
-        customer_email: email.clone(),
-        ui_mode: StripeUIModeEnum::Hosted,
-        metadata: Some(StripeMetadata(HashMap::new())),
-    })
+    let stripe_line_item = StripeLineItem {
+        price_data: StripePriceData {
+            currency: "usd".to_string(),
+            product_data: stripe_product_description.into(),
+            unit_amount: (total_price * 100.0).round() as u32,
+        },
+        quantity: 1,
+    };
+
+    Ok(StripeCreateCheckoutSession::new(
+        get_payments_url("success"),
+        get_payments_url("cancel"),
+        vec![stripe_line_item],
+        "payment".to_string(),
+        Some(StripeMetadata(HashMap::new())),
+        order_id,
+        email.clone(),
+        StripeUIModeEnum::Hosted,
+    ))
 }
