@@ -26,10 +26,10 @@ impl AdminCanisters {
         Self::new(key)
     }
 
-    pub fn from_env_axum_ssr() -> Self {
-        let key = create_identity_from_admin_principal_axum_ssr();
-        Self::new(key)
-    }
+    // pub fn from_env_axum_ssr() -> Self {
+    //     let key = create_identity_from_admin_principal_axum_ssr();
+    //     Self::new(key)
+    // }
 
     pub async fn backend_canister(&self) -> Backend {
         let agent = self.agent.get_agent().await;
@@ -46,18 +46,7 @@ impl AdminCanisters {
 /// Must be run on server only
 /// since EnvVarConfig is available in letpos server function context
 fn create_identity_from_admin_principal() -> impl Identity {
-    let config: EnvVarConfig = expect_context();
-
-    let identity = ic_agent::identity::Secp256k1Identity::from_pem(
-        stringreader::StringReader::new(config.admin_private_key.as_str()),
-    )
-    .unwrap();
-
-    identity
-}
-
-fn create_identity_from_admin_principal_axum_ssr() -> impl Identity {
-    let config = EnvVarConfig::try_from_env();
+    let config = EnvVarConfig::expect_context_or_try_from_env();
 
     let identity = ic_agent::identity::Secp256k1Identity::from_pem(
         stringreader::StringReader::new(config.admin_private_key.as_str()),
@@ -79,7 +68,7 @@ pub fn admin_canister() -> AdminCanisters {
         }
         None => {
             info!("admin_canister: Using AdminCanisters from env/axum SSR");
-            AdminCanisters::from_env_axum_ssr()
+            AdminCanisters::from_env()
         }
     }
 }

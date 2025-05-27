@@ -127,11 +127,7 @@ pub trait ProvabReqMeta: Sized + Send {
 
 pub trait ProvabReq: ProvabReqMeta + Debug {
     fn base_path() -> String {
-        // get_provab_base_url_from_env().to_owned()
-        // log!("base_path() BEFORE");
-
-        let env_var_config: EnvVarConfig = expect_context();
-        // log!("base_path(): {env_var_config:#?}");
+        let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
 
         env_var_config.provab_base_url
     }
@@ -143,10 +139,7 @@ pub trait ProvabReq: ProvabReqMeta + Debug {
     fn path_suffix() -> &'static str;
 
     fn headers() -> HeaderMap {
-        // get_headers_from_env()
-        // log!("headers(): BEFORE");
-
-        let env_var_config: EnvVarConfig = expect_context();
+        let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
 
         env_var_config.get_headers()
     }

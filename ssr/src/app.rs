@@ -100,7 +100,9 @@ impl AppRoutes {
         SITEMAP.get_or_init(|| {
             let urls: Vec<UrlEntry> = Self::all()
                 .map(|route| UrlEntry {
-                    loc: format!("{}{}", APP_URL, route.to_string()).parse().unwrap(),
+                    loc: format!("{}{}", APP_URL.as_str(), route.to_string())
+                        .parse()
+                        .unwrap(),
                     changefreq: Some(route.get_change_freq()),
                     priority: Some(route.get_priority()),
                     lastmod: Some(Utc::now()),

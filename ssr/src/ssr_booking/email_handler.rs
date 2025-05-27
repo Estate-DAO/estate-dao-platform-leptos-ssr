@@ -111,7 +111,7 @@ impl EmailClient {
         let mail_state = self.get_config().ok();
 
         // get booking details from backend
-        let admin_canister = AdminCanisters::from_env_axum_ssr();
+        let admin_canister = AdminCanisters::from_env();
         let backend = admin_canister.backend_canister().await;
         let booking_id = BookingId::from_order_id(&ssb_event.order_id).ok_or(format!(
             "Failed to parse booking id: {}",
@@ -224,7 +224,7 @@ pub async fn update_backend_email_sent(
     email_client: &EmailClient,
 ) -> Result<(), String> {
     // Update backend: set email_sent = true
-    let admin_canister = AdminCanisters::from_env_axum_ssr();
+    let admin_canister = AdminCanisters::from_env();
     let backend = admin_canister.backend_canister().await;
     let update_result = backend
         .update_email_sent(
@@ -312,7 +312,7 @@ impl PipelineValidator for SendEmailAfterSuccessfullBooking {
 async fn check_email_sent_status_from_canister(
     event: &ServerSideBookingEvent,
 ) -> Result<bool, String> {
-    let admin_canister = AdminCanisters::from_env_axum_ssr();
+    let admin_canister = AdminCanisters::from_env();
     let backend = admin_canister.backend_canister().await;
     let booking_id = BookingId::from_order_id(&event.order_id)
         .ok_or(format!("Failed to parse booking id: {}", event.order_id))?;
@@ -330,7 +330,7 @@ async fn check_email_sent_status_from_canister(
 async fn update_email_sent_status_in_canister(
     event: &ServerSideBookingEvent,
 ) -> Result<(), String> {
-    let admin_canister = AdminCanisters::from_env_axum_ssr();
+    let admin_canister = AdminCanisters::from_env();
     let backend = admin_canister.backend_canister().await;
     let booking_id = BookingId::from_order_id(&event.order_id)
         .ok_or(format!("Failed to parse booking id: {}", event.order_id))?;

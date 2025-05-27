@@ -90,7 +90,7 @@ impl NowPayments {
 
 impl Default for NowPayments {
     fn default() -> Self {
-        let env_var_config: EnvVarConfig = expect_context();
+        let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
 
         NowPayments::new(
             env_var_config.nowpayments_api_key,

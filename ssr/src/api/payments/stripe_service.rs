@@ -6,7 +6,9 @@ use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
     PaymentGateway, PaymentGatewayParams,
 };
-use crate::api::consts::{env_w_default, get_payments_url, EnvVarConfig};
+use crate::api::consts::{
+    env_w_default, get_payments_url, get_payments_url_v2, EnvVarConfig, PaymentProvider,
+};
 use crate::canister::backend::SelectedDateRange as BackendSelectedDateRange;
 use crate::component::SelectedDateRange;
 use crate::cprintln;
@@ -119,7 +121,7 @@ impl StripeEstate {
 
 impl Default for StripeEstate {
     fn default() -> Self {
-        let env_var_config: EnvVarConfig = expect_context();
+        let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
 
         StripeEstate::new(
             env_var_config.stripe_secret_key,
@@ -625,8 +627,8 @@ pub fn create_stripe_checkout_session(
     };
 
     Ok(StripeCreateCheckoutSession::new(
-        get_payments_url("success"),
-        get_payments_url("cancel"),
+        get_payments_url_v2("success", PaymentProvider::Stripe),
+        get_payments_url_v2("cancel", PaymentProvider::Stripe),
         vec![stripe_line_item],
         "payment".to_string(),
         Some(StripeMetadata(HashMap::new())),

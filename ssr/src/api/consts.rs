@@ -16,7 +16,7 @@ pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
 // APP_URL
-const LOCALHOST_APP_URL: &str = "http://localhost:3000";
+const LOCALHOST_APP_URL: &str = "https://louse-musical-hideously.ngrok-free.app";
 const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
 const PROD_APP_URL: &str = "https://nofeebooking.com";
 
@@ -30,17 +30,19 @@ pub const GTAG_MEASUREMENT_ID: Lazy<&str> = Lazy::new(|| "G-BPRVSPTP2T");
 
 cfg_if! {
     if #[cfg(feature = "local-consts")] {
-        pub const APP_URL: &str = LOCALHOST_APP_URL;
+        pub static APP_URL: Lazy<String> = Lazy::new(|| {
+            env_w_default("NGROK_LOCALHOST_URL", LOCALHOST_APP_URL).unwrap().to_string()
+        });
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
     }
     else if #[cfg(feature = "prod-consts")] {
-        pub const APP_URL: &str = PROD_APP_URL;
+        pub static APP_URL: Lazy<String> = Lazy::new(|| PROD_APP_URL.to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else {
-        pub const APP_URL: &str = STAGING_APP_URL;
+        pub static APP_URL: Lazy<String> = Lazy::new(|| STAGING_APP_URL.to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
@@ -64,6 +66,7 @@ pub fn get_default_provab_base_url() -> &'static str {
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
+use leptos::use_context;
 use once_cell::sync::Lazy;
 // use dotenvy::dotenv;
 // use leptos::logging::log;
@@ -76,7 +79,7 @@ use thiserror::Error;
 
 #[cfg(feature = "mock-provab")]
 pub fn get_payments_url(_status: &str) -> String {
-    let base_url = APP_URL;
+    let base_url = APP_URL.as_str();
     let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
         .unwrap_or_else(|e| {
             eprintln!("Error joining URL: {}", e);
@@ -88,7 +91,7 @@ pub fn get_payments_url(_status: &str) -> String {
 
 #[cfg(not(feature = "mock-provab"))]
 pub fn get_payments_url(status: &str) -> String {
-    let base_url = APP_URL;
+    let base_url = APP_URL.as_str();
     let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
         .unwrap_or_else(|e| {
             eprintln!("Error joining URL: {}", e);
@@ -100,6 +103,77 @@ pub fn get_payments_url(status: &str) -> String {
         format!("get_payments_url - {}", url).bright_green().bold()
     );
     url
+}
+
+/// Get payment URL with provider-specific parameters
+/// For Stripe: Adds ?session_id={CHECKOUT_SESSION_ID}
+/// For NowPayments: Adds ?payment=<status>
+#[cfg(not(feature = "mock-provab"))]
+pub fn get_payments_url_v2(status: &str, provider: PaymentProvider) -> String {
+    let base_url = APP_URL.as_str();
+    let confirmation_url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
+        .unwrap_or_else(|e| {
+            eprintln!("Error joining URL: {}", e);
+            base_url.to_string() // Fallback to base URL if joining fails
+        });
+
+    let url = match provider {
+        PaymentProvider::Stripe => {
+            format!("{}?session_id={{CHECKOUT_SESSION_ID}}", confirmation_url)
+        }
+        PaymentProvider::NowPayments => format!("{}?payment={}", confirmation_url, status),
+    };
+
+    println!(
+        "{}",
+        format!("get_payments_url_v2 - {}", url)
+            .bright_green()
+            .bold()
+    );
+    url
+}
+
+#[cfg(feature = "mock-provab")]
+pub fn get_payments_url_v2(_status: &str, provider: PaymentProvider) -> String {
+    let base_url = APP_URL.as_str();
+    let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
+        .unwrap_or_else(|e| {
+            eprintln!("Error joining URL: {}", e);
+            base_url.to_string() // Fallback to base URL if joining fails
+        });
+
+    // For mock,  return NP_id=4766973829 for nowpayments
+    // for stripe, return session_id={CHECKOUT_SESSION_ID}
+    match provider {
+        PaymentProvider::Stripe => format!("{}?session_id={{CHECKOUT_SESSION_ID}}", url),
+        PaymentProvider::NowPayments => format!("{}?NP_id={}", url, "4766973829"),
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PaymentProvider {
+    Stripe,
+    NowPayments,
+}
+
+/// ipn = Instant Payment Notification
+#[cfg(not(feature = "mock-provab"))]
+pub fn get_ipn_callback_url(provider: PaymentProvider) -> String {
+    let base_url = APP_URL.as_str();
+    match provider {
+        PaymentProvider::Stripe => format!("{}/stripe/webhook", base_url),
+        PaymentProvider::NowPayments => format!("{}/ipn/webhook", base_url),
+    }
+}
+
+/// ipn = Instant Payment Notification
+#[cfg(feature = "mock-provab")]
+pub fn get_ipn_callback_url(provider: PaymentProvider) -> String {
+    let base_url = APP_URL.as_str();
+    match provider {
+        PaymentProvider::Stripe => format!("{}/stripe/webhook", base_url),
+        PaymentProvider::NowPayments => format!("{}/ipn/webhook", base_url),
+    }
 }
 
 pub fn get_price_amount_based_on_env(price: u32) -> u32 {
@@ -129,6 +203,14 @@ pub struct EnvVarConfig {
 }
 
 impl EnvVarConfig {
+    pub fn expect_context_or_try_from_env() -> Self {
+        let env_var_config = use_context::<EnvVarConfig>();
+        match env_var_config {
+            Some(env_var_config) => env_var_config,
+            None => Self::try_from_env(),
+        }
+    }
+
     pub fn try_from_env() -> Self {
         log_other_consts();
         let provab_headers = env_or_panic("PROVAB_HEADERS");
@@ -203,7 +285,7 @@ impl ConfigLoader for EmailConfig {
 }
 
 fn log_other_consts() {
-    log!("APP_URL: {}", APP_URL);
+    log!("APP_URL: {}", APP_URL.as_str());
     log!("AGENT_URL: {}", AGENT_URL);
     log!("AGENT_URL: {}", AGENT_URL);
 }

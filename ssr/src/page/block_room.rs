@@ -4,7 +4,10 @@
 use crate::api::_default_passenger_age;
 use crate::api::block_room;
 use crate::api::canister::add_booking::add_booking_backend;
-use crate::api::consts::{get_payments_url, get_price_amount_based_on_env, APP_URL};
+use crate::api::consts::get_ipn_callback_url;
+use crate::api::consts::get_payments_url_v2;
+use crate::api::consts::PaymentProvider;
+use crate::api::consts::{get_payments_url, get_price_amount_based_on_env};
 use crate::api::get_room;
 use crate::api::payments::create_stripe_checkout_session;
 use crate::api::payments::nowpayments_create_invoice;
@@ -538,10 +541,13 @@ pub fn BlockRoomPage() -> impl IntoView {
                             &email,
                         ),
                         order_description: "Hotel Room Booking".to_string(),
-                        ipn_callback_url: format!("{}/ipn/webhook", APP_URL),
-                        success_url: get_payments_url("success"),
-                        cancel_url: get_payments_url("cancel"),
-                        partially_paid_url: get_payments_url("partial"),
+                        ipn_callback_url: get_ipn_callback_url(PaymentProvider::NowPayments),
+                        success_url: get_payments_url_v2("success", PaymentProvider::NowPayments),
+                        cancel_url: get_payments_url_v2("cancel", PaymentProvider::NowPayments),
+                        partially_paid_url: get_payments_url_v2(
+                            "partial",
+                            PaymentProvider::NowPayments,
+                        ),
                         is_fixed_rate: false,
                         is_fee_paid_by_user: false,
                     };
