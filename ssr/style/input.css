@@ -94,6 +94,13 @@
         @apply p-4 text-gray-700;
     }
     
+    body.overflow-hidden {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+  }
+  
     .error-popup-footer {
         @apply p-4 bg-gray-100 flex justify-end;
     }

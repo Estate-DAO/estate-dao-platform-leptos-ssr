@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
-use tracing::{info, instrument};
+#[cfg(feature = "ssr")]
+use tracing::instrument;
 // use sha2::digest::block_buffer::Block; // Removed as it's causing E0433 and seems unused
 use super::ports::{
     CreateInvoiceRequest, CreateInvoiceResponse, GetPaymentStatusRequest, GetPaymentStatusResponse,
@@ -58,6 +59,7 @@ impl StripeEstate {
         Self::new(api_key, api_host, ipn_secret)
     }
 
+    #[cfg(feature = "ssr")]
     #[instrument(skip(self))]
     pub async fn send<Req: PaymentGateway + PaymentGatewayParams + Serialize + std::fmt::Debug>(
         &self,
@@ -73,7 +75,7 @@ impl StripeEstate {
                 log!("[Stripe] url = {url:#?}");
                 // For debugging serialization issues with .form()
                 match serde_urlencoded::to_string(&req) {
-                    Ok(form_str) => info!("[Stripe] Serialized form data: {}", form_str),
+                    Ok(form_str) => log!("[Stripe] Serialized form data: {}", form_str),
                     Err(e) => error!("[Stripe] Failed to serialize form data with serde_urlencoded: {:?}", e),
                 }
 
@@ -377,6 +379,7 @@ pub struct StripeProductDescription {
 
 impl From<StripeProductDescription> for StripeProductData {
     fn from(desc: StripeProductDescription) -> Self {
+        let desc_clone = desc.clone();
         let mut metadata = HashMap::new();
         metadata.insert("hotel_location".to_string(), desc.hotel_location);
         metadata.insert("date_range".to_string(), desc.date_range.to_string());
@@ -388,17 +391,25 @@ impl From<StripeProductDescription> for StripeProductData {
         metadata.insert("total_price".to_string(), desc.total_price.to_string());
 
         Self {
-            name: desc.hotel_name,
-            description: Some(format!(
-                "Booking for {} nights",
-                desc.date_range.no_of_nights()
-            )),
+            name: desc.hotel_name.clone(),
+            description: Some(desc_clone.displayable_description()),
             metadata: Some(metadata),
         }
     }
 }
 
 impl StripeProductDescription {
+    /// Returns a simple text description with hotel, location, dates and phone
+    pub fn displayable_description(&self) -> String {
+        format!(
+            "{} at {}, during {} \nPhone: {}",
+            self.hotel_name,
+            self.hotel_location,
+            self.date_range.to_string(),
+            self.user_phone
+        )
+    }
+
     pub fn new(
         hotel_name: impl Into<String>,
         location: impl Into<String>,
