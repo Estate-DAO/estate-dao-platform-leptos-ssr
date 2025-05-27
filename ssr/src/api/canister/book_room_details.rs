@@ -3,7 +3,7 @@ use crate::utils::admin::admin_canister;
 use crate::utils::app_reference::BookingId;
 use colored::Colorize;
 // use leptos::logging::log;
-use crate::log;
+use crate::{log, warn};
 use leptos::*;
 
 #[server(GreetBackend)]
@@ -28,14 +28,14 @@ pub async fn call_update_book_room_details_backend(
     let adm_cans = admin_canister();
 
     let backend_cans = adm_cans.backend_canister().await;
-    println!("{:#?}", book_room_details_struct);
+    log!("book_room_details_struct - {:#?}", book_room_details_struct);
 
     let result = backend_cans
         .update_book_room_response(booking_id, book_room_details_struct)
         .await
         .map_err(|e| e.to_string())?;
 
-    println!("{}", format!("{:#?}", result).bright_purple().bold());
+    log!("{}", format!("{:#?}", result).bright_purple().bold());
 
     match result {
         Result_::Ok(save_status) => Ok(save_status),

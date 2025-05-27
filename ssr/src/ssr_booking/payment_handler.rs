@@ -192,6 +192,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
 
         // Get payment status with retry
         let response = check_if_payment_status_finished_with_backoff(request, None).await?;
+        // info!("payment_status from API: {response:#?}");
         // let response = get_payment_status_with_retry(request).await?;
 
         // Get payment status string from response
@@ -237,7 +238,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
             payment_api_response,
         };
 
-        let admin_canister = AdminCanisters::from_env_axum_ssr();
+        let admin_canister = AdminCanisters::from_env();
         let backend = admin_canister.backend_canister().await;
         // .map_err(|e| format!("Failed to get backend canister: {}", e))?;
 

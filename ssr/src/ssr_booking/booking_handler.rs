@@ -110,6 +110,9 @@ async fn book_room_and_update_backend(
     // Ok(updated_event)
 
     // todo (booking_hold) check for the backend booking status -- if BookingOnHold - then keep calling the booking provider for the final status.
+    // let hotel_booking_detail_response = get_hotel_booking_detail_from_travel_provider_v2(HotelBookingDetailRequest { app_reference: app_ref.clone() })
+    //     .await
+    //     .map_err(|e| format!("Failed in get_hotel_booking_detail_from_travel_provider_v2 for BookingOnHold: {e}")).ok();
 
     Ok(event)
 }
@@ -168,6 +171,65 @@ async fn book_room_hotel_details_looped(
 pub struct MakeBookingFromBookingProvider;
 
 impl MakeBookingFromBookingProvider {
+    /// Verifies that the payment status is 'Paid'
+    #[instrument(name = "verify_payment_status", skip(payment_status), err(Debug))]
+    fn verify_payment_status(payment_status: &backend::BackendPaymentStatus) -> Result<(), String> {
+        match payment_status {
+            backend::BackendPaymentStatus::Paid(paid_status) => {
+                info!("paid_status: {}", paid_status);
+                Ok(())
+            }
+            unpaid_or_failed_status => Err(format!(
+                "Payment status is not finished/paid - {:?}",
+                unpaid_or_failed_status
+            )),
+        }
+    }
+
+    /// Processes the booking based on its current status
+    #[instrument(name = "process_booking_status", skip(event, booking), err(Debug))]
+    async fn process_booking_status(
+        event: ServerSideBookingEvent,
+        booking: backend::Booking,
+    ) -> Result<ServerSideBookingEvent, String> {
+        let booking_clone = booking.clone();
+        match booking.book_room_status {
+            Some(book_room_status) => {
+                let booking_status = &book_room_status.commit_booking.resolved_booking_status;
+
+                match booking_status {
+                    backend::ResolvedBookingStatus::BookingConfirmed => {
+                        info!("Booking already confirmed, returning result.");
+                        Ok(event)
+                    }
+                    backend::ResolvedBookingStatus::Unknown => {
+                        info!("Payment confirmed, proceeding with booking provider call");
+                        book_room_and_update_backend(event, booking_clone).await
+                    }
+                    backend::ResolvedBookingStatus::BookingOnHold => {
+                        info!("Booking is on hold, proceeding with booking provider call");
+                        book_room_hotel_details_looped(event).await
+                    }
+                    invalid_status @ (backend::ResolvedBookingStatus::BookingCancelled
+                    | backend::ResolvedBookingStatus::BookingFailed) => {
+                        info!("Cannot proceed - booking status is {:?}", invalid_status);
+                        Err(format!(
+                            "Cannot proceed with booking - current status is {:?}",
+                            invalid_status
+                        ))
+                    }
+                }
+            }
+
+            None => {
+                info!(
+                    "booking.book_room_status.is_none() => proceeding with booking provider call"
+                );
+                book_room_and_update_backend(event, booking_clone).await
+            }
+        }
+    }
+
     #[instrument(
         name = "make_booking_from_booking_provider_run",
         skip(event),
@@ -205,94 +267,11 @@ impl MakeBookingFromBookingProvider {
             })
             .ok_or_else(|| "No matching booking found for user".to_string())?;
 
-        // 1d. Check payment status must be 'finished' (Paid)
-        match &booking.payment_details.payment_status {
-            backend::BackendPaymentStatus::Paid(paid_status) => {
-                info!("paid_status: {}", paid_status);
-                // Continue to next steps
-            }
-            unpaid_or_failed_status => {
-                return Err(format!(
-                    "Payment status is not finished/paid - {:?}",
-                    unpaid_or_failed_status
-                ))
-            }
-        }
+        let booking_clone = booking.clone();
+        // 1d. Verify payment status
+        Self::verify_payment_status(&booking.payment_details.payment_status)?;
 
-        // 2. Check booking status and handle accordingly
-        match &booking.book_room_status {
-            Some(book_room_status) => {
-                match &book_room_status.commit_booking.resolved_booking_status {
-                    backend::ResolvedBookingStatus::BookingConfirmed => {
-                        info!("Booking already confirmed, returning result.");
-                        return Ok(event);
-                    }
-                    // todo - fix this later
-                    backend::ResolvedBookingStatus::Unknown => {
-                        // backend::BookingStatus::PaymentConfirmed | backend::BookingStatus::PaymentPolling => {
-                        // backend::BookingStatus::PaymentConfirmed => {
-                        info!("Payment confirmed, proceeding with booking provider call");
-                        book_room_and_update_backend(event, booking).await
-                    }
-                    invalid_status @ (backend::ResolvedBookingStatus::BookingCancelled
-                    | backend::ResolvedBookingStatus::BookingFailed) => {
-                        // invalid_status @ (backend::BookingStatus::PaymentPolling | backend::BookingStatus::BookingCancelled | backend::BookingStatus::BookFailed) => {
-                        info!("Cannot proceed - booking status is {:?}", invalid_status);
-                        return Err(format!(
-                            "Cannot proceed with booking - current status is {:?}",
-                            invalid_status
-                        ));
-                    }
-                    backend::ResolvedBookingStatus::BookingOnHold => {
-                        info!("Booking is on hold, proceeding with booking provider call");
-                        // todo (booking_hold) fix this by doing a periodic call
-                        book_room_hotel_details_looped(event).await
-                        // return Err(format!(
-                        //     "Booking is on hold, cannot proceed with booking provider call"
-                        // ));
-                    }
-                }
-            }
-            None => {
-                warn!("No book_room_status found for booking");
-                return Err("No book_room_status found for booking".to_string());
-            }
-        }
-
-        // -----------------------------
-
-        // step 1: update the backend that book_room api will be called now.
-        // let booking_id = BookingId {
-        //     app_reference: event.order_id.clone(),
-        //     email: event.user_email.clone(),
-        // };
-        // -----------------------------
-
-        // // Update the backend with a message indicating that we're about to call book_room API
-        // let backend = event.backend.as_ref().ok_or("Backend not initialized")?;
-        // backend.update_booking_message(booking_id, "Initiating room booking process...".to_string())
-        //     .await
-        //     .map_err(|e| format!("Failed to update booking message: {}", e))?;
-
-        // step 2: call the book_room API from file a04_book_room.rs
-        // step 3: check the response from API,
-
-        // if success, update the backend with relevant data
-        //
-        // #[derive(CandidType, Deserialize, Default, Serialize, Clone, Debug)]
-        // pub struct BEBookRoomResponse {
-        //     pub status: String,
-        //     pub message: String,
-        //     pub commit_booking: BookingDetails,
-        // }
-
-        // if failure in book_room status, also update the above.
-        // if API failure happens (API response.status != 200 -- see a04_book_room.rs and client.rs for more details) - return error from pipeline
-
-        // step 4: if backend is updated with BEBookRoomResponse, return updated event
-
-        // make the task list and keep updating scratchpad.md accordingly.
-        //
+        Self::process_booking_status(event, booking_clone).await
     }
 }
 
