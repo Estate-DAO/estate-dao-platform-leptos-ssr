@@ -44,6 +44,17 @@ type BookingDetails = record {
 };
 type BookingId = record { app_reference : text; email : text };
 type BookingStatus = variant { BookFailed; Confirmed };
+type BookingSummary = record {
+  destination : text;
+  hotel_name : text;
+  booking_dates : text;
+  booking_status : text;
+  user_email : text;
+  payment_status : text;
+  nights : nat32;
+  payment_id : text;
+  booking_id : BookingId;
+};
 type ChildDetail = record {
   age : nat8;
   first_name : text;
@@ -102,6 +113,7 @@ type UserDetails = record {
 service : {
   add_booking : (text, Booking) -> (Result);
   add_controller : (principal) -> (Result_1);
+  get_all_bookings : () -> (vec BookingSummary) query;
   get_booking_by_id : (BookingId) -> (opt Booking) query;
   get_controllers : () -> (vec principal) query;
   get_email_sent : (BookingId) -> (Result_2) query;

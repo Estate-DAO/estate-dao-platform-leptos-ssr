@@ -1,6 +1,10 @@
+use crate::component::data_table_3::DataTableV3;
 use leptos::*;
 
 #[component]
 pub fn AdminPanelPage() -> impl IntoView {
-    view! { <div>Admin Panel</div> }.into_view()
+    view! {
+       <DataTableV3 />
+    }
+    .into_view()
 }

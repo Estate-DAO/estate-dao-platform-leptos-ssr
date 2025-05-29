@@ -1,13 +1,19 @@
 use crate::{
     canister::backend::{
-        self, BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, Destination,
-        HotelRoomDetails, PaymentDetails,
+        self, BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, BookingSummary,
+        Destination, HotelRoomDetails, PaymentDetails,
     },
     component::{Destination as FrontendDestination, SelectedDateRange as FrontendDateRange},
     state::view_state::{AdultDetail as FrontendAdultDetail, ChildDetail as FrontendChildDetail},
 };
 
 use crate::utils::app_reference::BookingId as AppReferenceBookingId;
+
+impl PartialEq for BookingSummary {
+    fn eq(&self, other: &Self) -> bool {
+        self.booking_id.app_reference == other.booking_id.app_reference
+    }
+}
 
 impl Default for BePaymentApiResponse {
     fn default() -> Self {

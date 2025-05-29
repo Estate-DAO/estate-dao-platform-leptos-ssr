@@ -4,7 +4,8 @@ use crate::{
         payments::ports::GetPaymentStatusResponse,
     },
     component::{
-        ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample, NotificationState,
+        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample,
+        NotificationState,
     },
     error_template::{AppError, ErrorTemplate},
     page::{
@@ -148,6 +149,7 @@ pub fn App() -> impl IntoView {
 
     provide_context(ApiErrorState::default());
 
+    provide_context(DataTableCtx::default());
     // provide_context(NotificationState::default());
 
     // Provides Query Client for entire app.
