@@ -288,14 +288,41 @@ pub fn DataTableV3() -> impl IntoView {
         move |_| async move { get_all_bookings_backend().await.unwrap_or(vec![]) },
     );
 
-    // Create a signal that filters and sorts the bookings
-    let filtered_sorted_bookings = create_rw_signal(vec![]);
+    // Use create_local_resource that combines data fetching with filtering/sorting
+    let filtered_sorted_bookings = create_local_resource(
+        move || {
+            (
+                ctx.booking_id_filter.get(),
+                ctx.destination_filter.get(),
+                ctx.hotel_name_filter.get(),
+                ctx.booking_dates_filter.get(),
+                ctx.user_email_filter.get(),
+                ctx.booking_status_filter.get(),
+                ctx.payment_status_filter.get(),
+                ctx.payment_id_filter.get(),
+                ctx.sort_column.get(),
+                ctx.sort_direction.get(),
+            )
+        },
+        move |filters| async move {
+            let bookings = all_user_bookings.get().unwrap_or(vec![]);
+            DataTableCtx::filter_and_sort_bookings(bookings)
+        },
+    );
 
-    create_effect(move |_| {
-        all_user_bookings.get().map(|bookings| {
-            filtered_sorted_bookings.set(DataTableCtx::filter_and_sort_bookings(bookings));
-        });
-    });
+    // this create effect method also works.
+    // // Create a signal that filters and sorts the bookings
+    // let filtered_sorted_bookings = create_rw_signal(vec![]);
+
+    // create_effect(move |_| {
+    //     all_user_bookings.get().map(|bookings| {
+    //         filtered_sorted_bookings.set(DataTableCtx::filter_and_sort_bookings(bookings));
+    //     });
+    // });
+
+    // let filtered_sorted_bookings = create_local_resource(move || all_user_bookings.get(), move |user_bookings_from_api| async move {
+    //     DataTableCtx::filter_and_sort_bookings(user_bookings_from_api.unwrap_or(vec![]))
+    // });
 
     view! {
         <div class="p-4 bg-white shadow rounded-lg">
@@ -303,10 +330,10 @@ pub fn DataTableV3() -> impl IntoView {
             <div class="flex justify-between items-center mb-4">
                 <Suspense fallback=move || view! { <h1 class="text-2xl font-bold">"Loading bookings..."</h1> }>
                     {move || {
-                        let bookings = filtered_sorted_bookings.get();
+                        let bookings_len = all_user_bookings.get().map(|bookings| bookings.len()).unwrap_or(0);
                         view! {
                             <h1 class="text-2xl font-bold">
-                                {format!("Bookings: {}", bookings.len())}
+                                {format!("Bookings: {}", bookings_len)}
                             </h1>
                         }
                     }}
@@ -394,8 +421,9 @@ pub fn DataTableV3() -> impl IntoView {
                             </tr>
                         }>
                             {move || {
-                                let bookings = filtered_sorted_bookings.get();
-                                if bookings.is_empty() {
+                                // let bookings = filtered_sorted_bookings.get();
+                                filtered_sorted_bookings.get().map(|bookings| {
+                                    if bookings.is_empty() {
                                     view! {
                                         <tr>
                                             <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">"No bookings found matching the current filters."</td>
@@ -441,6 +469,7 @@ pub fn DataTableV3() -> impl IntoView {
                                         }
                                     }).collect::<Vec<_>>().into_view()
                                 }
+                            })
                             }}
                         </Suspense>
                     </tbody>
