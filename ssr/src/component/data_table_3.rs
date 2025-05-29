@@ -238,14 +238,24 @@ fn FilterInput(
     value_signal: RwSignal<String>,
     on_input: impl Fn(String) + 'static + Clone,
 ) -> impl IntoView {
+    let column_name = placeholder.replace("Filter ", "").replace("...", "");
+
     view! {
-        <input
-            type="text"
-            placeholder=placeholder
-            class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            prop:value=move || value_signal.get()
-            on:input=move |ev| on_input(event_target_value(&ev))
-        />
+        <div class="relative group">
+            <input
+                type="text"
+                placeholder=placeholder
+                class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                prop:value=move || value_signal.get()
+                on:input=move |ev| on_input(event_target_value(&ev))
+            />
+            <div class="absolute left-1/2 -translate-x-1/2 -top-2 transform -translate-y-full
+                        px-2 py-1 bg-gray-800 text-white text-sm rounded-md
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                        pointer-events-none whitespace-nowrap">
+                {column_name}
+            </div>
+        </div>
     }
 }
 
@@ -348,7 +358,7 @@ pub fn DataTableV3() -> impl IntoView {
             </div>
 
             // Filter inputs
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6 mb-6">
                 <FilterInput
                     placeholder="Filter Booking ID..."
                     value_signal=ctx.booking_id_filter
