@@ -12,6 +12,7 @@ use estate_fe::{
         payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
         pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
+    state,
     utils::{
         admin::AdminCanisters,
         app_reference::BookingId,
@@ -32,7 +33,7 @@ cfg_if! {
             http::Request,
             response::{IntoResponse, Response, sse::{Event, Sse, KeepAlive}},
         };
-        use axum::{routing::get, Router, routing::post};
+        use axum::{middleware, routing::get, Router, routing::post};
 
         use leptos::*;
         use leptos::{get_configuration, logging::log, provide_context};
@@ -62,6 +63,9 @@ cfg_if! {
         mod sitemap;
 
         use sitemap::sitemap_handler;
+
+        mod basic_auth;
+        use basic_auth::*;
 
         // Helper: verify NowPayments HMAC-SHA512 signature (gated by feature)
         #[cfg(not(feature = "debug_log"))]
@@ -137,25 +141,6 @@ cfg_if! {
             );
             handler(req).await.into_response()
         }
-
-        // async fn sse_handler(
-        //     State(state): State<AppState>,
-        // ) -> Sse<impl Stream<Item = Result<Event, axum::BoxError>>> {
-        //     let mut count_rx = state.count_tx.subscribe();
-
-        //     let stream = async_stream::stream! {
-        //         // Send the initial count
-        //         let initial_count = get_server_count().await.unwrap_or(0);
-        //         yield Ok(Event::default().data(initial_count.to_string()));
-
-        //         // Listen for count updates
-        //         while let Ok(count) = count_rx.recv().await {
-        //             yield Ok(Event::default().data(count.to_string()));
-        //         }
-        //     };
-
-        //     Sse::new(stream).keep_alive(KeepAlive::default())
-        // }
 
 
         #[instrument(skip(state))]
@@ -321,6 +306,10 @@ cfg_if! {
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(trace_layer)
+                // Protect admin routes with browser challenge
+                .layer(
+                    middleware::from_fn_with_state(res.clone(),selective_auth_middleware)
+                )
                 .with_state(res);
 
             let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

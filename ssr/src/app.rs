@@ -8,7 +8,7 @@ use crate::{
     },
     error_template::{AppError, ErrorTemplate},
     page::{
-        BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
+        AdminPanelPage, BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
         PaymentBookingStatusUpdates, RootPage, SSEBookingStatusUpdates, SSEConfirmationPage,
     },
     state::{
@@ -51,6 +51,7 @@ pub enum AppRoutes {
     HotelDetails,
     BlockRoom,
     Confirmation,
+    AdminPanel,
     // Notifications
 }
 
@@ -62,6 +63,7 @@ impl AppRoutes {
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
             AppRoutes::Confirmation => "/confirmation",
+            AppRoutes::AdminPanel => "/admin-panel",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -73,6 +75,7 @@ impl AppRoutes {
             Self::HotelDetails,
             Self::BlockRoom,
             Self::Confirmation,
+            Self::AdminPanel,
             // Self::Notifications,
         ]
         .into_iter()
@@ -85,6 +88,7 @@ impl AppRoutes {
             AppRoutes::HotelDetails => 0.8,
             AppRoutes::BlockRoom => 0.7,
             AppRoutes::Confirmation => 0.6,
+            AppRoutes::AdminPanel => 0.1,
             // AppRoutes::Notifications => 0.5,
         }
     }
@@ -183,6 +187,7 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomPage />
                     <Route path=AppRoutes::Confirmation.to_string() view=SSEConfirmationPage />
+                    <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                     // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>

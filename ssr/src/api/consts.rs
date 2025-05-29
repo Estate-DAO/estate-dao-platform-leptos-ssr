@@ -200,6 +200,11 @@ pub struct EnvVarConfig {
     // pub payment_skip_local: String
     pub stripe_secret_key: String,
     pub stripe_webhook_secret: String,
+
+    // basic auth for the time being
+    // todo(auth) - replace with yral auth when integrated
+    pub basic_auth_username: String,
+    pub basic_auth_password: String,
 }
 
 impl EnvVarConfig {
@@ -212,7 +217,7 @@ impl EnvVarConfig {
     }
 
     pub fn try_from_env() -> Self {
-        log_other_consts();
+        // log_other_consts();
         let provab_headers = env_or_panic("PROVAB_HEADERS");
 
         let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
@@ -247,6 +252,8 @@ impl EnvVarConfig {
             stripe_webhook_secret: env_w_default("STRIPE_WEBHOOK_SECRET", "dummy-secret-for-now")
                 .unwrap(),
             // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
+            basic_auth_username: env_or_panic("BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE"),
+            basic_auth_password: env_or_panic("BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE"),
         };
 
         println!("Using PROVAB_BASE_URL: {}", value.provab_base_url);
