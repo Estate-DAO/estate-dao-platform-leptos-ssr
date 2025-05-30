@@ -936,28 +936,29 @@ pub fn BlockRoomPage() -> impl IntoView {
                             <div class="flex flex-col w-full mt-4 space-y-2">
                                 <button
                                     class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
-                                    on:click=move |_| {
-                                        handle_pay_click.dispatch("NOWPayments".to_owned());
-                                    }
+                                    // on:click=move |_| {
+                                    //     handle_pay_click.dispatch("NOWPayments".to_owned());
+                                    // }
                                 >
-                                    <span class="px-2 py-2"> Pay With Crypto </span>
+                                    // <span class="px-2 py-2"> Pay With Crypto </span>
+                                    <span class="px-2 py-2"> {"We'll add it soon.".to_owned()} </span>
                                 </button>
-                                <button
-                                    class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
-                                    on:click=move |_| {
-                                        handle_pay_click.dispatch("stripe".to_owned());
-                                        }
-                                >
-                                    <span class="px-2 py-2"> Pay With Stripe </span>
-                                </button>
+                                // <button
+                                //     class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
+                                //     on:click=move |_| {
+                                //         handle_pay_click.dispatch("stripe".to_owned());
+                                //     }
+                                // >
+                                //     <span class="px-2 py-2"> Pay With Stripe </span>
+                                // </button>
 
-                                <p class="text-sm mt-4 mb-6 text-red-500">
-                                    Note: Full payment required. Partial payments are not supported and will not secure your reservation.
-                                </p>
-                                <div class="text-center text-red-500 text-xs sm:text-sm mt-4 border-t pt-2 sm:pt-4">
-                                    <p>Do not close this tab until your payment is fully processed</p>
-                                    <p>to avoid issues with your booking.</p>
-                                </div>
+                                // <p class="text-sm mt-4 mb-6 text-red-500">
+                                //     Note: Full payment required. Partial payments are not supported and will not secure your reservation.
+                                // </p>
+                                // <div class="text-center text-red-500 text-xs sm:text-sm mt-4 border-t pt-2 sm:pt-4">
+                                //     <p>Do not close this tab until your payment is fully processed</p>
+                                //     <p>to avoid issues with your booking.</p>
+                                // </div>
                             </div>
                         </div>
                     </Show>
