@@ -1,15 +1,3 @@
-mod destination_picker_v1;
-pub use destination_picker_v1::DestinationPicker;
-
-mod destination_picker_v2;
-pub use destination_picker_v2::DestinationPickerV2;
-
-mod destination_picker_v3;
-pub use destination_picker_v3::DestinationPickerV3;
-
-mod destination_picker_v4;
-pub use destination_picker_v4::DestinationPickerV4;
-
 mod destination_picker_v5;
 pub use destination_picker_v5::DestinationPickerV5;
 

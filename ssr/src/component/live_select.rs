@@ -88,13 +88,28 @@ where
         label_fn: Callback<T, String>,
         value_fn: Callback<T, String>,
     ) -> Self {
-        let search_text = create_rw_signal(String::new());
+        // Initialize search text with current value's label if available
+        let initial_text = value.get().map_or(String::new(), |v| {
+            leptos::Callable::call(&label_fn, v.clone())
+        });
+        let search_text = create_rw_signal(initial_text);
         let is_open = create_rw_signal(false);
         let active_index = create_rw_signal(0);
 
         let input_ref = create_node_ref::<Input>();
         let dropdown_ref = create_node_ref::<Div>();
         let container_ref = create_node_ref::<Div>();
+
+        // Create effect to update search text when value changes
+        create_effect(move |_| {
+            let current_text = value.get().map_or(String::new(), |v| {
+                leptos::Callable::call(&label_fn, v.clone())
+            });
+            if !is_open.get() {
+                // Only update when dropdown is closed to avoid interfering with user typing
+                search_text.set(current_text);
+            }
+        });
 
         let options_clone = options.clone();
         // Create filtered options memo

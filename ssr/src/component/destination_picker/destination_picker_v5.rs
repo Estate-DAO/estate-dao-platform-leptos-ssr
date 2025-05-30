@@ -1,141 +1,198 @@
 use super::*;
-
-// Here are the observations about what works and what does not in the expected behaviour of the component
-// 1. [not_functional] when user clicks on the input, the dropdown opens
-// 2. [not_functional] when user types, the city list is filtered and higlighted
-// 3. when user clicks on a city from the dropdown list
-//    3.1 [not_functional] But the city is not filled back in the input. The city should fill back into the input when selected.
-//    3.2 [not_functional] the city is selected and the dropdown closes.
-// 4. [not_functional] when user re-opens the dropdown (by clicking on the input again), The input city (from step 3) should be filled back into the input.
-// 5. [not_functional] corollary to 4, if the user deletes a few character from the input after he has reopened the dropdown, the search dropdown should filter the original list accordginly. In other words, filter and highlight should be triggered on each keystroke to the input when user is typing.
-// 6. [not_functional] When user click away from the input, the dropdown does not close automatically. it sould close when user clicks outside the input.
-// 7. [not_functional] css for the input is as expected. dropdown cannot be seen. hence, no idea how that css looks.
+use leptos::{html::Div, NodeRef};
+use leptos_use::on_click_outside;
+use wasm_bindgen::JsCast;
+use web_sys::MouseEvent;
 
 #[component]
 pub fn DestinationPickerV5() -> impl IntoView {
     let search_ctx: SearchCtx = expect_context();
-    let input_group_ctx = InputGroupState::get();
 
     let QueryResult {
         data: destinations_resource,
         ..
     } = destinations_query().use_query(|| true);
 
-    let (search_term, set_search_term) = create_signal(String::new());
-    let input_ref = create_node_ref::<Input>();
-    let component_ref = create_node_ref::<html::Div>(); // Ref for the entire component for click-outside
+    // Simple state management
+    let (search_text, set_search_text) = create_signal(String::new());
+    let (is_open, set_is_open) = create_signal(false);
+    let (active_index, set_active_index) = create_signal(0);
 
-    // is_open signal derived from InputGroupState
-    let is_open = create_memo(move |_| {
-        matches!(
-            input_group_ctx.open_dialog.get(),
-            OpenDialogComponent::CityListComponent
-        )
+    // DOM refs
+    let container_ref = create_node_ref::<Div>();
+    let input_ref = create_node_ref::<leptos::html::Input>();
+
+    // Get destinations
+    let destinations =
+        Signal::derive(move || destinations_resource.get().flatten().unwrap_or_default());
+
+    // Filtered options
+    let filtered_options = create_memo(move |_| {
+        let search = search_text.get().to_lowercase().trim().to_string();
+        let all_destinations = destinations.get();
+
+        if search.is_empty() {
+            return all_destinations;
+        }
+
+        all_destinations
+            .into_iter()
+            .filter(|dest| {
+                format!("{}, {}", dest.city, dest.country_name)
+                    .to_lowercase()
+                    .contains(&search)
+            })
+            .collect::<Vec<_>>()
     });
 
-    // Effect to manage search_term when dropdown opens/closes or selection changes
+    // Initialize search text with current selection
     create_effect(move |_| {
-        let current_is_open = is_open.get();
-        let current_destination = search_ctx.destination.get();
+        if let Some(dest) = search_ctx.destination.get() {
+            if !is_open.get() {
+                set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+            }
+        } else if !is_open.get() {
+            set_search_text.set(String::new());
+        }
+    });
 
-        if current_is_open {
-            // Dropdown is open
-            if let Some(active_el) = document().active_element() {
-                if input_ref
-                    .get()
-                    .map_or(false, |ir| ir.is_same_node(Some(&active_el)))
-                {
-                    // Input is focused
-                    if let Some(dest) = &current_destination {
-                        // If current search term is the selected destination, clear for new search
-                        if search_term.get_untracked()
-                            == format!("{}, {}", dest.city, dest.country_name)
-                        {
-                            set_search_term.set("".to_string());
-                        }
-                    }
-                    // Ensure input text is selected if focused
-                    if let Some(input_el) = input_ref.get() {
-                        let _ = input_el.select();
+    // Reset active index when filtered options change
+    create_effect(move |_| {
+        let _ = filtered_options.get();
+        set_active_index.set(0);
+    });
+
+    // Handle clicks outside to close dropdown
+    let _cleanup = on_click_outside(container_ref, move |_| {
+        if is_open.get_untracked() {
+            set_is_open.set(false);
+            // Restore display text
+            if let Some(dest) = search_ctx.destination.get() {
+                set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+            } else {
+                set_search_text.set(String::new());
+            }
+        }
+    });
+
+    // Event handlers
+    let handle_input = move |ev: leptos::ev::Event| {
+        let value = event_target_value(&ev);
+        set_search_text.set(value);
+        set_is_open.set(true);
+        set_active_index.set(0);
+    };
+
+    let handle_focus = move |_: leptos::ev::FocusEvent| {
+        leptos::logging::log!("Focus event triggered");
+        set_is_open.set(true);
+    };
+
+    let handle_click = move |ev: MouseEvent| {
+        leptos::logging::log!(
+            "Click event triggered, current is_open: {}",
+            is_open.get_untracked()
+        );
+        ev.stop_propagation();
+        set_is_open.set(true); // Always open on click for debugging
+    };
+
+    let select_option = move |dest: Destination| {
+        leptos::logging::log!("Selecting option: {}, {}", dest.city, dest.country_name);
+        let _ = SearchCtx::set_destination(dest.clone());
+        set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+        set_is_open.set(false);
+        leptos::logging::log!(
+            "Dropdown should be closed now, is_open: {}",
+            is_open.get_untracked()
+        );
+
+        // Don't focus input immediately - this was causing the reopen issue
+        // The user can click again if they want to search for something else
+    };
+
+    let handle_key_down = move |ev: web_sys::KeyboardEvent| {
+        match ev.key().as_str() {
+            "ArrowDown" => {
+                ev.prevent_default();
+                if !is_open.get() {
+                    return;
+                }
+
+                let filtered = filtered_options.get();
+                if filtered.is_empty() {
+                    return;
+                }
+
+                let current = active_index.get();
+                let next = if current >= filtered.len() - 1 {
+                    0
+                } else {
+                    current + 1
+                };
+                set_active_index.set(next);
+            }
+            "ArrowUp" => {
+                ev.prevent_default();
+                if !is_open.get() {
+                    return;
+                }
+
+                let filtered = filtered_options.get();
+                if filtered.is_empty() {
+                    return;
+                }
+
+                let current = active_index.get();
+                let next = if current == 0 {
+                    filtered.len() - 1
+                } else {
+                    current - 1
+                };
+                set_active_index.set(next);
+            }
+            "Enter" => {
+                if is_open.get() {
+                    ev.prevent_default();
+                    let filtered = filtered_options.get();
+                    let current = active_index.get();
+
+                    if !filtered.is_empty() && current < filtered.len() {
+                        select_option(filtered[current].clone());
                     }
                 }
             }
-        } else {
-            // Dropdown is closed
-            if let Some(dest) = &current_destination {
-                set_search_term.set(format!("{}, {}", dest.city, dest.country_name));
-            } else {
-                set_search_term.set("".to_string()); // Clear if no destination selected
+            "Escape" => {
+                if is_open.get() {
+                    ev.prevent_default();
+                    set_is_open.set(false);
+                    // Restore display text
+                    if let Some(dest) = search_ctx.destination.get() {
+                        set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+                    } else {
+                        set_search_text.set(String::new());
+                    }
+                }
             }
-        }
-    });
-
-    let filtered_destinations = create_memo(move |_| {
-        let term = search_term.get().to_lowercase();
-        destinations_resource
-            .get()
-            .map_or_else(Vec::new, |dest_opt| {
-                dest_opt.map_or_else(Vec::new, |dests| {
-                    if term.is_empty() && !is_open.get() {
-                        // If not searching and dropdown closed, show nothing
-                        return Vec::new();
+            "Tab" => {
+                if is_open.get() {
+                    set_is_open.set(false);
+                    // Restore display text
+                    if let Some(dest) = search_ctx.destination.get() {
+                        set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+                    } else {
+                        set_search_text.set(String::new());
                     }
-                    if term.is_empty() && is_open.get() {
-                        // If dropdown open and search term empty, show all
-                        return dests;
-                    }
-                    dests
-                        .into_iter()
-                        .filter(|dest| {
-                            dest.city.to_lowercase().contains(&term)
-                                || dest.country_name.to_lowercase().contains(&term)
-                        })
-                        .collect()
-                })
-            })
-    });
-
-    let display_value_in_input = create_memo(move |_| {
-        // When input is focused and dropdown is open, show the live search_term
-        if is_open.get()
-            && input_ref.get().map_or(false, |el| {
-                el.is_same_node(document().active_element().as_ref().map(|v| &**v))
-            })
-        {
-            return search_term.get();
+                }
+            }
+            _ => {}
         }
-        // Otherwise, show the selected destination's display text or empty if none
-        search_ctx
-            .destination
-            .get()
-            .map(|d| format!("{}, {}", d.city, d.country_name))
-            .unwrap_or_else(String::new)
-    });
-
-    // Click outside handler
-    let _ = on_click_outside(component_ref, move |_| {
-        if is_open.get_untracked() {
-            InputGroupState::toggle_dialog(OpenDialogComponent::None);
-        }
-    });
-
-    let handle_focus = move |_| {
-        InputGroupState::toggle_dialog(OpenDialogComponent::CityListComponent);
-        // Effect above handles search_term and selection on focus
     };
 
-    let handle_select_destination = move |dest: Destination| {
-        SearchCtx::set_destination(dest.clone());
-        // search_term will be updated by the effect when is_open becomes false
-        InputGroupState::toggle_dialog(OpenDialogComponent::None); // Close dropdown
-    };
-
-    // Helper function to highlight matching text (copied from DestinationSearch)
-    let highlight_text = move |text: &str, search: &str| -> View {
-        let text_string = text.to_string();
-        let search_string = search.to_string();
-        if search_string.is_empty() {
-            return view! { <span>{text_string.clone()}</span> }.into_view();
+    // Add this function inside your component, before the view! macro
+    let highlight_match = move |text: &str, search: &str| -> View {
+        if search.is_empty() {
+            return view! { {text.to_string()} }.into_view();
         }
 
         let search_lower = search.to_lowercase();
@@ -148,98 +205,104 @@ pub fn DestinationPickerV5() -> impl IntoView {
             let after = &text[end..];
 
             view! {
-                <span>
-                    {before.to_string()}
-                    <span class="bg-yellow-200 text-yellow-800">{matched.to_string()}</span>
-                    {after.to_string()}
-                </span>
+                {before.to_string()}
+                <span class="text-blue-700 font-medium">{matched.to_string()}</span>
+                {after.to_string()}
             }
             .into_view()
         } else {
-            view! { <span>{text_string}</span> }.into_view()
-        }
-    };
-
-    // Helper function to get icon based on destination type (copied from DestinationSearch)
-    let get_destination_icon = |dest: &Destination| -> &str {
-        if dest.city.to_lowercase().contains("airport") {
-            "✈️"
-        } else if dest.city.to_lowercase().contains("railway")
-            || dest.city.to_lowercase().contains("station")
-        {
-            "🏛️" // Changed from train to building for variety, as per original
-        } else {
-            "📍"
+            view! { {text.to_string()} }.into_view()
         }
     };
 
     view! {
-        <div class="relative w-full h-full" _ref=component_ref>
-            // <!-- Icon positioned absolutely inside the input field's space -->
-            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-[1]">
-                <Icon icon=icondata::BsMap class="text-gray-400 h-5 w-5" />
+        <div
+            class="relative flex w-full md:w-[274px] h-full"
+            node_ref=container_ref
+        >
+            <div class="absolute inset-y-0 left-2 py-6 px-4 text-xl pointer-events-none flex items-center">
+                <Icon icon=icondata::BsMap class="text-black font-bold" />
             </div>
 
-            <input
-                type="text"
-                _ref=input_ref
-                // <!-- pl-10 to make space for the icon. text-base for general alignment. -->
-                // <!-- h-full to fill the parent container (e.g., h-[56px] from InputGroup) -->
-                class="w-full h-full pl-10 pr-4 py-2 text-[15px] leading-[18px] text-gray-900 bg-transparent focus:outline-none"
-                placeholder="Where to?"
-                prop:value=display_value_in_input
-                on:input=move |ev| set_search_term.set(event_target_value(&ev))
-                on:focus=handle_focus
-            />
+            <div class="relative w-full">
+                <input
+                    type="text"
+                    node_ref=input_ref
+                    id="destination-live-select"
+                    class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-6"
+                    placeholder="Where to?"
+                    autocomplete="off"
+                    aria-autocomplete="list"
+                    aria-controls="destination-dropdown"
+                    aria-expanded=move || is_open.get().to_string()
+                    role="combobox"
+                    prop:value=search_text
+                    on:input=handle_input
+                    on:focus=handle_focus
+                    on:click=handle_click
+                    on:keydown=handle_key_down
+                />
 
-            <Show when=is_open>
-                <div
-                    // <!-- Dropdown styling: full width on mobile, fixed on desktop, scrollable -->
-                    class="absolute top-full left-0 right-0 md:left-auto md:w-[350px] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[98] max-h-[60vh] md:max-h-[280px] overflow-y-auto"
-                    // <!-- Prevent mousedown from propagating to component_ref's on_click_outside handler if a scrollbar or empty area in dropdown is clicked -->
-                    on:mousedown=move |ev| ev.stop_propagation()
-                >
-                    <Suspense fallback=move || view! { <div class="p-4 text-gray-500">"Loading..."</div> }>
-                        {move || {
-                            let current_search_term_for_highlight = search_term.get();
-                            filtered_destinations.with(|dests| {
-                                if dests.is_empty() {
-                                    // Show "No destinations found" only if a search term is entered
-                                    if !search_term.get().is_empty() {
-                                        view! { <div class="p-4 text-gray-600 text-sm">"No destinations found"</div> }.into_view()
-                                    } else {
-                                        // Optionally, show a message like "Type to search" or popular destinations
-                                        // For now, show nothing if search term is empty and no results (e.g. initial state)
-                                        view! { <div class="p-4 text-gray-600 text-sm">"Type to search for a destination"</div> }.into_view()
-                                    }
-                                } else {
-                                    dests.iter().map(|dest| {
-                                        let dest_clone = dest.clone();
-                                        let dest_clone_for_select = dest.clone();
-                                        let icon = get_destination_icon(&dest_clone);
+                // Dropdown - Debug version
+                {move || {
+                    leptos::logging::log!("Dropdown render check - is_open: {}", is_open.get());
+                    if is_open.get() {
+                        leptos::logging::log!("Rendering dropdown");
+                        Some(view! {
+                            <div
+                                id="destination-dropdown"
+                                class="absolute z-50 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-2"
+                                role="listbox"
+                            >
+                                {move || {
+                                    let options = filtered_options.get();
+                                    leptos::logging::log!("Filtered options count: {}", options.len());
+
+                                    if options.is_empty() {
                                         view! {
-                                            <div
-                                                class="flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
-                                                on:click=move |_| handle_select_destination(dest_clone_for_select.clone())
-                                            >
-                                                <span class="text-xl mr-3 w-5 text-center">{icon}</span>
-                                                <div class="flex-1">
-                                                    <div class="text-sm font-medium text-gray-800">
-                                                        {highlight_text(&dest_clone.city, &current_search_term_for_highlight)}
-                                                    </div>
-                                                    <div class="text-xs text-gray-500">
-                                                        {highlight_text(&dest_clone.country_name, &current_search_term_for_highlight)}
-                                                    </div>
-                                                </div>
+                                            <div class="px-3 py-2 text-gray-500">
+                                                "No results found"
                                             </div>
-                                        }
-                                    }).collect_view()
-                                }
-                            })
-                        }}
-                    </Suspense>
-                </div>
-            </Show>
+                                        }.into_view()
+                                    } else {
+                                        options.into_iter().enumerate().map(|(i, dest)| {
+                                            let dest_clone = dest.clone();
+                                            let dest_for_click = dest.clone();
+                                            view! {
+                                                <div
+                                                    class=move || {
+                                                        let base = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+                                                        if active_index.get() == i {
+                                                            format!("{} bg-blue-50 text-blue-600", base)
+                                                        } else {
+                                                            base.to_string()
+                                                        }
+                                                    }
+                                                    role="option"
+                                                    aria-selected=move || (active_index.get() == i).to_string()
+                                                    on:click=move |ev| {
+                                                        leptos::logging::log!("Option clicked");
+                                                        ev.stop_propagation();
+                                                        select_option(dest_for_click.clone());
+                                                    }
+                                                    on:mouseenter=move |_| {
+                                                        set_active_index.set(i);
+                                                    }
+                                                >
+                                                {highlight_match(&format!("{}, {}", dest_clone.city, dest_clone.country_name), &search_text.get())}
+                                                </div>
+                                            }
+                                        }).collect::<Vec<_>>().into_view()
+                                    }
+                                }}
+                            </div>
+                        })
+                    } else {
+                        leptos::logging::log!("Not rendering dropdown - closed");
+                        None
+                    }
+                }}
+            </div>
         </div>
     }
 }
