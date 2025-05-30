@@ -941,7 +941,7 @@ pub fn BlockRoomPage() -> impl IntoView {
                                     // }
                                 >
                                     // <span class="px-2 py-2"> Pay With Crypto </span>
-                                    <span class="px-2 py-2"> {"We'll add it soon.".to_owned()} </span>
+                                    <span class="px-2 py-2"> {"We'll enable payments soon.".to_owned()} </span>
                                 </button>
                                 // <button
                                 //     class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
