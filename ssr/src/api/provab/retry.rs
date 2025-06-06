@@ -1,5 +1,5 @@
-use super::{ApiClientResult, ApiError, Provab, ProvabReq, ProvabReqMeta};
 use crate::api::api_client::{ApiClient, ApiRequest};
+use crate::api::provab::ProvabReq;
 use crate::{error, log};
 use async_trait::async_trait;
 use error_stack::ResultExt;
@@ -20,7 +20,7 @@ pub trait RetryableRequest: ApiRequest + Serialize + Clone + 'static {
         // let provab = Provab::default();
         // since this is working in SSR context, we need to get the provab instance from context
 
-        use super::a04_book_room::from_leptos_context_or_axum_ssr;
+        use crate::api::provab::{from_leptos_context_or_axum_ssr, Provab};
 
         let provab: Provab = from_leptos_context_or_axum_ssr();
 

@@ -1,4 +1,4 @@
-use crate::api::{HotelResult, HotelSearchResponse, HotelSearchResult, Price, Search};
+use crate::api::provab::{HotelResult, HotelSearchResponse, HotelSearchResult, Price, Search};
 
 cfg_if::cfg_if! {
 

@@ -1,5 +1,7 @@
 use crate::api::api_client::ApiClient;
-use crate::api::{a04_book_room::from_leptos_context_or_axum_ssr, Provab};
+use crate::api::provab::from_leptos_context_or_axum_ssr;
+use crate::api::provab::retry::RetryableRequest;
+use crate::api::provab::Provab;
 
 use super::{ProvabReq, ProvabReqMeta};
 use leptos::*;
@@ -77,6 +79,6 @@ pub async fn get_hotel_booking_detail_from_travel_provider_v2(
 ) -> Result<HotelBookingDetailResponse, ServerFnError> {
     let retry_count = 3;
 
-    use crate::api::RetryableRequest;
+    use crate::api::provab::retry::RetryableRequest;
     request.retry_with_backoff(retry_count).await
 }

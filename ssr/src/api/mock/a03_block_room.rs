@@ -1,8 +1,8 @@
-use crate::api::a03_block_room::{
+use crate::api::mock::mock_utils::MockableResponse;
+use crate::api::provab::a03_block_room::{
     BlockRoomContainer, BlockRoomResponse, BlockRoomResult, FailureBlockRoomResponse,
     HotelRoomDetail, SuccessBlockRoomResponse,
 };
-use crate::api::mock::mock_utils::MockableResponse;
 use fake::{Dummy, Fake, Faker};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};

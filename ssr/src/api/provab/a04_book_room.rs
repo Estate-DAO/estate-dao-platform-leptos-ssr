@@ -1,7 +1,13 @@
+use crate::api::api_client::ApiClient;
+use crate::api::provab::from_leptos_context_or_axum_ssr;
 use std::fmt;
 
-use super::{ApiClientResult, DeserializableInput, ProvabReq, ProvabReqMeta};
-use crate::api::{ApiError, Provab};
+use super::{ProvabReq, ProvabReqMeta};
+
+use super::DeserializableInput;
+use crate::api::provab::Provab;
+use crate::api::{ApiClientResult, ApiError};
+
 use crate::canister::backend::{
     self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
 };
@@ -9,7 +15,6 @@ use crate::canister::backend::{
 // use leptos::logging::log;
 use crate::log;
 // use tracing;
-use crate::api::api_client::ApiClient;
 use leptos::*;
 use reqwest::Method;
 use serde::Deserializer;
@@ -394,15 +399,6 @@ pub async fn book_room(request: String) -> Result<String, ServerFnError> {
             );
             Err(ServerFnError::ServerError(e.to_string()))
         }
-    }
-}
-
-pub fn from_leptos_context_or_axum_ssr() -> Provab {
-    let context = use_context::<Provab>();
-    match context {
-        Some(provab) => provab,
-        None => Provab::default(),
-        // None => get_provab_client().clone()
     }
 }
 

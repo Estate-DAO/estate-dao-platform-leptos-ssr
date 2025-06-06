@@ -1,7 +1,7 @@
-use crate::api::{
-    a01_hotel_info::{FirstRoomDetails, HotelDetailsLevel1, HotelDetailsLevel2},
-    HotelInfoResponse,
+use crate::api::provab::a01_hotel_info::{
+    FirstRoomDetails, HotelDetailsLevel1, HotelDetailsLevel2,
 };
+use crate::api::provab::HotelInfoResponse;
 
 cfg_if::cfg_if! {
 

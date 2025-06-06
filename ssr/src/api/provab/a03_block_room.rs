@@ -1,5 +1,5 @@
 use super::{ProvabReq, ProvabReqMeta};
-use crate::api::Provab;
+use crate::api::provab::{retry::RetryableRequest, Provab};
 // use leptos::logging::log;
 use crate::log;
 use leptos::ServerFnError;
@@ -237,6 +237,6 @@ impl ProvabReqMeta for BlockRoomRequest {
 pub async fn block_room(request: BlockRoomRequest) -> Result<BlockRoomResponse, ServerFnError> {
     let retry_count = 3;
 
-    use crate::api::RetryableRequest;
+    use crate::api::provab::retry::RetryableRequest;
     request.retry_with_backoff(retry_count).await
 }

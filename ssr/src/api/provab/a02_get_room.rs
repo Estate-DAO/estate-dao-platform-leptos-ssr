@@ -3,7 +3,7 @@ use super::{
     ProvabReq,
     ProvabReqMeta,
 };
-use crate::api::Provab;
+use crate::api::provab::{retry::RetryableRequest, Provab};
 
 // use leptos::logging::log;
 use crate::log;
@@ -230,6 +230,6 @@ impl ProvabReqMeta for HotelRoomRequest {
 
 #[server(GetRoom)]
 pub async fn get_room(request: HotelRoomRequest) -> Result<HotelRoomResponse, ServerFnError> {
-    use crate::api::RetryableRequest;
+    use crate::api::provab::retry::RetryableRequest;
     request.retry_with_backoff(3).await
 }

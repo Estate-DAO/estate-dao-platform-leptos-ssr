@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use super::{ProvabReq, ProvabReqMeta};
 use crate::api::api_client::ApiClient;
-use crate::api::Provab;
+use crate::api::provab::Provab;
 use crate::component::{Destination, GuestSelection};
 use crate::{component::SelectedDateRange, state::search_state::SearchCtx};
 // use leptos::logging::log;

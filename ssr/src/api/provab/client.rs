@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use super::a03_block_room::BlockRoomResponse;
-use super::consts::EnvVarConfig;
-use super::{ApiClientResult, ApiError};
 use colored::Colorize;
 use error_stack::{report, Report, ResultExt};
-use leptos::expect_context;
+use leptos::{expect_context, use_context};
 // use leptos::logging::log;
 
 use crate::api::api_client::ApiClient;
+use crate::api::consts::EnvVarConfig;
+use crate::api::{ApiClientResult, ApiError};
 use crate::log;
 use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Response, Url};
@@ -382,5 +382,14 @@ fn log_json_payload<T: Serialize + Debug>(req: &T) {
                 .bright_red()
                 .bold()
         ),
+    }
+}
+
+pub fn from_leptos_context_or_axum_ssr() -> Provab {
+    let context = use_context::<Provab>();
+    match context {
+        Some(provab) => provab,
+        None => Provab::default(),
+        // None => get_provab_client().clone()
     }
 }

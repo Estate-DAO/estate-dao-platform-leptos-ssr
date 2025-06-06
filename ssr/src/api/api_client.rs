@@ -1,10 +1,9 @@
 #[cfg(feature = "mock-provab")]
 use crate::api::mock::mock_utils::MockableResponse;
-use crate::api::{ApiClientResult, ApiError, DeserializableInput};
-use crate::{
-    api::{consts::EnvVarConfig, ProvabReq, ProvabReqMeta},
-    log,
-};
+use crate::api::provab::{DeserializableInput, Provab, ProvabReq, ProvabReqMeta};
+use crate::api::{ApiClientResult, ApiError};
+use crate::{api::consts::EnvVarConfig, log};
+
 use colored::Colorize;
 use error_stack::report;
 use error_stack::ResultExt;

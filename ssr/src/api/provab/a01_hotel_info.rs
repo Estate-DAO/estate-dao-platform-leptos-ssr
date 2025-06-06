@@ -1,4 +1,4 @@
-use crate::api::Provab;
+use crate::api::provab::Provab;
 // use leptos::logging::log;
 use crate::api::api_client::ApiClient;
 use crate::log;

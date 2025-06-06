@@ -2,11 +2,9 @@ use fake::{Dummy, Fake, Faker};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
-use crate::api::a04_book_room::{
-    BookRoomResponse, FailureBookRoomResponse, SuccessBookRoomResponse,
-};
 use crate::api::mock::mock_utils::MockableResponse;
-use crate::api::{BookingDetails, BookingDetailsContainer, BookingStatus};
+use crate::api::provab::{BookRoomResponse, FailureBookRoomResponse, SuccessBookRoomResponse};
+use crate::api::provab::{BookingDetails, BookingDetailsContainer, BookingStatus};
 
 impl MockableResponse for BookRoomResponse {
     fn should_simulate_failure() -> bool {

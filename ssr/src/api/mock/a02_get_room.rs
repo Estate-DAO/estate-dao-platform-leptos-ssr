@@ -1,4 +1,4 @@
-use crate::api::a02_get_room::{HotelRoomResponse, RoomList};
+use crate::api::provab::a02_get_room::{HotelRoomResponse, RoomList};
 
 // fake imports
 use fake::{Dummy, Fake, Faker};
