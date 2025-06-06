@@ -1,4 +1,5 @@
 use super::{ApiClientResult, ApiError, Provab, ProvabReq, ProvabReqMeta};
+use crate::api::api_client::{ApiClient, ApiRequest};
 use crate::{error, log};
 use async_trait::async_trait;
 use error_stack::ResultExt;
@@ -12,7 +13,7 @@ use tokio;
 
 /// Trait for implementing retry functionality for API requests
 #[async_trait]
-pub trait RetryableRequest: ProvabReq + Serialize + Clone + 'static {
+pub trait RetryableRequest: ApiRequest + Serialize + Clone + 'static {
     #[cfg(feature = "ssr")]
     /// Retry the API call with exponential backoff
     async fn retry_with_backoff(self, retry_count: u8) -> Result<Self::Response, ServerFnError> {

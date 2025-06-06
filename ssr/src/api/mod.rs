@@ -32,6 +32,7 @@ pub use a05_hotel_booking_detail::{
     HotelBookingDetailResponse,
 };
 
+mod api_client;
 // pub mod tower_client;
 // cfg_if! {
 //     if #[cfg(feature = "ssr")] {

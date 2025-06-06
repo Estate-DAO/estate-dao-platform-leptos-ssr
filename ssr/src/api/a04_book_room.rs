@@ -9,6 +9,7 @@ use crate::canister::backend::{
 // use leptos::logging::log;
 use crate::log;
 // use tracing;
+use crate::api::api_client::ApiClient;
 use leptos::*;
 use reqwest::Method;
 use serde::Deserializer;

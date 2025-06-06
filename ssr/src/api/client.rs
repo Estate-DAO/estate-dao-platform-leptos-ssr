@@ -8,6 +8,7 @@ use error_stack::{report, Report, ResultExt};
 use leptos::expect_context;
 // use leptos::logging::log;
 
+use crate::api::api_client::ApiClient;
 use crate::log;
 use reqwest::header::HeaderMap;
 use reqwest::{IntoUrl, Method, RequestBuilder, Response, Url};
@@ -167,170 +168,186 @@ impl Default for Provab {
     }
 }
 
-impl Provab {
-    /// Create a new client with the given base URL.
-    /// Use [Default::default] to use the default base URL ([crate::consts::get_provab_base_url_from_env])
-    pub fn new(base_url: Url) -> Self {
-        Self {
-            client: Default::default(),
-            // base_url: Arc::new(base_url),
-        }
+impl ApiClient for Provab {
+    fn base_url(&self) -> String {
+        let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
+        env_var_config.provab_base_url
     }
 
-    fn req_builder(
-        &self,
-        method: Method,
-        url: impl IntoUrl,
-        // g: Option<&Credentials>,
-    ) -> RequestBuilder {
-        let reqb = self.client.request(method, url);
-        reqb
+    fn default_headers(&self) -> HeaderMap {
+        let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
+        env_var_config.get_headers()
     }
 
-    async fn send_inner<Req: ProvabReqMeta>(
-        &self,
-        reqb: RequestBuilder,
-    ) -> ApiClientResult<Req::Response> {
-        let request = reqb
-            .build()
-            .map_err(|e| report!(ApiError::RequestFailed(e)))?;
-        // Print the headers before sending the request
-        // print_request_headers(&request)?;
-
-        // let response = reqb
-        //     .send()
-        //     .await
-        //     .map_err(|e| report!(ApiError::RequestFailed(e)))?;
-
-        let response = self
-            .client
-            .execute(request)
-            .await
-            .map_err(|e| report!(ApiError::RequestFailed(e)))?;
-
-        let response_status = response.status();
-        if !response_status.is_success() {
-            return response.text().await.map_or_else(
-                |er| {
-                    Err(ApiError::ResponseError).attach_printable_lazy(|| format!("Error: {er:?}"))
-                },
-                |t| {
-                    Err(report!(ApiError::ResponseNotOK(format!(
-                        "received status - {}, error- {t}",
-                        response_status
-                    ))))
-                },
-            );
-        }
-
-        let input = if Req::GZIP {
-            let body_bytes = response
-                .bytes()
-                .await
-                .map_err(|_e| report!(ApiError::ResponseError))?;
-            DeserializableInput::Bytes(body_bytes.into())
-        } else {
-            let body_string = response
-                .text()
-                .await
-                .map_err(|_e| report!(ApiError::ResponseError))?;
-            DeserializableInput::Text(body_string)
-        };
-
-        let res = Req::deserialize_response(input)?;
-
-        Ok(res)
-    }
-
-    async fn send_json<Req: ProvabReq + ProvabReqMeta + Serialize>(
-        &self,
-        req: Req,
-        reqb: RequestBuilder,
-    ) -> ApiClientResult<Req::Response> {
-        log_json_payload(&req);
-
-        let reqb = if Req::METHOD == Method::GET {
-            reqb.query(&req)
-        } else {
-            reqb.json(&req)
-        };
-        let reqb = reqb.headers(Req::custom_headers());
-
-        // TODO: in production, set headers to live. (via environment variables?)
-        #[cfg(any(feature = "prod-consts", feature = "stage-consts"))]
-        let reqb = set_live_headers(reqb);
-
-        let reqb = if Req::GZIP {
-            set_gzip_accept_encoding(reqb)
-        } else {
-            reqb
-        };
-
-        // log!(" reqb - send_json: {reqb:?}");
-
-        self.send_inner::<Req>(reqb).await
-    }
-
-    #[cfg(feature = "mock-provab")]
-    /// Send a request and return the response - mocked
-    pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
-    where
-        Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
-        Req::Response: MockableResponse + Send + 'static,
-    {
-        // sleep by 3 seconds before response
-
-        use std::time::Duration;
-        #[cfg(all(feature = "ssr", feature = "mock-provab"))]
-        tokio::time::sleep(Duration::from_millis(1000)).await;
-
-        Ok(Req::Response::generate_mock_response(0.5))
-    }
-
-    #[cfg(not(feature = "mock-provab"))]
-    /// Send a request and return the response
-    pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
-    where
-        Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
-        Req::Response: Send + 'static,
-    {
-        // Real request implementation here
-        let reqb = self.req_builder(Req::METHOD, Req::path());
-        self.send_json(req, reqb).await
+    fn http_client(&self) -> &reqwest::Client {
+        &self.client
     }
 }
 
-fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
-    // Create a HeaderMap to store custom headers
-    let mut headers = HeaderMap::new();
+// impl Provab {
+//     /// Create a new client with the given base URL.
+//     /// Use [Default::default] to use the default base URL ([crate::consts::get_provab_base_url_from_env])
+//     pub fn new(base_url: Url) -> Self {
+//         Self {
+//             client: Default::default(),
+//             // base_url: Arc::new(base_url),
+//         }
+//     }
 
-    // Insert headers with specific casing
-    headers.insert(
-        http::HeaderName::from_bytes(b"Accept-Encoding").unwrap(),
-        http::HeaderValue::from_str("gzip, deflate").unwrap(),
-    );
+//     fn req_builder(
+//         &self,
+//         method: Method,
+//         url: impl IntoUrl,
+//         // g: Option<&Credentials>,
+//     ) -> RequestBuilder {
+//         let reqb = self.client.request(method, url);
+//         reqb
+//     }
 
-    reqb.headers(headers)
-    // let headers = reqb.headers_ref().unwrap();
-    // if !headers.contains_key("Accept-Encoding") && !headers.contains_key("Range") {
-    // reqb.header("Accept-Encoding", "gzip, deflate")
-    // } else {
-    //     reqb
-    // }
-}
+//     async fn send_inner<Req: ProvabReqMeta>(
+//         &self,
+//         reqb: RequestBuilder,
+//     ) -> ApiClientResult<Req::Response> {
+//         let request = reqb
+//             .build()
+//             .map_err(|e| report!(ApiError::RequestFailed(e)))?;
+//         // Print the headers before sending the request
+//         // print_request_headers(&request)?;
 
-fn set_live_headers(reqb: RequestBuilder) -> RequestBuilder {
-    // Create a HeaderMap to store custom headers
-    let mut headers = HeaderMap::new();
+//         // let response = reqb
+//         //     .send()
+//         //     .await
+//         //     .map_err(|e| report!(ApiError::RequestFailed(e)))?;
 
-    // Insert headers with specific casing
-    headers.insert(
-        http::HeaderName::from_bytes(b"x-System").unwrap(),
-        http::HeaderValue::from_str("live").unwrap(),
-    );
+//         let response = self
+//             .client
+//             .execute(request)
+//             .await
+//             .map_err(|e| report!(ApiError::RequestFailed(e)))?;
 
-    reqb.headers(headers)
-}
+//         let response_status = response.status();
+//         if !response_status.is_success() {
+//             return response.text().await.map_or_else(
+//                 |er| {
+//                     Err(ApiError::ResponseError).attach_printable_lazy(|| format!("Error: {er:?}"))
+//                 },
+//                 |t| {
+//                     Err(report!(ApiError::ResponseNotOK(format!(
+//                         "received status - {}, error- {t}",
+//                         response_status
+//                     ))))
+//                 },
+//             );
+//         }
+
+//         let input = if Req::GZIP {
+//             let body_bytes = response
+//                 .bytes()
+//                 .await
+//                 .map_err(|_e| report!(ApiError::ResponseError))?;
+//             DeserializableInput::Bytes(body_bytes.into())
+//         } else {
+//             let body_string = response
+//                 .text()
+//                 .await
+//                 .map_err(|_e| report!(ApiError::ResponseError))?;
+//             DeserializableInput::Text(body_string)
+//         };
+
+//         let res = Req::deserialize_response(input)?;
+
+//         Ok(res)
+//     }
+
+//     async fn send_json<Req: ProvabReq + ProvabReqMeta + Serialize>(
+//         &self,
+//         req: Req,
+//         reqb: RequestBuilder,
+//     ) -> ApiClientResult<Req::Response> {
+//         log_json_payload(&req);
+
+//         let reqb = if Req::METHOD == Method::GET {
+//             reqb.query(&req)
+//         } else {
+//             reqb.json(&req)
+//         };
+//         let reqb = reqb.headers(Req::custom_headers());
+
+//         // TODO: in production, set headers to live. (via environment variables?)
+//         #[cfg(any(feature = "prod-consts", feature = "stage-consts"))]
+//         let reqb = set_live_headers(reqb);
+
+//         let reqb = if Req::GZIP {
+//             set_gzip_accept_encoding(reqb)
+//         } else {
+//             reqb
+//         };
+
+//         // log!(" reqb - send_json: {reqb:?}");
+
+//         self.send_inner::<Req>(reqb).await
+//     }
+
+//     #[cfg(feature = "mock-provab")]
+//     /// Send a request and return the response - mocked
+//     pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
+//     where
+//         Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
+//         Req::Response: MockableResponse + Send + 'static,
+//     {
+//         // sleep by 3 seconds before response
+
+//         use std::time::Duration;
+//         #[cfg(all(feature = "ssr", feature = "mock-provab"))]
+//         tokio::time::sleep(Duration::from_millis(1000)).await;
+
+//         Ok(Req::Response::generate_mock_response(0.5))
+//     }
+
+//     #[cfg(not(feature = "mock-provab"))]
+//     /// Send a request and return the response
+//     pub async fn send<Req>(&self, req: Req) -> ApiClientResult<Req::Response>
+//     where
+//         Req: ProvabReq + ProvabReqMeta + Serialize + Send + 'static,
+//         Req::Response: Send + 'static,
+//     {
+//         // Real request implementation here
+//         let reqb = self.req_builder(Req::METHOD, Req::path());
+//         self.send_json(req, reqb).await
+//     }
+// }
+
+// fn set_gzip_accept_encoding(reqb: RequestBuilder) -> RequestBuilder {
+//     // Create a HeaderMap to store custom headers
+//     let mut headers = HeaderMap::new();
+
+//     // Insert headers with specific casing
+//     headers.insert(
+//         http::HeaderName::from_bytes(b"Accept-Encoding").unwrap(),
+//         http::HeaderValue::from_str("gzip, deflate").unwrap(),
+//     );
+
+//     reqb.headers(headers)
+//     // let headers = reqb.headers_ref().unwrap();
+//     // if !headers.contains_key("Accept-Encoding") && !headers.contains_key("Range") {
+//     // reqb.header("Accept-Encoding", "gzip, deflate")
+//     // } else {
+//     //     reqb
+//     // }
+// }
+
+// fn set_live_headers(reqb: RequestBuilder) -> RequestBuilder {
+//     // Create a HeaderMap to store custom headers
+//     let mut headers = HeaderMap::new();
+
+//     // Insert headers with specific casing
+//     headers.insert(
+//         http::HeaderName::from_bytes(b"x-System").unwrap(),
+//         http::HeaderValue::from_str("live").unwrap(),
+//     );
+
+//     reqb.headers(headers)
+// }
 
 /// Function to print the headers of a reqwest::Request
 fn print_request_headers(request: &reqwest::Request) -> ApiClientResult<()> {
