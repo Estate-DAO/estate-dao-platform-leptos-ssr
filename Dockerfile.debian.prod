@@ -1,0 +1,102 @@
+
+# Use Debian Slim as the base image
+FROM debian:bookworm-slim as builder
+
+# Prevent apt from asking for input and use minimal outputs
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update package lists and install basic dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust using rustup
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+# Set up the Rust environment
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+
+# Add the WASM target
+RUN rustup toolchain install nightly-2024-09-23-x86_64-unknown-linux-gnu
+RUN rustup default nightly-2024-09-23-x86_64-unknown-linux-gnu
+RUN rustup target add wasm32-unknown-unknown
+
+
+
+# setup nodejs
+RUN curl https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o node-v22.14.0-linux-x64.tar.xz
+RUN ls | grep node
+RUN tar -xf node-v22.14.0-linux-x64.tar.xz
+
+RUN mv node-v22.14.0-linux-x64 /usr/local/node
+
+# Add Node.js and npm to PATH
+ENV PATH="/usr/local/node/bin:${PATH}"
+
+# Optional: Show Node.js and npm versions for verification
+RUN node -v
+RUN npm -v
+
+
+# RUN rustup target add x86_64-unknown-linux-musl
+
+# Install cargo-binstall, which makes it easier to install other
+# cargo extensions like cargo-leptos
+# RUN curl https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
+# Download cargo-binstall and save to a local file
+RUN curl -fsSL https://github.com/cargo-bins/cargo-binstall/releases/download/v1.11.2/cargo-binstall-x86_64-unknown-linux-gnu.tgz \
+    -o cargo-binstall-x86_64-unknown-linux-gnu.tgz
+
+RUN tar -xvf cargo-binstall-x86_64-unknown-linux-gnu.tgz
+RUN cp cargo-binstall /root/.cargo/bin
+
+# Install cargo-leptos
+RUN cargo binstall cargo-leptos --version 0.2.21 
+# RUN cargo install cargo-leptos --version 0.2.21 
+
+# Make an /app dir, which everything will eventually live in
+RUN mkdir -p /app
+WORKDIR /app
+COPY . .
+
+# remove dockerignore file during build
+RUN rm .dockerignore
+
+# RUN cargo fmt --check
+
+# Build the app
+RUN npm install --ci
+
+ENV LEPTOS_HASH_FILES=true
+RUN cargo leptos build --release --lib-features "release-lib-prod" --bin-features "release-bin-prod" 
+
+# ------------------------
+# STAGE 2: Dockerfile
+# ------------------------
+FROM debian:bookworm-slim as runner
+
+# RUN mkdir -p /app
+WORKDIR /app
+
+RUN apt update && apt install tree vim curl dnsutils -y
+
+COPY --from=builder /app/target/release/estate-fe .
+COPY --from=builder /app/ssr/target/release/hash.txt .
+COPY --from=builder /app/target/site ./site
+COPY --from=builder /app/city.json ./city.json
+
+# COPY --from=builder /app/.env ./.env
+
+# Set any required env variables
+ENV LEPTOS_ENV="production"
+ENV RUST_LOG="debug,hyper=info,tower=info"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+ENV LEPTOS_SITE_ROOT="site"
+ENV LEPTOS_HASH_FILES="true"
+
+EXPOSE 3000
+
+CMD ["estate-fe"]

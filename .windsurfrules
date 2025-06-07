@@ -1,0 +1,28 @@
+# Estate DAO Frontend Agent Guidelines
+
+## Build/Test Commands
+- Build: `bash scripts/local_run.sh`
+- Type Check: `bash scripts/local_check.sh` 
+- Run with Mocks: `./scripts/local_run_with_mock.sh`
+- Single Test: `cargo test --lib <test_name> -- --nocapture`
+
+## Code Style
+- Use Rust 2021 edition
+- Format imports: Group by crate, with `use crate` imports first
+- Leptos component props use `#[prop(into)]` pattern when accepting signals
+- Mark props as `#[prop(optional)]` when they have defaults
+- Use `RwSignal` for state that changes, `Signal` for read-only state
+- Callbacks use `Callable::call(&callback, args)` pattern
+- Use descriptive documentation comments for public functions/structs
+- Error handling: Prefer `anyhow` for errors, with `error-stack` for context
+- Mobile compatibility changes should only use CSS changes (per .windsurfrules)
+
+
+## Workflow to achieve desired outcome from code
+
+1. gather required context by searching functions / code paths / related files
+2. plan the changes in a markdown file
+3. code changes should be based on tasks broken down in step 2. and should not break existing functionality
+4. run `bash scripts/local_check.sh` to check for type errors
+5. write a short note on lessons learnt in lessons_learnt.md
+

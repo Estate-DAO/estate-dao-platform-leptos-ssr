@@ -19,3 +19,5 @@ pub mod payments;
 pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStatusResponse};
 
 pub mod canister;
+
+mod core_travel_types;

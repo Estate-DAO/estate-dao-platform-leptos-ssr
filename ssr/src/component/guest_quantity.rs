@@ -146,19 +146,19 @@ pub fn GuestQuantity() -> impl IntoView {
     });
 
     let search_ctx: SearchCtx = expect_context();
-    let guest_selection = search_ctx.guests;
+    let guest_selection = search_ctx.guests.get_untracked();
 
-    let guest_selection_clone = guest_selection.clone();
+    // Get direct references to the signals
+    let adults_signal = guest_selection.adults;
+    let children_signal = guest_selection.children;
+    let rooms_signal = guest_selection.rooms;
+    let children_ages = guest_selection.children_ages;
 
     let guest_count_display = create_memo(move |_prev| {
         format!(
             "{} • {}",
-            pluralize(guest_selection_clone.get().adults.get(), "adult", "adults"),
-            pluralize(
-                guest_selection_clone.get().children.get(),
-                "child",
-                "children"
-            )
+            pluralize(adults_signal.get(), "adult", "adults"),
+            pluralize(children_signal.get(), "child", "children")
         )
     });
 
@@ -199,65 +199,80 @@ pub fn GuestQuantity() -> impl IntoView {
                                 <div class="space-y-6">
                                     <NumberCounterV2
                                         label="Adults"
-                                        counter=guest_selection.get().adults
+                                        counter=adults_signal
                                         class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
                                         on_increment=move || {
-                                            guest_selection.get().adults.update(|n| *n += 1);
+                                            adults_signal.update(|n| *n += 1);
                                         }
                                         min=1_u32
                                     />
 
                                     <NumberCounterV2
                                         label="Children"
-                                        counter=guest_selection.get().children
+                                        counter=children_signal
                                         class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                                        on_increment=move || {
-                                            GuestSelection::increment_children();
-                                            // guest_selection.get().children.update(|n| *n += 1);
+                                        on_increment={
+                                            let children_ages = children_ages.clone();
+                                            move || {
+                                                children_signal.update(|n| *n += 1);
+                                                children_ages.push_children_ages();
+                                            }
                                         }
-                                        min=1_u32
+                                        on_decrement=Box::new({
+                                            let children_ages = children_ages.clone();
+                                            move || {
+                                                children_signal.update(|n| *n = n.saturating_sub(1));
+                                                children_ages.pop_children_ages();
+                                            }
+                                        })
+                                        min=0_u32
                                     />
 
                                     // !<-- Children Ages Grid - Responsive grid layout -->
                                     <div class="grid grid-cols-4 md:grid-cols-5 gap-2">
-                                        {move || {
-                                            (0..GuestSelection::get_children_reactive())
-                                                .map(|i| {
-                                                    view! {
-                                                        <input
-                                                            type="number"
-                                                            min=1
-                                                            max=18
-                                                            class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            name=format!("child_age[{}]", i)
-                                                            value=move || {
-                                                                GuestSelection::get_children_age_at(i)
-                                                                // guest_selection.get().children_ages.get_value_at(i)
-                                                            }
-                                                            placeholder="Age"
-                                                            on:input=move |e| {
-                                                                let age = event_target_value(&e);
-                                                                log!("{}",age);
-                                                                guest_selection
-                                                                    .get()
-                                                                    .children_ages
-                                                                    .update_children_ages(i as u32, age.parse().unwrap_or(10));
-                                                            }
-                                                        />
-                                                    }
-                                                })
-                                                .collect::<Vec<_>>()
-                                                .into_view()
-                                        }}
+                                        {
+                                            let children_ages = children_ages.clone();
+                                            move || {
+                                                (0..children_signal.get())
+                                                    .map(|i| {
+                                                        let children_ages = children_ages.clone();
+                                                        view! {
+                                                            <input
+                                                                type="number"
+                                                                min=1
+                                                                max=18
+                                                                class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                name=format!("child_age[{}]", i)
+                                                                value={
+                                                                    let children_ages = children_ages.clone();
+                                                                    move || {
+                                                                        children_ages.get_value_at(i)
+                                                                    }
+                                                                }
+                                                                placeholder="Age"
+                                                                on:input={
+                                                                    let children_ages = children_ages.clone();
+                                                                    move |e| {
+                                                                        let age = event_target_value(&e);
+                                                                        log!("{}",age);
+                                                                        children_ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
+                                                                    }
+                                                                }
+                                                            />
+                                                        }
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                                    .into_view()
+                                            }
+                                        }
                                     </div>
 
                                     <NumberCounterV2
                                         label="Rooms"
-                                        counter=guest_selection.get().rooms
+                                        counter=rooms_signal
                                         class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
                                         on_increment=move || {
-                                            GuestSelection::increment_rooms();
-                                            // guest_selection.get().rooms.update(|n| *n += 1);
+                                            rooms_signal.update(|n| *n += 1);
                                         }
                                         min=1_u32
                                     />
