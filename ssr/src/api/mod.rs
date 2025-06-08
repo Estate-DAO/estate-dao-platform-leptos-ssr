@@ -2,7 +2,7 @@ use cfg_if::cfg_if;
 
 mod api_client;
 
-mod provab;
+pub mod provab;
 
 cfg_if! {
     if #[cfg(feature = "mock-provab")]{
@@ -19,5 +19,3 @@ pub mod payments;
 pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStatusResponse};
 
 pub mod canister;
-
-mod core_travel_types;

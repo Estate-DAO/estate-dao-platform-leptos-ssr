@@ -74,36 +74,36 @@ where
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FirstRoomDetails {
     #[serde(rename = "Price")]
-    price: Price,
+    pub price: Price,
     // #[serde(rename = "cancellation_policy")]
     // cancellation_policy: Vec<CancellationPolicy>,
     #[serde(rename = "room_name")]
-    room_name: String,
+    pub room_name: String,
     #[serde(rename = "Room_data")]
-    room_data: RoomData,
+    pub room_data: RoomData,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct Price {
     #[serde(rename = "PublishedPrice")]
-    published_price: f64,
+    pub published_price: f64,
     #[serde(rename = "PublishedPriceRoundedOff")]
-    published_price_rounded_off: f64,
+    pub published_price_rounded_off: f64,
     #[serde(rename = "OfferedPrice")]
-    offered_price: f64,
+    pub offered_price: f64,
     #[serde(rename = "OfferedPriceRoundedOff")]
-    offered_price_rounded_off: f64,
+    pub offered_price_rounded_off: f64,
     #[serde(rename = "RoomPrice")]
-    room_price: f64,
+    pub room_price: f64,
     #[serde(rename = "Tax")]
-    tax: f64,
+    pub tax: f64,
     #[serde(rename = "ExtraGuestCharge")]
-    extra_guest_charge: f64,
+    pub extra_guest_charge: f64,
     #[serde(rename = "ChildCharge")]
-    child_charge: f64,
+    pub child_charge: f64,
     #[serde(rename = "OtherCharges")]
-    other_charges: f64,
+    pub other_charges: f64,
     // #[serde(rename = "Discount")]
     // discount: f64,
     // #[serde(rename = "AgentCommission")]
@@ -119,7 +119,7 @@ pub struct Price {
     // #[serde(rename = "GSTPrice")]
     // gst_price: f64,
     #[serde(rename = "CurrencyCode")]
-    currency_code: String,
+    pub currency_code: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -141,9 +141,9 @@ pub struct CancellationPolicy {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct RoomData {
     #[serde(rename = "RoomUniqueId")]
-    room_unique_id: String,
+    pub room_unique_id: String,
     #[serde(rename = "rate_key")]
-    rate_key: String,
+    pub rate_key: String,
     // #[serde(rename = "group_code")]
     // group_code: String,
 }
@@ -152,14 +152,14 @@ pub struct RoomData {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelDetailsLevel1 {
     #[serde(rename = "HotelInfoResult")]
-    hotel_info_result: HotelInfoResult,
+    pub hotel_info_result: HotelInfoResult,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelInfoResult {
     #[serde(rename = "HotelDetails")]
-    hotel_details: HotelDetailsLevel2,
+    pub hotel_details: HotelDetailsLevel2,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

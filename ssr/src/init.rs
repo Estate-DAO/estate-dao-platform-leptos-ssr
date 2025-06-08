@@ -6,7 +6,7 @@ use crate::{
     utils::notifier::Notifier,
 };
 
-use crate::api::Provab;
+use crate::api::provab::Provab;
 use once_cell::sync::OnceCell;
 
 static PROVAB_CLIENT: OnceCell<Provab> = OnceCell::new();

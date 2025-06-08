@@ -11,6 +11,11 @@ pub mod page;
 pub mod state;
 pub mod utils;
 
+pub mod adapters;
+pub mod application_services;
+pub mod domain;
+pub mod ports;
+
 #[cfg(feature = "ga4")]
 pub mod event_streaming;
 

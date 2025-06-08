@@ -149,19 +149,19 @@ pub struct Search {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct HotelSearchRequest {
     #[serde(rename = "CheckInDate")]
-    check_in_date: String,
+    pub check_in_date: String,
     #[serde(rename = "NoOfNights")]
-    no_of_nights: u32,
+    pub no_of_nights: u32,
     #[serde(rename = "CountryCode")]
-    country_code: String,
+    pub country_code: String,
     #[serde(rename = "CityId")]
-    city_id: u32,
+    pub city_id: u32,
     #[serde(rename = "GuestNationality")]
-    guest_nationality: String,
+    pub guest_nationality: String,
     #[serde(rename = "NoOfRooms")]
-    no_of_rooms: u32,
+    pub no_of_rooms: u32,
     #[serde(rename = "RoomGuests")]
-    room_guests: Vec<RoomGuest>,
+    pub room_guests: Vec<RoomGuest>,
 }
 
 // TODO: remove these defaults when going in prod
