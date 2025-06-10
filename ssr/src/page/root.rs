@@ -1,7 +1,8 @@
 // use crate::component::outside_click_detector::OutsideClickDetector;
 // use leptos::logging::log;
+use crate::api::client_side_api::ClientSideApiClient;
+use crate::domain::{DomainHotelListAfterSearch, DomainHotelSearchCriteria};
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
-use crate::web_api_translator::search_fns::search_hotel;
 use crate::{log, utils};
 use leptos::*;
 use leptos_icons::*;
@@ -171,6 +172,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         local_disabled.set(true);
         log!("[root.rs] local_disabled set to true");
 
+        // utils::send_wrap(
         async move {
             log!("Search button clicked");
             log!("[root.rs] About to navigate to hotel list page");
@@ -179,20 +181,23 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             log!("[root.rs] Navigation triggered");
 
             // call server function inside action
-            utils::send_wrap(async move {
-                // spawn_local(async move {
-                // on mobile, collapse the full input and goback to InputGroupMobile component
-                InputGroupState::set_show_full_input(false);
-                log!("[root.rs] spawn_local started for search_hotel");
-                let result = search_hotel(search_ctx.into()).await.ok();
-                log!("[root.rs] search_hotel completed");
-                // log!("SEARCH_HOTEL_API: {result:?}");
-                SearchListResults::set_search_results(result);
-                log!("[root.rs] SearchListResults set");
-                local_disabled.set(false);
-                log!("[root.rs] local_disabled set to false");
-            });
+            // utils::send_wrap(async move {
+            // spawn_local(async move {
+            // on mobile, collapse the full input and goback to InputGroupMobile component
+            InputGroupState::set_show_full_input(false);
+            log!("[root.rs] spawn_local started for search_hotel");
+            // Use the ClientSideApiClient to make the API call
+            let api_client = ClientSideApiClient::new();
+            let result = api_client.search_hotel(search_ctx.into()).await;
+            log!("[root.rs] search_hotel completed");
+            // log!("SEARCH_HOTEL_API: {result:?}");
+            SearchListResults::set_search_results(result);
+            log!("[root.rs] SearchListResults set");
+            local_disabled.set(false);
+            log!("[root.rs] local_disabled set to false");
+            // });
         }
+        // )
     });
 
     // let close_closure = move |_: ()| {

@@ -154,7 +154,7 @@ ssr = [
     "dep:tokio-stream",
     "dep:getrandom",
     "dep:coarsetime",
-    "dep:dashmap"
+    "dep:dashmap",
     # "dep:colored"
     # "dep:dotenvy"
     # "reqwest/gzip"

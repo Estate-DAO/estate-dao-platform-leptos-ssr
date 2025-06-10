@@ -45,7 +45,7 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         let domain_result = self
             .provider
             .search_hotels(core_criteria, ui_filters)
-            .await
+            // .await
             .await?;
 
         // todo (filtering) is not implemented at the moment
@@ -110,7 +110,7 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
     ) -> Result<DomainHotelDetails, ProviderError> {
         // <!-- Core business logic for getting hotel details can be added here -->
         // <!-- For now, we just delegate to the provider -->
-        self.provider.get_hotel_details(criteria).await.await
+        self.provider.get_hotel_details(criteria).await
     }
 
     // <!-- Future methods for room operations, booking, etc. -->

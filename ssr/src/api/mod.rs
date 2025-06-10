@@ -1,6 +1,7 @@
 use cfg_if::cfg_if;
 
 pub mod api_client;
+pub mod client_side_api;
 
 pub mod provab;
 

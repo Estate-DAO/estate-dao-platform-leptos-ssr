@@ -56,16 +56,13 @@ impl From<GuestSelection> for DomainRoomGuest {
     }
 }
 
-#[server(SearchHotel)]
-pub async fn search_hotel(
-    request: DomainHotelSearchCriteria,
-) -> Result<DomainHotelListAfterSearch, ServerFnError> {
-    let hotel_service: HotelService<ProvabAdapter> = expect_context();
-    // utils::send_wrap( async move {
-
-    hotel_service.search_hotels(request).await.map_err(|e| {
-        log!("server_fn_error: SEARCH_HOTEL_API - {}", e.to_string());
-        ServerFnError::ServerError(e.to_string())
-    })
-    // }).await
-}
+// #[server(SearchHotel)]
+// pub async fn search_hotel(
+//     request: DomainHotelSearchCriteria,
+// ) -> Result<DomainHotelListAfterSearch, ServerFnError> {
+//     let hotel_service: HotelService<ProvabAdapter> = expect_context();
+//     hotel_service.search_hotels(request).await.map_err(|e| {
+//         log!("server_fn_error: SEARCH_HOTEL_API - {}", e.to_string());
+//         ServerFnError::ServerError(e.to_string())
+//     })
+// }

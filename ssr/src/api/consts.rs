@@ -16,7 +16,8 @@ pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
 
 // APP_URL
-const LOCALHOST_APP_URL: &str = "https://louse-musical-hideously.ngrok-free.app";
+const LOCALHOST_APP_URL: &str = "https://localhost:3002/";
+// const LOCALHOST_APP_URL: &str = "https://louse-musical-hideously.ngrok-free.app";
 const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
 const PROD_APP_URL: &str = "https://nofeebooking.com";
 

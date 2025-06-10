@@ -1,8 +1,8 @@
 use chrono::NaiveDate;
 // use leptos::logging::log;
+use crate::api::client_side_api::ClientSideApiClient;
 use crate::log;
 use crate::view_state_layer::ui_search_state::SearchListResults;
-use crate::web_api_translator::search_fns::search_hotel;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;
@@ -147,7 +147,9 @@ pub fn MostPopular() -> impl IntoView {
 
             // call server function inside action
             spawn_local(async move {
-                let result = search_hotel(search_ctx.into()).await.ok();
+                log!("spawn_local - search_hotel called ClientSideApiClient");
+                let api_client = ClientSideApiClient::new();
+                let result = api_client.search_hotel(search_ctx.into()).await;
                 // log!("SEARCH_HOTEL_API: {result:?}");
                 SearchListResults::set_search_results(result);
             });

@@ -85,39 +85,89 @@ pub trait ApiClient: Clone + Debug + Default {
             .http_client()
             .execute(request)
             .await
-            .map_err(|e| (ApiError::RequestFailed(e.into())))?;
+            .map_err(|e| (ApiError::RequestFailed(e.into())))?
+            .text()
+            .await
+            .map_err(|e| ApiError::ResponseError(e.to_string()))?;
+        // .bytes().await.map_err(|e| ApiError::ResponseError(e.to_string()))?;
 
-        let response_status = response.status();
-        if !response_status.is_success() {
-            let response_text = response.text().await;
-            return response_text.map_or_else(
-                |er| Err(ApiError::ResponseError(er.to_string())),
-                |t| {
-                    Err(ApiError::ResponseNotOK(format!(
-                        "received status - {}, error- {t}",
-                        response_status
-                    )))
-                },
-            );
-        }
+        // let response_status = response.status();
+        // if !response_status.is_success() {
+        //     let response_text = response.text().await;
+        //     return response_text.map_or_else(
+        //         |er| Err(ApiError::ResponseError(er.to_string())),
+        //         |t| {
+        //             Err(ApiError::ResponseNotOK(format!(
+        //                 "received status - {}, error- {t}",
+        //                 response_status
+        //             )))
+        //         },
+        //     );
+        // }
 
         let input = if Req::GZIP {
-            let body_bytes = response
-                .bytes()
-                .await
-                .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
-            DeserializableInput::Bytes(body_bytes.into())
+            let body_bytes = response.as_bytes();
+
+            // .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
+            DeserializableInput::Bytes(body_bytes.to_vec())
         } else {
-            let body_string = response
-                .text()
-                .await
-                .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
+            let body_string = response;
+            // .text()
+            // .await
+            // .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
             DeserializableInput::Text(body_string)
         };
 
         let res = Req::deserialize_response(input)?;
         Ok(res)
     }
+
+    // /// Execute the HTTP request and handle the response
+    // async fn execute_request<Req: ApiRequestMeta>(
+    //     &self,
+    //     reqb: RequestBuilder,
+    // ) -> ApiClientResult<Req::Response> {
+    //     let request = reqb
+    //         .build()
+    //         .map_err(|e| ApiError::RequestFailed(e.into()))?;
+
+    //     let response = self
+    //         .http_client()
+    //         .execute(request)
+    //         .await
+    //         .map_err(|e| (ApiError::RequestFailed(e.into())))?;
+
+    //     let response_status = response.status();
+    //     if !response_status.is_success() {
+    //         let response_text = response.text().await;
+    //         return response_text.map_or_else(
+    //             |er| Err(ApiError::ResponseError(er.to_string())),
+    //             |t| {
+    //                 Err(ApiError::ResponseNotOK(format!(
+    //                     "received status - {}, error- {t}",
+    //                     response_status
+    //                 )))
+    //             },
+    //         );
+    //     }
+
+    //     let input = if Req::GZIP {
+    //         let body_bytes = response
+    //             .bytes()
+    //             .await
+    //             .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
+    //         DeserializableInput::Bytes(body_bytes.into())
+    //     } else {
+    //         let body_string = response
+    //             .text()
+    //             .await
+    //             .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
+    //         DeserializableInput::Text(body_string)
+    //     };
+
+    //     let res = Req::deserialize_response(input)?;
+    //     Ok(res)
+    // }
 
     /// Apply conditional headers based on compile-time features
     fn apply_conditional_headers(&self, reqb: RequestBuilder) -> RequestBuilder {

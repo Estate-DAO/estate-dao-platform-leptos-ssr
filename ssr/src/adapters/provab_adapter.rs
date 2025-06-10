@@ -6,7 +6,7 @@ use crate::api::provab::a01_hotel_info::{
     HotelDetailsLevel2 as ProvabHotelDetailsLevel2, HotelInfoResult as ProvabHotelInfoResult,
     Price as ProvabDetailedPrice, RoomData as ProvabRoomData,
 };
-use futures::future::{BoxFuture, FutureExt, LocalBoxFuture};
+use futures::future::{BoxFuture, FutureExt};
 
 use crate::api::provab::{
     HotelInfoRequest as ProvabHotelInfoRequest,
@@ -212,68 +212,64 @@ impl ProvabAdapter {
     }
 }
 
-// #[async_trait]
+// #[async_trait::async_trait]
 impl HotelProviderPort for ProvabAdapter {
-    fn search_hotels(
+    async fn search_hotels(
         // async fn search_hotels(
         &self,
         criteria: DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
-        // ) -> Result<DomainHotelListAfterSearch, ProviderError> {
-    ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>> {
-        async move {
-            let provab_request = Self::map_domain_search_to_provab(&criteria, ui_filters.clone());
-            let provab_response: ProvabHotelSearchResponse = self
-                .client
-                .send(provab_request)
-                .await
-                .map_err(|e: ApiError| {
-                    ProviderError::from_api_error(
-                        e,
-                        ProviderNames::Provab,
-                        ProviderSteps::HotelSearch,
-                    )
-                })?;
-            Ok(Self::map_provab_search_to_domain(provab_response))
-        }
-        .boxed_local()
+    ) -> Result<DomainHotelListAfterSearch, ProviderError> {
+        // ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>> {
+        // async move {
+        let provab_request = Self::map_domain_search_to_provab(&criteria, ui_filters.clone());
+        let provab_response: ProvabHotelSearchResponse = self
+            .client
+            .send(provab_request)
+            .await
+            .map_err(|e: ApiError| {
+                ProviderError::from_api_error(e, ProviderNames::Provab, ProviderSteps::HotelSearch)
+            })?;
+        Ok(Self::map_provab_search_to_domain(provab_response))
+        // }
+        // .boxed_local()
     }
 
-    fn get_hotel_details(
+    async fn get_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
-        // ) -> Result<DomainHotelDetails, ProviderError> {
-    ) -> LocalBoxFuture<'_, Result<DomainHotelDetails, ProviderError>> {
-        async move {
-            let provab_request = Self::map_domain_hotel_info_to_provab(&criteria);
-            let provab_response: ProvabHotelInfoResponse = self
-                .client
-                .send(provab_request)
-                .await
-                .map_err(|e: ApiError| {
+    ) -> Result<DomainHotelDetails, ProviderError> {
+        // ) -> LocalBoxFuture<'_, Result<DomainHotelDetails, ProviderError>> {
+        // async move {
+        let provab_request = Self::map_domain_hotel_info_to_provab(&criteria);
+        let provab_response: ProvabHotelInfoResponse = self
+            .client
+            .send(provab_request)
+            .await
+            .map_err(|e: ApiError| {
                 ProviderError::from_api_error(e, ProviderNames::Provab, ProviderSteps::HotelDetails)
             })?;
-            Self::map_provab_hotel_info_to_domain(provab_response)
-        }
-        .boxed_local()
+        Self::map_provab_hotel_info_to_domain(provab_response)
     }
-
-    // <!-- Future methods to be implemented -->
-    // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError> {
-    //     let provab_request = /* create request */;
-    //     let provab_response = self.client.send(provab_request).await.map_err(ProviderError::from)?;
-    //     Ok(/* map response */)
-    // }
-
-    // async fn block_room(&self, block_request: DomainBlockRoomRequest) -> Result<DomainBlockRoomResponse, ProviderError> {
-    //     let provab_request = /* map to provab block request */;
-    //     let provab_response = self.client.send(provab_request).await.map_err(ProviderError::from)?;
-    //     Ok(/* map response */)
-    // }
-
-    // async fn book_room(&self, book_request: DomainBookRoomRequest) -> Result<DomainBookRoomResponse, ProviderError> {
-    //     let provab_request = /* map to provab book request */;
-    //     let provab_response = self.client.send(provab_request).await.map_err(ProviderError::from)?;
-    //     Ok(/* map response */)
-    // }
+    // .boxed_local()
 }
+
+// <!-- Future methods to be implemented -->
+// async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError> {
+//     let provab_request = /* create request */;
+//     let provab_response = self.client.send(provab_request).await.map_err(ProviderError::from)?;
+//     Ok(/* map response */)
+// }
+
+// async fn block_room(&self, block_request: DomainBlockRoomRequest) -> Result<DomainBlockRoomResponse, ProviderError> {
+//     let provab_request = /* map to provab block request */;
+//     let provab_response = self.client.send(provab_request).await.map_err(ProviderError::from)?;
+//     Ok(/* map response */)
+// }
+
+// async fn book_room(&self, book_request: DomainBookRoomRequest) -> Result<DomainBookRoomResponse, ProviderError> {
+//     let provab_request = /* map to provab book request */;
+//     let provab_response = self.client.send(provab_request).await.map_err(ProviderError::from)?;
+//     Ok(/* map response */)
+// }
+// }

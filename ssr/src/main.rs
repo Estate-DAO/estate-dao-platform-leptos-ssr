@@ -13,7 +13,6 @@ use estate_fe::{
         payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
         pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
-    state,
     utils::{
         admin::AdminCanisters,
         app_reference::BookingId,
@@ -43,7 +42,7 @@ cfg_if! {
 
         use estate_fe::app::*;
         use estate_fe::fallback::file_and_error_handler;
-        use estate_fe::state::AppState;
+        use estate_fe::view_state_layer::AppState;
         use axum::{http::{StatusCode, HeaderMap} };
         use axum::body::Bytes;
         use serde_json::Value;
@@ -67,6 +66,9 @@ cfg_if! {
 
         mod basic_auth;
         use basic_auth::*;
+        mod server_functions_impl_custom_routes;
+
+        use server_functions_impl_custom_routes::api_routes;
 
         // Helper: verify NowPayments HMAC-SHA512 signature (gated by feature)
         #[cfg(not(feature = "debug_log"))]
@@ -303,6 +305,7 @@ cfg_if! {
                 // .route("/ipn/webhook", post(nowpayments_webhook))
                 // .route("/api/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))
+                .nest("/server_fn_api", api_routes())
                 // .route("/api/counter-events", get(counter_events))  // For backward compatibility
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)

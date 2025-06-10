@@ -53,9 +53,9 @@ impl ProviderError {
         }))
     }
 }
-#[async_trait::async_trait]
-pub trait HotelProviderPort: Send + Sync + 'static {
-    // pub trait HotelProviderPort: Send + Sync + 'static {
+// #[async_trait::async_trait]
+// pub trait HotelProviderPort: Send + Sync + 'static {
+pub trait HotelProviderPort {
     // <!-- Core search method that takes both essential criteria and UI filters -->
     // <!-- The adapter will try to use UI filters if the specific provider API supports them -->
     async fn search_hotels(
@@ -63,12 +63,13 @@ pub trait HotelProviderPort: Send + Sync + 'static {
         &self,
         criteria: DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
-    ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>>;
+    ) -> Result<DomainHotelListAfterSearch, ProviderError>;
+    // ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>>;
 
     async fn get_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> LocalBoxFuture<'_, Result<DomainHotelDetails, ProviderError>>;
+    ) -> Result<DomainHotelDetails, ProviderError>;
 
     // <!-- Future operations to be implemented -->
     // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError>;
