@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use super::a03_block_room::BlockRoomResponse;
 use colored::Colorize;
-use error_stack::{report, Report, ResultExt};
 use leptos::{expect_context, use_context};
 // use leptos::logging::log;
 
@@ -105,9 +104,9 @@ pub trait ProvabReqMeta: Sized + Send {
                 // })?;
                 // s
                 String::from_utf8(body_bytes).map_err(|e| {
-                    report!(ApiError::DecompressionFailed(String::from(
-                        "Could not convert from bytes to string"
-                    )))
+                    ApiError::DecompressionFailed(String::from(
+                        "Could not convert from bytes to string",
+                    ))
                 })?
             }
             DeserializableInput::Text(body_string) => body_string,
@@ -117,7 +116,7 @@ pub trait ProvabReqMeta: Sized + Send {
         let res: Self::Response = serde_path_to_error::deserialize(jd).map_err(|e| {
             let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
             log!("deserialize_response- JsonParseFailed: {:?}", total_error);
-            report!(ApiError::JsonParseFailed(total_error))
+            ApiError::JsonParseFailed(total_error)
         })?;
 
         // log!("\n\ndeserialize_response- Ok : {res:?}\n\n\n");

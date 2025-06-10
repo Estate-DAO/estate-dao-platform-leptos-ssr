@@ -2,8 +2,8 @@ use leptos::LeptosOptions;
 use leptos_router::RouteListing;
 
 use crate::{
-    api::consts::EnvVarConfig, ssr_booking::PipelineLockManager, state::AppState,
-    utils::notifier::Notifier,
+    api::consts::EnvVarConfig, ssr_booking::PipelineLockManager, utils::notifier::Notifier,
+    view_state_layer::AppState,
 };
 
 use crate::api::provab::Provab;

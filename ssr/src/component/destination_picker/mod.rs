@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     component::{Divider, HSettingIcon, LiveSelect},
-    state::{
+    view_state_layer::{
         input_group_state::{InputGroupState, OpenDialogComponent},
-        search_state::SearchCtx,
+        // search_state::SearchCtx,
         GlobalStateForLeptos,
     },
 };
@@ -72,18 +72,19 @@ impl Default for Destination {
         }
     }
 }
-impl Destination {
-    pub fn get_country_code(ctx: &SearchCtx) -> String {
-        ctx.destination
-            .get_untracked()
-            .map(|d| d.country_code.clone())
-            .unwrap_or_default()
-    }
 
-    pub fn get_city_id(ctx: &SearchCtx) -> u32 {
-        ctx.destination
-            .get_untracked()
-            .map(|d| d.city_id.parse::<u32>().unwrap_or_default())
-            .unwrap_or_default()
-    }
-}
+// impl Destination {
+//     pub fn get_country_code(ctx: &SearchCtx) -> String {
+//         ctx.destination
+//             .get_untracked()
+//             .map(|d| d.country_code.clone())
+//             .unwrap_or_default()
+//     }
+
+//     pub fn get_city_id(ctx: &SearchCtx) -> u32 {
+//         ctx.destination
+//             .get_untracked()
+//             .map(|d| d.city_id.parse::<u32>().unwrap_or_default())
+//             .unwrap_or_default()
+//     }
+// }

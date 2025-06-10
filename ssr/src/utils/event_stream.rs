@@ -10,12 +10,12 @@ use tokio_stream::wrappers::ReceiverStream;
 use tracing::instrument;
 use tracing::{debug, error, info};
 
-use crate::state::AppState;
 use crate::utils::{
     notifier::Notifier,
     notifier_event::NotifierEvent,
     tokio_event_bus::{Event as BusEvent, EventBus},
 };
+use crate::view_state_layer::AppState;
 
 /// Query parameters for the event stream endpoint
 #[derive(Debug, Deserialize)]

@@ -91,3 +91,12 @@ pub fn get_year_month(timestamp: f64) -> (u32, u32) {
     let datetime: chrono::DateTime<chrono::Utc> = chrono::DateTime::from_utc(naive, chrono::Utc);
     (datetime.year() as u32, datetime.month())
 }
+
+// YYYY MM DD
+pub fn date_tuple_to_yyyy_mm_dd(date: (u32, u32, u32)) -> String {
+    format!("{:04}-{:02}-{:02}", date.0, date.1, date.2)
+}
+
+pub fn date_tuple_to_dd_mm_yyyy(date: (u32, u32, u32)) -> String {
+    format!("{:02}-{:02}-{:04}", date.2, date.1, date.0)
+}

@@ -1,4 +1,4 @@
-use crate::{canister::backend, error, log, state::GlobalStateForLeptos, warn};
+use crate::{canister::backend, error, log, view_state_layer::GlobalStateForLeptos, warn};
 
 use leptos::*;
 use serde::Deserialize;

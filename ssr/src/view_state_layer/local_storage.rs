@@ -4,7 +4,7 @@ use leptos_use::storage::{use_local_storage, use_local_storage_with_options, Use
 
 use crate::api::{
     consts::{BOOK_ROOM_RESPONSE, PAYMENT_ID, PAYMENT_STATUS},
-    BookRoomResponse,
+    // BookRoomResponse,
 };
 use crate::{api::consts::BOOKING_ID, utils::app_reference::BookingId};
 
@@ -43,14 +43,14 @@ pub fn use_booking_id_store() -> (
     )
 }
 
-pub fn use_booking_response_store() -> (
-    Signal<Option<BookRoomResponse>>,
-    WriteSignal<Option<BookRoomResponse>>,
-    impl Fn() + Clone,
-) {
-    // use_local_storage::<Option<BookRoomResponse>, JsonSerdeCodec>(BOOK_ROOM_RESPONSE)
-    use_local_storage_with_options::<Option<BookRoomResponse>, JsonSerdeCodec>(
-        BOOK_ROOM_RESPONSE,
-        UseStorageOptions::default().delay_during_hydration(true),
-    )
-}
+// pub fn use_booking_response_store() -> (
+//     Signal<Option<BookRoomResponse>>,
+//     WriteSignal<Option<BookRoomResponse>>,
+//     impl Fn() + Clone,
+// ) {
+//     // use_local_storage::<Option<BookRoomResponse>, JsonSerdeCodec>(BOOK_ROOM_RESPONSE)
+//     use_local_storage_with_options::<Option<BookRoomResponse>, JsonSerdeCodec>(
+//         BOOK_ROOM_RESPONSE,
+//         UseStorageOptions::default().delay_during_hydration(true),
+//     )
+// }

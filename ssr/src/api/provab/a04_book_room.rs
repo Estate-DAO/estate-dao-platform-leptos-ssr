@@ -298,7 +298,6 @@ impl Serialize for BookingStatus {
 //
 
 use colored::Colorize;
-use error_stack::{report, Report, ResultExt};
 use std::io::Read;
 
 impl ProvabReqMeta for BookRoomRequest {
@@ -325,9 +324,9 @@ impl ProvabReqMeta for BookRoomRequest {
         let decompressed_body = match response_bytes_or_string {
             DeserializableInput::Bytes(body_bytes) => {
                 String::from_utf8(body_bytes).map_err(|e| {
-                    report!(ApiError::DecompressionFailed(String::from(
-                        "Could not convert from bytes to string"
-                    )))
+                    ApiError::DecompressionFailed(String::from(
+                        "Could not convert from bytes to string",
+                    ))
                 })?
             }
             DeserializableInput::Text(body_string) => body_string,
@@ -337,7 +336,7 @@ impl ProvabReqMeta for BookRoomRequest {
             serde_json::from_str(&decompressed_body).map_err(|e| {
                 // let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
                 log!("deserialize_response- JsonParseFailed: {:#?}", e);
-                report!(ApiError::JsonParseFailed(e.to_string()))
+                ApiError::JsonParseFailed(e.to_string())
             })?;
 
         if json_value.get("CommitBooking").is_some() {
@@ -349,13 +348,13 @@ impl ProvabReqMeta for BookRoomRequest {
             let res: SuccessBookRoomResponse = serde_json::from_value(json_value).map_err(|e| {
                 // let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
                 log!("deserialize_response- JsonParseFailed: {:?}", e.to_string());
-                report!(ApiError::JsonParseFailed(e.to_string()))
+                ApiError::JsonParseFailed(e.to_string())
             })?;
             Ok(BookRoomResponse::Success(res))
         } else {
             let res: FailureBookRoomResponse = serde_json::from_value(json_value).map_err(|e| {
                 log!("deserialize_response- JsonParseFailed: {:?}", e.to_string());
-                report!(ApiError::JsonParseFailed(e.to_string()))
+                ApiError::JsonParseFailed(e.to_string())
             })?;
             Ok(BookRoomResponse::Failure(res))
         }
@@ -667,65 +666,65 @@ impl From<&UserDetails> for Vec<PassengerDetail> {
     }
 }
 
-impl FromIterator<AdultDetail> for std::vec::Vec<crate::state::view_state::AdultDetail> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = AdultDetail>,
-    {
-        iter.into_iter()
-            .map(|detail| crate::state::view_state::AdultDetail {
-                first_name: detail.first_name,
-                last_name: detail.last_name,
-                email: detail.email,
-                phone: detail.phone,
-            })
-            .collect()
-    }
-}
+// impl FromIterator<AdultDetail> for std::vec::Vec<crate::state::view_state::AdultDetail> {
+//     fn from_iter<I>(iter: I) -> Self
+//     where
+//         I: IntoIterator<Item = AdultDetail>,
+//     {
+//         iter.into_iter()
+//             .map(|detail| crate::state::view_state::AdultDetail {
+//                 first_name: detail.first_name,
+//                 last_name: detail.last_name,
+//                 email: detail.email,
+//                 phone: detail.phone,
+//             })
+//             .collect()
+//     }
+// }
 
-impl FromIterator<ChildDetail> for std::vec::Vec<crate::state::view_state::ChildDetail> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = ChildDetail>,
-    {
-        iter.into_iter()
-            .map(|detail| crate::state::view_state::ChildDetail {
-                first_name: detail.first_name,
-                last_name: detail.last_name,
-                age: Some(detail.age),
-            })
-            .collect()
-    }
-}
+// impl FromIterator<ChildDetail> for std::vec::Vec<crate::state::view_state::ChildDetail> {
+//     fn from_iter<I>(iter: I) -> Self
+//     where
+//         I: IntoIterator<Item = ChildDetail>,
+//     {
+//         iter.into_iter()
+//             .map(|detail| crate::state::view_state::ChildDetail {
+//                 first_name: detail.first_name,
+//                 last_name: detail.last_name,
+//                 age: Some(detail.age),
+//             })
+//             .collect()
+//     }
+// }
 
-impl From<UserDetails> for Vec<crate::state::view_state::AdultDetail> {
-    fn from(user_details: UserDetails) -> Self {
-        user_details
-            .adults
-            .into_iter()
-            .map(|a| AdultDetail {
-                first_name: a.first_name,
-                last_name: a.last_name,
-                email: a.email,
-                phone: a.phone,
-            })
-            .collect()
-    }
-}
+// impl From<UserDetails> for Vec<crate::state::view_state::AdultDetail> {
+//     fn from(user_details: UserDetails) -> Self {
+//         user_details
+//             .adults
+//             .into_iter()
+//             .map(|a| AdultDetail {
+//                 first_name: a.first_name,
+//                 last_name: a.last_name,
+//                 email: a.email,
+//                 phone: a.phone,
+//             })
+//             .collect()
+//     }
+// }
 
-impl From<UserDetails> for Vec<crate::state::view_state::ChildDetail> {
-    fn from(user_details: UserDetails) -> Self {
-        user_details
-            .children
-            .into_iter()
-            .map(|c| ChildDetail {
-                first_name: c.first_name,
-                last_name: c.last_name,
-                age: c.age,
-            })
-            .collect()
-    }
-}
+// impl From<UserDetails> for Vec<crate::state::view_state::ChildDetail> {
+//     fn from(user_details: UserDetails) -> Self {
+//         user_details
+//             .children
+//             .into_iter()
+//             .map(|c| ChildDetail {
+//                 first_name: c.first_name,
+//                 last_name: c.last_name,
+//                 age: c.age,
+//             })
+//             .collect()
+//     }
+// }
 
 pub fn create_backend_book_room_response(
     (email, app_reference): (String, String),

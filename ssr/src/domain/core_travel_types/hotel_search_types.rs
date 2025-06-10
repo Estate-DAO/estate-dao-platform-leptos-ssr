@@ -1,25 +1,17 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "mock-provab")] {
-        // fake imports
-        use fake::{Dummy, Fake, Faker};
-        use rand::rngs::StdRng;
-        use rand::SeedableRng;
-    }
-}
-
 //
 // SEARCH CORE TYPES
 //
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Destination {
-    pub city: String,
-    pub country_name: String,
+pub struct DomainDestination {
+    // todo (liteapi) - should to be int?
+    pub city_id: u32,
+    pub city_name: String,
     pub country_code: String,
-    pub city_id: String,
+    pub country_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +21,6 @@ pub struct DomainSelectedDateRange {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct DomainRoomGuest {
     pub no_of_adults: u32,
     pub no_of_children: u32,
@@ -42,14 +33,16 @@ pub struct DomainRoomGuest {
 // <!-- Core domain types based on working Provab types -->
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct DomainHotelSearchCriteria {
     // <!-- Destination information -->
     pub destination_city_id: u32,
+    pub destination_city_name: String,
     pub destination_country_code: String,
+    pub destination_country_name: String,
 
     // <!-- Date information -->
-    pub check_in_date: String, // <!-- Format: "DD-MM-YYYY" -->
+    pub check_in_date: (u32, u32, u32),  // YYYY-MM-DD
+    pub check_out_date: (u32, u32, u32), // YYYY-MM-DD
     pub no_of_nights: u32,
 
     // <!-- Guest information -->
@@ -59,7 +52,6 @@ pub struct DomainHotelSearchCriteria {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct DomainPrice {
     pub room_price: f64,
     pub currency_code: String,
@@ -70,8 +62,7 @@ pub struct DomainPrice {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
-pub struct DomainHotelResult {
+pub struct DomainHotelAfterSearch {
     pub hotel_code: String,
     pub hotel_name: String,
     pub hotel_category: String,
@@ -86,38 +77,26 @@ pub struct DomainHotelResult {
     // pub amenities: Option<Vec<String>>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
-pub struct DomainHotelSearchResult {
-    pub hotel_results: Vec<DomainHotelResult>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
-pub struct DomainHotelSearchResponse {
-    // some Api providers give string, some give int
-    pub status: String,
-    pub message: String,
-    pub search: Option<DomainHotelSearchResult>,
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+pub struct DomainHotelListAfterSearch {
+    pub hotel_results: Vec<DomainHotelAfterSearch>,
 }
 
 // <!-- Hotel Details Types -->
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct DomainHotelInfoCriteria {
     pub token: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct DomainFirstRoomDetails {
     pub price: DomainDetailedPrice,
     pub room_data: DomainRoomData,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+
 pub struct DomainDetailedPrice {
     pub published_price: f64,
     pub published_price_rounded_off: f64,
@@ -132,7 +111,7 @@ pub struct DomainDetailedPrice {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+
 pub struct DomainRoomData {
     pub room_name: String,
     pub room_unique_id: String,
@@ -140,7 +119,7 @@ pub struct DomainRoomData {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+
 pub struct DomainHotelDetails {
     pub checkin: String,
     pub checkout: String,
@@ -162,7 +141,10 @@ impl Default for DomainHotelSearchCriteria {
         Self {
             destination_city_id: 1254, // <!-- Default to Mumbai -->
             destination_country_code: "IN".into(),
-            check_in_date: "11-11-2024".into(),
+            check_in_date: (2025, 11, 12),
+            check_out_date: (2025, 11, 12),
+            destination_city_name: "Mumbai".into(),
+            destination_country_name: "India".into(),
             no_of_nights: 1,
             guest_nationality: "IN".into(),
             no_of_rooms: 1,
@@ -176,26 +158,6 @@ impl Default for DomainHotelSearchCriteria {
 }
 
 // <!-- Helper implementations -->
-
-impl DomainHotelSearchResponse {
-    pub fn get_results_token_map(&self) -> HashMap<String, String> {
-        let mut hotel_map = HashMap::new();
-
-        if let Some(search) = self.search.clone() {
-            for hotel in search.hotel_results {
-                hotel_map.insert(hotel.hotel_code, hotel.result_token);
-            }
-        }
-
-        hotel_map
-    }
-
-    pub fn hotel_results(&self) -> Vec<DomainHotelResult> {
-        self.search
-            .clone()
-            .map_or_else(Vec::new, |search| search.hotel_results)
-    }
-}
 
 // <!-- Integration with UI State (SearchCtx) -->
 // <!-- This will be enabled when needed -->
@@ -278,8 +240,3 @@ pub struct DomainUserDetails {
 }
 
 // get room types
-
-// DomainHotelSearchCriteria, DomainHotelSearchResponse, DomainSearch,
-// DomainHotelSearchResult, DomainHotelResult, DomainPrice,
-// // DomainRoomGuest,
-// DomainHotelInfoCriteria,

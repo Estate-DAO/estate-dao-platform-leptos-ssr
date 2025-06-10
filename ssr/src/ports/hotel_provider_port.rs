@@ -1,45 +1,74 @@
 use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
-    DomainHotelDetails,
-    // <!-- Future domain types for room operations, booking, etc. -->
-    // DomainRoomOptions, DomainBlockRoomRequest, DomainBlockRoomResponse,
-    // DomainBookRoomRequest, DomainBookRoomResponse,
-    DomainHotelInfoCriteria,
+    DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
     DomainHotelSearchCriteria,
-    DomainHotelSearchResponse,
 };
+use crate::ports::ProviderNames;
 use async_trait::async_trait;
+use futures::future::{BoxFuture, FutureExt, LocalBoxFuture};
+use std::fmt;
+use std::future::Future;
+use std::sync::Arc;
 
-#[derive(Debug)]
-pub struct ProviderError(pub String);
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProviderErrorDetails {
+    pub provider_name: ProviderNames,
+    pub api_error: ApiError,
+    pub error_step: ProviderSteps,
+}
 
-impl From<ApiError> for ProviderError {
-    fn from(e: ApiError) -> Self {
-        ProviderError(e.to_string())
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProviderSteps {
+    HotelSearch,
+    HotelDetails,
+    HotelBlockRoom,
+    HotelBookRoom,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProviderError(pub Arc<ProviderErrorDetails>);
+
+// Added Display implementation
+impl fmt::Display for ProviderError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Provider '{:?}' failed during '{:?}' step. Details: {}",
+            self.0.provider_name, self.0.error_step, self.0.api_error
+        )
     }
 }
 
-impl From<error_stack::Report<ApiError>> for ProviderError {
-    fn from(e: error_stack::Report<ApiError>) -> Self {
-        ProviderError(e.to_string())
+impl ProviderError {
+    pub fn from_api_error(
+        api_error: ApiError,
+        provider_name: ProviderNames,
+        error_step: ProviderSteps,
+    ) -> Self {
+        ProviderError(Arc::new(ProviderErrorDetails {
+            provider_name,
+            api_error,
+            error_step,
+        }))
     }
 }
-
-#[async_trait]
-pub trait HotelProviderPort: Send + Sync {
+#[async_trait::async_trait]
+pub trait HotelProviderPort: Send + Sync + 'static {
+    // pub trait HotelProviderPort: Send + Sync + 'static {
     // <!-- Core search method that takes both essential criteria and UI filters -->
     // <!-- The adapter will try to use UI filters if the specific provider API supports them -->
     async fn search_hotels(
+        // async fn search_hotels(
         &self,
         criteria: DomainHotelSearchCriteria,
-        ui_filters: &UISearchFilters,
-    ) -> Result<DomainHotelSearchResponse, ProviderError>;
+        ui_filters: UISearchFilters,
+    ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>>;
 
     async fn get_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<DomainHotelDetails, ProviderError>;
+    ) -> LocalBoxFuture<'_, Result<DomainHotelDetails, ProviderError>>;
 
     // <!-- Future operations to be implemented -->
     // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError>;

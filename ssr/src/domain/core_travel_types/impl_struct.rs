@@ -1,4 +1,9 @@
-use crate::domain::DomainSelectedDateRange;
+use std::collections::HashMap;
+
+use crate::domain::{
+    core_travel_types::DomainSelectedDateRange, DomainHotelAfterSearch, DomainHotelListAfterSearch,
+    DomainHotelSearchCriteria,
+};
 
 impl DomainSelectedDateRange {
     pub fn to_string(&self) -> String {
@@ -136,5 +141,21 @@ impl DomainSelectedDateRange {
         } else {
             "-".to_string()
         }
+    }
+}
+
+impl DomainHotelListAfterSearch {
+    pub fn get_results_token_map(&self) -> HashMap<String, String> {
+        let mut hotel_map = HashMap::new();
+
+        for hotel in &self.hotel_results {
+            hotel_map.insert(hotel.hotel_code.clone(), hotel.result_token.clone());
+        }
+
+        hotel_map
+    }
+
+    pub fn hotel_list(&self) -> Vec<DomainHotelAfterSearch> {
+        self.hotel_results.clone()
     }
 }

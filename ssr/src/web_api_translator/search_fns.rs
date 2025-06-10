@@ -1,0 +1,71 @@
+use crate::adapters::ProvabAdapter;
+use crate::application_services::HotelService;
+use crate::component::SelectedDateRange;
+use crate::component::{Destination, GuestSelection};
+use crate::domain::{DomainHotelListAfterSearch, DomainRoomGuest};
+use crate::{domain::DomainHotelSearchCriteria, view_state_layer::ui_search_state::UISearchCtx};
+use crate::{log, utils};
+use leptos::*;
+
+impl From<UISearchCtx> for DomainHotelSearchCriteria {
+    fn from(ctx: UISearchCtx) -> Self {
+        let check_in_date = ctx.date_range.get_untracked().start;
+        let check_out_date = ctx.date_range.get_untracked().end;
+        let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
+        // let no_of_nights = 2;
+
+        // todo (better hanlding)
+        let destination: Destination = ctx.destination.get_untracked().unwrap_or_default();
+        let request = DomainHotelSearchCriteria {
+            check_in_date,
+            check_out_date,
+            no_of_nights,
+            room_guests: vec![ctx.guests.get_untracked().into()],
+            destination_city_id: destination.city_id.parse().unwrap_or_default(),
+            destination_city_name: destination.city,
+            destination_country_code: destination.country_code,
+            destination_country_name: destination.country_name,
+            ..Default::default()
+        };
+
+        log!("HotelSearchRequest: {request:?}");
+
+        request
+    }
+}
+
+impl From<GuestSelection> for DomainRoomGuest {
+    fn from(guest_selection: GuestSelection) -> Self {
+        let ages_u32: Vec<u32> = guest_selection.children_ages.get_untracked();
+        let children_ages_converted: Option<Vec<String>> = if ages_u32.is_empty() {
+            None
+        } else {
+            Some(
+                ages_u32
+                    .into_iter()
+                    .map(|age| age.to_string())
+                    .collect::<Vec<String>>(),
+            )
+        };
+
+        DomainRoomGuest {
+            no_of_adults: guest_selection.adults.get_untracked(),
+            no_of_children: guest_selection.children.get_untracked(),
+            children_ages: children_ages_converted,
+        }
+    }
+}
+
+#[server(SearchHotel)]
+pub async fn search_hotel(
+    request: DomainHotelSearchCriteria,
+) -> Result<DomainHotelListAfterSearch, ServerFnError> {
+    let hotel_service: HotelService<ProvabAdapter> = expect_context();
+    // utils::send_wrap( async move {
+
+    hotel_service.search_hotels(request).await.map_err(|e| {
+        log!("server_fn_error: SEARCH_HOTEL_API - {}", e.to_string());
+        ServerFnError::ServerError(e.to_string())
+    })
+    // }).await
+}

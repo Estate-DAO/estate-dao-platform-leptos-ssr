@@ -3,7 +3,7 @@ use std::fmt::Display;
 use leptos_router::use_navigate;
 use reqwest::Url;
 
-use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 
 #[macro_export]
 macro_rules! try_or_redirect {

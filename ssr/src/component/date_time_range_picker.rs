@@ -1,10 +1,10 @@
 // use console_log::log;
-use crate::state::input_group_state::OpenDialogComponent;
+use crate::view_state_layer::input_group_state::OpenDialogComponent;
 use leptos::*;
 use leptos_icons::*;
 // use leptos_use::use_timestamp;
-use crate::state::{input_group_state::InputGroupState, search_state::SearchCtx};
 use crate::utils::date::*;
+use crate::view_state_layer::{input_group_state::InputGroupState, ui_search_state::UISearchCtx};
 use chrono::{Local, NaiveDate, TimeZone, Utc};
 // use leptos::logging::log;
 use crate::log;
@@ -165,7 +165,7 @@ impl SelectedDateRange {
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
     let is_open = create_memo(move |_| InputGroupState::is_date_open());
-    let search_ctx: SearchCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
     let selected_range = search_ctx.date_range;
     let (initial_date, set_initial_date) = create_signal((2024_u32, 1_u32));
     let calendar_ref = create_node_ref::<leptos::html::Div>();

@@ -2,7 +2,6 @@ use crate::api::api_client::{ApiClient, ApiRequest};
 use crate::api::provab::ProvabReq;
 use crate::{error, log};
 use async_trait::async_trait;
-use error_stack::ResultExt;
 use leptos::ServerFnError;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Serialize};

@@ -1,22 +1,36 @@
+use crate::adapters::ProvabAdapter;
+use crate::api::provab::Provab;
 use crate::api::ApiError;
 use crate::application_services::filter_types::{
     DomainSortDirection, DomainSortField, UISearchFilters, UISortOptions,
 };
 use crate::domain::{
-    DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelResult, DomainHotelSearchCriteria,
-    DomainHotelSearchResponse,
+    DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
+    DomainHotelSearchCriteria,
 };
 use crate::ports::hotel_provider_port::{HotelProviderPort, ProviderError};
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+// #[derive(Clone)]
+// pub struct HotelService {
+//     provider: Arc<dyn  HotelProviderPort+ Send+ Sync>,
+// }
+
 #[derive(Clone)]
-pub struct HotelService {
-    provider: Arc<dyn HotelProviderPort>,
+pub struct HotelService<T: HotelProviderPort + Clone> {
+    provider: T,
 }
 
-impl HotelService {
-    pub fn new(provider: Arc<dyn HotelProviderPort>) -> Self {
+impl<T: HotelProviderPort + Clone> HotelService<T> {
+    pub fn init(provider: T) -> Self {
+        // todo (provab) is the default adaptyer for now. we will test this later.
+        // let provab_client = Provab::default();
+        // let provab_adapter  = ProvabAdapter::new(provab_client);
+        HotelService::new(provider)
+    }
+
+    pub fn new(provider: T) -> Self {
         Self { provider }
     }
 
@@ -25,12 +39,13 @@ impl HotelService {
         core_criteria: DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
         sort_options: UISortOptions,
-    ) -> Result<DomainHotelSearchResponse, ProviderError> {
+    ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         // <!-- 1. Call the provider with core criteria and UI filters -->
         // <!-- The adapter will try to use UI filters if its specific API supports them -->
-        let mut domain_result = self
+        let domain_result = self
             .provider
-            .search_hotels(core_criteria, &ui_filters)
+            .search_hotels(core_criteria, ui_filters)
+            .await
             .await?;
 
         // todo (filtering) is not implemented at the moment
@@ -79,7 +94,7 @@ impl HotelService {
     pub async fn search_hotels(
         &self,
         criteria: DomainHotelSearchCriteria,
-    ) -> Result<DomainHotelSearchResponse, ProviderError> {
+    ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         // <!-- Use the new method with empty filters -->
         self.search_hotels_with_filters(
             criteria,
@@ -95,7 +110,7 @@ impl HotelService {
     ) -> Result<DomainHotelDetails, ProviderError> {
         // <!-- Core business logic for getting hotel details can be added here -->
         // <!-- For now, we just delegate to the provider -->
-        self.provider.get_hotel_details(criteria).await
+        self.provider.get_hotel_details(criteria).await.await
     }
 
     // <!-- Future methods for room operations, booking, etc. -->

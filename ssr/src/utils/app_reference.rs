@@ -9,7 +9,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::canister::backend;
-use crate::{canister::backend::Booking, state::local_storage::use_booking_id_store};
+use crate::{canister::backend::Booking, view_state_layer::local_storage::use_booking_id_store};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct BookingId {

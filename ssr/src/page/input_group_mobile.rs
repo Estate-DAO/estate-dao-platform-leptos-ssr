@@ -1,12 +1,12 @@
-use crate::state::search_state::SearchCtx;
 use crate::utils::pluralize;
+use crate::view_state_layer::ui_search_state::UISearchCtx;
 use leptos::*;
 use leptos_icons::*;
 
 #[component]
 pub fn InputGroupMobile() -> impl IntoView {
     // Get actual data from search context
-    let search_ctx: SearchCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
 
     // Create derived signals for display values
     let destination_display = create_memo(move |_| {

@@ -20,12 +20,12 @@ use crate::api::canister::get_user_booking::get_user_booking_backend;
 use crate::api::consts::{ConfigLoader, EmailConfig, EnvVarConfig};
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
 use crate::api::payments::NowPayments;
-use crate::api::{
-    book_room as book_room_api, create_backend_book_room_response,
-    get_hotel_booking_detail_from_travel_provider_v2, user_details_to_passenger_details,
-    BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, HotelBookingDetailRequest,
-    RoomDetail,
-};
+// use crate::api::{
+//     book_room as book_room_api, create_backend_book_room_response,
+//     get_hotel_booking_detail_from_travel_provider_v2, user_details_to_passenger_details,
+//     BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, HotelBookingDetailRequest,
+//     RoomDetail,
+// };
 use crate::canister::backend::{self, BeBookRoomResponse, Booking, Result1, Result2};
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};

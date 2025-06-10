@@ -1,24 +1,27 @@
 use leptos::*;
 use leptos_router::use_navigate;
 
-use crate::api::get_room;
+// use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
 use crate::log;
 use crate::page::InputGroupContainer;
-use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
-use crate::state::search_state::HotelInfoResults;
+use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::view_state_layer::ui_search_state::SearchListResults;
+// use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
+// use crate::state::search_state::HotelInfoResults;
 use crate::{
-    api::hotel_info,
+    // api::hotel_info,
     app::AppRoutes,
     component::{FilterAndSortBy, PriceDisplay, StarRating},
     page::InputGroup,
-    state::{search_state::SearchListResults, view_state::HotelInfoCtx},
+    // state::{search_state::SearchListResults, view_state::HotelInfoCtx},
 };
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
     // ensure that context is clear. no pending signals
-    HotelInfoResults::reset();
+    // todo (uncomment)
+    // HotelInfoResults::reset();
     let search_list_page: SearchListResults = expect_context();
 
     let disabled_input_group: Signal<bool> = Signal::derive(move || {
@@ -63,7 +66,7 @@ pub fn HotelListPage() -> impl IntoView {
                                 .search_result
                                 .get()
                                 .unwrap()
-                                .hotel_results();
+                                .hotel_list();
                             if hotel_results.is_empty() {
 
                                 view! {
@@ -127,17 +130,20 @@ pub fn HotelCard(
             //  move to the hotel info page
             nav(AppRoutes::HotelDetails.to_string(), Default::default());
 
-            HotelInfoResults::reset();
+            // todo (uncomment)
+            // HotelInfoResults::reset();
 
             // Get hotel info request
-            let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
-            log!("{hotel_info_request:?}");
+            // todo (uncomment)
+            // let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
+            // log!("{hotel_info_request:?}");
 
             // Call server function inside action
             spawn_local(async move {
-                let result = hotel_info(hotel_info_request).await.ok();
-                log!("SEARCH_HOTEL_API: {result:?}");
-                HotelInfoResults::set_info_results(result);
+                // todo (uncomment)
+                // let result = hotel_info(hotel_info_request).await.ok();
+                // log!("SEARCH_HOTEL_API: {result:?}");
+                // HotelInfoResults::set_info_results(result);
 
                 // Navigate after data is loaded to ensure clean state transition
                 nav(AppRoutes::HotelDetails.to_string(), Default::default());
@@ -153,29 +159,32 @@ pub fn HotelCard(
         let search_list_page = search_list_page_clone.clone();
         let hotel_code = hotel_code_2_cloned.clone();
         async move {
-            let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
+            // let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
             // call server function inside action
             spawn_local(async move {
-                let result = get_room(hotel_room_request).await.ok();
-                log!("SEARCH_ROOM_API: {result:?}");
-                HotelInfoResults::set_room_results(result);
+                // todo (uncomment)
+                // let result = get_room(hotel_room_request).await.ok();
+                // log!("SEARCH_ROOM_API: {result:?}");
+                // HotelInfoResults::set_room_results(result);
             });
         }
     });
 
-    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    // todo (uncomment)
+    // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
     view! {
         <div // href=AppRoutes::HotelDetails.to_string()
         on:click=move |ev| {
             ev.prevent_default();
             ev.stop_propagation();
-            // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
-            hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
-            log!("hotel_code: {}", hotel_code_cloned);
+            // todo (uncomment)
+            // // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+            // hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
+            // log!("hotel_code: {}", hotel_code_cloned);
 
-            // make sure to reset the context before calling
-            HotelInfoResults::reset();
+            // // make sure to reset the context before calling
+            // HotelInfoResults::reset();
 
             // Dispatch actions to fetch data
             search_hotel_room_action.dispatch(());

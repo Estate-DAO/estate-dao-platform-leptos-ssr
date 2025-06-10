@@ -52,7 +52,7 @@
 ///   - Customizable button label
 ///   - Configurable error type
 ///
-use crate::state::api_error_state::{ApiErrorState, ApiErrorType};
+use crate::view_state_layer::api_error_state::{ApiErrorState, ApiErrorType};
 use leptos::*;
 use leptos_router::use_navigate;
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};

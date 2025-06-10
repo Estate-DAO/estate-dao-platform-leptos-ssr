@@ -7,12 +7,6 @@ use crate::api::canister::book_room_details::call_update_book_room_details_backe
 use crate::api::canister::get_user_booking::get_user_booking_backend;
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
 use crate::api::payments::NowPayments;
-use crate::api::{
-    book_room as book_room_api, create_backend_book_room_response,
-    get_hotel_booking_detail_from_travel_provider_v2, user_details_to_passenger_details,
-    BookRoomRequest, BookRoomResponse, BookingDetails, BookingStatus, HotelBookingDetailRequest,
-    RoomDetail,
-};
 use crate::canister::backend::{self, BeBookRoomResponse, Booking};
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
@@ -51,68 +45,68 @@ async fn book_room_and_update_backend(
 
     info!("Booking ID: {booking_id:?}");
 
-    // 2. use those room details to book room from booking provider
-    // Build BookRoomRequest using backend_booking
-    let passenger_details = user_details_to_passenger_details(&backend_booking.guests);
+    // // 2. use those room details to book room from booking provider
+    // // Build BookRoomRequest using backend_booking
+    // let passenger_details = user_details_to_passenger_details(&backend_booking.guests);
 
-    let frontend_room_details = vec![RoomDetail { passenger_details }];
+    // let frontend_room_details = vec![RoomDetail { passenger_details }];
 
-    info!("Frontend room details: {frontend_room_details:?}");
+    // info!("Frontend room details: {frontend_room_details:?}");
 
-    let book_room_request = BookRoomRequest {
-        result_token: backend_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .hotel_token
-            .clone(),
-        block_room_id: backend_booking
-            .user_selected_hotel_room_details
-            .hotel_details
-            .block_room_id
-            .clone(),
-        app_reference: app_ref.clone(),
-        room_details: frontend_room_details,
-    };
+    // let book_room_request = BookRoomRequest {
+    //     result_token: backend_booking
+    //         .user_selected_hotel_room_details
+    //         .hotel_details
+    //         .hotel_token
+    //         .clone(),
+    //     block_room_id: backend_booking
+    //         .user_selected_hotel_room_details
+    //         .hotel_details
+    //         .block_room_id
+    //         .clone(),
+    //     app_reference: app_ref.clone(),
+    //     room_details: frontend_room_details,
+    // };
 
-    info!("Book room request: {book_room_request:?}");
+    // info!("Book room request: {book_room_request:?}");
 
-    let request_json = serde_json::to_string(&book_room_request)
-        .map_err(|e| format!("Failed to serialize BookRoomRequest: {e:?}"))?;
+    // let request_json = serde_json::to_string(&book_room_request)
+    //     .map_err(|e| format!("Failed to serialize BookRoomRequest: {e:?}"))?;
 
-    info!("Request JSON: {request_json}");
+    // info!("Request JSON: {request_json}");
 
-    let book_room_response_str = book_room_api(request_json)
-        .await
-        .map_err(|e| format!("book_room API call failed: {e:?}"))?;
-    info!("Book room response: {book_room_response_str}");
-
-    let book_room_response: BookRoomResponse = serde_json::from_str(&book_room_response_str)
-        .map_err(|e| format!("Failed to deserialize BookRoomResponse: {e:?}"))?;
-
-    // 3. store back the results in backend
-    let book_room_backend = create_backend_book_room_response(
-        (event.user_email.clone(), app_ref.clone()),
-        book_room_response.clone(),
-    );
-
-    info!("Book room backend response: {book_room_backend:?}");
-
-    let book_room_backend_saved_status =
-        call_update_book_room_details_backend(booking_id.into(), book_room_backend)
-            .await
-            .ok();
-
-    info!("Book room and backend update complete: {book_room_backend_saved_status:?}");
-
-    // todo update the event with backend booking status and backend payment status
-    // let mut updated_event = event;
-    // updated_event.backend_booking_status = Some(backend_response);
-    // Ok(updated_event)
-
-    // todo (booking_hold) check for the backend booking status -- if BookingOnHold - then keep calling the booking provider for the final status.
-    // let hotel_booking_detail_response = get_hotel_booking_detail_from_travel_provider_v2(HotelBookingDetailRequest { app_reference: app_ref.clone() })
+    // let book_room_response_str = book_room_api(request_json)
     //     .await
-    //     .map_err(|e| format!("Failed in get_hotel_booking_detail_from_travel_provider_v2 for BookingOnHold: {e}")).ok();
+    //     .map_err(|e| format!("book_room API call failed: {e:?}"))?;
+    // info!("Book room response: {book_room_response_str}");
+
+    // let book_room_response: BookRoomResponse = serde_json::from_str(&book_room_response_str)
+    //     .map_err(|e| format!("Failed to deserialize BookRoomResponse: {e:?}"))?;
+
+    // // 3. store back the results in backend
+    // let book_room_backend = create_backend_book_room_response(
+    //     (event.user_email.clone(), app_ref.clone()),
+    //     book_room_response.clone(),
+    // );
+
+    // info!("Book room backend response: {book_room_backend:?}");
+
+    // let book_room_backend_saved_status =
+    //     call_update_book_room_details_backend(booking_id.into(), book_room_backend)
+    //         .await
+    //         .ok();
+
+    // info!("Book room and backend update complete: {book_room_backend_saved_status:?}");
+
+    // // todo update the event with backend booking status and backend payment status
+    // // let mut updated_event = event;
+    // // updated_event.backend_booking_status = Some(backend_response);
+    // // Ok(updated_event)
+
+    // // todo (booking_hold) check for the backend booking status -- if BookingOnHold - then keep calling the booking provider for the final status.
+    // // let hotel_booking_detail_response = get_hotel_booking_detail_from_travel_provider_v2(HotelBookingDetailRequest { app_reference: app_ref.clone() })
+    // //     .await
+    // //     .map_err(|e| format!("Failed in get_hotel_booking_detail_from_travel_provider_v2 for BookingOnHold: {e}")).ok();
 
     Ok(event)
 }
@@ -125,38 +119,38 @@ async fn book_room_hotel_details_looped(
     // 1. get the blocked room from backend (from event or by fetching booking details)
     // For this example, assume booking details are already fetched and available in event or context
 
-    let app_ref =
-        PaymentIdentifiers::app_reference_from_order_id(&event.order_id).ok_or_else(|| {
-            format!(
-                "Failed to extract app_reference from order_id: {}",
-                event.order_id
-            )
-        })?;
+    // let app_ref =
+    //     PaymentIdentifiers::app_reference_from_order_id(&event.order_id).ok_or_else(|| {
+    //         format!(
+    //             "Failed to extract app_reference from order_id: {}",
+    //             event.order_id
+    //         )
+    //     })?;
 
-    let booking_id = BookingId {
-        app_reference: app_ref.clone(),
-        email: event.user_email.clone(),
-    };
+    // let booking_id = BookingId {
+    //     app_reference: app_ref.clone(),
+    //     email: event.user_email.clone(),
+    // };
 
-    let request = HotelBookingDetailRequest {
-        app_reference: app_ref.clone(),
-    };
+    // let request = HotelBookingDetailRequest {
+    //     app_reference: app_ref.clone(),
+    // };
 
-    let hotel_details_response = get_hotel_booking_detail_from_travel_provider_v2(request)
-        .await
-        .map_err(|e| format!("Failed to get hotel booking detail: {e}"))?;
+    // let hotel_details_response = get_hotel_booking_detail_from_travel_provider_v2(request)
+    //     .await
+    //     .map_err(|e| format!("Failed to get hotel booking detail: {e}"))?;
 
-    if !hotel_details_response.status {
-        return Err(format!(
-            "Failed to get hotel booking detail: {}",
-            hotel_details_response.message
-        ));
-    }
+    // if !hotel_details_response.status {
+    //     return Err(format!(
+    //         "Failed to get hotel booking detail: {}",
+    //         hotel_details_response.message
+    //     ));
+    // }
 
-    // update_hold_booking vector length is zero => return error
-    if hotel_details_response.update_hold_booking.is_empty() {
-        return Err("Failed to get hotel booking detail: update_hold_booking is empty".to_string());
-    }
+    // // update_hold_booking vector length is zero => return error
+    // if hotel_details_response.update_hold_booking.is_empty() {
+    //     return Err("Failed to get hotel booking detail: update_hold_booking is empty".to_string());
+    // }
 
     // todo (booking_hold) details are not present in the api
 

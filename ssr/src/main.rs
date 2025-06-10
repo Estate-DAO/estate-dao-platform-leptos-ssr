@@ -3,7 +3,8 @@
 
 use cfg_if::cfg_if;
 use estate_fe::{
-    api::{consts::EnvVarConfig, payments::NowPayments, Provab},
+    api::provab::Provab,
+    api::{consts::EnvVarConfig, payments::NowPayments},
     init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -295,12 +296,12 @@ cfg_if! {
             );
 
             let app = Router::new()
-                .route(
-                    "/api/*fn_name",
-                    get(server_fn_handler).post(server_fn_handler),
-                )
-                .route("/ipn/webhook", post(nowpayments_webhook))
-                .route("/api/events", get(event_stream_handler))
+                // .route(
+                //     "/api/*fn_name",
+                //     get(server_fn_handler).post(server_fn_handler),
+                // )
+                // .route("/ipn/webhook", post(nowpayments_webhook))
+                // .route("/api/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))
                 // .route("/api/counter-events", get(counter_events))  // For backward compatibility
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))

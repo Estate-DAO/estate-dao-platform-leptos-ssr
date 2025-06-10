@@ -1,12 +1,13 @@
 use crate::api::consts::SEARCH_COMPONENT_ROOMS_DEFAULT;
-use crate::api::RoomGuest;
+// todo - change this to view state layer
+// use crate::api::provab::RoomGuest;
 use crate::component::NumberCounterV2;
-use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
-use crate::state::GlobalStateForLeptos;
 use crate::utils::pluralize;
+use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::view_state_layer::GlobalStateForLeptos;
 use crate::{
     component::{Divider, HSettingIcon},
-    state::search_state::SearchCtx,
+    view_state_layer::ui_search_state::UISearchCtx,
 };
 use ev::{InputEvent, MouseEvent};
 // use leptos::logging::log;
@@ -64,31 +65,31 @@ impl ChildrenAges {
 impl GlobalStateForLeptos for GuestSelection {}
 
 impl GuestSelection {
-    pub fn get_room_guests(search_ctx: &SearchCtx) -> Vec<RoomGuest> {
-        let guest_selection = search_ctx.guests;
+    // pub fn get_room_guests(search_ctx: &UISearchCtx) -> Vec<RoomGuest> {
+    //     let guest_selection = search_ctx.guests;
 
-        let no_of_adults = guest_selection.get_untracked().adults.get_untracked();
-        let no_of_child = guest_selection.get_untracked().children.get_untracked();
-        let children_ages: Vec<String> = guest_selection
-            .get_untracked()
-            .children_ages
-            .get_untracked()
-            .iter()
-            .map(|age| age.to_string())
-            .collect();
+    //     let no_of_adults = guest_selection.get_untracked().adults.get_untracked();
+    //     let no_of_child = guest_selection.get_untracked().children.get_untracked();
+    //     let children_ages: Vec<String> = guest_selection
+    //         .get_untracked()
+    //         .children_ages
+    //         .get_untracked()
+    //         .iter()
+    //         .map(|age| age.to_string())
+    //         .collect();
 
-        let child_age = if no_of_child > 0 {
-            Some(children_ages)
-        } else {
-            None
-        };
+    //     let child_age = if no_of_child > 0 {
+    //         Some(children_ages)
+    //     } else {
+    //         None
+    //     };
 
-        vec![RoomGuest {
-            no_of_adults,
-            no_of_child,
-            child_age,
-        }]
-    }
+    //     vec![RoomGuest {
+    //         no_of_adults,
+    //         no_of_child,
+    //         child_age,
+    //     }]
+    // }
 
     pub fn increment_children() {
         let this = Self::get();
@@ -145,7 +146,7 @@ pub fn GuestQuantity() -> impl IntoView {
         }
     });
 
-    let search_ctx: SearchCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
     let guest_selection = search_ctx.guests.get_untracked();
 
     // Get direct references to the signals
@@ -294,7 +295,7 @@ pub fn GuestQuantity() -> impl IntoView {
                                                     GuestSelection::get_children_ages()
                                                 );
 
-                                                SearchCtx::log_state();
+                                                UISearchCtx::log_state();
                                                 InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
                                             }
                                         >

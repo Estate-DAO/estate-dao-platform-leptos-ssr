@@ -5,9 +5,7 @@ use crate::api::{ApiClientResult, ApiError};
 use crate::{api::consts::EnvVarConfig, log};
 
 use colored::Colorize;
-use error_stack::report;
-use error_stack::ResultExt;
-use reqwest::{header::HeaderMap, Method, RequestBuilder, Url};
+use reqwest::{header::HeaderMap, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 
@@ -81,25 +79,24 @@ pub trait ApiClient: Clone + Debug + Default {
     ) -> ApiClientResult<Req::Response> {
         let request = reqb
             .build()
-            .map_err(|e| report!(ApiError::RequestFailed(e)))?;
+            .map_err(|e| ApiError::RequestFailed(e.into()))?;
 
         let response = self
             .http_client()
             .execute(request)
             .await
-            .map_err(|e| report!(ApiError::RequestFailed(e)))?;
+            .map_err(|e| (ApiError::RequestFailed(e.into())))?;
 
         let response_status = response.status();
         if !response_status.is_success() {
-            return response.text().await.map_or_else(
-                |er| {
-                    Err(ApiError::ResponseError).attach_printable_lazy(|| format!("Error: {er:?}"))
-                },
+            let response_text = response.text().await;
+            return response_text.map_or_else(
+                |er| Err(ApiError::ResponseError(er.to_string())),
                 |t| {
-                    Err(report!(ApiError::ResponseNotOK(format!(
+                    Err(ApiError::ResponseNotOK(format!(
                         "received status - {}, error- {t}",
                         response_status
-                    ))))
+                    )))
                 },
             );
         }
@@ -108,13 +105,13 @@ pub trait ApiClient: Clone + Debug + Default {
             let body_bytes = response
                 .bytes()
                 .await
-                .map_err(|_e| report!(ApiError::ResponseError))?;
+                .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
             DeserializableInput::Bytes(body_bytes.into())
         } else {
             let body_string = response
                 .text()
                 .await
-                .map_err(|_e| report!(ApiError::ResponseError))?;
+                .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
             DeserializableInput::Text(body_string)
         };
 
@@ -201,9 +198,9 @@ pub trait ApiRequestMeta: Sized + Send {
         let decompressed_body = match response_bytes_or_string {
             DeserializableInput::Bytes(body_bytes) => {
                 String::from_utf8(body_bytes).map_err(|e| {
-                    report!(ApiError::DecompressionFailed(String::from(
-                        "Could not convert from bytes to string"
-                    )))
+                    ApiError::DecompressionFailed(String::from(
+                        "Could not convert from bytes to string",
+                    ))
                 })?
             }
             DeserializableInput::Text(body_string) => body_string,
@@ -213,7 +210,7 @@ pub trait ApiRequestMeta: Sized + Send {
         let res: Self::Response = serde_path_to_error::deserialize(jd).map_err(|e| {
             let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
             log!("deserialize_response- JsonParseFailed: {:?}", total_error);
-            report!(ApiError::JsonParseFailed(total_error))
+            ApiError::JsonParseFailed(total_error)
         })?;
 
         Ok(res)

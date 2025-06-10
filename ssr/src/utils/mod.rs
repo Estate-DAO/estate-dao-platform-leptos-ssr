@@ -23,6 +23,8 @@ cfg_if::cfg_if! {
     }
 }
 
+use std::future::Future;
+
 pub use backend_default_impl::*;
 pub use colored_print::*;
 
@@ -45,3 +47,21 @@ pub fn debug_local_env() {
 
 #[cfg(not(feature = "debug_log"))]
 pub fn debug_local_env() {}
+
+#[cfg(not(feature = "hydrate"))]
+pub fn send_wrap<Fut: Future + Send>(
+    t: Fut,
+) -> impl Future<Output = <Fut as Future>::Output> + Send {
+    t
+    // send_wrapper::SendWrapper::new(t)
+}
+
+/// Wraps a specific future that is not `Send` when `hydrate` feature is enabled
+/// the future must be `Send` when `ssr` is enabled
+/// use only when necessary (usually inside resources)
+/// if you get a Send related error inside an Action, it probably makes more
+/// sense to use `Action::new_local` or `Action::new_unsync`
+#[cfg(feature = "hydrate")]
+pub fn send_wrap<Fut: Future>(t: Fut) -> impl Future<Output = <Fut as Future>::Output> + Send {
+    send_wrapper::SendWrapper::new(t)
+}

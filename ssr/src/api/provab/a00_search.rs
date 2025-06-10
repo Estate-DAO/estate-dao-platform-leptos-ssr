@@ -6,7 +6,7 @@ use super::{ProvabReq, ProvabReqMeta};
 use crate::api::api_client::ApiClient;
 use crate::api::provab::Provab;
 use crate::component::{Destination, GuestSelection};
-use crate::{component::SelectedDateRange, state::search_state::SearchCtx};
+use crate::{component::SelectedDateRange, view_state_layer::ui_search_state::UISearchCtx};
 // use leptos::logging::log;
 use crate::log;
 use std::collections::HashMap;
@@ -224,42 +224,4 @@ impl ProvabReqMeta for HotelSearchRequest {
     const GZIP: bool = true;
     // const GZIP: bool = false;
     type Response = HotelSearchResponse;
-}
-
-impl From<SearchCtx> for HotelSearchRequest {
-    fn from(ctx: SearchCtx) -> Self {
-        let check_in_date = SelectedDateRange::format_date(ctx.date_range.get_untracked().start);
-        let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
-        // let no_of_nights = 2;
-        let request = HotelSearchRequest {
-            // check_in_date: "11-11-2024".into(),
-            check_in_date,
-            no_of_nights,
-            room_guests: GuestSelection::get_room_guests(&ctx),
-            country_code: Destination::get_country_code(&ctx),
-            city_id: Destination::get_city_id(&ctx),
-            ..Default::default()
-        };
-
-        log!("HotelSearchRequest: {request:?}");
-
-        request
-    }
-}
-
-#[server(SearchHotel)]
-pub async fn search_hotel(
-    request: HotelSearchRequest,
-) -> Result<HotelSearchResponse, ServerFnError> {
-    log!("SEARCH_HOTEL_API: {request:?}");
-    let provab: Provab = expect_context();
-    // let provab = Provab::default();
-
-    match provab.send(request).await {
-        Ok(response) => Ok(response),
-        Err(e) => {
-            log!("server_fn_error: SEARCH_HOTEL_API - {}", e.to_string());
-            Err(ServerFnError::ServerError(e.to_string()))
-        }
-    }
 }

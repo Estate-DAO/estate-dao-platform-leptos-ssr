@@ -1,5 +1,5 @@
-use super::{search_state::HotelInfoResults, GlobalStateForLeptos};
-use crate::api::HotelRoomDetail;
+use super::GlobalStateForLeptos;
+// use crate::api::provab::HotelRoomDetail;
 // use crate::api::{HotelRoomDetail, RoomDetail};
 use crate::canister::backend::RoomDetails;
 use crate::{log, warn};
@@ -315,36 +315,36 @@ impl PricingBookNowState {
         this.room_counters_as_chosen_by_user.get()
     }
 
-    pub fn set_rooms_available_for_booking_from_api(room_details: Option<Vec<HotelRoomDetail>>) {
-        if let Some(room_details) = room_details {
-            let mut room_for_pricing = RoomForPricing::new();
+    // pub fn set_rooms_available_for_booking_from_api(room_details: Option<Vec<HotelRoomDetail>>) {
+    //     if let Some(room_details) = room_details {
+    //         let mut room_for_pricing = RoomForPricing::new();
 
-            for room in room_details {
-                // log!("[hotel_details_state] room_details_price: {:?}", room.price.offered_price);
+    //         for room in room_details {
+    //             // log!("[hotel_details_state] room_details_price: {:?}", room.price.offered_price);
 
-                let room_type = room.room_type_name.clone();
-                room_for_pricing.accumulate(
-                    room_type,
-                    room.room_unique_id,
-                    room.price.offered_price,
-                );
-            }
+    //             let room_type = room.room_type_name.clone();
+    //             room_for_pricing.accumulate(
+    //                 room_type,
+    //                 room.room_unique_id,
+    //                 room.price.offered_price,
+    //             );
+    //         }
 
-            log!(
-                "[hotel_details_state] - room_for_pricing: {:?}",
-                room_for_pricing
-            );
+    //         log!(
+    //             "[hotel_details_state] - room_for_pricing: {:?}",
+    //             room_for_pricing
+    //         );
 
-            Self::get()
-                .rooms_available_for_booking_from_api
-                .set(room_for_pricing);
-            let local = Self::get().rooms_available_for_booking_from_api.get();
-            log!(
-                "[hotel_details_state] - room_for_pricing - local: {:?}",
-                local
-            );
-        }
-    }
+    //         Self::get()
+    //             .rooms_available_for_booking_from_api
+    //             .set(room_for_pricing);
+    //         let local = Self::get().rooms_available_for_booking_from_api.get();
+    //         log!(
+    //             "[hotel_details_state] - room_for_pricing - local: {:?}",
+    //             local
+    //         );
+    //     }
+    // }
 
     pub fn set_room_counters_as_chosen_by_user(
         room_type: String,

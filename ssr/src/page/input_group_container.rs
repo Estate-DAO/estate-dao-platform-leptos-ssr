@@ -1,7 +1,7 @@
 use crate::log;
 use crate::page::{InputGroup, InputGroupMobile};
-use crate::state::input_group_state::InputGroupState;
 use crate::utils::responsive::use_is_desktop;
+use crate::view_state_layer::input_group_state::InputGroupState;
 use leptos::*;
 use web_sys;
 

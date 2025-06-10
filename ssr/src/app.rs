@@ -1,25 +1,36 @@
 use crate::{
+    adapters::{provab_adapter, ProvabAdapter},
     api::{
         consts::{EnvVarConfig, APP_URL},
         payments::ports::GetPaymentStatusResponse,
+        provab::Provab,
     },
+    application_services::HotelService,
     component::{
         DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample,
         NotificationState,
     },
     error_template::{AppError, ErrorTemplate},
     page::{
-        AdminPanelPage, BlockRoomPage, ConfirmationPage, HotelDetailsPage, HotelListPage,
-        PaymentBookingStatusUpdates, RootPage, SSEBookingStatusUpdates, SSEConfirmationPage,
+        AdminPanelPage,
+        BlockRoomPage,
+        ConfirmationPage,
+        HotelDetailsPage,
+        HotelListPage,
+        // PaymentBookingStatusUpdates,
+        RootPage,
+        // SSEBookingStatusUpdates,
+        SSEConfirmationPage,
     },
-    state::{
+    view_state_layer::{
         api_error_state::ApiErrorState,
         confirmation_results_state::ConfirmationResultsState,
         hotel_details_state::PricingBookNowState,
         input_group_state::InputGroupState,
-        search_state::{
-            BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
-        },
+        // search_state::{
+        //     BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
+        // },
+        ui_search_state::{SearchListResults, UISearchCtx},
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
 };
@@ -30,7 +41,7 @@ use leptos_query::{query_persister, *};
 use leptos_query_devtools::LeptosQueryDevtools;
 use leptos_router::*;
 use sitewriter::{ChangeFreq, UrlEntry};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 static SITEMAP: OnceLock<String> = OnceLock::new();
 
@@ -128,24 +139,30 @@ pub fn App() -> impl IntoView {
     // -> if environment variables are not defined, panic!
     // provide_context(EnvVarConfig::try_from_env());
 
+    // <!-- Create HotelService with ProvabAdapter -->
+    let provab_client = Provab::default();
+    let provab_adapter = ProvabAdapter::new(provab_client);
+    provide_context(HotelService::init(provab_adapter));
+
     provide_context(InputGroupState::default());
 
-    provide_context(SearchCtx::default());
+    // provide_context(SearchCtx::default());
+    provide_context(UISearchCtx::default());
     provide_context(SearchListResults::default());
 
     provide_context(HotelInfoCtx::default());
-    provide_context(HotelInfoResults::default());
+    // provide_context(HotelInfoResults::default());
     // NEW booking context for hotel_details page
     provide_context(PricingBookNowState::default());
 
     provide_context(BlockRoomCtx::default());
-    provide_context(BlockRoomResults::default());
+    // provide_context(BlockRoomResults::default());
 
-    provide_context(ConfirmationResults::default());
+    // provide_context(ConfirmationResults::default());
     provide_context(ConfirmationResultsState::default());
 
-    provide_context(PaymentBookingStatusUpdates::default());
-    provide_context(SSEBookingStatusUpdates::default());
+    // provide_context(PaymentBookingStatusUpdates::default());
+    // provide_context(SSEBookingStatusUpdates::default());
 
     provide_context(ApiErrorState::default());
 

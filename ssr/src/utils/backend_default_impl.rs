@@ -4,7 +4,9 @@ use crate::{
         Destination, HotelRoomDetails, PaymentDetails,
     },
     component::{Destination as FrontendDestination, SelectedDateRange as FrontendDateRange},
-    state::view_state::{AdultDetail as FrontendAdultDetail, ChildDetail as FrontendChildDetail},
+    view_state_layer::view_state::{
+        AdultDetail as FrontendAdultDetail, ChildDetail as FrontendChildDetail,
+    },
 };
 
 use crate::utils::app_reference::BookingId as AppReferenceBookingId;

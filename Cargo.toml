@@ -2,6 +2,11 @@
 members = ["ssr"]
 resolver = "2"
 
+[workspace.package]
+publish = false
+edition = "2021"
+
+
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
 inherits = "release"

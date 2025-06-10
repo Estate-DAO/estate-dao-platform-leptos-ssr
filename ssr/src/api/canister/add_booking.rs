@@ -2,10 +2,11 @@ use crate::canister::backend::{
     BackendPaymentStatus, Booking, HotelDetails, HotelRoomDetails, PaymentDetails,
     SelectedDateRange, UserDetails,
 };
-use crate::state::search_state::{
-    BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
-};
 use crate::utils::admin::admin_canister;
+use crate::view_state_layer::ui_search_state::{
+    // BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx,
+    SearchListResults,
+};
 // use leptos::logging::log;
 use crate::log;
 use leptos::*;

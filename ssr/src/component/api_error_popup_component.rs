@@ -2,7 +2,7 @@ use leptos::*;
 // Import the state and the specific modal component
 use crate::component::modal::ErrorModalWithHome;
 use crate::log;
-use crate::state::api_error_state::{ApiErrorState, ApiErrorType};
+use crate::view_state_layer::api_error_state::{ApiErrorState, ApiErrorType};
 
 /// A component that listens to the global ApiErrorState from context
 /// and displays an ErrorModalWithHome when an error is set to be shown.

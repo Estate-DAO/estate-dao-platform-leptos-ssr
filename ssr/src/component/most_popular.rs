@@ -1,6 +1,8 @@
 use chrono::NaiveDate;
 // use leptos::logging::log;
 use crate::log;
+use crate::view_state_layer::ui_search_state::SearchListResults;
+use crate::web_api_translator::search_fns::search_hotel;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::use_navigate;
@@ -8,13 +10,13 @@ use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
 use serde::{Deserialize, Serialize};
 
 use crate::component::GuestSelection;
-use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::{
-    api::search_hotel,
+    // api::search_hotel,
     app::AppRoutes,
     component::SelectedDateRange,
-    state::search_state::{SearchCtx, SearchListResults},
     utils::date::{get_year_month_day, next_day},
+    view_state_layer::ui_search_state::UISearchCtx,
 };
 
 use super::Destination;
@@ -78,7 +80,7 @@ fn destinations_query() -> QueryScope<bool, Option<Vec<City>>> {
 
 #[component]
 pub fn MostPopular() -> impl IntoView {
-    let search_ctx: SearchCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
 
     let selected_range = search_ctx.date_range;
 
@@ -199,12 +201,12 @@ pub fn MostPopular() -> impl IntoView {
 
                                                     // Directly update search context
                                                     log!("[most_popular.rs] Setting destination");
-                                                    SearchCtx::set_destination(dest.clone().into());
+                                                    UISearchCtx::set_destination(dest.clone().into());
                                                     log!("[most_popular.rs] Setting date range");
-                                                    SearchCtx::set_date_range(date_range.get());
+                                                    UISearchCtx::set_date_range(date_range.get());
                                                     log!("[most_popular.rs] Setting guests");
 
-                                                    SearchCtx::set_guests(GuestSelection::default());
+                                                    UISearchCtx::set_guests(GuestSelection::default());
                                                     log!("[most_popular.rs] ABOUT TO dispatch search action");
                                                     search_action.dispatch(());
                                                     log!("[most_popular.rs] AFTER dispatching search action");

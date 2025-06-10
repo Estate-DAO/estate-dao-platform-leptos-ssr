@@ -1,8 +1,13 @@
+use std::sync::Arc;
+
+use crate::api::api_client::ApiClient;
 use crate::api::provab::a01_hotel_info::{
     FirstRoomDetails as ProvabFirstRoomDetails, HotelDetailsLevel1 as ProvabHotelDetailsLevel1,
     HotelDetailsLevel2 as ProvabHotelDetailsLevel2, HotelInfoResult as ProvabHotelInfoResult,
     Price as ProvabDetailedPrice, RoomData as ProvabRoomData,
 };
+use futures::future::{BoxFuture, FutureExt, LocalBoxFuture};
+
 use crate::api::provab::{
     HotelInfoRequest as ProvabHotelInfoRequest,
     HotelInfoResponse as ProvabHotelInfoResponse,
@@ -15,16 +20,22 @@ use crate::api::provab::{
     RoomGuest as ProvabRoomGuest,
     Search as ProvabSearch,
 };
+use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
-    DomainDetailedPrice, DomainFirstRoomDetails, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelResult, DomainHotelSearchCriteria, DomainHotelSearchResponse,
-    DomainHotelSearchResult, DomainPrice, DomainRoomData,
+    DomainDetailedPrice, DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails,
+    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice,
+    DomainRoomData,
 };
-use crate::ports::hotel_provider_port::{HotelProviderPort, ProviderError};
+use crate::ports::hotel_provider_port::{
+    HotelProviderPort, ProviderError, ProviderErrorDetails, ProviderSteps,
+};
+use crate::ports::ProviderNames;
+use crate::utils::date::date_tuple_to_dd_mm_yyyy;
 use async_trait::async_trait;
 // use crate::api::ApiClient; // If your Provab client uses this
 
+#[derive(Clone)]
 pub struct ProvabAdapter {
     client: Provab, // Your existing Provab HTTP client
 }
@@ -37,11 +48,11 @@ impl ProvabAdapter {
     // --- Mapping functions ---
     fn map_domain_search_to_provab(
         domain_criteria: &DomainHotelSearchCriteria,
-        ui_filters: &UISearchFilters, // <!-- New parameter for UI filters -->
+        ui_filters: UISearchFilters, // <!-- New parameter for UI filters -->
     ) -> ProvabHotelSearchRequest {
         // <!-- Start with core criteria mapping -->
-        let mut provab_request = ProvabHotelSearchRequest {
-            check_in_date: domain_criteria.check_in_date.clone(),
+        let provab_request = ProvabHotelSearchRequest {
+            check_in_date: date_tuple_to_dd_mm_yyyy(domain_criteria.check_in_date.clone()),
             no_of_nights: domain_criteria.no_of_nights,
             country_code: domain_criteria.destination_country_code.clone(),
             city_id: domain_criteria.destination_city_id,
@@ -77,25 +88,24 @@ impl ProvabAdapter {
 
     fn map_provab_search_to_domain(
         provab_response: ProvabHotelSearchResponse,
-    ) -> DomainHotelSearchResponse {
-        DomainHotelSearchResponse {
-            status: provab_response.status,
-            message: provab_response.message,
-            search: provab_response
-                .search
-                .map(|search| DomainHotelSearchResult {
-                    hotel_results: search
-                        .hotel_search_result
-                        .hotel_results
-                        .into_iter()
-                        .map(|hotel| Self::map_provab_hotel_to_domain(hotel))
-                        .collect(),
-                }),
+    ) -> DomainHotelListAfterSearch {
+        match provab_response.search {
+            Some(search) => DomainHotelListAfterSearch {
+                hotel_results: search
+                    .hotel_search_result
+                    .hotel_results
+                    .into_iter()
+                    .map(|hotel| Self::map_provab_hotel_to_domain(hotel))
+                    .collect(),
+            },
+            None => DomainHotelListAfterSearch {
+                hotel_results: vec![],
+            },
         }
     }
 
-    fn map_provab_hotel_to_domain(provab_hotel: ProvabHotelResult) -> DomainHotelResult {
-        DomainHotelResult {
+    fn map_provab_hotel_to_domain(provab_hotel: ProvabHotelResult) -> DomainHotelAfterSearch {
+        DomainHotelAfterSearch {
             hotel_code: provab_hotel.hotel_code,
             hotel_name: provab_hotel.hotel_name,
             hotel_category: provab_hotel.hotel_category,
@@ -142,19 +152,22 @@ impl ProvabAdapter {
     ) -> Result<DomainHotelDetails, ProviderError> {
         // Check if the response status indicates success (typically 200 or 1)
         if provab_response.status != 200 && provab_response.status != 1 {
-            return Err(ProviderError(format!(
-                "Hotel info request failed: {}",
-                provab_response.message
-            )));
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::Provab,
+                api_error: ApiError::ResponseNotOK(provab_response.message.clone()),
+                error_step: ProviderSteps::HotelDetails,
+            })));
         }
 
         match provab_response.hotel_details {
             Some(details) => Ok(Self::map_provab_hotel_details_level2_to_domain(
                 details.hotel_info_result.hotel_details,
             )),
-            None => Err(ProviderError(
-                "No hotel details found in response".to_string(),
-            )),
+            None => Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::Provab,
+                api_error: ApiError::Other("No hotel details found in response".to_string()),
+                error_step: ProviderSteps::HotelDetails,
+            }))),
         }
     }
 
@@ -199,33 +212,50 @@ impl ProvabAdapter {
     }
 }
 
-#[async_trait]
+// #[async_trait]
 impl HotelProviderPort for ProvabAdapter {
-    async fn search_hotels(
+    fn search_hotels(
+        // async fn search_hotels(
         &self,
         criteria: DomainHotelSearchCriteria,
-        ui_filters: &UISearchFilters,
-    ) -> Result<DomainHotelSearchResponse, ProviderError> {
-        let provab_request = Self::map_domain_search_to_provab(&criteria, ui_filters);
-        let provab_response = self
-            .client
-            .send(provab_request)
-            .await
-            .map_err(|e| ProviderError(format!("Provab search failed: {}", e)))?;
-        Ok(Self::map_provab_search_to_domain(provab_response))
+        ui_filters: UISearchFilters,
+        // ) -> Result<DomainHotelListAfterSearch, ProviderError> {
+    ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>> {
+        async move {
+            let provab_request = Self::map_domain_search_to_provab(&criteria, ui_filters.clone());
+            let provab_response: ProvabHotelSearchResponse = self
+                .client
+                .send(provab_request)
+                .await
+                .map_err(|e: ApiError| {
+                    ProviderError::from_api_error(
+                        e,
+                        ProviderNames::Provab,
+                        ProviderSteps::HotelSearch,
+                    )
+                })?;
+            Ok(Self::map_provab_search_to_domain(provab_response))
+        }
+        .boxed_local()
     }
 
-    async fn get_hotel_details(
+    fn get_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<DomainHotelDetails, ProviderError> {
-        let provab_request = Self::map_domain_hotel_info_to_provab(&criteria);
-        let provab_response = self
-            .client
-            .send(provab_request)
-            .await
-            .map_err(|e| ProviderError(format!("Provab hotel info failed: {}", e)))?;
-        Self::map_provab_hotel_info_to_domain(provab_response)
+        // ) -> Result<DomainHotelDetails, ProviderError> {
+    ) -> LocalBoxFuture<'_, Result<DomainHotelDetails, ProviderError>> {
+        async move {
+            let provab_request = Self::map_domain_hotel_info_to_provab(&criteria);
+            let provab_response: ProvabHotelInfoResponse = self
+                .client
+                .send(provab_request)
+                .await
+                .map_err(|e: ApiError| {
+                ProviderError::from_api_error(e, ProviderNames::Provab, ProviderSteps::HotelDetails)
+            })?;
+            Self::map_provab_hotel_info_to_domain(provab_response)
+        }
+        .boxed_local()
     }
 
     // <!-- Future methods to be implemented -->

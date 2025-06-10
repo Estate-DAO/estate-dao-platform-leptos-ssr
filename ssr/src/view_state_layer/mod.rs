@@ -4,6 +4,7 @@ pub mod hotel_details_state;
 pub mod input_group_state;
 pub mod local_storage;
 pub mod search_state;
+pub mod ui_search_state;
 pub mod view_state;
 // pub mod pricing_book_now;
 
@@ -30,7 +31,7 @@ use leptos::{provide_context, use_context};
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::extract::FromRef;
-        use crate::api::Provab;
+        use crate::api::provab::Provab;
         use leptos::LeptosOptions;
         use leptos_router::RouteListing;
         use crate::ssr_booking::PipelineLockManager;

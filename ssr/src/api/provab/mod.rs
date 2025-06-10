@@ -1,7 +1,7 @@
 pub mod a00_search;
 pub use a00_search::{
-    search_hotel, HotelResult, HotelSearchRequest, HotelSearchResponse, HotelSearchResult, Price,
-    RoomGuest, Search,
+    HotelResult, HotelSearchRequest, HotelSearchResponse, HotelSearchResult, Price, RoomGuest,
+    Search,
 };
 
 pub mod a01_hotel_info;

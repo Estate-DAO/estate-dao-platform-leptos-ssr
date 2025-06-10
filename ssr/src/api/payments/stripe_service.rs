@@ -12,10 +12,13 @@ use crate::api::consts::{
 use crate::canister::backend::SelectedDateRange as BackendSelectedDateRange;
 use crate::component::SelectedDateRange;
 use crate::cprintln;
-use crate::state::search_state::{HotelInfoResults, SearchCtx, SearchListResults};
-use crate::state::view_state::{BlockRoomCtx, HotelInfoCtx};
 use crate::utils::app_reference::BookingId;
 use crate::utils::booking_id::PaymentIdentifiers;
+use crate::view_state_layer::ui_search_state::{
+    // HotelInfoResults, SearchCtx,
+    SearchListResults,
+};
+use crate::view_state_layer::view_state::{BlockRoomCtx, HotelInfoCtx};
 use colored::Colorize;
 use std::{collections::HashMap, fmt};
 use thiserror::Error;
@@ -581,59 +584,59 @@ pub async fn stripe_create_invoice(
     }
 }
 
-/// Used on block_room page to crate a checkout url to which the user will be redirected to complete the payment
-pub fn create_stripe_checkout_session(
-    total_price: f64,
-) -> Result<StripeCreateCheckoutSession, Box<dyn std::error::Error>> {
-    let email = BlockRoomCtx::get_email_untracked();
-    let booking_id = BookingId::get_backend_compatible_booking_id_untracked(email.clone());
+// /// Used on block_room page to crate a checkout url to which the user will be redirected to complete the payment
+// pub fn create_stripe_checkout_session(
+//     total_price: f64,
+// ) -> Result<StripeCreateCheckoutSession, Box<dyn std::error::Error>> {
+//     let email = BlockRoomCtx::get_email_untracked();
+//     let booking_id = BookingId::get_backend_compatible_booking_id_untracked(email.clone());
 
-    let order_id =
-        PaymentIdentifiers::order_id_from_app_reference(&booking_id.app_reference, &email);
+//     let order_id =
+//         PaymentIdentifiers::order_id_from_app_reference(&booking_id.app_reference, &email);
 
-    let destination = SearchCtx::get_backend_compatible_destination_untracked();
-    let date_range = SearchCtx::get_backend_compatible_date_range_untracked();
-    let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
-    let hotel_token = SearchListResults::get_result_token(hotel_code.clone());
+//     let destination = SearchCtx::get_backend_compatible_destination_untracked();
+//     let date_range = SearchCtx::get_backend_compatible_date_range_untracked();
+//     let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
+//     let hotel_token = SearchListResults::get_result_token(hotel_code.clone());
 
-    let hotel_name = HotelInfoResults::get_hotel_name_untracked();
-    let hotel_location = HotelInfoResults::get_hotel_location_untracked();
+//     let hotel_name = HotelInfoResults::get_hotel_name_untracked();
+//     let hotel_location = HotelInfoResults::get_hotel_location_untracked();
 
-    let user_phone = BlockRoomCtx::get_user_phone_untracked();
-    let user_name = BlockRoomCtx::get_user_name_untracked();
+//     let user_phone = BlockRoomCtx::get_user_phone_untracked();
+//     let user_name = BlockRoomCtx::get_user_name_untracked();
 
-    let num_adults = BlockRoomCtx::get_num_adults_untracked();
-    let num_children = BlockRoomCtx::get_num_children_untracked();
+//     let num_adults = BlockRoomCtx::get_num_adults_untracked();
+//     let num_children = BlockRoomCtx::get_num_children_untracked();
 
-    let stripe_product_description = StripeProductDescription::new(
-        hotel_name,
-        hotel_location,
-        date_range.into(),
-        total_price,
-        email.clone(),
-        user_phone,
-        user_name,
-        num_adults,
-        num_children,
-    );
+//     let stripe_product_description = StripeProductDescription::new(
+//         hotel_name,
+//         hotel_location,
+//         date_range.into(),
+//         total_price,
+//         email.clone(),
+//         user_phone,
+//         user_name,
+//         num_adults,
+//         num_children,
+//     );
 
-    let stripe_line_item = StripeLineItem {
-        price_data: StripePriceData {
-            currency: "usd".to_string(),
-            product_data: stripe_product_description.into(),
-            unit_amount: (total_price * 100.0).round() as u32,
-        },
-        quantity: 1,
-    };
+//     let stripe_line_item = StripeLineItem {
+//         price_data: StripePriceData {
+//             currency: "usd".to_string(),
+//             product_data: stripe_product_description.into(),
+//             unit_amount: (total_price * 100.0).round() as u32,
+//         },
+//         quantity: 1,
+//     };
 
-    Ok(StripeCreateCheckoutSession::new(
-        get_payments_url_v2("success", PaymentProvider::Stripe),
-        get_payments_url_v2("cancel", PaymentProvider::Stripe),
-        vec![stripe_line_item],
-        "payment".to_string(),
-        Some(StripeMetadata(HashMap::new())),
-        order_id,
-        email.clone(),
-        StripeUIModeEnum::Hosted,
-    ))
-}
+//     Ok(StripeCreateCheckoutSession::new(
+//         get_payments_url_v2("success", PaymentProvider::Stripe),
+//         get_payments_url_v2("cancel", PaymentProvider::Stripe),
+//         vec![stripe_line_item],
+//         "payment".to_string(),
+//         Some(StripeMetadata(HashMap::new())),
+//         order_id,
+//         email.clone(),
+//         StripeUIModeEnum::Hosted,
+//     ))
+// }

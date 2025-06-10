@@ -1,4 +1,6 @@
 use super::*;
+use crate::log;
+use crate::view_state_layer::ui_search_state::UISearchCtx;
 use leptos::{html::Div, NodeRef};
 use leptos_use::on_click_outside;
 use wasm_bindgen::JsCast;
@@ -6,7 +8,7 @@ use web_sys::MouseEvent;
 
 #[component]
 pub fn DestinationPickerV5() -> impl IntoView {
-    let search_ctx: SearchCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
 
     let QueryResult {
         data: destinations_resource,
@@ -98,8 +100,8 @@ pub fn DestinationPickerV5() -> impl IntoView {
     };
 
     let select_option = move |dest: Destination| {
-        leptos::logging::log!("Selecting option: {}, {}", dest.city, dest.country_name);
-        let _ = SearchCtx::set_destination(dest.clone());
+        log!("Selecting option: {}, {}", dest.city, dest.country_name);
+        let _ = UISearchCtx::set_destination(dest.clone());
         set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
         set_is_open.set(false);
         leptos::logging::log!(

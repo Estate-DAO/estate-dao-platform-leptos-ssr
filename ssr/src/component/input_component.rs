@@ -1,4 +1,4 @@
-use crate::state::search_state::SearchCtx;
+use crate::view_state_layer::ui_search_state::UISearchCtx;
 use leptos::*;
 
 macro_rules! input_component {
@@ -12,7 +12,7 @@ macro_rules! input_component {
             updater: U,
             validator: V,
         ) -> impl IntoView {
-            let ctx: SearchCtx = expect_context();
+            let ctx: UISearchCtx = expect_context();
             let error = create_rw_signal(initial_value.is_none());
             let show_error = create_rw_signal(false);
             // if error.get_untracked() {

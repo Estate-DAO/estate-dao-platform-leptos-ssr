@@ -1,7 +1,8 @@
 // use crate::component::outside_click_detector::OutsideClickDetector;
 // use leptos::logging::log;
-use crate::log;
-use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::web_api_translator::search_fns::search_hotel;
+use crate::{log, utils};
 use leptos::*;
 use leptos_icons::*;
 use leptos_query::QueryResult;
@@ -9,14 +10,14 @@ use leptos_router::use_navigate;
 
 use crate::component::{DestinationPickerV5, Footer, MostPopular, Navbar};
 use crate::{
-    api::{canister::greet_call::greet_backend, search_hotel},
+    api::canister::greet_call::greet_backend,
     app::AppRoutes,
     component::{
         DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy,
         FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
         SelectedDateRange,
     },
-    state::search_state::{SearchCtx, SearchListResults},
+    view_state_layer::ui_search_state::{SearchListResults, UISearchCtx},
 };
 // use chrono::{Datelike, NaiveDate};
 use crate::page::InputGroupContainer;
@@ -145,7 +146,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         }
     };
 
-    let search_ctx: SearchCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
 
     let destination_display = create_memo(move |_| {
         search_ctx
@@ -178,7 +179,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             log!("[root.rs] Navigation triggered");
 
             // call server function inside action
-            spawn_local(async move {
+            utils::send_wrap(async move {
+                // spawn_local(async move {
                 // on mobile, collapse the full input and goback to InputGroupMobile component
                 InputGroupState::set_show_full_input(false);
                 log!("[root.rs] spawn_local started for search_hotel");
