@@ -1,10 +1,3 @@
-use super::{
-    // consts::{get_headers_from_env, get_provab_base_url_from_env},
-    ProvabReq,
-    ProvabReqMeta,
-};
-use crate::api::provab::{retry::RetryableRequest, Provab};
-
 // use leptos::logging::log;
 use crate::log;
 use leptos::ServerFnError;
@@ -19,6 +12,15 @@ cfg_if::cfg_if! {
         use fake::{Dummy, Fake, Faker};
         use rand::rngs::StdRng;
         use rand::SeedableRng;
+    }
+}
+
+use super::client::{ProvabReq, ProvabReqMeta};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::api_client::ApiClient;
+        use crate::api::provab::Provab;
     }
 }
 
@@ -228,8 +230,8 @@ impl ProvabReqMeta for HotelRoomRequest {
     type Response = HotelRoomResponse;
 }
 
-#[server(GetRoom)]
-pub async fn get_room(request: HotelRoomRequest) -> Result<HotelRoomResponse, ServerFnError> {
-    use crate::api::provab::retry::RetryableRequest;
-    request.retry_with_backoff(3).await
-}
+// #[server(GetRoom)]
+// pub async fn get_room(request: HotelRoomRequest) -> Result<HotelRoomResponse, ServerFnError> {
+//     use crate::api::provab::retry::RetryableRequest;
+//     request.retry_with_backoff(3).await
+// }

@@ -1,6 +1,3 @@
-use super::{ProvabReq, ProvabReqMeta};
-use crate::api::provab::{retry::RetryableRequest, Provab};
-// use leptos::logging::log;
 use crate::log;
 use leptos::ServerFnError;
 use leptos::*;
@@ -13,6 +10,15 @@ cfg_if::cfg_if! {
         use fake::{Dummy, Fake, Faker};
         use rand::rngs::StdRng;
         use rand::SeedableRng;
+    }
+}
+
+use super::client::{ProvabReq, ProvabReqMeta};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::api_client::ApiClient;
+        use crate::api::provab::Provab;
     }
 }
 
@@ -233,10 +239,10 @@ impl ProvabReqMeta for BlockRoomRequest {
     type Response = BlockRoomResponse;
 }
 
-#[server(BlockRoom)]
-pub async fn block_room(request: BlockRoomRequest) -> Result<BlockRoomResponse, ServerFnError> {
-    let retry_count = 3;
+// #[server(BlockRoom)]
+// pub async fn block_room(request: BlockRoomRequest) -> Result<BlockRoomResponse, ServerFnError> {
+//     let retry_count = 3;
 
-    use crate::api::provab::retry::RetryableRequest;
-    request.retry_with_backoff(retry_count).await
-}
+//     use crate::api::provab::retry::RetryableRequest;
+//     request.retry_with_backoff(retry_count).await
+// }

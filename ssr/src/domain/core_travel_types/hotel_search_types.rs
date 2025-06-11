@@ -86,7 +86,12 @@ pub struct DomainHotelListAfterSearch {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainHotelInfoCriteria {
-    pub token: String,
+    // Hotel-specific information
+    pub token: String,          // Used by Provab, hotel ID for LiteAPI
+    pub hotel_ids: Vec<String>, // For LiteAPI
+
+    // Search criteria (reused from search) because some api providers need the search criteria
+    pub search_criteria: DomainHotelSearchCriteria,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -116,6 +121,7 @@ pub struct DomainRoomData {
     pub room_name: String,
     pub room_unique_id: String,
     pub rate_key: String,
+    pub offer_id: String, // LiteAPI: offerId, Provab: empty string
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

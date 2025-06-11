@@ -1550,6 +1550,7 @@ dependencies = [
  "once_cell",
  "rand",
  "reqwest",
+ "send_wrapper",
  "serde",
  "serde_json",
  "serde_path_to_error",

@@ -2,9 +2,15 @@ use leptos::*;
 use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use super::{ProvabReq, ProvabReqMeta};
-use crate::api::api_client::ApiClient;
-use crate::api::provab::Provab;
+use super::client::{ProvabReq, ProvabReqMeta};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::api_client::ApiClient;
+        use crate::api::provab::Provab;
+    }
+}
+
 use crate::component::{Destination, GuestSelection};
 use crate::{component::SelectedDateRange, view_state_layer::ui_search_state::UISearchCtx};
 // use leptos::logging::log;

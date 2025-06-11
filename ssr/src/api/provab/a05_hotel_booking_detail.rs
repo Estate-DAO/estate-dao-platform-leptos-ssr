@@ -1,9 +1,6 @@
-use crate::api::api_client::ApiClient;
-use crate::api::provab::from_leptos_context_or_axum_ssr;
-use crate::api::provab::retry::RetryableRequest;
-use crate::api::provab::Provab;
+// use crate::api::provab::from_leptos_context_or_axum_ssr;
+// use crate::api::provab::retry::RetryableRequest;
 
-use super::{ProvabReq, ProvabReqMeta};
 use leptos::*;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
@@ -14,6 +11,15 @@ cfg_if::cfg_if! {
         use fake::{Dummy, Fake, Faker};
         use rand::rngs::StdRng;
         use rand::SeedableRng;
+    }
+}
+
+use super::client::{ProvabReq, ProvabReqMeta};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::provab::Provab;
+        use crate::api::api_client::ApiClient;
     }
 }
 
@@ -56,29 +62,29 @@ impl ProvabReq for HotelBookingDetailRequest {
     }
 }
 
-#[server(HotelBookingDetail)]
-pub async fn get_hotel_booking_detail_from_travel_provider(
-    request: HotelBookingDetailRequest,
-) -> Result<HotelBookingDetailResponse, ServerFnError> {
-    let provab: Provab = from_leptos_context_or_axum_ssr();
+// #[server(HotelBookingDetail)]
+// pub async fn get_hotel_booking_detail_from_travel_provider(
+//     request: HotelBookingDetailRequest,
+// ) -> Result<HotelBookingDetailResponse, ServerFnError> {
+//     let provab: Provab = from_leptos_context_or_axum_ssr();
 
-    println!("hotel booking detail request - {request:?}");
+//     println!("hotel booking detail request - {request:?}");
 
-    match provab.send(request).await {
-        Ok(response) => Ok(response),
-        Err(e) => {
-            // log!("server_fn_error: {}", e.to_string());
-            Err(ServerFnError::ServerError(e.to_string()))
-        }
-    }
-}
+//     match provab.send(request).await {
+//         Ok(response) => Ok(response),
+//         Err(e) => {
+//             // log!("server_fn_error: {}", e.to_string());
+//             Err(ServerFnError::ServerError(e.to_string()))
+//         }
+//     }
+// }
 
-#[server(HotelBookingDetailV2)]
-pub async fn get_hotel_booking_detail_from_travel_provider_v2(
-    request: HotelBookingDetailRequest,
-) -> Result<HotelBookingDetailResponse, ServerFnError> {
-    let retry_count = 3;
+// #[server(HotelBookingDetailV2)]
+// pub async fn get_hotel_booking_detail_from_travel_provider_v2(
+//     request: HotelBookingDetailRequest,
+// ) -> Result<HotelBookingDetailResponse, ServerFnError> {
+//     let retry_count = 3;
 
-    use crate::api::provab::retry::RetryableRequest;
-    request.retry_with_backoff(retry_count).await
-}
+//     use crate::api::provab::retry::RetryableRequest;
+//     request.retry_with_backoff(retry_count).await
+// }

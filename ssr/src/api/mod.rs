@@ -1,9 +1,15 @@
 use cfg_if::cfg_if;
 
-pub mod api_client;
+cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        pub mod api_client;
+    }
+}
+
 pub mod client_side_api;
 
 pub mod provab;
+pub use provab::{DeserializableInput, ProvabReq, ProvabReqMeta};
 
 cfg_if! {
     if #[cfg(feature = "mock-provab")]{
@@ -20,3 +26,5 @@ pub mod payments;
 pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStatusResponse};
 
 pub mod canister;
+
+pub mod liteapi;

@@ -1,12 +1,5 @@
-use crate::api::api_client::ApiClient;
-use crate::api::provab::from_leptos_context_or_axum_ssr;
-use std::fmt;
-
-use super::{ProvabReq, ProvabReqMeta};
-
-use super::DeserializableInput;
-use crate::api::provab::Provab;
 use crate::api::{ApiClientResult, ApiError};
+use std::fmt;
 
 use crate::canister::backend::{
     self, AdultDetail, BeBookRoomResponse, Booking, ChildDetail, UserDetails,
@@ -29,9 +22,15 @@ cfg_if::cfg_if! {
     }
 }
 
-//
-//
-//
+use super::client::{DeserializableInput, ProvabReq, ProvabReqMeta};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        // use crate::api::provab::from_leptos_context_or_axum_ssr;
+        use crate::api::api_client::ApiClient;
+        use crate::api::provab::Provab;
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
@@ -371,35 +370,35 @@ impl ProvabReq for BookRoomRequest {
 //
 //
 
-#[server(BlockRoom)]
-pub async fn book_room(request: String) -> Result<String, ServerFnError> {
-    // pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
-    // let provab = Provab::default();
-    let provab: Provab = from_leptos_context_or_axum_ssr();
+// #[server(BlockRoom)]
+// pub async fn book_room(request: String) -> Result<String, ServerFnError> {
+//     // pub async fn book_room(request: String) -> Result<BookRoomResponse, ServerFnError> {
+//     // let provab = Provab::default();
+//     let provab: Provab = from_leptos_context_or_axum_ssr();
 
-    let request_struct = serde_json::from_str::<BookRoomRequest>(&request)
-        .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
+//     let request_struct = serde_json::from_str::<BookRoomRequest>(&request)
+//         .map_err(|er| ServerFnError::new(format!("Could not deserialize Booking: Err = {er:?}")))?;
 
-    println!("book_request - {request_struct:?}");
+//     println!("book_request - {request_struct:?}");
 
-    match provab.send(request_struct).await {
-        Ok(response) => {
-            println!("{}", format!("{:?}", response).green().on_black());
-            let response_str = serde_json::to_string(&response).unwrap();
-            Ok(response_str)
-        }
-        Err(e) => {
-            println!(
-                "{}",
-                format!("error: {:?}", e)
-                    .bright_black()
-                    .bold()
-                    .on_bright_red()
-            );
-            Err(ServerFnError::ServerError(e.to_string()))
-        }
-    }
-}
+//     match provab.send(request_struct).await {
+//         Ok(response) => {
+//             println!("{}", format!("{:?}", response).green().on_black());
+//             let response_str = serde_json::to_string(&response).unwrap();
+//             Ok(response_str)
+//         }
+//         Err(e) => {
+//             println!(
+//                 "{}",
+//                 format!("error: {:?}", e)
+//                     .bright_black()
+//                     .bold()
+//                     .on_bright_red()
+//             );
+//             Err(ServerFnError::ServerError(e.to_string()))
+//         }
+//     }
+// }
 
 //
 //

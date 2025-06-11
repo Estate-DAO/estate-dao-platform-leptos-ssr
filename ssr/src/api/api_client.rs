@@ -1,7 +1,14 @@
 #[cfg(feature = "mock-provab")]
 use crate::api::mock::mock_utils::MockableResponse;
-use crate::api::provab::{DeserializableInput, Provab, ProvabReq, ProvabReqMeta};
+
 use crate::api::{ApiClientResult, ApiError};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::{DeserializableInput, ProvabReq, ProvabReqMeta};
+    }
+}
+
 use crate::{api::consts::EnvVarConfig, log};
 
 use colored::Colorize;
@@ -9,6 +16,7 @@ use reqwest::{header::HeaderMap, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 
+#[async_trait::async_trait]
 /// Common trait for API clients that handle HTTP requests with JSON serialization/deserialization
 pub trait ApiClient: Clone + Debug + Default {
     /// The base URL for this client's API endpoints
@@ -89,33 +97,12 @@ pub trait ApiClient: Clone + Debug + Default {
             .text()
             .await
             .map_err(|e| ApiError::ResponseError(e.to_string()))?;
-        // .bytes().await.map_err(|e| ApiError::ResponseError(e.to_string()))?;
-
-        // let response_status = response.status();
-        // if !response_status.is_success() {
-        //     let response_text = response.text().await;
-        //     return response_text.map_or_else(
-        //         |er| Err(ApiError::ResponseError(er.to_string())),
-        //         |t| {
-        //             Err(ApiError::ResponseNotOK(format!(
-        //                 "received status - {}, error- {t}",
-        //                 response_status
-        //             )))
-        //         },
-        //     );
-        // }
 
         let input = if Req::GZIP {
             let body_bytes = response.as_bytes();
-
-            // .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
             DeserializableInput::Bytes(body_bytes.to_vec())
         } else {
-            let body_string = response;
-            // .text()
-            // .await
-            // .map_err(|_e| ApiError::ResponseError(_e.to_string()))?;
-            DeserializableInput::Text(body_string)
+            DeserializableInput::Text(response)
         };
 
         let res = Req::deserialize_response(input)?;
@@ -230,6 +217,7 @@ pub trait ApiRequestMeta: Sized + Send {
     type Response: DeserializeOwned + Debug + Send;
 
     /// Deserialize the response from the API
+    #[cfg(feature = "ssr")]
     fn deserialize_response(
         response_bytes_or_string: DeserializableInput,
     ) -> ApiClientResult<Self::Response> {

@@ -111,3 +111,13 @@ impl PartialEq for ApiError {
 }
 
 pub type ApiClientResult<T> = anyhow::Result<T, ApiError>;
+
+// cfg_if::cfg_if! {
+//     if #[cfg(feature = "ssr")] {
+//         use crate::api::api_client::ApiRequestMeta;
+
+//         // <!-- SSR-specific types for API client functionality -->
+
+//         // <!-- Provab traits are defined in provab/client.rs -->
+//     }
+// }

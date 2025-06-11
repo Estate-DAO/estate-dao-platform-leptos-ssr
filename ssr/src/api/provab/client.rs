@@ -5,7 +5,6 @@ use colored::Colorize;
 use leptos::{expect_context, use_context};
 // use leptos::logging::log;
 
-use crate::api::api_client::ApiClient;
 use crate::api::consts::EnvVarConfig;
 use crate::api::{ApiClientResult, ApiError};
 use crate::log;
@@ -15,8 +14,12 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::io::Read;
 
-#[cfg(feature = "ssr")]
-use tokio;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::api_client::ApiClient;
+        use tokio;
+    }
+}
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-provab")] {
@@ -167,6 +170,7 @@ impl Default for Provab {
     }
 }
 
+#[cfg(feature = "ssr")]
 impl ApiClient for Provab {
     fn base_url(&self) -> String {
         let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
@@ -384,11 +388,11 @@ fn log_json_payload<T: Serialize + Debug>(req: &T) {
     }
 }
 
-pub fn from_leptos_context_or_axum_ssr() -> Provab {
-    let context = use_context::<Provab>();
-    match context {
-        Some(provab) => provab,
-        None => Provab::default(),
-        // None => get_provab_client().clone()
-    }
-}
+// pub fn from_leptos_context_or_axum_ssr() -> Provab {
+//     let context = use_context::<Provab>();
+//     match context {
+//         Some(provab) => provab,
+//         None => Provab::default(),
+//         // None => get_provab_client().clone()
+//     }
+// }

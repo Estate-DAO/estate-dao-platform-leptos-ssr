@@ -1,6 +1,8 @@
-pub mod provab_adapter;
-pub use provab_adapter::ProvabAdapter;
-
-// <!-- Future adapters -->
-// pub mod liteapi_adapters;
-// pub use liteapi_adapters::LiteApiAdapter;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        pub mod provab_adapter;
+        pub use provab_adapter::ProvabAdapter;
+        pub mod liteapi_adapter;
+        pub use liteapi_adapter::LiteApiAdapter;
+    }
+}

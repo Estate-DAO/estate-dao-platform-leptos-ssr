@@ -1,11 +1,16 @@
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::provab::Provab;
+        use crate::adapters::ProvabAdapter;
+    }
+}
+
 use crate::{
-    adapters::{provab_adapter, ProvabAdapter},
     api::{
         consts::{EnvVarConfig, APP_URL},
         payments::ports::GetPaymentStatusResponse,
-        provab::Provab,
     },
-    application_services::HotelService,
+    // application_services::hotel_service::HotelService,
     component::{
         DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample,
         NotificationState,
@@ -138,11 +143,6 @@ pub fn App() -> impl IntoView {
     // fallible component in app startup
     // -> if environment variables are not defined, panic!
     // provide_context(EnvVarConfig::try_from_env());
-
-    // <!-- Create HotelService with ProvabAdapter -->
-    let provab_client = Provab::default();
-    let provab_adapter = ProvabAdapter::new(provab_client);
-    provide_context(HotelService::init(provab_adapter));
 
     provide_context(InputGroupState::default());
 

@@ -1,5 +1,9 @@
-use crate::adapters::ProvabAdapter;
-use crate::application_services::HotelService;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::adapters::ProvabAdapter;
+    }
+}
+// use crate::application_services::HotelService;
 use crate::component::SelectedDateRange;
 use crate::component::{Destination, GuestSelection};
 use crate::domain::{DomainHotelListAfterSearch, DomainRoomGuest};

@@ -1,13 +1,8 @@
-use crate::api::provab::Provab;
-// use leptos::logging::log;
-use crate::api::api_client::ApiClient;
 use crate::log;
 use leptos::ServerFnError;
 use leptos::*;
 use reqwest::Method;
 use serde::{Deserialize, Deserializer, Serialize};
-
-use super::{ProvabReq, ProvabReqMeta};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-provab")] {
@@ -15,6 +10,15 @@ cfg_if::cfg_if! {
         use fake::{Dummy, Fake, Faker};
         use rand::rngs::StdRng;
         use rand::SeedableRng;
+    }
+}
+
+use super::client::{ProvabReq, ProvabReqMeta};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use crate::api::api_client::ApiClient;
+        use crate::api::provab::Provab;
     }
 }
 

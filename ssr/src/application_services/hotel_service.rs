@@ -8,7 +8,8 @@ use crate::domain::{
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
     DomainHotelSearchCriteria,
 };
-use crate::ports::hotel_provider_port::{HotelProviderPort, ProviderError};
+use crate::ports::hotel_provider_port::ProviderError;
+use crate::ports::traits::HotelProviderPort;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
