@@ -194,6 +194,7 @@ pub struct EnvVarConfig {
     #[serde(default = "provab_base_url_default")]
     pub provab_base_url: String,
     provab_headers: HashMap<String, String>,
+    pub liteapi_key: String,
     pub nowpayments_api_key: String,
     pub admin_private_key: String,
     pub email_client_config: EmailConfig,
@@ -242,6 +243,7 @@ impl EnvVarConfig {
         let value = Self {
             provab_headers: pv_hashmap,
             provab_base_url,
+            liteapi_key: env_or_panic("LITEAPI_KEY"),
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",

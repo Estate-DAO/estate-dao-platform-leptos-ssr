@@ -1,9 +1,9 @@
-cfg_if::cfg_if! {
-    if #[cfg(feature = "ssr")] {
-        use crate::api::provab::Provab;
-        use crate::adapters::ProvabAdapter;
-    }
-}
+// cfg_if::cfg_if! {
+//     if #[cfg(feature = "ssr")] {
+//         use crate::api::provab::Provab;
+//         use crate::adapters::ProvabAdapter;
+//     }
+// }
 
 use crate::{
     api::{

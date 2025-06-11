@@ -13,6 +13,8 @@ use crate::application_services::{
 };
 use crate::adapters::ProvabAdapter;
 use crate::api::provab::Provab;
+use crate::adapters::LiteApiAdapter;
+use crate::api::liteapi::LiteApiHTTPClient;
 
 // <!-- Example server function using the new architecture with filters -->
 #[server(SearchHotelsFilteredAppService)]
@@ -22,11 +24,11 @@ pub async fn search_hotels_filtered_app_service(
     sort_options: UISortOptions,
 ) -> Result<crate::domain::DomainHotelSearchResponse, ServerFnError> {
     // <!-- 1. Create the provider adapter -->
-    let provab_http_client = Provab::default();
-    let provab_adapter = Arc::new(ProvabAdapter::new(provab_http_client));
+    let liteapi_http_client = LiteApiHTTPClient::default();
+    let liteapi_adapter = Arc::new(LiteApiAdapter::new(liteapi_http_client));
     
     // <!-- 2. Create the hotel service -->
-    let hotel_service = HotelService::new(provab_adapter);
+    let hotel_service = HotelService::new(liteapi_adapter);
 
     // <!-- 3. Call the service with filters -->
     hotel_service.search_hotels_with_filters(core_criteria, ui_filters, sort_options).await

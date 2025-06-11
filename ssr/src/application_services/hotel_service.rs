@@ -1,5 +1,3 @@
-use crate::adapters::ProvabAdapter;
-use crate::api::provab::Provab;
 use crate::api::ApiError;
 use crate::application_services::filter_types::{
     DomainSortDirection, DomainSortField, UISearchFilters, UISortOptions,

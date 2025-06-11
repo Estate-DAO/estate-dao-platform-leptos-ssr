@@ -7,6 +7,7 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
+    adapters::LiteApiAdapter,
     adapters::ProvabAdapter,
     application_services::HotelService,
     domain::{
@@ -40,9 +41,9 @@ pub async fn search_hotel_api_server_fn_route(
         }
     };
 
-    // <!-- Create the hotel service with ProvabAdapter -->
-    let provab_adapter = ProvabAdapter::new(state.provab_client.clone());
-    let hotel_service = HotelService::new(provab_adapter);
+    // <!-- Create the hotel service with LiteApiAdapter -->
+    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    let hotel_service = HotelService::new(liteapi_adapter);
 
     // <!-- Perform the hotel search -->
     match hotel_service.search_hotels(request).await {
@@ -98,9 +99,9 @@ pub async fn search_hotel_api_server_fn_route(
 //         }
 //     };
 
-//     // <!-- Create the hotel service with ProvabAdapter -->
-//     let provab_adapter = ProvabAdapter::new(state.provab_client.clone());
-//     let hotel_service = HotelService::new(provab_adapter);
+//     // <!-- Create the hotel service with LiteApiAdapter -->
+//     let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+//     let hotel_service = HotelService::new(liteapi_adapter);
 
 //     // <!-- Get hotel information -->
 //     match hotel_service.get_hotel_details(request).await {
@@ -148,9 +149,9 @@ pub async fn search_hotel_api_server_fn_route(
 //         }
 //     };
 
-//     // <!-- Create the hotel service with ProvabAdapter -->
-//     let provab_adapter = ProvabAdapter::new(state.provab_client.clone());
-//     let hotel_service = HotelService::new(provab_adapter);
+//     // <!-- Create the hotel service with LiteApiAdapter -->
+//     let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+//     let hotel_service = HotelService::new(liteapi_adapter);
 
 //     // <!-- Get hotel rates -->
 //     match hotel_service.get_hotel_rates(request).await {
