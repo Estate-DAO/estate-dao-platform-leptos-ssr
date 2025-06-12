@@ -3,6 +3,7 @@ use crate::application_services::filter_types::{
     DomainSortDirection, DomainSortField, UISearchFilters, UISortOptions,
 };
 use crate::domain::{
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
     DomainHotelSearchCriteria,
 };
@@ -112,17 +113,34 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         self.provider.get_hotel_details(criteria).await
     }
 
-    // <!-- Future methods for room operations, booking, etc. -->
+    // <!-- Room operations and booking methods -->
+
+    pub async fn block_room(
+        &self,
+        block_request: DomainBlockRoomRequest,
+    ) -> Result<DomainBlockRoomResponse, ProviderError> {
+        // <!-- Core business logic for room blocking can be added here -->
+        // <!-- For now, we just delegate to the provider -->
+        self.provider.block_room(block_request).await
+    }
+
+    pub async fn book_room(
+        &self,
+        book_request: DomainBookRoomRequest,
+    ) -> Result<DomainBookRoomResponse, ProviderError> {
+        // <!-- Core business logic for room booking can be added here -->
+        // <!-- This is where we could add cross-cutting concerns like -->
+        // <!-- - Booking validation -->
+        // <!-- - Payment processing coordination -->
+        // <!-- - Notification sending -->
+        // <!-- - Audit logging -->
+        // <!-- For now, we just delegate to the provider -->
+        self.provider.book_room(book_request).await
+    }
+
+    // <!-- Future methods -->
     // pub async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError> {
     //     self.provider.get_room_options(hotel_id, token).await
-    // }
-
-    // pub async fn block_room(&self, block_request: DomainBlockRoomRequest) -> Result<DomainBlockRoomResponse, ProviderError> {
-    //     self.provider.block_room(block_request).await
-    // }
-
-    // pub async fn book_room(&self, book_request: DomainBookRoomRequest) -> Result<DomainBookRoomResponse, ProviderError> {
-    //     self.provider.book_room(book_request).await
     // }
 
     // <!-- Helper methods for filtering and sorting -->

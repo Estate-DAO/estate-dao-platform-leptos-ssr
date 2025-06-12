@@ -3,14 +3,14 @@ use std::future::Future;
 use crate::{
     application_services::UISearchFilters,
     domain::{
-        DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
-        DomainHotelSearchCriteria,
+        DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest,
+        DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
+        DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
     ports::hotel_provider_port::ProviderError,
 };
 
 #[async_trait::async_trait]
-// pub trait HotelProviderPort: Send + Sync + 'static {
 pub trait HotelProviderPort {
     // <!-- Core search method that takes both essential criteria and UI filters -->
     // <!-- The adapter will try to use UI filters if the specific provider API supports them -->
@@ -40,12 +40,19 @@ pub trait HotelProviderPort {
     //     criteria: DomainHotelInfoCriteria,
     // ) -> impl Future<Output = Result<DomainHotelDetails, ProviderError>> + Send;
 
+    // <!-- Block room operation - reserves room before payment -->
+    async fn block_room(
+        &self,
+        block_request: DomainBlockRoomRequest,
+    ) -> Result<DomainBlockRoomResponse, ProviderError>;
+
+    // <!-- Book room operation - finalizes the booking with payment -->
+    async fn book_room(
+        &self,
+        book_request: DomainBookRoomRequest,
+    ) -> Result<DomainBookRoomResponse, ProviderError>;
+
     // <!-- Future operations to be implemented -->
     // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError>;
-
-    // async fn block_room(&self, block_request: DomainBlockRoomRequest) -> Result<DomainBlockRoomResponse, ProviderError>;
-
-    // async fn book_room(&self, book_request: DomainBookRoomRequest) -> Result<DomainBookRoomResponse, ProviderError>;
-
     // async fn get_booking_details(&self, booking_id: String) -> Result<DomainBookingDetails, ProviderError>;
 }

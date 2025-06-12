@@ -19,12 +19,16 @@ use crate::api::provab::a00_search::{
 use crate::api::provab::a01_hotel_info::{
     HotelInfoRequest as ProvabHotelInfoRequest, HotelInfoResponse as ProvabHotelInfoResponse,
 };
+use crate::api::provab::a03_block_room::{
+    BlockRoomRequest as ProvabBlockRoomRequest, BlockRoomResponse as ProvabBlockRoomResponse,
+    HotelRoomDetail as ProvabHotelRoomDetail,
+};
 use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
-    DomainDetailedPrice, DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails,
-    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice,
-    DomainRoomData,
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
+    DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice, DomainRoomData,
 };
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
@@ -206,5 +210,174 @@ impl ProvabAdapter {
             rate_key: provab_room_data.rate_key,
             offer_id: String::new(), // Provab doesn't have offer_id, use empty string
         }
+    }
+
+    // --- Block Room Mapping Functions ---
+
+    // Map domain block room request to Provab format
+    fn map_domain_block_to_provab(
+        domain_request: &DomainBlockRoomRequest,
+    ) -> ProvabBlockRoomRequest {
+        ProvabBlockRoomRequest {
+            token: domain_request.hotel_info_criteria.token.clone(),
+            room_unique_id: vec![domain_request.selected_room.room_unique_id.clone()],
+        }
+    }
+
+    // Map Provab block room response to domain format
+    fn map_provab_block_to_domain(
+        provab_response: ProvabBlockRoomResponse,
+        original_request: &DomainBlockRoomRequest,
+    ) -> Result<DomainBlockRoomResponse, ProviderError> {
+        match provab_response {
+            ProvabBlockRoomResponse::Success(success) => {
+                // Map each blocked room from Provab response
+                let blocked_rooms: Vec<DomainBlockedRoom> = success
+                    .get_block_room_hotel_details()
+                    .into_iter()
+                    .map(|room| DomainBlockedRoom {
+                        room_code: room.room_code.clone(),
+                        room_name: room.room_type_name.clone(),
+                        room_type_code: room.room_type_code.clone(),
+                        price: DomainDetailedPrice {
+                            published_price: 0.0, // Not provided by Provab in block response
+                            published_price_rounded_off: 0.0,
+                            offered_price: room.get_offered_price(),
+                            offered_price_rounded_off: room.get_offered_price().round(),
+                            room_price: room.get_offered_price(),
+                            tax: 0.0, // Not provided in block response
+                            extra_guest_charge: 0.0,
+                            child_charge: 0.0,
+                            other_charges: 0.0,
+                            currency_code: "USD".to_string(), // Default currency since it's private
+                        },
+                        cancellation_policy: None, // Would need to extract if available
+                        meal_plan: None,           // Would need to extract if available
+                    })
+                    .collect();
+
+                // Calculate total price
+                let total_price_amount = blocked_rooms
+                    .iter()
+                    .map(|room| room.price.offered_price)
+                    .sum();
+
+                let currency = "USD".to_string(); // Use default since currency_code is private
+
+                Ok(DomainBlockRoomResponse {
+                    block_id: success.get_block_room_id().unwrap_or_default(),
+                    is_price_changed: success.block_room.block_room_result.is_price_changed,
+                    is_cancellation_policy_changed: success
+                        .block_room
+                        .block_room_result
+                        .is_cancellation_policy_changed,
+                    blocked_rooms,
+                    total_price: DomainDetailedPrice {
+                        published_price: total_price_amount,
+                        published_price_rounded_off: total_price_amount.round(),
+                        offered_price: total_price_amount,
+                        offered_price_rounded_off: total_price_amount.round(),
+                        room_price: total_price_amount,
+                        tax: 0.0,
+                        extra_guest_charge: 0.0,
+                        child_charge: 0.0,
+                        other_charges: 0.0,
+                        currency_code: currency,
+                    },
+                    provider_data: Some(serde_json::to_string(&success).unwrap_or_default()),
+                })
+            }
+            ProvabBlockRoomResponse::Failure(failure) => {
+                Err(ProviderError(Arc::new(ProviderErrorDetails {
+                    provider_name: ProviderNames::Provab,
+                    api_error: ApiError::Other(
+                        failure
+                            .message
+                            .unwrap_or_else(|| "Block room failed".to_string()),
+                    ),
+                    error_step: ProviderSteps::HotelBlockRoom,
+                })))
+            }
+        }
+    }
+
+    // --- Validation Functions ---
+
+    // Validate block room request before processing
+    fn validate_block_room_request(request: &DomainBlockRoomRequest) -> Result<(), ProviderError> {
+        // Validate token is not empty (Provab specific)
+        if request.hotel_info_criteria.token.is_empty() {
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::Provab,
+                api_error: ApiError::Other(
+                    "Result token cannot be empty for Provab block room".to_string(),
+                ),
+                error_step: ProviderSteps::HotelBlockRoom,
+            })));
+        }
+
+        // Validate guest details match room occupancy
+        let total_adults = request.user_details.adults.len() as u32;
+        let total_children = request.user_details.children.len() as u32;
+        let total_guests_from_details = total_adults + total_children;
+
+        if total_guests_from_details != request.total_guests {
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::Provab,
+                api_error: ApiError::Other(format!(
+                    "Guest count mismatch. Expected {} guests but got {} in details",
+                    request.total_guests, total_guests_from_details
+                )),
+                error_step: ProviderSteps::HotelBlockRoom,
+            })));
+        }
+
+        // Validate essential fields are not empty
+        if request.selected_room.room_unique_id.is_empty() {
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::Provab,
+                api_error: ApiError::Other("Room unique ID cannot be empty".to_string()),
+                error_step: ProviderSteps::HotelBlockRoom,
+            })));
+        }
+
+        // Validate at least one adult is present
+        if request.user_details.adults.is_empty() {
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::Provab,
+                api_error: ApiError::Other("At least one adult guest is required".to_string()),
+                error_step: ProviderSteps::HotelBlockRoom,
+            })));
+        }
+
+        // Validate adult details
+        for (i, adult) in request.user_details.adults.iter().enumerate() {
+            if adult.first_name.trim().is_empty() {
+                return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                    provider_name: ProviderNames::Provab,
+                    api_error: ApiError::Other(format!(
+                        "Adult {} first name cannot be empty",
+                        i + 1
+                    )),
+                    error_step: ProviderSteps::HotelBlockRoom,
+                })));
+            }
+        }
+
+        // Validate children ages
+        for child in &request.user_details.children {
+            if child.age > 17 {
+                return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                    provider_name: ProviderNames::Provab,
+                    api_error: ApiError::Other(format!(
+                        "Child age {} exceeds maximum allowed age of 17",
+                        child.age
+                    )),
+                    error_step: ProviderSteps::HotelBlockRoom,
+                })));
+            }
+        }
+
+        Ok(())
     }
 }

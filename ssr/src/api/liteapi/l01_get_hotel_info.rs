@@ -174,6 +174,13 @@ impl ApiRequest for LiteApiHotelRatesRequest {
 pub async fn liteapi_hotel_rates(
     request: LiteApiHotelRatesRequest,
 ) -> Result<LiteApiHotelRatesResponse, crate::api::ApiError> {
+    // Validate request
+    if request.hotel_ids.is_empty() {
+        return Err(crate::api::ApiError::Other(
+            "Hotel IDs cannot be empty".to_string(),
+        ));
+    }
+
     let client = LiteApiHTTPClient::default();
     client.send(request).await
 }

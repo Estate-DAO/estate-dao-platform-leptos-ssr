@@ -222,7 +222,7 @@ impl From<SearchCtx> for DomainHotelSearchCriteria {
 // GUEST types
 //
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /// This is used in the form we will on the block room page
 /// stored in backend
 pub struct DomainChildDetail {
@@ -231,7 +231,7 @@ pub struct DomainChildDetail {
     pub last_name: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainAdultDetail {
     pub email: Option<String>,
     pub first_name: String,
@@ -239,10 +239,57 @@ pub struct DomainAdultDetail {
     pub phone: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainUserDetails {
     pub children: Vec<DomainChildDetail>,
     pub adults: Vec<DomainAdultDetail>,
+}
+
+// Block Room Types
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBlockRoomRequest {
+    // Hotel and search context
+    pub hotel_info_criteria: DomainHotelInfoCriteria,
+
+    // Guest details for the booking
+    pub user_details: DomainUserDetails,
+
+    // Selected room from hotel details
+    pub selected_room: DomainRoomData,
+
+    // Additional booking context
+    pub total_guests: u32,
+    pub special_requests: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBlockRoomResponse {
+    // Unique identifier for this block
+    // differnt providers give different names to this.
+    pub block_id: String,
+
+    // Flags for changes since search
+    pub is_price_changed: bool,
+    pub is_cancellation_policy_changed: bool,
+
+    // Blocked room details
+    pub blocked_rooms: Vec<DomainBlockedRoom>,
+
+    // Total pricing for all rooms
+    pub total_price: DomainDetailedPrice,
+
+    // Provider-specific data that might be needed for booking
+    pub provider_data: Option<String>, // JSON string for flexibility
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBlockedRoom {
+    pub room_code: String,
+    pub room_name: String,
+    pub room_type_code: Option<String>,
+    pub price: DomainDetailedPrice,
+    pub cancellation_policy: Option<String>,
+    pub meal_plan: Option<String>,
 }
 
 // get room types
