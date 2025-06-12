@@ -1,6 +1,6 @@
 use leptos::*;
 use reqwest::Method;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 
 use crate::api::api_client::{ApiClient, ApiRequest, ApiRequestMeta};
 use crate::api::liteapi::client::LiteApiHTTPClient;
@@ -48,8 +48,8 @@ pub struct LiteApiHotelResult {
     pub name: String,
     #[serde(rename = "hotelDescription")]
     pub hotel_description: String,
-    #[serde(rename = "hotelTypeId")]
-    pub hotel_type_id: i32,
+    #[serde(rename = "hotelTypeId", skip_serializing_if = "Option::is_none")]
+    pub hotel_type_id: Option<i32>,
     // #[serde(rename = "chainId", skip_serializing_if = "Option::is_none")]
     // pub chain_id: Option<i32>,
     // pub chain: String,
@@ -62,7 +62,9 @@ pub struct LiteApiHotelResult {
     pub zip: String,
     #[serde(rename = "main_photo")]
     pub main_photo: String,
-    pub thumbnail: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thumbnail: Option<String>,
+    #[serde(deserialize_with = "deserialize_stars")]
     pub stars: i32,
     pub rating: f64,
     #[serde(rename = "reviewCount")]
@@ -171,6 +173,18 @@ pub async fn search_hotels_from_destination(
 ) -> Result<LiteApiHotelSearchResponse, crate::api::ApiError> {
     let request = LiteApiHotelSearchRequest::new(&destination);
     liteapi_hotel_search(request).await
+}
+
+// Custom deserializer for stars field to handle both integer and floating point values
+fn deserialize_stars<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+
+    // First try to deserialize as f64 to handle both int and float cases
+    let value = f64::deserialize(deserializer)?;
+    Ok(value.floor() as i32)
 }
 
 // // Utility function to convert LiteAPI results to the common format used by the UI
