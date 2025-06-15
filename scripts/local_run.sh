@@ -25,7 +25,7 @@ done
 # cargo leptos build --lib-features "local-lib,mock-provab" --bin-features "local-bin,mock-provab" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab,debug_display" --bin-features "local-bin,mock-provab,debug_display" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab,debug_display,mock-block-room-fail" --bin-features "local-bin,mock-provab,debug_display,mock-block-room-fail" || exit 1
-export RUST_LOG="estate_fe=debug,tower_http=info"
+export RUST_LOG="estate_fe=debug,tower_http=debug"
 export RUST_BACKTRACE=1
 export LEPTOS_SITE_ROOT="target/site"
 export PAYMENTS_SKIP_LOCAL="true"
