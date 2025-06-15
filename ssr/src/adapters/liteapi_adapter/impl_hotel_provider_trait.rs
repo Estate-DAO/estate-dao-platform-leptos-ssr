@@ -40,13 +40,58 @@ impl HotelProviderPort for LiteApiAdapter {
             .map_err(|e: ApiError| {
                 ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelSearch)
             })?;
-        Ok(Self::map_liteapi_search_to_domain(liteapi_response))
+
+        // Use the new method that includes pricing from rates API
+        self.map_liteapi_search_to_domain_with_pricing(liteapi_response, &criteria)
+            .await
     }
 
     async fn get_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError> {
+        // First, get hotel information from search to get detailed hotel info
+        let hotel_search_request = LiteApiHotelSearchRequest {
+            country_code: criteria.search_criteria.destination_country_code.clone(),
+            city_name: criteria.search_criteria.destination_city_name.clone(),
+            offset: 0,
+            limit: 50,
+        };
+
+        let hotel_search_response: LiteApiHotelSearchResponse = self
+            .client
+            .send(hotel_search_request)
+            .await
+            .map_err(|e: ApiError| {
+                ProviderError::from_api_error(
+                    e,
+                    ProviderNames::LiteApi,
+                    ProviderSteps::HotelDetails,
+                )
+            })?;
+
+        // Find the specific hotel in search results
+        let hotel_id = if !criteria.hotel_ids.is_empty() {
+            criteria.hotel_ids[0].clone()
+        } else {
+            criteria.token.clone()
+        };
+
+        let hotel_info = hotel_search_response
+            .data
+            .iter()
+            .find(|h| h.id == hotel_id)
+            .ok_or_else(|| {
+                ProviderError(Arc::new(ProviderErrorDetails {
+                    provider_name: ProviderNames::LiteApi,
+                    api_error: ApiError::Other(format!(
+                        "Hotel with ID {} not found in search results",
+                        hotel_id
+                    )),
+                    error_step: ProviderSteps::HotelDetails,
+                }))
+            })?;
+
         // Convert domain criteria to LiteAPI rates request
         let liteapi_request = Self::map_domain_info_to_liteapi_rates(&criteria)?;
 
@@ -59,13 +104,17 @@ impl HotelProviderPort for LiteApiAdapter {
             ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelDetails)
         })?;
 
-        // Map response to domain hotel details
-        Self::map_liteapi_rates_to_domain_details(liteapi_response, &criteria.search_criteria)
-            .map_err(|e| {
-                // Log the error for debugging
-                crate::log!("LiteAPI rates mapping error: {:?}", e);
-                e
-            })
+        // Map response to domain hotel details using hotel info from search
+        Self::map_liteapi_rates_to_domain_details(
+            liteapi_response,
+            &criteria.search_criteria,
+            Some(hotel_info),
+        )
+        .map_err(|e| {
+            // Log the error for debugging
+            crate::log!("LiteAPI rates mapping error: {:?}", e);
+            e
+        })
     }
 
     async fn block_room(
@@ -126,6 +175,31 @@ impl HotelProviderPort for LiteApiAdapter {
             liteapi_response,
             &book_request,
         ))
+    }
+
+    async fn get_hotel_rates(
+        &self,
+        criteria: DomainHotelInfoCriteria,
+    ) -> Result<DomainHotelDetails, ProviderError> {
+        // Convert domain criteria to LiteAPI rates request
+        let liteapi_request = Self::map_domain_info_to_liteapi_rates(&criteria)?;
+
+        // Call LiteAPI rates endpoint
+        let liteapi_response: LiteApiHotelRatesResponse = self
+            .client
+            .send(liteapi_request)
+            .await
+            .map_err(|e: ApiError| {
+            ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelDetails)
+        })?;
+
+        // Map response to domain hotel details
+        Self::map_liteapi_rates_to_domain_details(liteapi_response, &criteria.search_criteria, None)
+            .map_err(|e| {
+                // Log the error for debugging
+                crate::log!("LiteAPI rates mapping error: {:?}", e);
+                e
+            })
     }
 }
 

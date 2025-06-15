@@ -109,8 +109,17 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError> {
         // <!-- Core business logic for getting hotel details can be added here -->
-        // <!-- For now, we just delegate to the provider -->
+        // <!-- For now, we just delegate to th                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     e provider -->
         self.provider.get_hotel_details(criteria).await
+    }
+
+    pub async fn get_hotel_rates(
+        &self,
+        criteria: DomainHotelInfoCriteria,
+    ) -> Result<DomainHotelDetails, ProviderError> {
+        // <!-- Core business logic for getting hotel rates can be added here -->
+        // <!-- For now, we just delegate to the provider -->
+        self.provider.get_hotel_rates(criteria).await
     }
 
     // <!-- Room operations and booking methods -->

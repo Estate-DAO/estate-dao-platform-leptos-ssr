@@ -5,11 +5,17 @@ pub use root::*;
 mod hotel_details;
 pub use hotel_details::*;
 
+mod hotel_details_v1;
+pub use hotel_details_v1::*;
+
 mod hotel_list;
 pub use hotel_list::*;
 
 mod block_room;
 pub use block_room::*;
+
+mod block_room_v1;
+pub use block_room_v1::*;
 
 mod confirm_booking;
 pub use confirm_booking::*;

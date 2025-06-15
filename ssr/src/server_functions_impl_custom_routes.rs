@@ -20,13 +20,54 @@ use estate_fe::{
 };
 use serde_json::json;
 
+// Helper function to filter hotels with valid pricing
+fn filter_hotels_with_valid_pricing(
+    mut search_result: DomainHotelListAfterSearch,
+) -> DomainHotelListAfterSearch {
+    let original_count = search_result.hotel_results.len();
+    let hotels_without_pricing = search_result
+        .hotel_results
+        .iter()
+        .filter(|hotel| hotel.price.room_price <= 0.0)
+        .count();
+
+    search_result
+        .hotel_results
+        .retain(|hotel| hotel.price.room_price > 0.0);
+
+    let final_count = search_result.hotel_results.len();
+
+    if hotels_without_pricing > 0 {
+        tracing::info!(
+            "API search filtering: Found {} hotels total, {} without pricing ({}%), {} with valid pricing returned to client",
+            original_count,
+            hotels_without_pricing,
+            if original_count > 0 { (hotels_without_pricing * 100) / original_count } else { 0 },
+            final_count
+        );
+    } else if original_count > 0 {
+        tracing::info!(
+            "API search filtering: All {} hotels had valid pricing",
+            original_count
+        );
+    }
+
+    search_result
+}
+
 pub fn api_routes() -> Router<AppState> {
     Router::new()
         .route("/search_hotel_api", post(search_hotel_api_server_fn_route))
         .route("/block_room_api", post(block_room_api_server_fn_route))
         .route("/book_room_api", post(book_room_api_server_fn_route))
-    // .route("/get_hotel_info_api", post(get_hotel_info_api_server_fn_route))
-    // .route("/get_hotel_rates_api", post(get_hotel_rates_api_server_fn_route))
+        .route(
+            "/get_hotel_info_api",
+            post(get_hotel_info_api_server_fn_route),
+        )
+        .route(
+            "/get_hotel_rates_api",
+            post(get_hotel_rates_api_server_fn_route),
+        )
 }
 
 #[axum::debug_handler]
@@ -53,8 +94,11 @@ pub async fn search_hotel_api_server_fn_route(
     // <!-- Perform the hotel search -->
     match hotel_service.search_hotels(request).await {
         Ok(result) => {
+            // <!-- Filter out hotels with zero pricing -->
+            let filtered_result = filter_hotels_with_valid_pricing(result);
+
             // <!-- Serialize response to string -->
-            match serde_json::to_string(&result) {
+            match serde_json::to_string(&filtered_result) {
                 Ok(json_string) => (StatusCode::OK, json_string).into_response(),
                 Err(e) => {
                     tracing::error!("Failed to serialize response: {:?}", e);
@@ -87,105 +131,121 @@ pub async fn search_hotel_api_server_fn_route(
     }
 }
 
-// #[axum::debug_handler]
-// pub async fn get_hotel_info_api_server_fn_route(
-//     State(state): State<AppState>,
-//     body: String,
-// ) -> Response {
-//     // <!-- Parse input string to struct -->
-//     let request: DomainHotelInfoCriteria = match serde_json::from_str(&body) {
-//         Ok(req) => req,
-//         Err(e) => {
-//             tracing::error!("Failed to parse hotel info request: {:?}", e);
-//             let error_response = json!({
-//                 "error": format!("Invalid input format: {}", e)
-//             });
-//             return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-//         }
-//     };
+#[axum::debug_handler]
+pub async fn get_hotel_info_api_server_fn_route(
+    State(state): State<AppState>,
+    body: String,
+) -> Response {
+    // <!-- Parse input string to struct -->
+    let request: DomainHotelInfoCriteria = match serde_json::from_str(&body) {
+        Ok(req) => req,
+        Err(e) => {
+            tracing::error!("Failed to parse hotel info request: {:?}", e);
+            let error_response = json!({
+                "error": format!("Invalid input format: {}", e)
+            });
+            return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
+        }
+    };
 
-//     // <!-- Create the hotel service with LiteApiAdapter -->
-//     let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-//     let hotel_service = HotelService::new(liteapi_adapter);
+    // <!-- Create the hotel service with LiteApiAdapter -->
+    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    let hotel_service = HotelService::new(liteapi_adapter);
 
-//     // <!-- Get hotel information -->
-//     match hotel_service.get_hotel_details(request).await {
-//         Ok(result) => {
-//             // <!-- Serialize response to string -->
-//             match serde_json::to_string(&result) {
-//                 Ok(json_string) => (StatusCode::OK, json_string).into_response(),
-//                 Err(e) => {
-//                     tracing::error!("Failed to serialize response: {:?}", e);
-//                     let error_response = json!({
-//                         "error": format!("Failed to serialize response: {}", e)
-//                     });
-//                     (StatusCode::INTERNAL_SERVER_ERROR, error_response.to_string()).into_response()
-//                 }
-//             }
-//         }
-//         Err(e) => {
-//             // <!-- Log the error -->
-//             tracing::error!("Hotel info retrieval failed: {:?}", e);
+    // <!-- Get hotel information -->
+    match hotel_service.get_hotel_details(request).await {
+        Ok(result) => {
+            // <!-- Serialize response to string -->
+            match serde_json::to_string(&result) {
+                Ok(json_string) => (StatusCode::OK, json_string).into_response(),
+                Err(e) => {
+                    tracing::error!("Failed to serialize response: {:?}", e);
+                    let error_response = json!({
+                        "error": format!("Failed to serialize response: {}", e)
+                    });
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        error_response.to_string(),
+                    )
+                        .into_response()
+                }
+            }
+        }
+        Err(e) => {
+            // <!-- Log the error -->
+            tracing::error!("Hotel info retrieval failed: {:?}", e);
 
-//             // <!-- Return error response -->
-//             let error_response = json!({
-//                 "error": format!("Failed to get hotel info: {}", e)
-//             });
+            // <!-- Return error response -->
+            let error_response = json!({
+                "error": format!("Failed to get hotel info: {}", e)
+            });
 
-//             (StatusCode::INTERNAL_SERVER_ERROR, error_response.to_string()).into_response()
-//         }
-//     }
-// }
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                error_response.to_string(),
+            )
+                .into_response()
+        }
+    }
+}
 
-// #[axum::debug_handler]
-// pub async fn get_hotel_rates_api_server_fn_route(
-//     State(state): State<AppState>,
-//     body: String,
-// ) -> Response {
-//     // <!-- Parse input string to struct -->
-//     let request: DomainHotelInfoCriteria = match serde_json::from_str(&body) {
-//         Ok(req) => req,
-//         Err(e) => {
-//             tracing::error!("Failed to parse hotel rates request: {:?}", e);
-//             let error_response = json!({
-//                 "error": format!("Invalid input format: {}", e)
-//             });
-//             return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-//         }
-//     };
+#[axum::debug_handler]
+pub async fn get_hotel_rates_api_server_fn_route(
+    State(state): State<AppState>,
+    body: String,
+) -> Response {
+    // <!-- Parse input string to struct -->
+    let request: DomainHotelInfoCriteria = match serde_json::from_str(&body) {
+        Ok(req) => req,
+        Err(e) => {
+            tracing::error!("Failed to parse hotel rates request: {:?}", e);
+            let error_response = json!({
+                "error": format!("Invalid input format: {}", e)
+            });
+            return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
+        }
+    };
 
-//     // <!-- Create the hotel service with LiteApiAdapter -->
-//     let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-//     let hotel_service = HotelService::new(liteapi_adapter);
+    // <!-- Create the hotel service with LiteApiAdapter -->
+    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    let hotel_service = HotelService::new(liteapi_adapter);
 
-//     // <!-- Get hotel rates -->
-//     match hotel_service.get_hotel_rates(request).await {
-//         Ok(result) => {
-//             // <!-- Serialize response to string -->
-//             match serde_json::to_string(&result) {
-//                 Ok(json_string) => (StatusCode::OK, json_string).into_response(),
-//                 Err(e) => {
-//                     tracing::error!("Failed to serialize response: {:?}", e);
-//                     let error_response = json!({
-//                         "error": format!("Failed to serialize response: {}", e)
-//                     });
-//                     (StatusCode::INTERNAL_SERVER_ERROR, error_response.to_string()).into_response()
-//                 }
-//             }
-//         }
-//         Err(e) => {
-//             // <!-- Log the error -->
-//             tracing::error!("Hotel rates retrieval failed: {:?}", e);
+    // <!-- Get hotel rates -->
+    match hotel_service.get_hotel_rates(request).await {
+        Ok(result) => {
+            // <!-- Serialize response to string -->
+            match serde_json::to_string(&result) {
+                Ok(json_string) => (StatusCode::OK, json_string).into_response(),
+                Err(e) => {
+                    tracing::error!("Failed to serialize response: {:?}", e);
+                    let error_response = json!({
+                        "error": format!("Failed to serialize response: {}", e)
+                    });
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        error_response.to_string(),
+                    )
+                        .into_response()
+                }
+            }
+        }
+        Err(e) => {
+            // <!-- Log the error -->
+            tracing::error!("Hotel rates retrieval failed: {:?}", e);
 
-//             // <!-- Return error response -->
-//             let error_response = json!({
-//                 "error": format!("Failed to get hotel rates: {}", e)
-//             });
+            // <!-- Return error response -->
+            let error_response = json!({
+                "error": format!("Failed to get hotel rates: {}", e)
+            });
 
-//             (StatusCode::INTERNAL_SERVER_ERROR, error_response.to_string()).into_response()
-//         }
-//     }
-// }
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                error_response.to_string(),
+            )
+                .into_response()
+        }
+    }
+}
 #[axum::debug_handler]
 pub async fn block_room_api_server_fn_route(
     State(state): State<AppState>,

@@ -4,6 +4,8 @@ pub mod hotel_details_state;
 pub mod input_group_state;
 pub mod local_storage;
 pub mod search_state;
+pub mod ui_block_room;
+pub mod ui_hotel_details;
 pub mod ui_search_state;
 pub mod view_state;
 // pub mod pricing_book_now;

@@ -50,8 +50,8 @@ pub struct LiteApiAmount {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRetailRate {
     pub total: Vec<LiteApiAmount>,
-    // #[serde(rename = "suggestedSellingPrice")]
-    // pub suggested_selling_price: Vec<LiteApiAmount>,
+    #[serde(rename = "suggestedSellingPrice")]
+    pub suggested_selling_price: Vec<LiteApiAmount>,
     // #[serde(rename = "initialPrice")]
     // pub initial_price: Vec<LiteApiAmount>,
     // #[serde(rename = "taxesAndFees")]
@@ -124,21 +124,44 @@ pub struct LiteApiHotelData {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiError {
+    pub code: i32,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiHotelRatesResponse {
-    pub data: Vec<LiteApiHotelData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Vec<LiteApiHotelData>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<LiteApiError>,
 }
 
 impl LiteApiHotelRatesResponse {
     pub fn get_first_hotel_data(&self) -> Option<&LiteApiHotelData> {
-        self.data.first()
+        self.data.as_ref()?.first()
     }
 
     pub fn get_first_room_type(&self) -> Option<&LiteApiRoomType> {
-        self.data.first()?.room_types.first()
+        self.data.as_ref()?.first()?.room_types.first()
     }
 
     pub fn get_first_rate(&self) -> Option<&LiteApiRate> {
         self.get_first_room_type()?.rates.first()
+    }
+
+    pub fn is_error_response(&self) -> bool {
+        self.error.is_some()
+    }
+
+    pub fn is_no_availability(&self) -> bool {
+        if let Some(error) = &self.error {
+            error.code == 2001
+            // && error.message.contains("no availability found")
+        } else {
+            false
+        }
     }
 }
 

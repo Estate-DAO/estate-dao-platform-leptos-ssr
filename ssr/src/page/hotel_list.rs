@@ -6,7 +6,9 @@ use crate::component::{Navbar, SkeletonCards};
 use crate::log;
 use crate::page::InputGroupContainer;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::SearchListResults;
+use crate::view_state_layer::view_state::HotelInfoCtx;
 // use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 // use crate::state::search_state::HotelInfoResults;
 use crate::{
@@ -170,21 +172,20 @@ pub fn HotelCard(
         }
     });
 
-    // todo (uncomment)
-    // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
     view! {
         <div // href=AppRoutes::HotelDetails.to_string()
         on:click=move |ev| {
             ev.prevent_default();
             ev.stop_propagation();
-            // todo (uncomment)
-            // // let hotel_view_info_ctx: HotelInfoCtx = expect_context();
-            // hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
-            // log!("hotel_code: {}", hotel_code_cloned);
 
-            // // make sure to reset the context before calling
-            // HotelInfoResults::reset();
+            // Set hotel code in context for hotel details page
+            hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
+            log!("hotel_code: {}", hotel_code_cloned);
+
+            // Reset hotel details state
+            HotelDetailsUIState::reset();
 
             // Dispatch actions to fetch data
             search_hotel_room_action.dispatch(());

@@ -111,7 +111,7 @@ cfg_if! {
                     // provide a single instance of provab client so that connection pooling can be used
                     // creating a new client for each reqwest causes new TCP connection each time
                     // This results in TCP handshake, slow-start, causing considerable latency!
-                    provide_context(app_state.provab_client.clone());
+                    // provide_context(app_state.provab_client.clone());
                 },
                 request,
             )
@@ -298,10 +298,10 @@ cfg_if! {
             );
 
             let app = Router::new()
-                // .route(
-                //     "/api/*fn_name",
-                //     get(server_fn_handler).post(server_fn_handler),
-                // )
+                .route(
+                    "/api/*fn_name",
+                    get(server_fn_handler).post(server_fn_handler),
+                )
                 // .route("/ipn/webhook", post(nowpayments_webhook))
                 // .route("/api/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))

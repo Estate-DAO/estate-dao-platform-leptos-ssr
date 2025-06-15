@@ -19,8 +19,10 @@ use crate::{
     page::{
         AdminPanelPage,
         BlockRoomPage,
+        BlockRoomV1Page,
         ConfirmationPage,
         HotelDetailsPage,
+        HotelDetailsV1Page,
         HotelListPage,
         // PaymentBookingStatusUpdates,
         RootPage,
@@ -35,6 +37,8 @@ use crate::{
         // search_state::{
         //     BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
         // },
+        ui_block_room::BlockRoomUIState,
+        ui_hotel_details::HotelDetailsUIState,
         ui_search_state::{SearchListResults, UISearchCtx},
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
@@ -151,11 +155,13 @@ pub fn App() -> impl IntoView {
     provide_context(SearchListResults::default());
 
     provide_context(HotelInfoCtx::default());
+    provide_context(HotelDetailsUIState::default());
     // provide_context(HotelInfoResults::default());
     // NEW booking context for hotel_details page
     provide_context(PricingBookNowState::default());
 
     provide_context(BlockRoomCtx::default());
+    provide_context(BlockRoomUIState::default());
     // provide_context(BlockRoomResults::default());
 
     // provide_context(ConfirmationResults::default());
@@ -203,8 +209,8 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path=AppRoutes::Root.to_string() view=RootPage />
                     <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
-                    <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsPage />
-                    <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomPage />
+                    <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
+                    <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
                     <Route path=AppRoutes::Confirmation.to_string() view=SSEConfirmationPage />
                     <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />

@@ -118,6 +118,15 @@ impl HotelProviderPort for ProvabAdapter {
             error_step: ProviderSteps::HotelBookRoom,
         })))
     }
+
+    async fn get_hotel_rates(
+        &self,
+        criteria: DomainHotelInfoCriteria,
+    ) -> Result<DomainHotelDetails, ProviderError> {
+        // For Provab, hotel rates are equivalent to hotel details
+        // since Provab provides pricing information in their hotel info response
+        self.get_hotel_details(criteria).await
+    }
 }
 
 // <!-- Future methods to be implemented -->

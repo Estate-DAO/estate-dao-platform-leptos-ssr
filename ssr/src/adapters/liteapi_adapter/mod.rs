@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::api::api_client::ApiClient;
 use crate::api::liteapi::{
-    liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook, LiteApiHTTPClient,
+    liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook, LiteApiError, LiteApiHTTPClient,
     LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiHotelResult,
     LiteApiHotelSearchRequest, LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest,
     LiteApiPrebookResponse,
@@ -71,11 +71,134 @@ impl LiteApiAdapter {
             hotel_category: format!("{} Star", liteapi_hotel.stars),
             star_rating: liteapi_hotel.stars as u8,
             price: DomainPrice {
-                room_price: 0.0, // LiteAPI doesn't provide price in search
+                room_price: 0.0, // Will be populated by get_hotel_rates in search_hotels
                 currency_code: liteapi_hotel.currency,
             },
             hotel_picture: liteapi_hotel.main_photo,
             result_token: hotel_id,
+        }
+    }
+
+    // Map search results with pricing from rates API
+    async fn map_liteapi_search_to_domain_with_pricing(
+        &self,
+        liteapi_response: LiteApiHotelSearchResponse,
+        search_criteria: &DomainHotelSearchCriteria,
+    ) -> Result<DomainHotelListAfterSearch, ProviderError> {
+        let mut domain_results = Self::map_liteapi_search_to_domain(liteapi_response.clone());
+
+        // (todo): review hotel_search - Extract hotel IDs (max 50 as per plan)
+        let hotel_ids: Vec<String> = liteapi_response
+            .data
+            .iter()
+            .take(50)
+            .map(|hotel| hotel.id.clone())
+            .collect();
+
+        if hotel_ids.is_empty() {
+            return Ok(domain_results);
+        }
+
+        // Create hotel info criteria for rates call
+        let hotel_info_criteria = DomainHotelInfoCriteria {
+            // todo: liteapi does not need this token
+            token: String::new(),
+            hotel_ids,
+            search_criteria: search_criteria.clone(),
+        };
+
+        // Call get_hotel_rates to get pricing
+        let rates_request = Self::map_domain_info_to_liteapi_rates(&hotel_info_criteria)?;
+        let rates_response: LiteApiHotelRatesResponse = self
+            .client
+            .send(rates_request)
+            .await
+            .map_err(|e: ApiError| {
+                // Log but don't fail the entire search if rates fail
+                crate::log!("Failed to get hotel rates in search: {:?}", e);
+                ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelSearch)
+            })?;
+
+        // Check if rates response indicates no availability
+        if rates_response.is_no_availability() {
+            crate::log!("LiteAPI rates returned no availability, returning empty results");
+            return Ok(DomainHotelListAfterSearch {
+                hotel_results: vec![],
+            });
+        }
+
+        // Merge pricing data into search results
+        Self::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Filter out hotels with zero pricing
+        Self::filter_hotels_with_valid_pricing(&mut domain_results);
+
+        Ok(domain_results)
+    }
+
+    // Helper method to merge pricing data into search results
+    fn merge_pricing_into_search_results(
+        domain_results: &mut DomainHotelListAfterSearch,
+        rates_response: LiteApiHotelRatesResponse,
+    ) {
+        // Create a map of hotel_id -> price for quick lookup
+        let mut hotel_prices = std::collections::HashMap::new();
+
+        // Only process if we have data (not an error response)
+        if let Some(data) = rates_response.data {
+            for hotel_data in data {
+                if let Some(room_type) = hotel_data.room_types.first() {
+                    if let Some(rate) = room_type.rates.first() {
+                        if let Some(amount) = rate.retail_rate.suggested_selling_price.first() {
+                            hotel_prices.insert(
+                                hotel_data.hotel_id.clone(),
+                                DomainPrice {
+                                    room_price: amount.amount,
+                                    currency_code: amount.currency.clone(),
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update search results with pricing
+        for hotel in &mut domain_results.hotel_results {
+            if let Some(price) = hotel_prices.get(&hotel.hotel_code) {
+                hotel.price = price.clone();
+            }
+        }
+    }
+
+    // Filter out hotels with zero pricing from search results
+    fn filter_hotels_with_valid_pricing(domain_results: &mut DomainHotelListAfterSearch) {
+        let original_count = domain_results.hotel_results.len();
+        let hotels_without_pricing = domain_results
+            .hotel_results
+            .iter()
+            .filter(|hotel| hotel.price.room_price <= 0.0)
+            .count();
+
+        domain_results
+            .hotel_results
+            .retain(|hotel| hotel.price.room_price > 0.0);
+
+        let final_count = domain_results.hotel_results.len();
+
+        if hotels_without_pricing > 0 {
+            crate::log!(
+                "LiteAPI search filtering: Found {} hotels total, {} without pricing ({}%), {} with valid pricing retained",
+                original_count,
+                hotels_without_pricing,
+                if original_count > 0 { (hotels_without_pricing * 100) / original_count } else { 0 },
+                final_count
+            );
+        } else if original_count > 0 {
+            crate::log!(
+                "LiteAPI search filtering: All {} hotels had valid pricing",
+                original_count
+            );
         }
     }
 
@@ -139,13 +262,45 @@ impl LiteApiAdapter {
         })
     }
 
+    // Map facility ID to human-readable name
+    fn map_facility_id_to_name(facility_id: i32) -> String {
+        match facility_id {
+            1 => "Swimming Pool".to_string(),
+            2 => "Fitness Center".to_string(),
+            3 => "Spa & Wellness".to_string(),
+            4 => "Restaurant".to_string(),
+            5 => "Bar".to_string(),
+            6 => "Free WiFi".to_string(),
+            7 => "Parking".to_string(),
+            8 => "Business Center".to_string(),
+            9 => "Concierge".to_string(),
+            10 => "Room Service".to_string(),
+            11 => "Laundry Service".to_string(),
+            12 => "Air Conditioning".to_string(),
+            13 => "Pet Friendly".to_string(),
+            14 => "Elevator".to_string(),
+            15 => "Non-Smoking Rooms".to_string(),
+            16 => "Airport Shuttle".to_string(),
+            17 => "Meeting Rooms".to_string(),
+            18 => "Childcare".to_string(),
+            19 => "Breakfast".to_string(),
+            20 => "24-Hour Front Desk".to_string(),
+            _ => format!("Facility {}", facility_id),
+        }
+    }
+
     // Map LiteAPI rates response to domain hotel details
     fn map_liteapi_rates_to_domain_details(
         liteapi_response: LiteApiHotelRatesResponse,
         search_criteria: &DomainHotelSearchCriteria,
+        hotel_info: Option<&LiteApiHotelResult>,
     ) -> Result<DomainHotelDetails, ProviderError> {
         // Check if we have any data
-        if liteapi_response.data.is_empty() {
+        if liteapi_response
+            .data
+            .as_deref()
+            .map_or(true, |d| d.is_empty())
+        {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
                 api_error: ApiError::Other(
@@ -200,6 +355,41 @@ impl LiteApiAdapter {
             .map(|amount| amount.currency.clone())
             .unwrap_or_else(|| "USD".to_string());
 
+        // Extract hotel information from search results if available
+        let (hotel_name, star_rating, description, address, images) = if let Some(info) = hotel_info
+        {
+            (
+                info.name.clone(),
+                info.stars, // Keep as i32 to match domain type
+                info.hotel_description.clone(),
+                info.address.clone(),
+                if !info.main_photo.is_empty() {
+                    vec![info.main_photo.clone()]
+                } else {
+                    vec![]
+                },
+            )
+        } else {
+            // Fallback to default values if no hotel info available
+            (
+                search_criteria.destination_city_name.clone(),
+                0,
+                String::new(),
+                String::new(),
+                vec![],
+            )
+        };
+
+        // Map facility IDs to string descriptions
+        let hotel_facilities = if let Some(info) = hotel_info {
+            info.facility_ids
+                .iter()
+                .map(|id| Self::map_facility_id_to_name(*id))
+                .collect()
+        } else {
+            vec![]
+        };
+
         // Build domain hotel details
         Ok(DomainHotelDetails {
             checkin: format!(
@@ -214,13 +404,13 @@ impl LiteApiAdapter {
                 search_criteria.check_out_date.1,
                 search_criteria.check_out_date.2
             ),
-            hotel_name: search_criteria.destination_city_name.clone(), // Would need to get from search results
+            hotel_name,
             hotel_code: hotel_data.hotel_id.clone(),
-            star_rating: 0,             // Would need to get from search results
-            description: String::new(), // LiteAPI doesn't provide in rates endpoint
-            hotel_facilities: vec![],
-            address: String::new(), // Would need to get from search results
-            images: vec![],         // Would need to get from search results
+            star_rating,
+            description,
+            hotel_facilities,
+            address,
+            images,
             first_room_details: DomainFirstRoomDetails {
                 price: DomainDetailedPrice {
                     published_price: room_price,
@@ -245,8 +435,6 @@ impl LiteApiAdapter {
         })
     }
 
-    // --- Block Room Mapping Functions ---
-
     // Map domain block room request to LiteAPI prebook request
     fn map_domain_block_to_liteapi_prebook(
         domain_request: &DomainBlockRoomRequest,
@@ -266,7 +454,7 @@ impl LiteApiAdapter {
 
         Ok(LiteApiPrebookRequest {
             offer_id: offer_id.clone(),
-            use_payment_sdk: true, // Always true for our use case
+            use_payment_sdk: false, // Always false for our use case
         })
     }
 

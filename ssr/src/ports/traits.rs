@@ -52,6 +52,12 @@ pub trait HotelProviderPort {
         book_request: DomainBookRoomRequest,
     ) -> Result<DomainBookRoomResponse, ProviderError>;
 
+    // <!-- Get hotel rates - for providers that need separate rates call -->
+    async fn get_hotel_rates(
+        &self,
+        criteria: DomainHotelInfoCriteria,
+    ) -> Result<DomainHotelDetails, ProviderError>;
+
     // <!-- Future operations to be implemented -->
     // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError>;
     // async fn get_booking_details(&self, booking_id: String) -> Result<DomainBookingDetails, ProviderError>;

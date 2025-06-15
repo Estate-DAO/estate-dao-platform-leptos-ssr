@@ -56,7 +56,7 @@ pub async fn read_cities_from_file(file_path: String) -> Result<Vec<City>, Serve
     let file = std::fs::File::open(file_path.as_str())?;
     let reader = std::io::BufReader::new(file);
     let result: Vec<City> = serde_json::from_reader(reader)?;
-    log!("{:?}", result.first());
+    log!(" read_cities_from_file - {:?}", result.first());
 
     Ok(result)
 }

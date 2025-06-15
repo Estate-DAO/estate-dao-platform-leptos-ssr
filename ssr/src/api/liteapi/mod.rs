@@ -17,7 +17,7 @@ cfg_if::cfg_if! {
         pub use l01_get_hotel_info::liteapi_hotel_rates;
         pub mod l01_get_hotel_info;
         pub use l01_get_hotel_info::{
-            LiteApiHotelData, LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiOccupancy,
+            LiteApiError, LiteApiHotelData, LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiOccupancy,
             LiteApiRate, LiteApiRoomType,
         };
 
