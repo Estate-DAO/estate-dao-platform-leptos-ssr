@@ -12,6 +12,7 @@ pub struct HotelDetailsUIState {
     pub available_rooms: RwSignal<Vec<DomainRoomData>>,
     pub selected_rooms: RwSignal<HashMap<String, u32>>, // room_type -> quantity
     pub room_loading: RwSignal<bool>,
+    // this is the aggregate price of all the rooms selected
     pub total_price: RwSignal<f64>,
 }
 

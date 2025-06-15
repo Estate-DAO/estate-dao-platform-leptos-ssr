@@ -3,13 +3,18 @@ use leptos_icons::Icon;
 use leptos_router::use_navigate;
 
 use crate::api::client_side_api::ClientSideApiClient;
+use crate::app::AppRoutes;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
 use crate::domain::{DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest};
 use crate::log;
 use crate::page::InputGroupContainer;
+use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
+
+// <!-- Configuration constant for number of skeleton rooms to display during loading -->
+const NUMBER_OF_ROOMS: usize = 5;
 
 #[derive(Clone)]
 struct Amenity {
@@ -30,9 +35,9 @@ pub fn RoomSelectionSkeleton() -> impl IntoView {
             // <!-- Skeleton for room type title -->
             <div class="h-6 bg-gray-200 rounded w-32"></div>
 
-            // <!-- Skeleton for 3 room types - matches expected room count -->
+            // <!-- Skeleton for rooms - uses NUMBER_OF_ROOMS constant -->
             <For
-                each=|| (0..3)
+                each=|| (0..NUMBER_OF_ROOMS)
                 key=|i| *i
                 let:_
             >
@@ -246,13 +251,13 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         }
     });
 
-    /// **Phase 3 API Integration: Hotel Rates Fetching**
-    ///
-    /// **Purpose**: Fetches available room types and rates for the selected hotel
-    /// **Trigger**: Automatically called after hotel details are loaded
-    /// **API**: Uses ClientSideApiClient::get_hotel_rates()
-    /// **State Management**: Updates HotelDetailsUIState with room data
-    /// **Error Handling**: Graceful fallback to mock data if API fails
+    // / **Phase 3 API Integration: Hotel Rates Fetching**
+    // /
+    // / **Purpose**: Fetches available room types and rates for the selected hotel
+    // / **Trigger**: Automatically called after hotel details are loaded
+    // / **API**: Uses ClientSideApiClient::get_hotel_rates()
+    // / **State Management**: Updates HotelDetailsUIState with room data
+    // / **Error Handling**: Graceful fallback to mock data if API fails
     let fetch_hotel_rates = create_action(move |_: &()| {
         let client = ClientSideApiClient::new();
 
@@ -738,9 +743,47 @@ pub fn PricingBreakdownV1() -> impl IntoView {
         async move {
             booking_loading.set(true);
 
-            // Simple delay to show loading state (removed gloo_timers dependency)
+            // <!-- Pass room selection data to BlockRoomUIState -->
+            // Get selected rooms with quantities
+            let selected_rooms = HotelDetailsUIState::get_selected_rooms();
+            let available_rooms = HotelDetailsUIState::get_available_rooms();
+            let hotel_details = HotelDetailsUIState::get_hotel_details();
+
+            // Create room selection summary for block room page
+            let mut room_selection_summary = Vec::new();
+            let mut selected_rooms_with_data = std::collections::HashMap::new();
+
+            for (room_id, quantity) in selected_rooms.iter() {
+                if *quantity > 0 {
+                    // Find the corresponding room data
+                    if let Some(room_data) = available_rooms
+                        .iter()
+                        .find(|r| &r.room_unique_id == room_id)
+                    {
+                        // Create summary entry
+                        let summary = RoomSelectionSummary {
+                            room_id: room_id.clone(),
+                            room_name: room_data.room_name.clone(),
+                            quantity: *quantity,
+                            price_per_night: HotelDetailsUIState::total_room_price()
+                                / HotelDetailsUIState::total_selected_rooms() as f64,
+                            room_data: room_data.clone(),
+                        };
+                        room_selection_summary.push(summary);
+                        selected_rooms_with_data
+                            .insert(room_id.clone(), (*quantity, room_data.clone()));
+                    }
+                }
+            }
+
+            // Pass data to BlockRoomUIState
+            BlockRoomUIState::set_selected_rooms(selected_rooms_with_data);
+            BlockRoomUIState::set_hotel_context(hotel_details);
+            BlockRoomUIState::set_room_selection_summary(room_selection_summary);
+
             // Navigate to block room page
-            navigate("/block-room", Default::default());
+            let block_room_url = AppRoutes::BlockRoom.to_string();
+            navigate(block_room_url, Default::default());
 
             booking_loading.set(false);
         }
@@ -858,12 +901,8 @@ pub fn PricingBookNowV1() -> impl IntoView {
                 })
                 .collect::<Vec<_>>()
         } else {
-            // Fallback to mock data if no rooms available yet
-            vec![
-                ("Standard Room".to_string(), 150.0, "room_1".to_string()),
-                ("Deluxe Room".to_string(), 200.0, "room_2".to_string()),
-                ("Suite".to_string(), 300.0, "room_3".to_string()),
-            ]
+            // No fallback rooms - show empty list when no API data available
+            vec![]
         }
     };
 

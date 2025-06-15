@@ -1,9 +1,16 @@
 use crate::{
     canister::backend::{
         self, BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId, BookingSummary,
-        Destination, HotelRoomDetails, PaymentDetails,
+        Destination, HotelDetails, HotelRoomDetails, PaymentDetails, RoomDetails, UserDetails,
     },
     component::{Destination as FrontendDestination, SelectedDateRange as FrontendDateRange},
+    domain::{
+        DomainAdultDetail, DomainBookRoomRequest, DomainBookRoomResponse, DomainBookedHotel,
+        DomainBookedRoom, DomainBookingGuest, DomainBookingHolder, DomainBookingStatus,
+        DomainCancellationPolicies, DomainChildDetail, DomainDestination, DomainDetailedPrice,
+        DomainFirstRoomDetails, DomainGuestPaymentInfo, DomainHotelDetails, DomainPaymentAddress,
+        DomainPaymentInfo, DomainPrice, DomainRoomData, DomainSelectedDateRange, DomainUserDetails,
+    },
     view_state_layer::view_state::{
         AdultDetail as FrontendAdultDetail, ChildDetail as FrontendChildDetail,
     },
@@ -270,6 +277,201 @@ impl From<AppReferenceBookingId> for backend::BookingId {
         Self {
             app_reference: value.app_reference,
             email: value.email,
+        }
+    }
+}
+
+// Domain to Backend conversions
+
+impl From<DomainDestination> for backend::Destination {
+    fn from(domain: DomainDestination) -> Self {
+        Self {
+            city_id: domain.city_id.to_string(),
+            city: domain.city_name,
+            country_code: domain.country_code,
+            country_name: domain.country_name,
+        }
+    }
+}
+
+impl From<backend::Destination> for DomainDestination {
+    fn from(backend: backend::Destination) -> Self {
+        Self {
+            city_id: backend.city_id.parse().unwrap_or_default(),
+            city_name: backend.city,
+            country_code: backend.country_code,
+            country_name: backend.country_name,
+        }
+    }
+}
+
+impl From<DomainSelectedDateRange> for backend::SelectedDateRange {
+    fn from(domain: DomainSelectedDateRange) -> Self {
+        Self {
+            start: domain.start,
+            end: domain.end,
+        }
+    }
+}
+
+impl From<backend::SelectedDateRange> for DomainSelectedDateRange {
+    fn from(backend: backend::SelectedDateRange) -> Self {
+        Self {
+            start: backend.start,
+            end: backend.end,
+        }
+    }
+}
+
+impl From<DomainAdultDetail> for backend::AdultDetail {
+    fn from(domain: DomainAdultDetail) -> Self {
+        Self {
+            email: domain.email,
+            first_name: domain.first_name,
+            last_name: domain.last_name,
+            phone: domain.phone,
+        }
+    }
+}
+
+impl From<backend::AdultDetail> for DomainAdultDetail {
+    fn from(backend: backend::AdultDetail) -> Self {
+        Self {
+            email: backend.email,
+            first_name: backend.first_name,
+            last_name: backend.last_name,
+            phone: backend.phone,
+        }
+    }
+}
+
+impl From<DomainChildDetail> for backend::ChildDetail {
+    fn from(domain: DomainChildDetail) -> Self {
+        Self {
+            age: domain.age,
+            first_name: domain.first_name,
+            last_name: domain.last_name,
+        }
+    }
+}
+
+impl From<backend::ChildDetail> for DomainChildDetail {
+    fn from(backend: backend::ChildDetail) -> Self {
+        Self {
+            age: backend.age,
+            first_name: backend.first_name,
+            last_name: backend.last_name,
+        }
+    }
+}
+
+impl From<DomainUserDetails> for backend::UserDetails {
+    fn from(domain: DomainUserDetails) -> Self {
+        Self {
+            children: domain.children.into_iter().map(|c| c.into()).collect(),
+            adults: domain.adults.into_iter().map(|a| a.into()).collect(),
+        }
+    }
+}
+
+impl From<backend::UserDetails> for DomainUserDetails {
+    fn from(backend: backend::UserDetails) -> Self {
+        Self {
+            children: backend.children.into_iter().map(|c| c.into()).collect(),
+            adults: backend.adults.into_iter().map(|a| a.into()).collect(),
+        }
+    }
+}
+
+// Hotel Room Details conversions
+impl From<DomainRoomData> for backend::RoomDetails {
+    fn from(domain: DomainRoomData) -> Self {
+        Self {
+            room_price: 0.0, // Price will need to be set separately
+            room_unique_id: domain.room_unique_id,
+            room_type_name: domain.room_name,
+        }
+    }
+}
+
+impl From<DomainDetailedPrice> for f32 {
+    fn from(domain: DomainDetailedPrice) -> Self {
+        domain.room_price as f32
+    }
+}
+
+// HotelRoomDetails construction helper
+impl HotelRoomDetails {
+    pub fn from_domain_parts(
+        destination: Option<DomainDestination>,
+        date_range: DomainSelectedDateRange,
+        room_details: Vec<DomainRoomData>,
+        hotel_details: DomainHotelDetails,
+        requested_payment_amount: f64,
+    ) -> Self {
+        Self {
+            destination: destination.map(|d| d.into()),
+            date_range: date_range.into(),
+            room_details: room_details.into_iter().map(|r| r.into()).collect(),
+            hotel_details: HotelDetails {
+                hotel_code: hotel_details.hotel_code,
+                hotel_name: hotel_details.hotel_name,
+                hotel_image: hotel_details.images.first().cloned().unwrap_or_default(),
+                block_room_id: "".to_string(), // Will need to be set during block room
+                hotel_location: hotel_details.address,
+                hotel_token: "".to_string(), // Will need to be set from search token
+            },
+            requested_payment_amount,
+        }
+    }
+}
+
+// Booking conversions
+impl From<DomainBookingHolder> for backend::AdultDetail {
+    fn from(domain: DomainBookingHolder) -> Self {
+        Self {
+            email: Some(domain.email),
+            first_name: domain.first_name,
+            last_name: Some(domain.last_name),
+            phone: Some(domain.phone),
+        }
+    }
+}
+
+impl From<backend::AdultDetail> for DomainBookingHolder {
+    fn from(backend: backend::AdultDetail) -> Self {
+        Self {
+            email: backend.email.unwrap_or_default(),
+            first_name: backend.first_name,
+            last_name: backend.last_name.unwrap_or_default(),
+            phone: backend.phone.unwrap_or_default(),
+        }
+    }
+}
+
+// Helper function to create backend Booking from domain parts
+impl Booking {
+    pub fn from_domain_parts(
+        hotel_room_details: HotelRoomDetails,
+        guests: DomainUserDetails,
+        booking_id: BookingId,
+        payment_amount: f64,
+        payment_currency: String,
+    ) -> Self {
+        Self {
+            user_selected_hotel_room_details: hotel_room_details,
+            guests: guests.into(),
+            booking_id: booking_id.clone(),
+            book_room_status: None,
+            payment_details: PaymentDetails {
+                payment_status: BackendPaymentStatus::Unpaid(None),
+                booking_id,
+                payment_api_response: BePaymentApiResponse {
+                    pay_amount: payment_amount,
+                    pay_currency: payment_currency,
+                    ..Default::default()
+                },
+            },
         }
     }
 }

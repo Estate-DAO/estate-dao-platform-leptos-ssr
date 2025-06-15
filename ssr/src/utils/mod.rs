@@ -1,6 +1,7 @@
 pub mod admin;
 pub mod app_reference;
 pub mod backend_default_impl;
+pub mod backend_integration_helpers;
 pub mod booking_id;
 mod colored_print;
 pub mod date;
@@ -26,6 +27,7 @@ cfg_if::cfg_if! {
 use std::future::Future;
 
 pub use backend_default_impl::*;
+pub use backend_integration_helpers::*;
 pub use colored_print::*;
 
 pub fn pluralize(count: u32, singular: &str, plural: &str) -> String {

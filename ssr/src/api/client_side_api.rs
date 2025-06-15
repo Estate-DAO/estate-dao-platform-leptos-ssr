@@ -6,7 +6,24 @@ use crate::domain::{
 use crate::log;
 use crate::utils::route::join_base_and_path_url;
 use leptos::*;
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfirmationProcessRequest {
+    pub payment_id: Option<String>,
+    pub app_reference: Option<String>,
+    pub email: Option<String>,
+    pub query_params: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfirmationProcessResponse {
+    pub success: bool,
+    pub message: String,
+    pub order_id: Option<String>,
+    pub user_email: Option<String>,
+}
 
 #[derive(Clone)]
 pub struct ClientSideApiClient;
@@ -207,6 +224,58 @@ impl ClientSideApiClient {
             }
             Err(e) => {
                 log!("Block room API call error: {}", e);
+                None
+            }
+        }
+    }
+
+    pub async fn process_confirmation(
+        &self,
+        request: ConfirmationProcessRequest,
+    ) -> Option<ConfirmationProcessResponse> {
+        // Serialize request to JSON string
+        let body = match serde_json::to_string(&request) {
+            Ok(json) => json,
+            Err(e) => {
+                log!("Failed to serialize confirmation request: {}", e);
+                return None;
+            }
+        };
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(
+                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/process_confirmation_api")
+                    .unwrap_or_else(|e| {
+                        log!("Failed to build URL: {}", e);
+                        format!(
+                            "{}/server_fn_api/process_confirmation_api",
+                            APP_URL.as_str()
+                        )
+                    }),
+            )
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await;
+
+        match response {
+            Ok(res) => {
+                if res.status().is_success() {
+                    match res.text().await {
+                        Ok(text) => Self::parse_server_response(&text).ok(),
+                        Err(e) => {
+                            log!("Failed to get confirmation response text: {}", e);
+                            None
+                        }
+                    }
+                } else {
+                    log!("Confirmation API call failed with status: {}", res.status());
+                    None
+                }
+            }
+            Err(e) => {
+                log!("Confirmation API call error: {}", e);
                 None
             }
         }

@@ -20,6 +20,9 @@ pub use block_room_v1::*;
 mod confirm_booking;
 pub use confirm_booking::*;
 
+mod confirmation_page_v1;
+pub use confirmation_page_v1::*;
+
 mod input_group_mobile;
 pub use input_group_mobile::*;
 

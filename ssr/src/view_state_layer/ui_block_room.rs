@@ -1,3 +1,4 @@
+use crate::domain::{DomainHotelDetails, DomainRoomData};
 use crate::view_state_layer::GlobalStateForLeptos;
 use leptos::*;
 use std::collections::HashMap;
@@ -18,6 +19,16 @@ pub struct ChildDetail {
     pub age: Option<u8>,
 }
 
+// <!-- Room selection summary for block room page -->
+#[derive(Clone, Debug)]
+pub struct RoomSelectionSummary {
+    pub room_id: String,
+    pub room_name: String,
+    pub quantity: u32,
+    pub price_per_night: f64,
+    pub room_data: DomainRoomData,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct BlockRoomUIState {
     // Form data
@@ -34,6 +45,11 @@ pub struct BlockRoomUIState {
     pub error: RwSignal<Option<String>>,
     pub show_payment_modal: RwSignal<bool>,
 
+    // <!-- Phase 3.2: Enhanced error handling -->
+    pub api_error_type: RwSignal<Option<String>>, // "network", "validation", "room_unavailable", "server"
+    pub error_details: RwSignal<Option<String>>,  // Detailed error message for debugging
+    pub retry_count: RwSignal<u32>,               // Track retry attempts
+
     // Pricing data
     pub room_price: RwSignal<f64>,
     pub total_price: RwSignal<f64>,
@@ -42,6 +58,16 @@ pub struct BlockRoomUIState {
     // Block room response
     pub block_room_id: RwSignal<Option<String>>,
     pub block_room_called: RwSignal<bool>,
+
+    // // <!-- Phase 3.3: Real-time availability checking -->
+    // pub availability_checking: RwSignal<bool>,
+    // pub room_availability_status: RwSignal<Option<String>>, // "available", "limited", "unavailable"
+    // pub availability_last_checked: RwSignal<Option<String>>, // Timestamp of last check
+
+    // <!-- Room selection data from hotel details -->
+    pub selected_rooms: RwSignal<HashMap<String, (u32, DomainRoomData)>>, // room_id -> (quantity, room_data)
+    pub hotel_context: RwSignal<Option<DomainHotelDetails>>,
+    pub room_selection_summary: RwSignal<Vec<RoomSelectionSummary>>,
 }
 
 impl BlockRoomUIState {
@@ -120,7 +146,8 @@ impl BlockRoomUIState {
 
     // Helper function for phone validation
     pub fn is_valid_phone(phone: &str) -> bool {
-        phone.chars().all(|c| c.is_ascii_digit()) && phone.len() >= 10
+        phone.chars().all(|c| c.is_ascii_digit())
+        // && phone.len() >= 10
     }
 
     // Validation logic
@@ -197,6 +224,65 @@ impl BlockRoomUIState {
         this.error.set(error);
     }
 
+    // <!-- Phase 3.2: Enhanced error handling methods -->
+    pub fn set_api_error(
+        error_type: Option<String>,
+        user_message: Option<String>,
+        details: Option<String>,
+    ) {
+        let this: Self = expect_context();
+        this.api_error_type.set(error_type);
+        this.error.set(user_message);
+        this.error_details.set(details);
+    }
+
+    pub fn increment_retry_count() {
+        let this: Self = expect_context();
+        this.retry_count.update(|count| *count += 1);
+    }
+
+    pub fn reset_retry_count() {
+        let this: Self = expect_context();
+        this.retry_count.set(0);
+    }
+
+    pub fn get_retry_count() -> u32 {
+        let this: Self = expect_context();
+        this.retry_count.get_untracked()
+    }
+
+    pub fn can_retry() -> bool {
+        Self::get_retry_count() < 3 // Max 3 retry attempts
+    }
+
+    // // <!-- Phase 3.3: Availability checking methods -->
+    // pub fn set_availability_checking(checking: bool) {
+    //     let this: Self = expect_context();
+    //     this.availability_checking.set(checking);
+    // }
+
+    // pub fn set_room_availability_status(status: Option<String>) {
+    //     let this: Self = expect_context();
+    //     let status_is_some = status.is_some();
+    //     this.room_availability_status.set(status);
+
+    //     // Update timestamp when status changes
+    //     if status_is_some {
+    //         let now = "timestamp_placeholder".to_string(); // Replace with actual timestamp in production
+    //         this.availability_last_checked.set(Some(now));
+    //     }
+    // }
+
+    // pub fn get_room_availability_status() -> Option<String> {
+    //     let this: Self = expect_context();
+    //     this.room_availability_status.get_untracked()
+    // }
+
+    // pub fn is_availability_checking() -> bool {
+    //     let this: Self = expect_context();
+    //     this.availability_checking.get_untracked()
+    // }
+
     pub fn set_show_payment_modal(show: bool) {
         let this: Self = expect_context();
         this.show_payment_modal.set(show);
@@ -251,6 +337,62 @@ impl BlockRoomUIState {
             .unwrap_or_default()
     }
 
+    // <!-- Room selection data management methods -->
+    pub fn set_selected_rooms(rooms: HashMap<String, (u32, DomainRoomData)>) {
+        let this: Self = expect_context();
+        this.selected_rooms.set(rooms);
+    }
+
+    pub fn get_selected_rooms_untracked() -> HashMap<String, (u32, DomainRoomData)> {
+        let this: Self = expect_context();
+        this.selected_rooms.get_untracked()
+    }
+
+    pub fn set_hotel_context(hotel_details: Option<DomainHotelDetails>) {
+        let this: Self = expect_context();
+        this.hotel_context.set(hotel_details);
+    }
+
+    pub fn get_hotel_context_untracked() -> Option<DomainHotelDetails> {
+        let this: Self = expect_context();
+        this.hotel_context.get_untracked()
+    }
+
+    pub fn set_room_selection_summary(summary: Vec<RoomSelectionSummary>) {
+        let this: Self = expect_context();
+        this.room_selection_summary.set(summary);
+    }
+
+    pub fn get_room_selection_summary_untracked() -> Vec<RoomSelectionSummary> {
+        let this: Self = expect_context();
+        this.room_selection_summary.get_untracked()
+    }
+
+    // <!-- Helper method to calculate total from room selections -->
+    pub fn calculate_total_from_room_selections() -> f64 {
+        let this: Self = expect_context();
+        let summary = this.room_selection_summary.get_untracked();
+        let num_nights = this.num_nights.get_untracked();
+
+        let total: f64 = summary
+            .iter()
+            .map(|room| room.price_per_night * room.quantity as f64 * num_nights as f64)
+            .sum();
+
+        this.total_price.set(total);
+        total
+    }
+
+    // <!-- Helper method to get total number of selected rooms -->
+    pub fn get_total_selected_rooms() -> u32 {
+        let this: Self = expect_context();
+        this.room_selection_summary
+            .get_untracked()
+            .iter()
+            .map(|room| room.quantity)
+            .sum()
+    }
+
     // Reset method
     pub fn reset() {
         let this: Self = expect_context();
@@ -267,6 +409,15 @@ impl BlockRoomUIState {
         this.num_nights.set(0);
         this.block_room_id.set(None);
         this.block_room_called.set(false);
+        this.selected_rooms.set(HashMap::new());
+        this.hotel_context.set(None);
+        this.room_selection_summary.set(vec![]);
+        this.api_error_type.set(None);
+        this.error_details.set(None);
+        this.retry_count.set(0);
+        // this.availability_checking.set(false);
+        // this.room_availability_status.set(None);
+        // this.availability_last_checked.set(None);
     }
 }
 
