@@ -8,6 +8,7 @@ use crate::api::payments::{create_domain_request, PaymentProvider};
 use crate::app::AppRoutes;
 use crate::application_services::BookingService;
 use crate::component::{Divider, Navbar, SpinnerGray};
+use crate::component::ChildrenAgesSignalExt;
 use crate::domain::{
     DomainAdultDetail, DomainBlockRoomRequest, DomainChildDetail, DomainDestination,
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomData,

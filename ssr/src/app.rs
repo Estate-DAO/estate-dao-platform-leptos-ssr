@@ -22,6 +22,7 @@ use crate::{
         BlockRoomV1Page,
         ConfirmationPage,
         ConfirmationPageV1,
+        ConfirmationPageV2,
         HotelDetailsPage,
         HotelDetailsV1Page,
         HotelListPage,
@@ -32,6 +33,7 @@ use crate::{
     },
     view_state_layer::{
         api_error_state::ApiErrorState,
+        booking_context_state::BookingContextState,
         confirmation_results_state::ConfirmationResultsState,
         hotel_details_state::PricingBookNowState,
         input_group_state::InputGroupState,
@@ -40,6 +42,7 @@ use crate::{
         // },
         ui_block_room::BlockRoomUIState,
         ui_confirmation_page::ConfirmationPageUIState,
+        ui_confirmation_page_v2::ConfirmationPageState,
         ui_hotel_details::HotelDetailsUIState,
         ui_search_state::{SearchListResults, UISearchCtx},
         view_state::{BlockRoomCtx, HotelInfoCtx},
@@ -75,6 +78,7 @@ pub enum AppRoutes {
     BlockRoom,
     Confirmation,
     ConfirmationV1,
+    ConfirmationV2,
     AdminPanel,
     // Notifications
 }
@@ -88,6 +92,7 @@ impl AppRoutes {
             AppRoutes::BlockRoom => "/block_room",
             AppRoutes::Confirmation => "/confirmation",
             AppRoutes::ConfirmationV1 => "/confirmation-v1",
+            AppRoutes::ConfirmationV2 => "/confirmation-v2",
             AppRoutes::AdminPanel => "/admin-panel",
             // AppRoutes::Notifications => "/notifications"
         }
@@ -101,6 +106,7 @@ impl AppRoutes {
             Self::BlockRoom,
             Self::Confirmation,
             Self::ConfirmationV1,
+            Self::ConfirmationV2,
             Self::AdminPanel,
             // Self::Notifications,
         ]
@@ -115,6 +121,7 @@ impl AppRoutes {
             AppRoutes::BlockRoom => 0.7,
             AppRoutes::Confirmation => 0.6,
             AppRoutes::ConfirmationV1 => 0.6,
+            AppRoutes::ConfirmationV2 => 0.6,
             AppRoutes::AdminPanel => 0.1,
             // AppRoutes::Notifications => 0.5,
         }
@@ -173,6 +180,8 @@ pub fn App() -> impl IntoView {
     // provide_context(ConfirmationResults::default());
     provide_context(ConfirmationResultsState::default());
     provide_context(ConfirmationPageUIState::default());
+    provide_context(ConfirmationPageState::default());
+    provide_context(BookingContextState::default());
 
     // provide_context(PaymentBookingStatusUpdates::default());
     // provide_context(SSEBookingStatusUpdates::default());
@@ -220,6 +229,7 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
                     <Route path=AppRoutes::Confirmation.to_string() view=SSEConfirmationPage />
                     <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
+                    <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
                     <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                     // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />

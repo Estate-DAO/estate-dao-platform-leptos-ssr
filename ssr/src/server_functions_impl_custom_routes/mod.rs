@@ -74,6 +74,7 @@ pub struct ConfirmationProcessResponse {
     pub message: String,
     pub order_id: Option<String>,
     pub user_email: Option<String>,
+    pub booking_data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

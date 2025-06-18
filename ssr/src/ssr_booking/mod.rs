@@ -15,6 +15,7 @@ mod pipeline_integration_test;
 use crate::canister::backend;
 use crate::ssr_booking::pipeline::PipelineExecutor;
 use crate::ssr_booking::pipeline::PipelineValidator;
+use crate::utils::notifier::Notifier;
 use mock_handler::MockStep;
 use payment_handler::GetPaymentStatusFromPaymentProvider;
 use pipeline::PipelineDecision;
@@ -75,22 +76,23 @@ impl SSRBookingPipelineStep {
     pub async fn execute(
         &self,
         event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
     ) -> Result<ServerSideBookingEvent, String> {
         match self {
             SSRBookingPipelineStep::PaymentStatus(_) => {
-                GetPaymentStatusFromPaymentProvider::execute(event).await
+                GetPaymentStatusFromPaymentProvider::execute(event, notifier).await
             }
             SSRBookingPipelineStep::GetBookingFromBackend(_) => {
-                GetBookingFromBackend::execute(event).await
+                GetBookingFromBackend::execute(event, notifier).await
             }
             SSRBookingPipelineStep::BookRoom(_) => {
-                MakeBookingFromBookingProvider::execute(event).await
+                MakeBookingFromBookingProvider::execute(event, notifier).await
             }
             SSRBookingPipelineStep::SendEmail(_) => {
-                SendEmailAfterSuccessfullBooking::execute(event).await
+                SendEmailAfterSuccessfullBooking::execute(event, notifier).await
             }
             // PipelineStep::BookingCall(_) => {
-            //     CreateBookingCallForTravelProvider::execute(event).await
+            //     CreateBookingCallForTravelProvider::execute(event, notifier).await
             // }
             SSRBookingPipelineStep::Mock(step) => {
                 step.executed.store(true, Ordering::SeqCst);

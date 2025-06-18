@@ -32,6 +32,10 @@ use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::AdminCanisters;
 use crate::utils::app_reference::BookingId;
 use crate::utils::booking_id::PaymentIdentifiers;
+use crate::utils::notifier::{self, Notifier};
+use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
+use crate::utils::uuidv7;
+use chrono::Utc;
 
 // --- Email Client Implementation ---
 #[derive(Debug, Clone)]
@@ -354,11 +358,37 @@ async fn update_email_sent_status_in_canister(
 }
 
 impl SendEmailAfterSuccessfullBooking {
-    async fn run(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
+    #[instrument(name = "send_email_run", skip(event, notifier), err(Debug))]
+    async fn run(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
         let config = EnvVarConfig::try_from_env();
         let email_client = EmailClient::new(config.email_client_config);
         let _ = email_client.send_email_gmail(&event).await?;
         update_email_sent_status_in_canister(&event).await?;
+
+        // --- EMIT CUSTOM EVENT: EmailSent ---
+        if let Some(n) = notifier {
+            let correlation_id = tracing::Span::current()
+                .field("correlation_id")
+                .map(|f| f.to_string())
+                .unwrap_or_else(|| "unknown_correlation_id".to_string());
+
+            let custom_event = NotifierEvent {
+                event_id: uuidv7::create(),
+                correlation_id,
+                timestamp: Utc::now(),
+                order_id: event.order_id.clone(),
+                step_name: Some("SendEmailAfterSuccessfullBooking".to_string()),
+                event_type: NotifierEventType::EmailSent {
+                    email_type: "booking_confirmation".to_string(),
+                    recipient: event.user_email.clone(),
+                },
+                email: event.user_email.clone(),
+            };
+            info!("Emitting EmailSent event: {custom_event:#?}");
+            n.notify(custom_event).await;
+        }
+        // --- END EMIT CUSTOM EVENT ---
+
         Ok(event)
     }
 }
@@ -367,10 +397,10 @@ impl SendEmailAfterSuccessfullBooking {
 impl PipelineExecutor for SendEmailAfterSuccessfullBooking {
     #[instrument(
         name = "execute_send_email_after_successfull_booking",
-        skip(event),
+        skip(event, notifier),
         err(Debug)
     )]
-    async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
-        SendEmailAfterSuccessfullBooking::run(event).await
+    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+        SendEmailAfterSuccessfullBooking::run(event, notifier).await
     }
 }

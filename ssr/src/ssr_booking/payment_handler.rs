@@ -3,6 +3,11 @@ use std::time::{Duration, Instant};
 use tokio::time;
 use tracing::{debug, error, info, instrument, warn};
 
+use crate::utils::notifier::{self, Notifier};
+use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
+use crate::utils::uuidv7;
+use chrono::Utc;
+
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
 use crate::api::payments::NowPayments;
 use crate::canister::backend::{
@@ -161,11 +166,33 @@ impl PipelineValidator for GetPaymentStatusFromPaymentProvider {
     #[instrument(name = "validate_get_payment_status", skip(self, event), err(Debug))]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
         if event.payment_id.is_some() {
-            // what is relation between booking id and order id ??? (see: memories/booking_id.md)
-            // TODO: check if payment is_paid == false, (from backend) then RUN
-            // if is_paid == true, PipelineDecision::Skip
+            // Check if backend_booking_struct exists and payment is already paid
+            if let Some(ref backend_booking) = event.backend_booking_struct {
+                match &backend_booking.payment_details.payment_status {
+                    BackendPaymentStatus::Paid(_) => {
+                        info!("Payment already paid in backend, skipping payment status check");
+                        return Ok(PipelineDecision::Skip);
+                    }
+                    BackendPaymentStatus::Unpaid(_) => {
+                        info!("Payment not yet paid in backend, proceeding with payment status check");
+                    }
+                }
+            }
 
-            // ensure that order_id exists in ServerSideBookingEvent and booking_id can be derived from order_id - log the error use crate::log;
+            // Ensure that order_id exists in ServerSideBookingEvent and booking_id can be derived from order_id
+            if event.order_id.is_empty() {
+                error!("order_id is empty in ServerSideBookingEvent");
+                return Err("order_id is required but empty".to_string());
+            }
+
+            // Verify that app_reference can be derived from order_id
+            if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
+                error!("Failed to extract app_reference from order_id: {}", event.order_id);
+                return Err(format!(
+                    "Failed to extract app_reference from order_id: {}",
+                    event.order_id
+                ));
+            }
 
             Ok(PipelineDecision::Run)
         } else {
@@ -176,8 +203,8 @@ impl PipelineValidator for GetPaymentStatusFromPaymentProvider {
 
 #[async_trait]
 impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
-    #[instrument(name = "execute_get_payment_status", skip(event), err(Debug))]
-    async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
+    #[instrument(name = "execute_get_payment_status", skip(event, notifier), err(Debug))]
+    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
         // step 1:  Retrieves the payment status  from API
 
         // Get payment ID from event
@@ -203,6 +230,30 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
         updated_event.payment_status = Some(payment_status.clone());
         updated_event.payment_id = Some(payment_id.to_string());
         info!("Updated event: {:?}", updated_event);
+
+        // --- EMIT CUSTOM EVENT: PaymentStatusChecked ---
+        if let Some(n) = notifier {
+            let correlation_id = tracing::Span::current()
+                .field("correlation_id")
+                .map(|f| f.to_string())
+                .unwrap_or_else(|| "unknown_correlation_id".to_string());
+
+            let custom_event = NotifierEvent {
+                event_id: uuidv7::create(),
+                correlation_id,
+                timestamp: Utc::now(),
+                order_id: updated_event.order_id.clone(),
+                step_name: Some("GetPaymentStatusFromPaymentProvider".to_string()),
+                event_type: NotifierEventType::PaymentStatusChecked {
+                    status: payment_status.clone(),
+                    is_finished: response.is_finished(),
+                },
+                email: updated_event.user_email.clone(),
+            };
+            info!("Emitting PaymentStatusChecked event: {custom_event:#?}");
+            n.notify(custom_event).await;
+        }
+        // --- END EMIT CUSTOM EVENT ---
 
         // step 2: write code to update payment status in backend using the function details in file memories/update_payment.md
         let order_id = updated_event.order_id.clone();

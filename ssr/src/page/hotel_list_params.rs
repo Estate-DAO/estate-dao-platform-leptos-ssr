@@ -1,5 +1,5 @@
 use crate::{
-    component::{Destination, GuestSelection, SelectedDateRange},
+    component::{Destination, GuestSelection, SelectedDateRange, ChildrenAgesSignalExt},
     utils::query_params::{update_url_with_state, FilterMap, QueryParamsSync, SortDirection},
     view_state_layer::ui_search_state::UISearchCtx,
 };
@@ -77,7 +77,7 @@ impl HotelListParams {
         let adults = Some(guests.adults.get_untracked());
         let children = Some(guests.children.get_untracked());
         let rooms = Some(guests.rooms.get_untracked());
-        let children_ages = guests.children_ages.get_untracked();
+        let children_ages = guests.children_ages.get_untracked().into();
 
         Self {
             destination,

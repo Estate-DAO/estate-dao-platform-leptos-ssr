@@ -5,9 +5,12 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
+    api::canister::get_user_booking::get_booking_by_id_backend,
+    canister::backend,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
         email_handler::SendEmailAfterSuccessfullBooking,
+        get_booking_from_backend::GetBookingFromBackend,
         payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
         SSRBookingPipelineStep, ServerSideBookingEvent,
     },
@@ -16,6 +19,37 @@ use estate_fe::{
 use serde_json::json;
 
 use super::{parse_json_request, ConfirmationProcessRequest};
+
+/// Fetch booking from backend and return serializable booking data
+/// Returns None if booking not found, logs error if fetch fails
+async fn fetch_booking_data(booking_id: &BookingId) -> Option<serde_json::Value> {
+    let backend_booking_id = backend::BookingId {
+        app_reference: booking_id.app_reference.clone(),
+        email: booking_id.email.clone(),
+    };
+
+    match get_booking_by_id_backend(backend_booking_id).await {
+        Ok(Some(booking)) => {
+            tracing::info!("Successfully fetched booking data from backend");
+            // Convert booking to serializable format
+            match serde_json::to_value(&booking) {
+                Ok(booking_json) => Some(booking_json),
+                Err(e) => {
+                    tracing::error!("Failed to serialize booking data: {}", e);
+                    None
+                }
+            }
+        }
+        Ok(None) => {
+            tracing::warn!("No booking found in backend for booking_id: {:?}", booking_id);
+            None
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch booking from backend: {}", e);
+            None
+        }
+    }
+}
 
 #[axum::debug_handler]
 pub async fn process_confirmation_api_server_fn_route(
@@ -140,9 +174,10 @@ pub async fn process_confirmation_api_server_fn_route(
     let payment_status_step =
         SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
     let book_room_step = SSRBookingPipelineStep::BookRoom(MakeBookingFromBookingProvider);
+    let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
     let send_email_step = SSRBookingPipelineStep::SendEmail(SendEmailAfterSuccessfullBooking);
 
-    let steps = vec![payment_status_step, book_room_step, send_email_step];
+    let steps = vec![get_booking_step, payment_status_step, book_room_step, send_email_step];
 
     tracing::info!(
         "Executing booking pipeline for order_id: {}, payment_id: {}",
@@ -151,7 +186,12 @@ pub async fn process_confirmation_api_server_fn_route(
     );
 
     // Execute the pipeline - this will publish events to the eventbus
-    match process_pipeline(event, &steps, None).await {
+    let pipeline_result = process_pipeline(event, &steps, None).await;
+    
+    // Fetch booking data from backend regardless of pipeline success/failure
+    let booking_data = fetch_booking_data(&booking_id).await;
+    
+    match pipeline_result {
         Ok(final_event) => {
             tracing::info!(
                 "Booking pipeline completed successfully for payment_id: {}",
@@ -162,23 +202,25 @@ pub async fn process_confirmation_api_server_fn_route(
                 "success": true,
                 "message": "Booking process initiated successfully. Check eventbus for updates.",
                 "order_id": order_id,
-                "user_email": user_email
+                "user_email": user_email,
+                "booking_data": booking_data
             });
 
             (StatusCode::OK, success_response.to_string()).into_response()
         }
         Err(e) => {
-            tracing::error!("Booking pipeline failed: {}", e);
+            tracing::error!("Booking pipeline failed: {} - but still returning booking data if available", e);
 
             let error_response = json!({
                 "success": false,
                 "message": format!("Booking processing failed: {}", e),
                 "order_id": Some(order_id),
-                "user_email": Some(user_email)
+                "user_email": Some(user_email),
+                "booking_data": booking_data
             });
 
             (
-                StatusCode::INTERNAL_SERVER_ERROR,
+                StatusCode::OK,
                 error_response.to_string(),
             )
                 .into_response()

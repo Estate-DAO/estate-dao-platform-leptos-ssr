@@ -28,7 +28,7 @@ pub trait PipelineValidator: Send + Sync {
 /// Execution is stateless so it does not need &self.
 #[async_trait]
 pub trait PipelineExecutor: Send + Sync {
-    async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String>;
+    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String>;
 }
 
 // --------------------------
@@ -133,7 +133,7 @@ pub async fn process_pipeline(
                 }
 
                 // Actually run the step
-                current_event = step.execute(current_event).await?;
+                current_event = step.execute(current_event, notifier).await?;
 
                 info!(status = "completed", "Pipeline step completed");
                 // Publish OnStepCompleted

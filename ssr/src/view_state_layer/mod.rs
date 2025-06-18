@@ -8,6 +8,7 @@ pub mod local_storage;
 pub mod search_state;
 pub mod ui_block_room;
 pub mod ui_confirmation_page;
+pub mod ui_confirmation_page_v2;
 pub mod ui_hotel_details;
 pub mod ui_search_state;
 pub mod view_state;

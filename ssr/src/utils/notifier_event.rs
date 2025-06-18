@@ -94,7 +94,7 @@
 //! - New segment types or event types can be added with minimal changes.
 //! - The topic system supports flexible subscriptions for advanced notification workflows.
 
-use crate::utils::uuidv7;
+use crate::{canister::backend::Booking, utils::uuidv7};
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -108,6 +108,24 @@ pub enum NotifierEventType {
     OnPipelineStart,
     OnPipelineEnd,
     OnPipelineAbort,
+    // Custom pipeline step events
+    PaymentStatusChecked {
+        status: String,
+        is_finished: bool,
+    },
+    BookingStatusChecked {
+        status: String,
+        booking_confirmed: bool,
+    },
+    BackendDataRetrieved {
+        has_booking: bool,
+        has_payment: bool,
+        // booking_struct: Option<Booking>,
+    },
+    EmailSent {
+        email_type: String,
+        recipient: String,
+    },
 }
 
 type Uuid = String;
@@ -368,6 +386,10 @@ fn format_event_type(event_type: &NotifierEventType) -> &'static str {
         NotifierEventType::OnPipelineStart => "on_pipeline_start",
         NotifierEventType::OnPipelineEnd => "on_pipeline_end",
         NotifierEventType::OnPipelineAbort => "on_pipeline_abort",
+        NotifierEventType::PaymentStatusChecked { .. } => "payment_status_checked",
+        NotifierEventType::BookingStatusChecked { .. } => "booking_status_checked",
+        NotifierEventType::BackendDataRetrieved { .. } => "backend_data_retrieved",
+        NotifierEventType::EmailSent { .. } => "email_sent",
     }
 }
 

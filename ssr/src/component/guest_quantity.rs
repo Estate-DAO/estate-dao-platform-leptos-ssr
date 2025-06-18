@@ -16,12 +16,72 @@ use leptos::*;
 use leptos_icons::*;
 use std::ops::Index;
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ChildrenAges(Vec<u32>);
+
+impl ChildrenAges {
+    pub fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn get_untracked(&self) -> Vec<u32> {
+        self.0.clone()
+    }
+
+    pub fn get_value_at(&self, index: u32) -> u32 {
+        self.0.get(index as usize).copied().unwrap_or(5)
+    }
+
+    pub fn update_children_ages(&mut self, index: u32, age: u32) {
+        if let Some(existing_age) = self.0.get_mut(index as usize) {
+            *existing_age = age;
+        }
+    }
+
+    pub fn push_children_ages(&mut self) {
+        self.0.push(10);
+    }
+
+    pub fn pop_children_ages(&mut self) {
+        self.0.pop();
+    }
+
+    pub fn set_ages(&mut self, ages: Vec<u32>) {
+        self.0 = ages;
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl IntoIterator for ChildrenAges {
+    type Item = u32;
+    type IntoIter = std::vec::IntoIter<u32>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl From<Vec<u32>> for ChildrenAges {
+    fn from(vec: Vec<u32>) -> Self {
+        Self(vec)
+    }
+}
+
+impl From<ChildrenAges> for Vec<u32> {
+    fn from(ages: ChildrenAges) -> Self {
+        ages.0
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct GuestSelection {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
     pub rooms: RwSignal<u32>,
-    pub children_ages: ChildrenAges,
+    pub children_ages: RwSignal<ChildrenAges>,
 }
 
 impl Default for GuestSelection {
@@ -30,41 +90,11 @@ impl Default for GuestSelection {
             adults: RwSignal::new(2),
             children: RwSignal::new(0),
             rooms: RwSignal::new(SEARCH_COMPONENT_ROOMS_DEFAULT), // Set default value for rooms to 1
-            children_ages: ChildrenAges::default(),
+            children_ages: RwSignal::new(ChildrenAges::new()),
         }
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct ChildrenAges(RwSignal<Vec<u32>>);
-
-impl ChildrenAges {
-    pub fn get_untracked(&self) -> Vec<u32> {
-        self.0.get_untracked().iter().map(|age| *age).collect()
-    }
-
-    pub fn get_value_at(&self, index: u32) -> u32 {
-        *self.0.get_untracked().get(index as usize).unwrap_or(&5)
-    }
-
-    pub fn update_children_ages(&self, index: u32, age: u32) {
-        self.0.update(|f| f[index as usize] = age);
-    }
-
-    pub fn push_children_ages(&self) {
-        self.0.update(|f| f.push(10));
-    }
-
-    pub fn pop_children_ages(&self) {
-        self.0.update(|f| {
-            let _a = f.pop();
-        });
-    }
-
-    pub fn set_ages(&self, ages: Vec<u32>) {
-        self.0.set(ages);
-    }
-}
 
 impl GlobalStateForLeptos for GuestSelection {}
 
@@ -98,6 +128,13 @@ impl GuestSelection {
     pub fn increment_children() {
         let this = Self::get();
         this.children.update(|n| *n += 1);
+        this.children_ages.update(|ages| ages.push_children_ages());
+    }
+
+    pub fn decrement_children() {
+        let this = Self::get();
+        this.children.update(|n| *n = n.saturating_sub(1));
+        this.children_ages.update(|ages| ages.pop_children_ages());
     }
 
     pub fn increment_rooms() {
@@ -121,11 +158,11 @@ impl GuestSelection {
 
     pub fn get_children_ages() -> Vec<u32> {
         let this = Self::get();
-        this.children_ages.get_untracked()
+        this.children_ages.get_untracked().get_untracked()
     }
     pub fn get_children_age_at(i: u32) -> u32 {
         let this = Self::get();
-        this.children_ages.get_value_at(i)
+        this.children_ages.get_untracked().get_value_at(i)
     }
     // pub fn reactive_length(&self) {
     //     let no_of_child = self.children.get_untracked();
@@ -135,6 +172,24 @@ impl GuestSelection {
     //         self.children_ages.pop_children_ages();
     //     }
     // }
+}
+
+// Extension trait to add missing methods to RwSignal<ChildrenAges>
+pub trait ChildrenAgesSignalExt {
+    fn get_value_at(&self, index: u32) -> u32;
+    fn set_ages(&self, ages: Vec<u32>);
+}
+
+impl ChildrenAgesSignalExt for RwSignal<ChildrenAges> {
+    fn get_value_at(&self, index: u32) -> u32 {
+        self.get_untracked().get_value_at(index)
+    }
+
+    fn set_ages(&self, ages: Vec<u32>) {
+        self.update(|children_ages| {
+            children_ages.set_ages(ages);
+        });
+    }
 }
 
 /// Guest quantity component (button)
@@ -157,7 +212,7 @@ pub fn GuestQuantity() -> impl IntoView {
     let adults_signal = guest_selection.adults;
     let children_signal = guest_selection.children;
     let rooms_signal = guest_selection.rooms;
-    let children_ages = guest_selection.children_ages;
+    let children_ages_signal = guest_selection.children_ages;
 
     let guest_count_display = create_memo(move |_prev| {
         format!(
@@ -212,35 +267,61 @@ pub fn GuestQuantity() -> impl IntoView {
                                         min=1_u32
                                     />
 
-                                    <NumberCounterV2
-                                        label="Children"
-                                        counter=children_signal
-                                        class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                                        on_increment={
-                                            let children_ages = children_ages.clone();
-                                            move || {
-                                                children_signal.update(|n| *n += 1);
-                                                children_ages.push_children_ages();
+                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <p>"Children"</p>
+                                        <div class="flex items-center space-x-1">
+                                            {
+                                                // Create reactive validation signals inspired by RoomCounterV1
+                                                let is_at_minimum = create_memo(move |_| children_signal.get() == 0);
+                                                let is_at_maximum = create_memo(move |_| children_signal.get() >= 10); // Max 10 children
+                                                
+                                                // Button event handlers inspired by both RoomCounterV1 and NumberCounterV2
+                                                let increment_children = move |_| {
+                                                    if children_signal.get() < 10 { // Guard against maximum
+                                                        GuestSelection::increment_children();
+                                                    }
+                                                };
+                                                let decrement_children = move |_| {
+                                                    if children_signal.get() > 0 { // Guard against minimum 
+                                                        GuestSelection::decrement_children();
+                                                    }
+                                                };
+                                                
+                                                view! {
+                                                    <button
+                                                        class=move || format!(
+                                                            "ps-2 py-1 text-2xl {}",
+                                                            if is_at_minimum() { "opacity-50 cursor-not-allowed" } else { "" }
+                                                        )
+                                                        disabled=is_at_minimum
+                                                        on:click=decrement_children
+                                                    >
+                                                        {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
+                                                    </button>
+                                                    <p class="text-center w-6">{move || children_signal.get()}</p>
+                                                    <button
+                                                        class=move || format!(
+                                                            "py-1 text-2xl {}",
+                                                            if is_at_maximum() { "opacity-50 cursor-not-allowed" } else { "" }
+                                                        )
+                                                        disabled=is_at_maximum
+                                                        on:click=increment_children
+                                                    >
+                                                        "+"
+                                                    </button>
+                                                }
                                             }
-                                        }
-                                        on_decrement=Box::new({
-                                            let children_ages = children_ages.clone();
-                                            move || {
-                                                children_signal.update(|n| *n = n.saturating_sub(1));
-                                                children_ages.pop_children_ages();
-                                            }
-                                        })
-                                        min=0_u32
-                                    />
+                                        </div>
+                                    </div>
 
                                     // !<-- Children Ages Grid - Responsive grid layout -->
                                     <div class="grid grid-cols-4 md:grid-cols-5 gap-2">
-                                        {
-                                            let children_ages = children_ages.clone();
+{
+                                            let children_ages_signal = children_ages_signal.clone();
                                             move || {
                                                 (0..children_signal.get())
                                                     .map(|i| {
-                                                        let children_ages = children_ages.clone();
+                                                        let children_ages_signal = children_ages_signal.clone();
                                                         view! {
                                                             <input
                                                                 type="number"
@@ -249,18 +330,20 @@ pub fn GuestQuantity() -> impl IntoView {
                                                                 class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                                 name=format!("child_age[{}]", i)
                                                                 value={
-                                                                    let children_ages = children_ages.clone();
+                                                                    let children_ages_signal = children_ages_signal.clone();
                                                                     move || {
-                                                                        children_ages.get_value_at(i)
+                                                                        children_ages_signal.get().get_value_at(i as u32)
                                                                     }
                                                                 }
                                                                 placeholder="Age"
                                                                 on:input={
-                                                                    let children_ages = children_ages.clone();
+                                                                    let children_ages_signal = children_ages_signal.clone();
                                                                     move |e| {
                                                                         let age = event_target_value(&e);
-                                                                        log!("{}",age);
-                                                                        children_ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
+                                                                        log!("Setting child {} age to: {}", i, age);
+                                                                        children_ages_signal.update(|ages| {
+                                                                            ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
+                                                                        });
                                                                     }
                                                                 }
                                                             />

@@ -178,7 +178,7 @@ cfg_if! {
             let payment_status_step = SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
             let book_room_step = SSRBookingPipelineStep::BookRoom(MakeBookingFromBookingProvider);
             let send_email_step = SSRBookingPipelineStep::SendEmail(SendEmailAfterSuccessfullBooking);
-            // let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
+            let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
             let mock_step = SSRBookingPipelineStep::Mock(MockStep::default());
 
             let booking_id_result = BookingId::from_order_id(order_id);
@@ -216,8 +216,7 @@ cfg_if! {
             let order_id = order_id.to_string();
 
             tokio::spawn(async move {
-                let result = process_pipeline(event, &[payment_status_step, book_room_step, send_email_step, mock_step], Some(notifier)).await;
-                // let result = process_pipeline(event, &[payment_status_step, book_room_step, get_booking_step, mock_step], Some(notifier)).await;
+                let result = process_pipeline(event, &[payment_status_step, book_room_step, get_booking_step, send_email_step, mock_step], Some(notifier)).await;
 
                 lock_manager.release_lock(payment_id.as_deref(), &order_id);
 

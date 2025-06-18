@@ -183,6 +183,9 @@ impl Booking {
     pub fn get_user_name(&self) -> String {
         self.guests.get_first_name()
     }
+    pub fn get_user_phone(&self) -> String {
+        self.guests.get_first_phone()
+    }
     /// Hotel name for emails
     pub fn get_hotel_name(&self) -> String {
         self.user_selected_hotel_room_details
@@ -201,6 +204,36 @@ impl Booking {
     pub fn get_booking_ref(&self) -> String {
         self.booking_id.app_reference.clone()
     }
+    /// Booking reference number from provider (if booking completed)
+    pub fn get_booking_ref_no(&self) -> String {
+        self.book_room_status
+            .as_ref()
+            .map(|status| status.commit_booking.booking_ref_no.clone())
+            .unwrap_or_default()
+    }
+    /// Confirmation number from provider (if booking completed)
+    pub fn get_confirmation_no(&self) -> String {
+        self.book_room_status
+            .as_ref()
+            .map(|status| status.commit_booking.confirmation_no.clone())
+            .unwrap_or_default()
+    }
+    /// Check if booking is actually confirmed based on booking status
+    pub fn is_booking_confirmed(&self) -> bool {
+        self.book_room_status
+            .as_ref()
+            .map(|status| {
+                matches!(status.commit_booking.api_status, crate::canister::backend::BookingStatus::Confirmed)
+            })
+            .unwrap_or(false)
+    }
+    /// Get booking status message
+    pub fn get_booking_status_message(&self) -> String {
+        self.book_room_status
+            .as_ref()
+            .map(|status| status.commit_booking.booking_status.clone())
+            .unwrap_or_else(|| "Pending confirmation".to_string())
+    }
     /// Check-in date as YYYY-MM-DD
     pub fn get_check_in_date(&self) -> String {
         let (y, m, d) = self.user_selected_hotel_room_details.date_range.start;
@@ -210,6 +243,31 @@ impl Booking {
     pub fn get_check_out_date(&self) -> String {
         let (y, m, d) = self.user_selected_hotel_room_details.date_range.end;
         format!("{:04}-{:02}-{:02}", y, m, d)
+    }
+    /// Check-in date formatted as "04th April 2025"
+    pub fn get_check_in_date_formatted(&self) -> String {
+        let (y, m, d) = self.user_selected_hotel_room_details.date_range.start;
+        Self::format_date_display(y, m, d)
+    }
+    /// Check-out date formatted as "06th April 2025"
+    pub fn get_check_out_date_formatted(&self) -> String {
+        let (y, m, d) = self.user_selected_hotel_room_details.date_range.end;
+        Self::format_date_display(y, m, d)
+    }
+    /// Format date as "04th April 2025"
+    fn format_date_display(year: u32, month: u32, day: u32) -> String {
+        let month_names = ["", "January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+        
+        let month_name = month_names.get(month as usize).unwrap_or(&"");
+        let day_suffix = match day % 10 {
+            1 if day != 11 => "st",
+            2 if day != 12 => "nd", 
+            3 if day != 13 => "rd",
+            _ => "th"
+        };
+        
+        format!("{:02}{} {} {}", day, day_suffix, month_name, year)
     }
     /// Number of adults
     pub fn get_number_of_adults(&self) -> usize {
@@ -222,6 +280,21 @@ impl Booking {
     /// Amount paid by user
     pub fn get_amount_paid(&self) -> f64 {
         self.payment_details.payment_api_response.actually_paid
+    }
+    /// Number of nights between check-in and check-out
+    pub fn get_number_of_nights(&self) -> u32 {
+        let (start_y, start_m, start_d) = self.user_selected_hotel_room_details.date_range.start;
+        let (end_y, end_m, end_d) = self.user_selected_hotel_room_details.date_range.end;
+        
+        // Simple calculation - for production use proper date library
+        let start_days = start_y * 365 + start_m * 30 + start_d;
+        let end_days = end_y * 365 + end_m * 30 + end_d;
+        
+        if end_days > start_days {
+            end_days - start_days
+        } else {
+            1 // Default to 1 night
+        }
     }
     /// Email of the first adult guest
     pub fn get_first_adult_email(&self) -> Option<String> {
@@ -258,6 +331,15 @@ impl backend::UserDetails {
             .unwrap_or(&backend::AdultDetail::default())
             .first_name
             .clone()
+    }
+    /// Returns the phone number of the first adult guest or an empty string if none
+    pub fn get_first_phone(&self) -> String {
+        self.adults
+            .first()
+            .unwrap_or(&backend::AdultDetail::default())
+            .phone
+            .clone()
+            .unwrap_or_default()
     }
 }
 

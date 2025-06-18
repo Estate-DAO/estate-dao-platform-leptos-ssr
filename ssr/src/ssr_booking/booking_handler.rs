@@ -3,6 +3,11 @@ use std::time::{Duration, Instant};
 use tokio::time;
 use tracing::{debug, error, info, instrument, warn};
 
+use crate::utils::notifier::{self, Notifier};
+use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
+use crate::utils::uuidv7;
+use chrono::Utc;
+
 use crate::api::canister::book_room_details::call_update_book_room_details_backend;
 use crate::api::canister::get_user_booking::{get_booking_by_id_backend, get_user_booking_backend};
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
@@ -26,99 +31,99 @@ use crate::domain::{
 // external api calls
 // ---------------------
 
-#[instrument(
-    name = "book_room_and_update_backend",
-    skip(event, backend_booking),
-    err(Debug)
-)]
-async fn book_room_and_update_backend(
-    event: ServerSideBookingEvent,
-    backend_booking: backend::Booking,
-) -> Result<ServerSideBookingEvent, String> {
-    info!("Booking room");
-    // 1. get the blocked room from backend (from event or by fetching booking details)
-    // For this example, assume booking details are already fetched and available in event or context
+// #[instrument(
+//     name = "book_room_and_update_backend",
+//     skip(event, backend_booking),
+//     err(Debug)
+// )]
+// async fn book_room_and_update_backend(
+//     event: ServerSideBookingEvent,
+//     backend_booking: backend::Booking,
+// ) -> Result<ServerSideBookingEvent, String> {
+//     info!("Booking room");
+//     // 1. get the blocked room from backend (from event or by fetching booking details)
+//     // For this example, assume booking details are already fetched and available in event or context
 
-    let app_ref =
-        PaymentIdentifiers::app_reference_from_order_id(&event.order_id).ok_or_else(|| {
-            format!(
-                "Failed to extract app_reference from order_id: {}",
-                event.order_id
-            )
-        })?;
+//     let app_ref =
+//         PaymentIdentifiers::app_reference_from_order_id(&event.order_id).ok_or_else(|| {
+//             format!(
+//                 "Failed to extract app_reference from order_id: {}",
+//                 event.order_id
+//             )
+//         })?;
 
-    let booking_id = BookingId {
-        app_reference: app_ref.clone(),
-        email: event.user_email.clone(),
-    };
+//     let booking_id = BookingId {
+//         app_reference: app_ref.clone(),
+//         email: event.user_email.clone(),
+//     };
 
-    info!("Booking ID: {booking_id:?}");
+//     info!("Booking ID: {booking_id:?}");
 
-    // // 2. use those room details to book room from booking provider
-    // // Build BookRoomRequest using backend_booking
-    // let passenger_details = user_details_to_passenger_details(&backend_booking.guests);
+//     // // 2. use those room details to book room from booking provider
+//     // // Build BookRoomRequest using backend_booking
+//     // let passenger_details = user_details_to_passenger_details(&backend_booking.guests);
 
-    // let frontend_room_details = vec![RoomDetail { passenger_details }];
+//     // let frontend_room_details = vec![RoomDetail { passenger_details }];
 
-    // info!("Frontend room details: {frontend_room_details:?}");
+//     // info!("Frontend room details: {frontend_room_details:?}");
 
-    // let book_room_request = BookRoomRequest {
-    //     result_token: backend_booking
-    //         .user_selected_hotel_room_details
-    //         .hotel_details
-    //         .hotel_token
-    //         .clone(),
-    //     block_room_id: backend_booking
-    //         .user_selected_hotel_room_details
-    //         .hotel_details
-    //         .block_room_id
-    //         .clone(),
-    //     app_reference: app_ref.clone(),
-    //     room_details: frontend_room_details,
-    // };
+//     // let book_room_request = BookRoomRequest {
+//     //     result_token: backend_booking
+//     //         .user_selected_hotel_room_details
+//     //         .hotel_details
+//     //         .hotel_token
+//     //         .clone(),
+//     //     block_room_id: backend_booking
+//     //         .user_selected_hotel_room_details
+//     //         .hotel_details
+//     //         .block_room_id
+//     //         .clone(),
+//     //     app_reference: app_ref.clone(),
+//     //     room_details: frontend_room_details,
+//     // };
 
-    // info!("Book room request: {book_room_request:?}");
+//     // info!("Book room request: {book_room_request:?}");
 
-    // let request_json = serde_json::to_string(&book_room_request)
-    //     .map_err(|e| format!("Failed to serialize BookRoomRequest: {e:?}"))?;
+//     // let request_json = serde_json::to_string(&book_room_request)
+//     //     .map_err(|e| format!("Failed to serialize BookRoomRequest: {e:?}"))?;
 
-    // info!("Request JSON: {request_json}");
+//     // info!("Request JSON: {request_json}");
 
-    // let book_room_response_str = book_room_api(request_json)
-    //     .await
-    //     .map_err(|e| format!("book_room API call failed: {e:?}"))?;
-    // info!("Book room response: {book_room_response_str}");
+//     // let book_room_response_str = book_room_api(request_json)
+//     //     .await
+//     //     .map_err(|e| format!("book_room API call failed: {e:?}"))?;
+//     // info!("Book room response: {book_room_response_str}");
 
-    // let book_room_response: BookRoomResponse = serde_json::from_str(&book_room_response_str)
-    //     .map_err(|e| format!("Failed to deserialize BookRoomResponse: {e:?}"))?;
+//     // let book_room_response: BookRoomResponse = serde_json::from_str(&book_room_response_str)
+//     //     .map_err(|e| format!("Failed to deserialize BookRoomResponse: {e:?}"))?;
 
-    // // 3. store back the results in backend
-    // let book_room_backend = create_backend_book_room_response(
-    //     (event.user_email.clone(), app_ref.clone()),
-    //     book_room_response.clone(),
-    // );
+//     // // 3. store back the results in backend
+//     // let book_room_backend = create_backend_book_room_response(
+//     //     (event.user_email.clone(), app_ref.clone()),
+//     //     book_room_response.clone(),
+//     // );
 
-    // info!("Book room backend response: {book_room_backend:?}");
+//     // info!("Book room backend response: {book_room_backend:?}");
 
-    // let book_room_backend_saved_status =
-    //     call_update_book_room_details_backend(booking_id.into(), book_room_backend)
-    //         .await
-    //         .ok();
+//     // let book_room_backend_saved_status =
+//     //     call_update_book_room_details_backend(booking_id.into(), book_room_backend)
+//     //         .await
+//     //         .ok();
 
-    // info!("Book room and backend update complete: {book_room_backend_saved_status:?}");
+//     // info!("Book room and backend update complete: {book_room_backend_saved_status:?}");
 
-    // // todo update the event with backend booking status and backend payment status
-    // // let mut updated_event = event;
-    // // updated_event.backend_booking_status = Some(backend_response);
-    // // Ok(updated_event)
+//     // // todo update the event with backend booking status and backend payment status
+//     // // let mut updated_event = event;
+//     // // updated_event.backend_booking_status = Some(backend_response);
+//     // // Ok(updated_event)
 
-    // // todo (booking_hold) check for the backend booking status -- if BookingOnHold - then keep calling the booking provider for the final status.
-    // // let hotel_booking_detail_response = get_hotel_booking_detail_from_travel_provider_v2(HotelBookingDetailRequest { app_reference: app_ref.clone() })
-    // //     .await
-    // //     .map_err(|e| format!("Failed in get_hotel_booking_detail_from_travel_provider_v2 for BookingOnHold: {e}")).ok();
+//     // // todo (booking_hold) check for the backend booking status -- if BookingOnHold - then keep calling the booking provider for the final status.
+//     // // let hotel_booking_detail_response = get_hotel_booking_detail_from_travel_provider_v2(HotelBookingDetailRequest { app_reference: app_ref.clone() })
+//     // //     .await
+//     // //     .map_err(|e| format!("Failed in get_hotel_booking_detail_from_travel_provider_v2 for BookingOnHold: {e}")).ok();
 
-    Ok(event)
-}
+//     Ok(event)
+// }
 
 #[instrument(name = "book_room_hotel_details_looped", skip(event), err(Debug))]
 async fn book_room_hotel_details_looped(
@@ -534,6 +539,40 @@ async fn book_room_and_update_backend_v1(
 #[derive(Debug, Clone)]
 pub struct MakeBookingFromBookingProvider;
 
+/// Helper function to check backend booking status and return appropriate pipeline decision
+#[instrument(name = "check_backend_booking_status", skip(backend_booking), err(Debug))]
+fn check_backend_booking_status(
+    backend_booking: &backend::Booking,
+) -> Result<Option<PipelineDecision>, String> {
+    if let Some(ref book_room_status) = backend_booking.book_room_status {
+        match &book_room_status.commit_booking.resolved_booking_status {
+            backend::ResolvedBookingStatus::BookingConfirmed => {
+                info!("Booking already confirmed in backend, skipping booking step");
+                Ok(Some(PipelineDecision::Skip))
+            }
+            backend::ResolvedBookingStatus::BookingCancelled => {
+                error!("Booking was cancelled, cannot proceed with booking");
+                Err("Booking was cancelled and cannot be processed".to_string())
+            }
+            backend::ResolvedBookingStatus::BookingFailed => {
+                error!("Booking previously failed, cannot proceed with booking");
+                Err("Booking previously failed and cannot be processed".to_string())
+            }
+            backend::ResolvedBookingStatus::BookingOnHold => {
+                info!("Booking is on hold, proceeding with booking status check");
+                Ok(None) // Continue with validation
+            }
+            backend::ResolvedBookingStatus::Unknown => {
+                info!("Booking status unknown, proceeding with booking");
+                Ok(None) // Continue with validation
+            }
+        }
+    } else {
+        info!("No book_room_status found in backend booking, proceeding with booking");
+        Ok(None) // Continue with validation
+    }
+}
+
 impl MakeBookingFromBookingProvider {
     /// Verifies that the payment status is 'Paid'
     #[instrument(name = "verify_payment_status", skip(payment_status), err(Debug))]
@@ -551,10 +590,11 @@ impl MakeBookingFromBookingProvider {
     }
 
     /// Processes the booking based on its current status
-    #[instrument(name = "process_booking_status", skip(event, booking), err(Debug))]
+    #[instrument(name = "process_booking_status", skip(event, booking, notifier), err(Debug))]
     async fn process_booking_status(
         event: ServerSideBookingEvent,
         booking: backend::Booking,
+        notifier: Option<&Notifier>,
     ) -> Result<ServerSideBookingEvent, String> {
         let booking_clone = booking.clone();
         match booking.book_room_status {
@@ -569,6 +609,7 @@ impl MakeBookingFromBookingProvider {
                     backend::ResolvedBookingStatus::Unknown => {
                         info!("Payment confirmed, proceeding with booking provider call v1");
                         book_room_and_update_backend_v1(event, booking_clone).await
+                        // TODO: Pass notifier to book_room_and_update_backend_v1 when it supports it
                     }
                     backend::ResolvedBookingStatus::BookingOnHold => {
                         info!("Booking is on hold, proceeding with booking provider call");
@@ -590,16 +631,17 @@ impl MakeBookingFromBookingProvider {
                     "booking.book_room_status.is_none() => proceeding with booking provider call v1"
                 );
                 book_room_and_update_backend_v1(event, booking_clone).await
+                // TODO: Pass notifier to book_room_and_update_backend_v1 when it supports it
             }
         }
     }
 
     #[instrument(
         name = "make_booking_from_booking_provider_run",
-        skip(event),
+        skip(event, notifier),
         err(Debug)
     )]
-    pub async fn run(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
+    pub async fn run(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
         info!("Executing MakeBookingFromBookingProvider");
 
         // ---------------------------
@@ -626,7 +668,42 @@ impl MakeBookingFromBookingProvider {
         // 1d. Verify payment status
         Self::verify_payment_status(&booking.payment_details.payment_status)?;
 
-        Self::process_booking_status(event, booking_clone).await
+        // --- EMIT CUSTOM EVENT: BookingStatusChecked ---
+        if let Some(n) = notifier {
+            let correlation_id = tracing::Span::current()
+                .field("correlation_id")
+                .map(|f| f.to_string())
+                .unwrap_or_else(|| "unknown_correlation_id".to_string());
+
+            let (status, booking_confirmed) = if let Some(ref book_room_status) = booking.book_room_status {
+                let status = format!("{:?}", book_room_status.commit_booking.resolved_booking_status);
+                let confirmed = matches!(
+                    book_room_status.commit_booking.resolved_booking_status,
+                    backend::ResolvedBookingStatus::BookingConfirmed
+                );
+                (status, confirmed)
+            } else {
+                ("No booking status".to_string(), false)
+            };
+
+            let custom_event = NotifierEvent {
+                event_id: uuidv7::create(),
+                correlation_id,
+                timestamp: Utc::now(),
+                order_id: event.order_id.clone(),
+                step_name: Some("MakeBookingFromBookingProvider".to_string()),
+                event_type: NotifierEventType::BookingStatusChecked {
+                    status,
+                    booking_confirmed,
+                },
+                email: event.user_email.clone(),
+            };
+            info!("Emitting BookingStatusChecked event: {custom_event:#?}");
+            n.notify(custom_event).await;
+        }
+        // --- END EMIT CUSTOM EVENT ---
+
+        Self::process_booking_status(event, booking_clone, notifier).await
     }
 }
 
@@ -634,11 +711,14 @@ impl MakeBookingFromBookingProvider {
 impl PipelineValidator for MakeBookingFromBookingProvider {
     #[instrument(name = "validate_make_booking", skip(self, event), err(Debug))]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
-        // Check if all required fields are present
-        // if event.order_id.is_empty() {
-        //     return Err("Order ID is missing".to_string());
-        // }
+        // Check if backend_booking_struct exists and booking is already completed
+        if let Some(ref backend_booking) = event.backend_booking_struct {
+            if let Some(decision) = check_backend_booking_status(backend_booking)? {
+                return Ok(decision);
+            }
+        }
 
+        // Check if all required fields are present
         if event.payment_id.is_none() {
             return Err("Payment ID is missing".to_string());
         }
@@ -647,34 +727,28 @@ impl PipelineValidator for MakeBookingFromBookingProvider {
             return Err("User email is missing".to_string());
         }
 
-        if event.payment_status.is_none() {
-            return Err("Payment status is missing".to_string());
-        }
-
-        // if event.backend_payment_status.is_none() {
-        //     return Err("Backend payment status is missing".to_string());
+        // if event.payment_status.is_none() {
+        //     return Err("Payment status is missing".to_string());
         // }
 
         // Check payment status conditions
-        let payment_status = event.payment_status.as_ref().unwrap();
-        // let backend_payment_status = event.backend_payment_status.as_ref().unwrap();
+        // let payment_status = event.payment_status.as_ref().unwrap();
 
-        if payment_status != "finished" {
-            return Err(format!(
-                "Payment status is not finished: {}",
-                payment_status
-            ));
-        }
-
-        // if backend_payment_status != "PAID" {
+        // if payment_status != "finished" {
         //     return Err(format!(
-        //         "Backend payment status is not PAID: {}",
-        //         backend_payment_status
+        //         "Payment status is not finished: {}",
+        //         payment_status
         //     ));
         // }
 
-        // step : do the backend API call with the booking_id to check book_room details
-        // if the backend shows that the room is booked, throw error indicating the BookingStatus
+        // Verify that app_reference can be derived from order_id
+        if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
+            error!("Failed to extract app_reference from order_id: {}", event.order_id);
+            return Err(format!(
+                "Failed to extract app_reference from order_id: {}",
+                event.order_id
+            ));
+        }
 
         Ok(PipelineDecision::Run)
     }
@@ -682,8 +756,8 @@ impl PipelineValidator for MakeBookingFromBookingProvider {
 
 #[async_trait]
 impl PipelineExecutor for MakeBookingFromBookingProvider {
-    #[instrument(name = "execute_make_booking", skip(event), err(Debug))]
-    async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
-        MakeBookingFromBookingProvider::run(event).await
+    #[instrument(name = "execute_make_booking", skip(event, notifier), err(Debug))]
+    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+        MakeBookingFromBookingProvider::run(event, notifier).await
     }
 }

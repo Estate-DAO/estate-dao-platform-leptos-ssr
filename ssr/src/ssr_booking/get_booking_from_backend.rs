@@ -5,15 +5,19 @@ use super::{
 use crate::{
     api::canister::get_user_booking::get_user_booking_backend, canister::backend,
     utils::booking_id::PaymentIdentifiers,
+    utils::notifier::{self, Notifier},
+    utils::notifier_event::{NotifierEvent, NotifierEventType},
+    utils::uuidv7,
 };
-use tracing::instrument;
+use chrono::Utc;
+use tracing::{info, instrument};
 
 #[derive(Debug, Clone)]
 pub struct GetBookingFromBackend;
 
 impl GetBookingFromBackend {
-    #[instrument(name = "get_booking_from_backend_run", skip(event), err(Debug))]
-    pub async fn run(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
+    #[instrument(name = "get_booking_from_backend_run", skip(event, notifier), err(Debug))]
+    pub async fn run(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
         // extract user email
         let user_email = event.user_email.clone();
         // extract booking id
@@ -51,7 +55,35 @@ impl GetBookingFromBackend {
 
         // return event with booking
         let mut updated_event = event;
-        updated_event.backend_booking_struct = Some(booking);
+        updated_event.backend_booking_struct = Some(booking.clone());
+
+        // --- EMIT CUSTOM EVENT: BackendDataRetrieved ---
+        if let Some(n) = notifier {
+            let correlation_id = tracing::Span::current()
+                .field("correlation_id")
+                .map(|f| f.to_string())
+                .unwrap_or_else(|| "unknown_correlation_id".to_string());
+
+            let has_payment = booking.payment_details.payment_status.to_string() != "unpaid";
+            let has_booking = booking.book_room_status.is_some();
+
+            let custom_event = NotifierEvent {
+                event_id: uuidv7::create(),
+                correlation_id,
+                timestamp: Utc::now(),
+                order_id: updated_event.order_id.clone(),
+                step_name: Some("GetBookingFromBackend".to_string()),
+                event_type: NotifierEventType::BackendDataRetrieved {
+                    has_booking,
+                    has_payment,
+                },
+                email: updated_event.user_email.clone(),
+            };
+            info!("Emitting BackendDataRetrieved event: {custom_event:#?}");
+            n.notify(custom_event).await;
+        }
+        // --- END EMIT CUSTOM EVENT ---
+
         Ok(updated_event)
     }
 }
@@ -74,9 +106,9 @@ impl PipelineValidator for GetBookingFromBackend {
             return Err("User email is missing".to_string());
         }
 
-        if event.payment_status.is_none() {
-            return Err("Payment status is missing".to_string());
-        }
+        // if event.payment_status.is_none() {
+        //     return Err("Payment status is missing".to_string());
+        // }
 
         Ok(PipelineDecision::Run)
     }
@@ -84,8 +116,8 @@ impl PipelineValidator for GetBookingFromBackend {
 
 #[async_trait::async_trait]
 impl PipelineExecutor for GetBookingFromBackend {
-    #[instrument(name = "execute_get_booking_from_backend", skip(event), err(Debug))]
-    async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
-        GetBookingFromBackend::run(event).await
+    #[instrument(name = "execute_get_booking_from_backend", skip(event, notifier), err(Debug))]
+    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+        GetBookingFromBackend::run(event, notifier).await
     }
 }

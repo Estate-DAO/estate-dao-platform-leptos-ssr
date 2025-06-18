@@ -26,6 +26,9 @@ pub use confirm_booking::*;
 mod confirmation_page_v1;
 pub use confirmation_page_v1::*;
 
+mod confirmation_page_v2;
+pub use confirmation_page_v2::*;
+
 mod input_group_mobile;
 pub use input_group_mobile::*;
 

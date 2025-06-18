@@ -49,7 +49,7 @@ impl UISearchCtx {
         this.guests.rooms.set(guests.rooms.get_untracked());
         this.guests
             .children_ages
-            .set_ages(guests.children_ages.get_untracked());
+            .set(guests.children_ages.get_untracked());
     }
 
     pub fn log_state() {

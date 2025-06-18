@@ -1,5 +1,6 @@
 use super::pipeline::{PipelineDecision, PipelineExecutor, PipelineValidator};
 use super::ServerSideBookingEvent;
+use crate::utils::notifier::Notifier;
 use async_trait::async_trait;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -32,7 +33,7 @@ impl PipelineValidator for MockStep {
 
 #[async_trait]
 impl PipelineExecutor for MockStep {
-    async fn execute(event: ServerSideBookingEvent) -> Result<ServerSideBookingEvent, String> {
+    async fn execute(event: ServerSideBookingEvent, _notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
         println!("Executing MockStep");
         Ok(event)
     }
