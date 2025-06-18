@@ -71,29 +71,58 @@ impl HotelProviderPort for LiteApiAdapter {
             ));
         };
 
-        // Only call rates API - LiteAPI hotel details endpoint doesn't seem to exist
+        // Create requests for both APIs
         let rates_request = Self::map_domain_info_to_liteapi_rates(&criteria)?;
+        let hotel_details_request =
+            crate::api::liteapi::l04_one_hotel_detail::LiteApiSingleHotelDetailRequest {
+                hotel_id: hotel_id.clone(),
+            };
 
         crate::log!(
-            "LiteAPI get_hotel_details: calling rates API only for hotel_id: {}",
+            "LiteAPI get_hotel_details: calling both hotel details API and rates API for hotel_id: {}",
             hotel_id
         );
 
-        // Call rates API
-        let rates_response = self
-            .client
-            .send(rates_request)
-            .await
-            .map_err(|e: ApiError| {
-                ProviderError::from_api_error(
-                    e,
-                    ProviderNames::LiteApi,
-                    ProviderSteps::HotelDetails,
-                )
-            })?;
+        // Call both APIs concurrently and handle the result
+        let (hotel_details_data, rates_response) = match tokio::try_join!(
+            self.client.send(hotel_details_request),
+            self.client.send(rates_request)
+        ) {
+            Ok((hotel_details_response, rates_response)) => {
+                crate::log!(
+                    "Successfully retrieved both hotel details and rates for hotel_id: {}",
+                    hotel_id
+                );
+                (Some(hotel_details_response.data), rates_response)
+            }
+            Err(e) => {
+                crate::log!(
+                    "One or both API calls failed for hotel_id: {}, error: {:?}",
+                    hotel_id,
+                    e
+                );
 
-        // No separate hotel details data - will use search result data if available
-        let hotel_details_data = None;
+                // Try rates API alone as fallback
+                let rates_request_fallback = Self::map_domain_info_to_liteapi_rates(&criteria)?;
+                let rates_response =
+                    self.client
+                        .send(rates_request_fallback)
+                        .await
+                        .map_err(|e: ApiError| {
+                            ProviderError::from_api_error(
+                                e,
+                                ProviderNames::LiteApi,
+                                ProviderSteps::HotelDetails,
+                            )
+                        })?;
+
+                crate::log!(
+                    "Successfully retrieved rates as fallback for hotel_id: {}",
+                    hotel_id
+                );
+                (None, rates_response)
+            }
+        };
 
         // Map response to domain hotel details using both hotel details and rates data
         Self::map_liteapi_rates_and_details_to_domain(

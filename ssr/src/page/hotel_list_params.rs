@@ -1,5 +1,5 @@
 use crate::{
-    component::{Destination, GuestSelection, SelectedDateRange, ChildrenAgesSignalExt},
+    component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     utils::query_params::{update_url_with_state, FilterMap, QueryParamsSync, SortDirection},
     view_state_layer::ui_search_state::UISearchCtx,
 };
