@@ -404,6 +404,47 @@ mod tests {
     }
 
     #[test]
+    fn test_pattern_matching_for_frontend_subscription() {
+        // Test the exact scenario from confirmation_page_v2.rs
+        let email = "tripathi.abhishek.iitkgp@gmail.com";
+        let order_id = "ORDER123";
+
+        // This is what the frontend subscribes to (email-based pattern)
+        let subscription_pattern = NotifierEvent::subscribe_by_email_pattern(email);
+
+        // This is what the pipeline publishes (step event with specific details)
+        let pipeline_event = NotifierEvent::new_step_start(
+            order_id.to_string(),
+            email.to_string(),
+            "payment".to_string(),
+            "corr123".to_string(),
+        );
+        let published_topic = pipeline_event.topic();
+
+        // Debug output to help with troubleshooting
+        println!("Subscription pattern: {}", subscription_pattern);
+        println!("Published topic: {}", published_topic);
+
+        // This should match - if it doesn't, the frontend won't receive events
+        let matches = NotifierEvent::matches_pattern(&subscription_pattern, &published_topic);
+        assert!(
+            matches,
+            "Frontend subscription pattern '{}' should match pipeline topic '{}'",
+            subscription_pattern, published_topic
+        );
+
+        // Verify the expected formats
+        assert_eq!(
+            subscription_pattern,
+            "step:*:step_type:*:booking:*:email:tripathi.abhishek.iitkgp@gmail.com"
+        );
+        assert_eq!(
+            published_topic,
+            "step:payment:step_type:on_step_start:booking:ORDER123:email:tripathi.abhishek.iitkgp@gmail.com"
+        );
+    }
+
+    #[test]
     fn test_subscribe_by_email_pattern() {
         let pattern = NotifierEvent::subscribe_by_email_pattern("user@example.com");
         assert_eq!(

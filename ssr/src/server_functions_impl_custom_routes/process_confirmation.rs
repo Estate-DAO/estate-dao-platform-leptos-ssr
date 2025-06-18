@@ -56,7 +56,7 @@ async fn fetch_booking_data(booking_id: &BookingId) -> Option<serde_json::Value>
 
 #[axum::debug_handler]
 pub async fn process_confirmation_api_server_fn_route(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     body: String,
 ) -> Response {
     tracing::info!(
@@ -195,7 +195,8 @@ pub async fn process_confirmation_api_server_fn_route(
     );
 
     // Execute the pipeline - this will publish events to the eventbus
-    let pipeline_result = process_pipeline(event, &steps, None).await;
+    let notifier = &state.notifier_for_pipeline;
+    let pipeline_result = process_pipeline(event, &steps, Some(notifier)).await;
 
     // Fetch booking data from backend regardless of pipeline success/failure
     let booking_data = fetch_booking_data(&booking_id).await;

@@ -101,44 +101,44 @@ pub fn NotificationListener(
 }
 
 // /// Example usage component that demonstrates how to use NotificationListener
-// #[component]
-// pub fn NotificationExample() -> impl IntoView {
-//     // let handle_notification = Box::new(move |notification: NotificationData| {
-//     //     set_notifications.update(|list| {
-//     //         let mut new_list = list.clone();
-//     //         new_list.push(notification);
-//     //         // Keep only last 5 notifications
-//     //         if new_list.len() > 5 {
-//     //             new_list.remove(0);
-//     //         }
-//     //         new_list
-//     //     });
-//     // });
+#[component]
+pub fn NotificationExample() -> impl IntoView {
+    // let handle_notification = Box::new(move |notification: NotificationData| {
+    //     set_notifications.update(|list| {
+    //         let mut new_list = list.clone();
+    //         new_list.push(notification);
+    //         // Keep only last 5 notifications
+    //         if new_list.len() > 5 {
+    //             new_list.remove(0);
+    //         }
+    //         new_list
+    //     });
+    // });
 
-//     view! {
-//         <div>
-//             <h2>"Notifications"</h2>
-//             <NotificationListener
-//                 order_id="NP$6:ABC123$16:user@example.com".to_string()
-//                 email="user@example.com".to_string()
-//                 event_type="nowpayments".to_string()
-//                 on_notification={Box::new(move |notification: NotificationData| {
-//                     // SSEBookingStatusUpdates::update_from_notification(&notification);
-//                     log!("invoking_on_notification: {:#?}", notification);
-//                 })}
-//             />
-//             <ul>
-//                 {move || NotificationState::get().notifications.get().into_iter().map(|n: NotificationData| {
-//                     view! {
-//                         <li>
-//                             {format!("{}: {} - {}", n.event_type, n.step.unwrap_or_default(), n.order_id)}
-//                         </li>
-//                     }
-//                 }).collect::<Vec<_>>()}
-//             </ul>
-//         </div>
-//     }
-// }
+    view! {
+        <div>
+            <h2>"Notifications"</h2>
+            <NotificationListener
+                order_id="NP$6:ABC123$16:user@example.com".to_string()
+                email="user@example.com".to_string()
+                event_type="nowpayments".to_string()
+                on_notification={Box::new(move |notification: NotificationData| {
+                    // SSEBookingStatusUpdates::update_from_notification(&notification);
+                    log!("invoking_on_notification: {:#?}", notification);
+                })}
+            />
+            <ul>
+                {move || NotificationState::get().notifications.get().into_iter().map(|n: NotificationData| {
+                    view! {
+                        <li>
+                            {format!("{}: {} - {}", n.event_type, n.step.unwrap_or_default(), n.order_id)}
+                        </li>
+                    }
+                }).collect::<Vec<_>>()}
+            </ul>
+        </div>
+    }
+}
 
 // state management for notifications
 
