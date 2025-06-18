@@ -56,6 +56,9 @@ pub enum ApiError {
     #[error("Invalid header Name")]
     InvalidHeaderName(#[from] Arc<reqwest::header::InvalidHeaderName>),
 
+    #[error("Room is no longer available: {0}")]
+    RoomUnavailable(String),
+
     #[error("Other error: {0}")]
     Other(String),
 }
@@ -86,6 +89,7 @@ impl PartialEq for ApiError {
             (ApiError::ResponseError(a), ApiError::ResponseError(b)) => a == b,
             (ApiError::DecompressionFailed(a), ApiError::DecompressionFailed(b)) => a == b,
             (ApiError::JsonParseFailed(a), ApiError::JsonParseFailed(b)) => a == b,
+            (ApiError::RoomUnavailable(a), ApiError::RoomUnavailable(b)) => a == b,
             (ApiError::Other(a), ApiError::Other(b)) => a == b,
 
             // For Arc<reqwest::Error>, compare by string representation

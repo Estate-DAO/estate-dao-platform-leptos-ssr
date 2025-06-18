@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainBookRoomRequest {
     // Block ID from previous block_room call
+    // liteapi calls this prebookId
     pub block_id: String,
 
     // Booking holder information (credit card holder/main contact)

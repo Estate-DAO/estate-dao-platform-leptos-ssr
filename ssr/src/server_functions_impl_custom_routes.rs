@@ -720,8 +720,8 @@ pub async fn integrated_block_room_api_server_fn_route(
             booking_id_struct,
             payment_amount,
             payment_currency,
-            hotel_token,
             block_room_id,
+            hotel_token,
         )?;
 
         // Validate the booking

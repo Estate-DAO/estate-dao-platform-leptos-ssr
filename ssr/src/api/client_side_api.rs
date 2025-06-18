@@ -39,28 +39,31 @@ impl ClientSideApiClient {
         Self
     }
 
-    pub async fn search_hotel(
-        &self,
-        request: DomainHotelSearchCriteria,
-    ) -> Option<DomainHotelListAfterSearch> {
-        // <!-- Serialize request to JSON string -->
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
+    fn serialize_request<T: Serialize>(request: &T, context: &str) -> Option<String> {
+        match serde_json::to_string(request) {
+            Ok(json) => Some(json),
             Err(e) => {
-                log!("Failed to serialize request: {}", e);
-                return None;
+                log!("Failed to serialize {} request: {}", context, e);
+                None
             }
-        };
+        }
+    }
 
+    fn build_api_url(endpoint: &str) -> String {
+        join_base_and_path_url(APP_URL.as_str(), endpoint).unwrap_or_else(|e| {
+            log!("Failed to build URL: {}", e);
+            format!("{}/{}", APP_URL.as_str(), endpoint)
+        })
+    }
+
+    async fn make_post_request<T: DeserializeOwned>(
+        endpoint: &str,
+        body: String,
+        context: &str,
+    ) -> Option<T> {
         let client = reqwest::Client::new();
         let response = client
-            .post(
-                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/search_hotel_api")
-                    .unwrap_or_else(|e| {
-                        log!("Failed to build URL: {}", e);
-                        format!("{}server_fn_api/search_hotel_api", APP_URL.as_str())
-                    }),
-            )
+            .post(Self::build_api_url(endpoint))
             .header("Content-Type", "application/json")
             .body(body)
             .send()
@@ -72,274 +75,91 @@ impl ClientSideApiClient {
                     match res.text().await {
                         Ok(text) => Self::parse_server_response(&text).ok(),
                         Err(e) => {
-                            log!("Failed to get response text: {}", e);
+                            log!("Failed to get {} response text: {}", context, e);
                             None
                         }
                     }
                 } else {
-                    log!("API call failed with status: {}", res.status());
+                    log!("{} API call failed with status: {}", context, res.status());
                     None
                 }
             }
             Err(e) => {
-                log!("API call error: {}", e);
+                log!("{} API call error: {}", context, e);
                 None
             }
         }
+    }
+
+    async fn api_call<Req: Serialize, Res: DeserializeOwned>(
+        request: Req,
+        endpoint: &str,
+        context: &str,
+    ) -> Option<Res> {
+        let body = Self::serialize_request(&request, context)?;
+        Self::make_post_request(endpoint, body, context).await
+    }
+
+    pub async fn search_hotel(
+        &self,
+        request: DomainHotelSearchCriteria,
+    ) -> Option<DomainHotelListAfterSearch> {
+        Self::api_call(request, "server_fn_api/search_hotel_api", "search hotel").await
     }
 
     pub async fn get_hotel_info(
         &self,
         request: DomainHotelInfoCriteria,
     ) -> Option<DomainHotelDetails> {
-        // <!-- Serialize request to JSON string -->
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
-            Err(e) => {
-                log!("Failed to serialize request: {}", e);
-                return None;
-            }
-        };
-
-        let client = reqwest::Client::new();
-        let response = client
-            .post(
-                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/get_hotel_info_api")
-                    .unwrap_or_else(|e| {
-                        log!("Failed to build URL: {}", e);
-                        format!("{}/server_fn_api/get_hotel_info_api", APP_URL.as_str())
-                    }),
-            )
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
-
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    match res.text().await {
-                        Ok(text) => Self::parse_server_response(&text).ok(),
-                        Err(e) => {
-                            log!("Failed to get response text: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    log!("API call failed with status: {}", res.status());
-                    None
-                }
-            }
-            Err(e) => {
-                log!("API call error: {}", e);
-                None
-            }
-        }
+        Self::api_call(
+            request,
+            "server_fn_api/get_hotel_info_api",
+            "get hotel info",
+        )
+        .await
     }
 
     pub async fn get_hotel_rates(
         &self,
         request: DomainHotelInfoCriteria,
     ) -> Option<DomainHotelDetails> {
-        // <!-- Serialize request to JSON string -->
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
-            Err(e) => {
-                log!("Failed to serialize request: {}", e);
-                return None;
-            }
-        };
-
-        let client = reqwest::Client::new();
-        let response = client
-            .post(
-                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/get_hotel_rates_api")
-                    .unwrap_or_else(|e| {
-                        log!("Failed to build URL: {}", e);
-                        format!("{}/server_fn_api/get_hotel_rates_api", APP_URL.as_str())
-                    }),
-            )
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
-
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    match res.text().await {
-                        Ok(text) => Self::parse_server_response(&text).ok(),
-                        Err(e) => {
-                            log!("Failed to get response text: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    log!("API call failed with status: {}", res.status());
-                    None
-                }
-            }
-            Err(e) => {
-                log!("API call error: {}", e);
-                None
-            }
-        }
+        Self::api_call(
+            request,
+            "server_fn_api/get_hotel_rates_api",
+            "get hotel rates",
+        )
+        .await
     }
 
     pub async fn block_room(
         &self,
         request: DomainBlockRoomRequest,
     ) -> Option<DomainBlockRoomResponse> {
-        // <!-- Serialize request to JSON string -->
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
-            Err(e) => {
-                log!("Failed to serialize block room request: {}", e);
-                return None;
-            }
-        };
-
-        let client = reqwest::Client::new();
-        let response = client
-            .post(
-                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/block_room_api")
-                    .unwrap_or_else(|e| {
-                        log!("Failed to build URL: {}", e);
-                        format!("{}/server_fn_api/block_room_api", APP_URL.as_str())
-                    }),
-            )
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
-
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    match res.text().await {
-                        Ok(text) => Self::parse_server_response(&text).ok(),
-                        Err(e) => {
-                            log!("Failed to get block room response text: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    log!("Block room API call failed with status: {}", res.status());
-                    None
-                }
-            }
-            Err(e) => {
-                log!("Block room API call error: {}", e);
-                None
-            }
-        }
+        Self::api_call(request, "server_fn_api/block_room_api", "block room").await
     }
 
     pub async fn process_confirmation(
         &self,
         request: ConfirmationProcessRequest,
     ) -> Option<ConfirmationProcessResponse> {
-        // Serialize request to JSON string
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
-            Err(e) => {
-                log!("Failed to serialize confirmation request: {}", e);
-                return None;
-            }
-        };
-
-        let client = reqwest::Client::new();
-        let response = client
-            .post(
-                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/process_confirmation_api")
-                    .unwrap_or_else(|e| {
-                        log!("Failed to build URL: {}", e);
-                        format!(
-                            "{}/server_fn_api/process_confirmation_api",
-                            APP_URL.as_str()
-                        )
-                    }),
-            )
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
-
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    match res.text().await {
-                        Ok(text) => Self::parse_server_response(&text).ok(),
-                        Err(e) => {
-                            log!("Failed to get confirmation response text: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    log!("Confirmation API call failed with status: {}", res.status());
-                    None
-                }
-            }
-            Err(e) => {
-                log!("Confirmation API call error: {}", e);
-                None
-            }
-        }
+        Self::api_call(
+            request,
+            "server_fn_api/process_confirmation_api",
+            "process confirmation",
+        )
+        .await
     }
 
     pub async fn integrated_block_room(
         &self,
         request: IntegratedBlockRoomRequest,
     ) -> Option<IntegratedBlockRoomResponse> {
-        // Serialize request to JSON string
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
-            Err(e) => {
-                log!("Failed to serialize integrated block room request: {}", e);
-                return None;
-            }
-        };
-
-        let client = reqwest::Client::new();
-        let response = client
-            .post(
-                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/integrated_block_room_api")
-                    .unwrap_or_else(|e| {
-                        log!("Failed to build URL: {}", e);
-                        format!(
-                            "{}/server_fn_api/integrated_block_room_api",
-                            APP_URL.as_str()
-                        )
-                    }),
-            )
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
-
-        match response {
-            Ok(res) => {
-                if res.status().is_success() {
-                    match res.text().await {
-                        Ok(text) => Self::parse_server_response(&text).ok(),
-                        Err(e) => {
-                            log!("Failed to get integrated block room response text: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    log!(
-                        "Integrated block room API call failed with status: {}",
-                        res.status()
-                    );
-                    None
-                }
-            }
-            Err(e) => {
-                log!("Integrated block room API call error: {}", e);
-                None
-            }
-        }
+        Self::api_call(
+            request,
+            "server_fn_api/integrated_block_room_api",
+            "integrated block room",
+        )
+        .await
     }
 
     // <!-- Helper function for parsing server responses -->
@@ -352,62 +172,18 @@ impl ClientSideApiClient {
         &self,
         request: DomainCreateInvoiceRequest,
     ) -> Option<DomainCreateInvoiceResponse> {
-        // Serialize request to JSON string
-        let body = match serde_json::to_string(&request) {
-            Ok(json) => json,
-            Err(e) => {
-                log!("Failed to serialize payment invoice request: {}", e);
-                return None;
-            }
-        };
+        let result = Self::api_call::<_, DomainCreateInvoiceResponse>(
+            request,
+            "server_fn_api/create_payment_invoice_api",
+            "create payment invoice",
+        )
+        .await;
 
-        // Make HTTP request to the payment API endpoint
-        let client = reqwest::Client::new();
-        let response = client
-            .post(
-                join_base_and_path_url(
-                    APP_URL.as_str(),
-                    "server_fn_api/create_payment_invoice_api",
-                )
-                .unwrap_or_else(|e| {
-                    log!("Failed to build URL: {}", e);
-                    format!(
-                        "{}/server_fn_api/create_payment_invoice_api",
-                        APP_URL.as_str()
-                    )
-                }),
-            )
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
-
-        match response {
-            Ok(resp) => {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-
-                if status == 200 {
-                    match Self::parse_server_response::<DomainCreateInvoiceResponse>(&text) {
-                        Ok(payment_response) => {
-                            log!("Payment invoice created successfully");
-                            Some(payment_response)
-                        }
-                        Err(e) => {
-                            log!("Failed to parse payment response: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    log!("Payment API error - Status: {}, Response: {}", status, text);
-                    None
-                }
-            }
-            Err(e) => {
-                log!("Payment API request failed: {:?}", e);
-                None
-            }
+        if result.is_some() {
+            log!("Payment invoice created successfully");
         }
+
+        result
     }
 }
 

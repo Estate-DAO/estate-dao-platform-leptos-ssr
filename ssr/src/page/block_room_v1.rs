@@ -867,7 +867,8 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
             return None;
         };
 
-        let hotel_token = Some(hotel_info_ctx.hotel_code.get_untracked());
+        // Note: We don't need block_room_id here since it's set AFTER successful prebook
+        // The BookingService will use hotel_code as token for LiteAPI prebook call
 
         // Use BookingService for integrated call (block room + backend save in one call)
         let booking_service = BookingService::new();
@@ -879,7 +880,7 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
         );
 
         match booking_service
-            .block_room_with_backend_integration(booking_id.to_order_id(), email, hotel_token)
+            .block_room_with_backend_integration(booking_id.to_order_id(), email, None)
             .await
         {
             Ok(_) => {

@@ -290,6 +290,7 @@ pub struct DomainBlockRoomRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainBlockRoomResponse {
     // Unique identifier for this block
+    // liteapi calls this prebookId
     // differnt providers give different names to this.
     pub block_id: String,
 

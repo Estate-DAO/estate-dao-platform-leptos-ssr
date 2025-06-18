@@ -132,6 +132,34 @@ impl HotelProviderPort for LiteApiAdapter {
                 )
             })?;
 
+        // Check for room unavailability before mapping
+        if liteapi_response.is_no_availability() {
+            return Err(ProviderError::from_api_error(
+                ApiError::RoomUnavailable(
+                    liteapi_response
+                        .get_error_message()
+                        .unwrap_or("Room is no longer available")
+                        .to_string(),
+                ),
+                ProviderNames::LiteApi,
+                ProviderSteps::HotelBlockRoom,
+            ));
+        }
+
+        // Check for other errors
+        if liteapi_response.is_error_response() {
+            return Err(ProviderError::from_api_error(
+                ApiError::ResponseError(
+                    liteapi_response
+                        .get_error_message()
+                        .unwrap_or("Unknown error from provider")
+                        .to_string(),
+                ),
+                ProviderNames::LiteApi,
+                ProviderSteps::HotelBlockRoom,
+            ));
+        }
+
         // Map response to domain block room response
         Ok(Self::map_liteapi_prebook_to_domain_block(
             liteapi_response,
@@ -143,11 +171,21 @@ impl HotelProviderPort for LiteApiAdapter {
         &self,
         book_request: DomainBookRoomRequest,
     ) -> Result<DomainBookRoomResponse, ProviderError> {
-        // Validate request before processing
-        Self::validate_book_room_request(&book_request)?;
+        // Apply guest contact fallback strategy BEFORE validation
+        let guests_with_fallback = LiteApiAdapter::apply_guest_contact_fallback(
+            &book_request.guests,
+            &book_request.holder,
+        );
+        let book_request_with_fallback = DomainBookRoomRequest {
+            guests: guests_with_fallback,
+            ..book_request
+        };
+
+        // Validate request after applying fallback
+        Self::validate_book_room_request(&book_request_with_fallback)?;
 
         // Map domain request to LiteAPI book request
-        let liteapi_request = Self::map_domain_book_to_liteapi_book(&book_request)?;
+        let liteapi_request = Self::map_domain_book_to_liteapi_book(&book_request_with_fallback)?;
 
         // Call LiteAPI book endpoint
         let liteapi_response: LiteApiBookResponse = self
@@ -165,7 +203,7 @@ impl HotelProviderPort for LiteApiAdapter {
         // Map response to domain book room response
         Ok(Self::map_liteapi_book_to_domain_book(
             liteapi_response,
-            &book_request,
+            &book_request_with_fallback,
         ))
     }
 

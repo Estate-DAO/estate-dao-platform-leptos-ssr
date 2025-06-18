@@ -42,3 +42,19 @@ pub async fn call_update_book_room_details_backend(
         Result_::Err(e) => Err(e),
     }
 }
+
+pub async fn call_get_booking_by_id_backend(
+    booking_id: backend::BookingId,
+) -> Result<Option<backend::Booking>, String> {
+    let adm_cans = admin_canister();
+    let backend_cans = adm_cans.backend_canister().await;
+
+    let result = backend_cans
+        .get_booking_by_id(booking_id)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    log!("Retrieved booking: {result:?}");
+
+    Ok(result)
+}

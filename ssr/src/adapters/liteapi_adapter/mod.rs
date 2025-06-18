@@ -601,14 +601,22 @@ impl LiteApiAdapter {
         liteapi_response: LiteApiPrebookResponse,
         original_request: &DomainBlockRoomRequest,
     ) -> DomainBlockRoomResponse {
+        // Serialize provider data before extracting data to avoid borrow issues
+        let provider_data_json = serde_json::to_string(&liteapi_response).unwrap_or_default();
+
+        // At this point, we know data exists because error handling was done in the caller
+        let data = liteapi_response
+            .data
+            .expect("Data should exist after error handling");
+
         // Extract price information from prebook response
-        let total_price = liteapi_response.data.price;
-        let suggested_selling_price = liteapi_response.data.suggested_selling_price;
-        let currency = liteapi_response.data.currency.clone();
+        let total_price = data.price;
+        let suggested_selling_price = data.suggested_selling_price;
+        let currency = data.currency.clone();
 
         // Get room details from first room type and rate if available
         let (room_name, cancellation_policy, meal_plan) =
-            if let Some(room_type) = liteapi_response.data.room_types.first() {
+            if let Some(room_type) = data.room_types.first() {
                 if let Some(rate) = room_type.rates.first() {
                     (
                         rate.name.clone(),
@@ -647,12 +655,12 @@ impl LiteApiAdapter {
         };
 
         DomainBlockRoomResponse {
-            block_id: liteapi_response.data.prebook_id.clone(),
-            is_price_changed: liteapi_response.data.price_difference_percent != 0.0,
-            is_cancellation_policy_changed: liteapi_response.data.cancellation_changed,
+            block_id: data.prebook_id.clone(),
+            is_price_changed: data.price_difference_percent != 0.0,
+            is_cancellation_policy_changed: data.cancellation_changed,
             blocked_rooms: vec![blocked_room],
             total_price: detailed_price,
-            provider_data: Some(serde_json::to_string(&liteapi_response).unwrap_or_default()),
+            provider_data: Some(provider_data_json),
         }
     }
 
@@ -669,7 +677,7 @@ impl LiteApiAdapter {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
                 api_error: ApiError::Other(format!(
-                    "Guest count mismatch. Expected {} guests but got {} in details",
+                    "[LITEAPI VALIDATION ERROR] Guest count mismatch. Expected {} guests but got {} in details",
                     request.total_guests, total_guests_from_details
                 )),
                 error_step: ProviderSteps::HotelBlockRoom,
@@ -680,7 +688,9 @@ impl LiteApiAdapter {
         if request.selected_room.room_unique_id.is_empty() {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
-                api_error: ApiError::Other("Room unique ID cannot be empty".to_string()),
+                api_error: ApiError::Other(
+                    "[LITEAPI VALIDATION ERROR] Room unique ID cannot be empty".to_string(),
+                ),
                 error_step: ProviderSteps::HotelBlockRoom,
             })));
         }
@@ -689,7 +699,9 @@ impl LiteApiAdapter {
         if request.user_details.adults.is_empty() {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
-                api_error: ApiError::Other("At least one adult guest is required".to_string()),
+                api_error: ApiError::Other(
+                    "[LITEAPI VALIDATION ERROR] At least one adult guest is required".to_string(),
+                ),
                 error_step: ProviderSteps::HotelBlockRoom,
             })));
         }
@@ -700,7 +712,7 @@ impl LiteApiAdapter {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
                     api_error: ApiError::Other(format!(
-                        "Adult {} first name cannot be empty",
+                        "[LITEAPI VALIDATION ERROR] Adult {} first name cannot be empty",
                         i + 1
                     )),
                     error_step: ProviderSteps::HotelBlockRoom,
@@ -714,7 +726,7 @@ impl LiteApiAdapter {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
                     api_error: ApiError::Other(format!(
-                        "Child age {} exceeds maximum allowed age of 17",
+                        "[LITEAPI VALIDATION ERROR] Child age {} exceeds maximum allowed age of 17",
                         child.age
                     )),
                     error_step: ProviderSteps::HotelBlockRoom,
@@ -728,6 +740,74 @@ impl LiteApiAdapter {
     // <!-- BOOKING MAPPING FUNCTIONS -->
 
     /// Validates the domain book room request
+    /// Apply email and phone fallback strategy for guests
+    ///
+    /// Strategy:
+    /// - Use guest's own email/phone if available
+    /// - Otherwise, use the email/phone from the holder (first guest with contact info)
+    /// - Keep original guest name and occupancy info
+    pub fn apply_guest_contact_fallback(
+        guests: &[crate::domain::DomainBookingGuest],
+        holder: &crate::domain::DomainBookingHolder,
+    ) -> Vec<crate::domain::DomainBookingGuest> {
+        crate::log!(
+            "Applying guest contact fallback strategy. Holder email: '{}', phone: '{}'",
+            holder.email,
+            holder.phone
+        );
+
+        guests
+            .iter()
+            .map(|guest| {
+                // Use guest's own contact info if available, otherwise fallback to holder's
+                let email = if guest.email.is_empty() {
+                    crate::log!(
+                        "Guest {} {} has empty email, using holder email: '{}'",
+                        guest.first_name,
+                        guest.last_name,
+                        holder.email
+                    );
+                    holder.email.clone()
+                } else {
+                    crate::log!(
+                        "Guest {} {} has email '{}', using guest's own email",
+                        guest.first_name,
+                        guest.last_name,
+                        guest.email
+                    );
+                    guest.email.clone()
+                };
+
+                let phone = if guest.phone.is_empty() {
+                    crate::log!(
+                        "Guest {} {} has empty phone, using holder phone: '{}'",
+                        guest.first_name,
+                        guest.last_name,
+                        holder.phone
+                    );
+                    holder.phone.clone()
+                } else {
+                    crate::log!(
+                        "Guest {} {} has phone '{}', using guest's own phone",
+                        guest.first_name,
+                        guest.last_name,
+                        guest.phone
+                    );
+                    guest.phone.clone()
+                };
+
+                crate::domain::DomainBookingGuest {
+                    occupancy_number: guest.occupancy_number,
+                    first_name: guest.first_name.clone(),
+                    last_name: guest.last_name.clone(),
+                    email,
+                    phone,
+                    remarks: guest.remarks.clone(),
+                }
+            })
+            .collect()
+    }
+
     pub fn validate_book_room_request(
         request: &crate::domain::DomainBookRoomRequest,
     ) -> Result<(), ProviderError> {
@@ -742,7 +822,9 @@ impl LiteApiAdapter {
         if request.block_id.is_empty() {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
-                api_error: ApiError::Other("Block ID cannot be empty".to_string()),
+                api_error: ApiError::Other(
+                    "[LITEAPI VALIDATION ERROR] Block ID cannot be empty".to_string(),
+                ),
                 error_step: ProviderSteps::HotelBookRoom,
             })));
         }
@@ -753,7 +835,8 @@ impl LiteApiAdapter {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
                 api_error: ApiError::Other(
-                    "Holder first name and last name are required".to_string(),
+                    "[LITEAPI VALIDATION ERROR] Holder first name and last name are required"
+                        .to_string(),
                 ),
                 error_step: ProviderSteps::HotelBookRoom,
             })));
@@ -762,7 +845,19 @@ impl LiteApiAdapter {
         if request.holder.email.trim().is_empty() {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
-                api_error: ApiError::Other("Holder email is required".to_string()),
+                api_error: ApiError::Other(
+                    "[LITEAPI VALIDATION ERROR] Holder email is required".to_string(),
+                ),
+                error_step: ProviderSteps::HotelBookRoom,
+            })));
+        }
+
+        if request.holder.phone.trim().is_empty() {
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::LiteApi,
+                api_error: ApiError::Other(
+                    "[LITEAPI VALIDATION ERROR] Holder phone is required".to_string(),
+                ),
                 error_step: ProviderSteps::HotelBookRoom,
             })));
         }
@@ -771,20 +866,22 @@ impl LiteApiAdapter {
         if request.guests.is_empty() {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
-                api_error: ApiError::Other("At least one guest is required".to_string()),
+                api_error: ApiError::Other(
+                    "[LITEAPI VALIDATION ERROR] At least one guest is required".to_string(),
+                ),
                 error_step: ProviderSteps::HotelBookRoom,
             })));
         }
 
-        // LITEAPI SPECIFIC VALIDATION: One guest per room requirement
+        // LITEAPI SPECIFIC VALIDATION: Exactly one primary contact per room requirement
         let number_of_rooms = request.booking_context.number_of_rooms;
 
-        // Validate exactly one guest per room
-        if request.guests.len() as u32 != number_of_rooms {
+        // Validate exactly one guest per room (primary contact/room manager model)
+        if (request.guests.len() as u32) != number_of_rooms {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
                 api_error: ApiError::Other(format!(
-                    "LiteAPI requires exactly one guest per room. Expected {} guests for {} rooms, but got {}",
+                    "[LITEAPI VALIDATION ERROR] LiteAPI requires exactly one primary contact per room. Expected {} guests for {} rooms, but got {}. Each guest represents the primary contact/room manager for their assigned room.",
                     number_of_rooms, number_of_rooms, request.guests.len()
                 )),
                 error_step: ProviderSteps::HotelBookRoom,
@@ -802,7 +899,7 @@ impl LiteApiAdapter {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
                     api_error: ApiError::Other(format!(
-                        "LiteAPI requires occupancy numbers to be sequential starting from 1. Expected {}, but found {}",
+                        "[LITEAPI VALIDATION ERROR] LiteAPI requires occupancy numbers to be sequential starting from 1. Expected {}, but found {}",
                         expected, occupancy_num
                     )),
                     error_step: ProviderSteps::HotelBookRoom,
@@ -819,7 +916,7 @@ impl LiteApiAdapter {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
                 api_error: ApiError::Other(
-                    "LiteAPI requires unique occupancy numbers for each guest".to_string(),
+                    "[LITEAPI VALIDATION ERROR] LiteAPI requires unique occupancy numbers for each guest".to_string(),
                 ),
                 error_step: ProviderSteps::HotelBookRoom,
             })));
@@ -831,7 +928,7 @@ impl LiteApiAdapter {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
                     api_error: ApiError::Other(format!(
-                        "Guest {} first name and last name are required",
+                        "[LITEAPI VALIDATION ERROR] Guest {} first name and last name are required",
                         i + 1
                     )),
                     error_step: ProviderSteps::HotelBookRoom,
@@ -841,7 +938,10 @@ impl LiteApiAdapter {
             if guest.email.trim().is_empty() {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
-                    api_error: ApiError::Other(format!("Guest {} email is required", i + 1)),
+                    api_error: ApiError::Other(format!(
+                        "[LITEAPI VALIDATION ERROR] Guest {} email is required",
+                        i + 1
+                    )),
                     error_step: ProviderSteps::HotelBookRoom,
                 })));
             }
@@ -850,7 +950,7 @@ impl LiteApiAdapter {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
                     api_error: ApiError::Other(format!(
-                        "Guest {} occupancy number must be greater than 0",
+                        "[LITEAPI VALIDATION ERROR] Guest {} occupancy number must be greater than 0",
                         i + 1
                     )),
                     error_step: ProviderSteps::HotelBookRoom,
@@ -858,16 +958,16 @@ impl LiteApiAdapter {
             }
 
             // Validate occupancy number does not exceed number of rooms
-            if guest.occupancy_number > number_of_rooms {
-                return Err(ProviderError(Arc::new(ProviderErrorDetails {
-                    provider_name: ProviderNames::LiteApi,
-                    api_error: ApiError::Other(format!(
-                        "Guest {} occupancy number {} exceeds the number of rooms being booked ({})",
-                        i + 1, guest.occupancy_number, number_of_rooms
-                    )),
-                    error_step: ProviderSteps::HotelBookRoom,
-                })));
-            }
+            // if guest.occupancy_number > number_of_rooms {
+            //     return Err(ProviderError(Arc::new(ProviderErrorDetails {
+            //         provider_name: ProviderNames::LiteApi,
+            //         api_error: ApiError::Other(format!(
+            //             "Guest {} occupancy number {} exceeds the number of rooms being booked ({})",
+            //             i + 1, guest.occupancy_number, number_of_rooms
+            //         )),
+            //         error_step: ProviderSteps::HotelBookRoom,
+            //     })));
+            // }
         }
 
         // Validate room occupancies consistency (if provided)
@@ -876,7 +976,7 @@ impl LiteApiAdapter {
                 return Err(ProviderError(Arc::new(ProviderErrorDetails {
                     provider_name: ProviderNames::LiteApi,
                     api_error: ApiError::Other(format!(
-                        "Room occupancies count ({}) does not match number of rooms ({})",
+                        "[LITEAPI VALIDATION ERROR] Room occupancies count ({}) does not match number of rooms ({})",
                         request.booking_context.room_occupancies.len(),
                         number_of_rooms
                     )),
@@ -894,7 +994,7 @@ impl LiteApiAdapter {
                     return Err(ProviderError(Arc::new(ProviderErrorDetails {
                         provider_name: ProviderNames::LiteApi,
                         api_error: ApiError::Other(format!(
-                            "No guest provided for room {} as required by LiteAPI",
+                            "[LITEAPI VALIDATION ERROR] No guest provided for room {} as required by LiteAPI",
                             occupancy.room_number
                         )),
                         error_step: ProviderSteps::HotelBookRoom,
@@ -933,7 +1033,7 @@ impl LiteApiAdapter {
             },
         };
 
-        // Map guests
+        // Map guests (fallback should already be applied before this function is called)
         let guests: Vec<LiteApiBookGuest> = domain_request
             .guests
             .iter()

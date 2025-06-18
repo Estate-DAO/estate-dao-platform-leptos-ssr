@@ -4,6 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::api::api_client::{ApiClient, ApiRequest, ApiRequestMeta};
 use crate::api::liteapi::client::LiteApiHTTPClient;
+use crate::api::liteapi::l01_get_hotel_info_rates::LiteApiError;
 use crate::api::liteapi::traits::LiteApiReq;
 use crate::{api::consts::EnvVarConfig, log};
 use reqwest::header::HeaderMap;
@@ -156,19 +157,39 @@ pub struct LiteApiPrebookData {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiPrebookResponse {
-    pub data: LiteApiPrebookData,
-    #[serde(rename = "guestLevel")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<LiteApiPrebookData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<LiteApiError>,
+    #[serde(rename = "guestLevel", default)]
     pub guest_level: i32,
+    #[serde(default)]
     pub sandbox: bool,
 }
 
 impl LiteApiPrebookResponse {
-    pub fn get_prebook_id(&self) -> &str {
-        &self.data.prebook_id
+    pub fn get_prebook_id(&self) -> Option<&str> {
+        self.data.as_ref().map(|data| data.prebook_id.as_str())
     }
 
-    pub fn get_hotel_id(&self) -> &str {
-        &self.data.hotel_id
+    pub fn get_hotel_id(&self) -> Option<&str> {
+        self.data.as_ref().map(|data| data.hotel_id.as_str())
+    }
+
+    pub fn is_error_response(&self) -> bool {
+        self.error.is_some()
+    }
+
+    pub fn is_no_availability(&self) -> bool {
+        if let Some(error) = &self.error {
+            error.code == 2001
+        } else {
+            false
+        }
+    }
+
+    pub fn get_error_message(&self) -> Option<&str> {
+        self.error.as_ref().map(|error| error.message.as_str())
     }
 }
 

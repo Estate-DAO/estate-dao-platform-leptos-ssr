@@ -35,6 +35,8 @@ impl BookingConversions {
         let ui_search_ctx: UISearchCtx = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
 
+        // let block_room_id = block_room_state.block_room_id.get_untracked();
+
         // Get form data
         let adults = block_room_state.adults.get_untracked();
         let children = block_room_state.children.get_untracked();
@@ -107,7 +109,7 @@ impl BookingConversions {
 
         let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
         let hotel_info_criteria = DomainHotelInfoCriteria {
-            token: hotel_code.clone(),
+            token: hotel_code.clone(), // Use hotel_code as token for LiteAPI (not block_room_id)
             hotel_ids: vec![hotel_code],
             search_criteria,
         };
@@ -159,36 +161,66 @@ impl BookingConversions {
 
         // Get primary adult as booking holder
         let primary_adult = adults.first().ok_or_else(|| {
-            BookingError::ValidationError("Primary adult is required".to_string())
+            BookingError::ValidationError(
+                "[UI VALIDATION ERROR] Primary adult is required".to_string(),
+            )
         })?;
 
         let holder = DomainBookingHolder {
             first_name: primary_adult.first_name.clone(),
-            last_name: primary_adult.last_name.clone().unwrap_or_default(),
+            last_name: primary_adult.last_name.clone().ok_or_else(|| {
+                BookingError::ValidationError(
+                    "[UI VALIDATION ERROR] Primary adult last name is required".to_string(),
+                )
+            })?,
             email: primary_adult.email.clone().ok_or_else(|| {
-                BookingError::ValidationError("Primary adult email is required".to_string())
+                BookingError::ValidationError(
+                    "[UI VALIDATION ERROR] Primary adult email is required".to_string(),
+                )
             })?,
             phone: primary_adult.phone.clone().ok_or_else(|| {
-                BookingError::ValidationError("Primary adult phone is required".to_string())
+                BookingError::ValidationError(
+                    "[UI VALIDATION ERROR] Primary adult phone is required".to_string(),
+                )
             })?,
         };
 
-        // Convert adults to guests (one guest per room)
+        // Convert adults to guests (one PRIMARY CONTACT per room)
+        // LiteAPI Rule: Need exactly one guest per room as the primary contact/room manager
+        let guests_ctx = &ui_search_ctx.guests;
+        let number_of_rooms = guests_ctx.rooms.get_untracked() as usize;
+
+        // Validation: Must have at least one adult per room
+        if adults.len() < number_of_rooms {
+            return Err(BookingError::ValidationError(format!(
+                "[UI VALIDATION ERROR] Need at least {} adults for {} rooms, but only {} provided. Each room requires a primary contact.",
+                number_of_rooms, number_of_rooms, adults.len()
+            )));
+        }
+
+        // Take only the first N adults as primary contacts (ignore extras)
+        // This follows LiteAPI rule: one primary contact per room, not per person
         let guests: Vec<DomainBookingGuest> = adults
             .into_iter()
+            .take(number_of_rooms)  // 🔑 KEY FIX: Limit to room count, not adult count
             .enumerate()
-            .map(|(index, adult)| DomainBookingGuest {
-                occupancy_number: (index + 1) as u32,
-                first_name: adult.first_name,
-                last_name: adult.last_name.unwrap_or_default(),
-                email: adult.email.unwrap_or_default(),
-                phone: adult.phone.unwrap_or_default(),
-                remarks: None,
+            .map(|(index, adult)| -> Result<DomainBookingGuest, BookingError> {
+                Ok(DomainBookingGuest {
+                    occupancy_number: (index + 1) as u32,  // Room number (1, 2, 3...)
+                    first_name: adult.first_name,
+                    last_name: adult.last_name.ok_or_else(|| {
+                        BookingError::ValidationError(format!(
+                            "[UI VALIDATION ERROR] Primary contact for room {} must have a last name", index + 1
+                        ))
+                    })?,
+                    email: adult.email.unwrap_or_default(),  // Will be handled by fallback
+                    phone: adult.phone.unwrap_or_default(),  // Will be handled by fallback
+                    remarks: None,
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Build booking context
-        let guests_ctx = &ui_search_ctx.guests;
         let room_occupancies = vec![DomainRoomOccupancyForBooking {
             room_number: 1,
             adults: guests_ctx.adults.get_untracked(),
