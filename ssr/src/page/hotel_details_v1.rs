@@ -564,6 +564,12 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
 
     let is_at_minimum = move || room_count() == 0;
 
+    // <!-- Room validation signals -->
+    let is_at_maximum = create_memo(move |_| {
+        // Disable increment if we're at the global room limit
+        HotelDetailsUIState::is_at_room_selection_limit()
+    });
+
     // Clone for closures
     let room_key_inc = room_unique_id.clone();
     let room_key_dec = room_unique_id.clone();
@@ -600,7 +606,8 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
                         </button>
                         <p class="text-center w-6">{move || room_count()}</p>
                         <button
-                            class="py-1 text-2xl"
+                            class="py-1 text-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled=is_at_maximum
                             on:click=increment
                         >
                             "+"

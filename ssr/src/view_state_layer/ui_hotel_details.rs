@@ -81,11 +81,15 @@ impl HotelDetailsUIState {
 
     pub fn increment_room_counter(room_type: String) {
         let this: Self = expect_context();
-        this.selected_rooms.update(|rooms| {
-            let current = rooms.get(&room_type).copied().unwrap_or(0);
-            rooms.insert(room_type, current + 1);
-        });
-        Self::update_total_price();
+
+        // Check if incrementing would exceed the search limit
+        if Self::can_increment_room_selection() {
+            this.selected_rooms.update(|rooms| {
+                let current = rooms.get(&room_type).copied().unwrap_or(0);
+                rooms.insert(room_type, current + 1);
+            });
+            Self::update_total_price();
+        }
     }
 
     pub fn decrement_room_counter(room_type: String) {
@@ -122,6 +126,21 @@ impl HotelDetailsUIState {
     pub fn get_selected_rooms() -> HashMap<String, u32> {
         let this: Self = expect_context();
         this.selected_rooms.get()
+    }
+
+    // <!-- Validation methods for room selection limits -->
+    pub fn can_increment_room_selection() -> bool {
+        use crate::view_state_layer::ui_search_state::UISearchCtx;
+
+        let ui_search_ctx: UISearchCtx = expect_context();
+        let max_rooms = ui_search_ctx.guests.rooms.get();
+        let current_total = Self::total_selected_rooms();
+
+        current_total < max_rooms
+    }
+
+    pub fn is_at_room_selection_limit() -> bool {
+        !Self::can_increment_room_selection()
     }
 
     // <!-- Helper method to get selected rooms with their data and pricing -->
