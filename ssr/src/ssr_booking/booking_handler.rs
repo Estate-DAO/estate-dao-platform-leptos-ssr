@@ -461,6 +461,46 @@ fn domain_book_room_response_to_backend_response(
     })
 }
 
+/// Store booking error in backend with BookingFailed status
+#[instrument(
+    name = "store_booking_error_in_backend",
+    skip(booking_id, error_message),
+    err(Debug)
+)]
+async fn store_booking_error_in_backend(
+    booking_id: backend::BookingId,
+    error_message: String,
+) -> Result<(), String> {
+    use crate::canister::backend::{BookingDetails, BookingStatus, ResolvedBookingStatus};
+
+    info!("Storing booking error in backend: {}", error_message);
+
+    // Create a failed booking response
+    let booking_details = BookingDetails {
+        api_status: BookingStatus::BookFailed,
+        booking_ref_no: "".to_string(), // No booking reference on failure
+        booking_status: "BookingFailed".to_string(),
+        confirmation_no: "".to_string(), // No confirmation on failure
+        resolved_booking_status: ResolvedBookingStatus::BookingFailed,
+        booking_id: booking_id.clone(),
+        travelomatrix_id: "".to_string(), // No supplier booking ID on failure
+    };
+
+    let failed_response = backend::BeBookRoomResponse {
+        status: "failed".to_string(),
+        commit_booking: booking_details,
+        message: format!("Booking failed: {}", error_message),
+    };
+
+    // Save the failed response to backend
+    call_update_book_room_details_backend(booking_id, failed_response)
+        .await
+        .map_err(|e| format!("Failed to save booking error to backend: {}", e))?;
+
+    info!("Successfully stored booking error in backend");
+    Ok(())
+}
+
 /// Initialize hotel service with liteapi adapter
 #[instrument(name = "create_hotel_service_with_liteapi")]
 fn create_hotel_service_with_liteapi() -> HotelService<LiteApiAdapter> {
@@ -506,10 +546,22 @@ async fn book_room_and_update_backend_v1(
 
     // Step 2: Initialize hotel service and call book_room
     let hotel_service = create_hotel_service_with_liteapi();
-    let domain_response = hotel_service
-        .book_room(domain_request)
-        .await
-        .map_err(|e| format!("Hotel service book_room failed: {e:?}"))?;
+    let domain_response = match hotel_service.book_room(domain_request).await {
+        Ok(response) => response,
+        Err(e) => {
+            let error_message = format!("Hotel service book_room failed: {e:?}");
+            error!("Booking failed: {}", error_message);
+
+            // Store the error in backend with BookingFailed status
+            if let Err(store_error) =
+                store_booking_error_in_backend(booking_id.clone(), error_message.clone()).await
+            {
+                error!("Failed to store booking error in backend: {}", store_error);
+            }
+
+            return Err(error_message);
+        }
+    };
 
     info!("Received domain response: {domain_response:?}");
 
@@ -540,7 +592,11 @@ async fn book_room_and_update_backend_v1(
 pub struct MakeBookingFromBookingProvider;
 
 /// Helper function to check backend booking status and return appropriate pipeline decision
-#[instrument(name = "check_backend_booking_status", skip(backend_booking), err(Debug))]
+#[instrument(
+    name = "check_backend_booking_status",
+    skip(backend_booking),
+    err(Debug)
+)]
 fn check_backend_booking_status(
     backend_booking: &backend::Booking,
 ) -> Result<Option<PipelineDecision>, String> {
@@ -590,7 +646,11 @@ impl MakeBookingFromBookingProvider {
     }
 
     /// Processes the booking based on its current status
-    #[instrument(name = "process_booking_status", skip(event, booking, notifier), err(Debug))]
+    #[instrument(
+        name = "process_booking_status",
+        skip(event, booking, notifier),
+        err(Debug)
+    )]
     async fn process_booking_status(
         event: ServerSideBookingEvent,
         booking: backend::Booking,
@@ -641,7 +701,10 @@ impl MakeBookingFromBookingProvider {
         skip(event, notifier),
         err(Debug)
     )]
-    pub async fn run(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    pub async fn run(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         info!("Executing MakeBookingFromBookingProvider");
 
         // ---------------------------
@@ -675,16 +738,20 @@ impl MakeBookingFromBookingProvider {
                 .map(|f| f.to_string())
                 .unwrap_or_else(|| "unknown_correlation_id".to_string());
 
-            let (status, booking_confirmed) = if let Some(ref book_room_status) = booking.book_room_status {
-                let status = format!("{:?}", book_room_status.commit_booking.resolved_booking_status);
-                let confirmed = matches!(
-                    book_room_status.commit_booking.resolved_booking_status,
-                    backend::ResolvedBookingStatus::BookingConfirmed
-                );
-                (status, confirmed)
-            } else {
-                ("No booking status".to_string(), false)
-            };
+            let (status, booking_confirmed) =
+                if let Some(ref book_room_status) = booking.book_room_status {
+                    let status = format!(
+                        "{:?}",
+                        book_room_status.commit_booking.resolved_booking_status
+                    );
+                    let confirmed = matches!(
+                        book_room_status.commit_booking.resolved_booking_status,
+                        backend::ResolvedBookingStatus::BookingConfirmed
+                    );
+                    (status, confirmed)
+                } else {
+                    ("No booking status".to_string(), false)
+                };
 
             let custom_event = NotifierEvent {
                 event_id: uuidv7::create(),
@@ -719,10 +786,6 @@ impl PipelineValidator for MakeBookingFromBookingProvider {
         }
 
         // Check if all required fields are present
-        if event.payment_id.is_none() {
-            return Err("Payment ID is missing".to_string());
-        }
-
         if event.user_email.is_empty() {
             return Err("User email is missing".to_string());
         }
@@ -743,7 +806,10 @@ impl PipelineValidator for MakeBookingFromBookingProvider {
 
         // Verify that app_reference can be derived from order_id
         if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
-            error!("Failed to extract app_reference from order_id: {}", event.order_id);
+            error!(
+                "Failed to extract app_reference from order_id: {}",
+                event.order_id
+            );
             return Err(format!(
                 "Failed to extract app_reference from order_id: {}",
                 event.order_id
@@ -757,7 +823,10 @@ impl PipelineValidator for MakeBookingFromBookingProvider {
 #[async_trait]
 impl PipelineExecutor for MakeBookingFromBookingProvider {
     #[instrument(name = "execute_make_booking", skip(event, notifier), err(Debug))]
-    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    async fn execute(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         MakeBookingFromBookingProvider::run(event, notifier).await
     }
 }
