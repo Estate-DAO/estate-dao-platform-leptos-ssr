@@ -1,5 +1,4 @@
-use chrono::Datelike;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate, TimeZone, Utc};
 
 pub fn is_leap_year(year: u32) -> bool {
     (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
@@ -80,15 +79,13 @@ pub fn next_date(year: u32, month: u32) -> (u32, u32) {
 
 pub fn get_year_month_day(timestamp: f64) -> (u32, u32, u32) {
     let secs = (timestamp / 1000_f64).floor() as i64;
-    let naive = chrono::NaiveDateTime::from_timestamp_opt(secs, 0).unwrap();
-    let datetime: chrono::DateTime<chrono::Utc> = chrono::DateTime::from_utc(naive, chrono::Utc);
+    let datetime: chrono::DateTime<chrono::Utc> = Utc.timestamp_opt(secs, 0).unwrap();
     (datetime.year() as u32, datetime.month(), datetime.day())
 }
 
 pub fn get_year_month(timestamp: f64) -> (u32, u32) {
     let secs = (timestamp / 1000_f64).floor() as i64;
-    let naive = chrono::NaiveDateTime::from_timestamp_opt(secs, 0).unwrap();
-    let datetime: chrono::DateTime<chrono::Utc> = chrono::DateTime::from_utc(naive, chrono::Utc);
+    let datetime: chrono::DateTime<chrono::Utc> = Utc.timestamp_opt(secs, 0).unwrap();
     (datetime.year() as u32, datetime.month())
 }
 
