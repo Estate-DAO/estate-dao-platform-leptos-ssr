@@ -3,6 +3,8 @@ use leptos_icons::Icon;
 use leptos_router::use_navigate;
 
 use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
+use crate::api::payments::{create_domain_request, PaymentProvider};
 use crate::app::AppRoutes;
 use crate::application_services::BookingService;
 use crate::component::{Divider, Navbar, SpinnerGray};
@@ -26,6 +28,9 @@ use crate::view_state_layer::view_state::HotelInfoCtx;
 
 #[component]
 pub fn BlockRoomV1Page() -> impl IntoView {
+    // Initialize form validation on page load - button will be disabled until form is valid
+    BlockRoomUIState::validate_form();
+
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
@@ -850,7 +855,7 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
                     e.technical_details()
                 );
                 BlockRoomUIState::batch_update_on_error(
-                    Some("server".to_string()),
+                    Some(e.category().to_string()),
                     Some(e.user_message()),
                     Some(e.technical_details()),
                 );
@@ -984,9 +989,7 @@ pub fn PaymentModal() -> impl IntoView {
                             <div class="font-bold">
                                 <label>"Pay with"</label>
                                 <div class="flex flex-col w-full mt-4 space-y-2">
-                                    <button class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500">
-                                        <span class="px-2 py-2">"We'll enable payments soon."</span>
-                                    </button>
+                                    <PaymentProviderButtons />
                                 </div>
                             </div>
                         </Show>
@@ -1233,3 +1236,198 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
 // Note: build_block_room_request and save_booking_to_backend functions removed
 // The integrated server function now handles both the block room API call and backend save
 // using BookingConversions::ui_to_block_room_request() on the server side
+
+#[component]
+pub fn PaymentProviderButtons() -> impl IntoView {
+    let block_room_state: BlockRoomUIState = expect_context();
+    let ui_search_ctx: UISearchCtx = expect_context();
+
+    // Get pricing information
+    let total_price = move || BlockRoomUIState::get_total_price();
+
+    // Payment loading state
+    let (payment_loading, set_payment_loading) = create_signal(false);
+    let (selected_provider, set_selected_provider) = create_signal::<Option<PaymentProvider>>(None);
+
+    // Create payment action
+    let create_payment_action = create_action(move |provider: &PaymentProvider| {
+        let provider = provider.clone();
+        async move {
+            log!("Creating payment invoice with provider: {:?}", provider);
+            set_payment_loading.set(true);
+            set_selected_provider.set(Some(provider.clone()));
+
+            // Get booking details
+            let block_room_state: BlockRoomUIState = expect_context();
+            let ui_search_ctx: UISearchCtx = expect_context();
+
+            // Validate required email
+            let Some(email) = block_room_state
+                .adults
+                .get_untracked()
+                .first()
+                .and_then(|adult| adult.email.clone())
+            else {
+                log!("Payment creation failed - no primary adult email provided");
+                BlockRoomUIState::batch_update_on_error(
+                    Some("payment".to_string()),
+                    Some("Email required for payment".to_string()),
+                    Some("Primary adult email is required to create payment invoice".to_string()),
+                );
+                set_payment_loading.set(false);
+                set_selected_provider.set(None);
+                return None;
+            };
+
+            // Generate booking ID and order ID
+            let Some(booking_id) = generate_app_reference(email.clone()).get_untracked() else {
+                log!("Payment creation failed - could not generate app reference");
+                BlockRoomUIState::batch_update_on_error(
+                    Some("payment".to_string()),
+                    Some("Reference generation failed".to_string()),
+                    Some("Unable to generate booking reference for payment".to_string()),
+                );
+                set_payment_loading.set(false);
+                set_selected_provider.set(None);
+                return None;
+            };
+
+            // Create order ID using the proper booking_id method
+            let order_id = booking_id.to_order_id();
+
+            // Get price information
+            let price_amount = (total_price() * 100.0) as u32; // Convert to cents
+
+            // Create domain request using proper URL helper functions
+            let consts_provider: crate::api::consts::PaymentProvider = provider.clone().into();
+            let domain_request = create_domain_request(
+                price_amount,
+                "USD".to_string(),
+                order_id,
+                "Hotel Room Booking".to_string(),
+                email.clone(),
+                get_ipn_callback_url(consts_provider.clone()),
+                get_payments_url_v2("success", consts_provider.clone()),
+                get_payments_url_v2("cancel", consts_provider.clone()),
+                get_payments_url_v2("partial", consts_provider),
+                false,
+                false,
+                provider,
+            );
+
+            // Call payment API via client-side API
+            let client = ClientSideApiClient::new();
+            match client.create_payment_invoice(domain_request).await {
+                Some(response) => {
+                    log!(
+                        "Payment invoice created successfully: {}",
+                        response.payment_url
+                    );
+                    // Redirect to payment URL
+                    let window = web_sys::window().expect("no global `window` exists");
+                    let location = window.location();
+                    let _ = location.set_href(&response.payment_url);
+                    Some(response)
+                }
+                None => {
+                    log!("Payment invoice creation failed");
+                    BlockRoomUIState::batch_update_on_error(
+                        Some("payment".to_string()),
+                        Some("Payment creation failed".to_string()),
+                        Some("Failed to create payment invoice".to_string()),
+                    );
+                    None
+                }
+            }
+        }
+    });
+
+    // Handle action completion
+    create_effect(move |_| {
+        if create_payment_action.value().get().is_some() {
+            set_payment_loading.set(false);
+            set_selected_provider.set(None);
+        }
+    });
+
+    view! {
+        <div class="space-y-3">
+            // <!-- NowPayments Button -->
+            <button
+                class=move || format!(
+                    "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
+                    if selected_provider().map_or(false, |p| p == PaymentProvider::NowPayments) {
+                        "border-blue-500 bg-blue-50"
+                    } else {
+                        "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+                    }
+                )
+                disabled=payment_loading
+                on:click=move |_| {
+                    if !payment_loading() {
+                        create_payment_action.dispatch(PaymentProvider::NowPayments);
+                    }
+                }
+            >
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
+                            <span class="text-white text-sm font-bold">"NP"</span>
+                        </div>
+                        <div class="text-left">
+                            <div class="font-semibold text-gray-900">"NowPayments"</div>
+                            <div class="text-sm text-gray-600">"Pay with crypto currencies"</div>
+                        </div>
+                    </div>
+                    <Show when=move || selected_provider().map_or(false, |p| p == PaymentProvider::NowPayments) && payment_loading()>
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                    </Show>
+                </div>
+            </button>
+
+            // <!-- Stripe Button -->
+            <button
+                class=move || format!(
+                    "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
+                    if selected_provider().map_or(false, |p| p == PaymentProvider::Stripe) {
+                        "border-indigo-500 bg-indigo-50"
+                    } else {
+                        "border-gray-300 hover:border-indigo-400 hover:bg-gray-50"
+                    }
+                )
+                disabled=payment_loading
+                on:click=move |_| {
+                    if !payment_loading() {
+                        create_payment_action.dispatch(PaymentProvider::Stripe);
+                    }
+                }
+            >
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center mr-3">
+                            <span class="text-white text-sm font-bold">"S"</span>
+                        </div>
+                        <div class="text-left">
+                            <div class="font-semibold text-gray-900">"Stripe"</div>
+                            <div class="text-sm text-gray-600">"Pay with credit/debit cards"</div>
+                        </div>
+                    </div>
+                    <Show when=move || selected_provider().map_or(false, |p| p == PaymentProvider::Stripe) && payment_loading()>
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+                    </Show>
+                </div>
+            </button>
+
+            // <!-- Loading overlay for general payment processing -->
+            <Show when=payment_loading>
+                <div class="text-center py-2">
+                    <div class="text-sm text-gray-600">
+                        {move || format!("Creating {} payment...",
+                            selected_provider().map_or("payment".to_string(), |p| p.as_str().to_string())
+                        )}
+                    </div>
+                </div>
+            </Show>
+        </div>
+    }
+}

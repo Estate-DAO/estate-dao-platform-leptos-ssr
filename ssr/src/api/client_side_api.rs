@@ -1,4 +1,5 @@
 use crate::api::consts::APP_URL;
+use crate::api::payments::domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse};
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
     DomainHotelListAfterSearch, DomainHotelSearchCriteria,
@@ -345,6 +346,68 @@ impl ClientSideApiClient {
     pub fn parse_server_response<T: DeserializeOwned>(response: &str) -> Result<T, String> {
         serde_json::from_str(response)
             .map_err(|e| format!("Failed to parse server response: {}", e))
+    }
+
+    pub async fn create_payment_invoice(
+        &self,
+        request: DomainCreateInvoiceRequest,
+    ) -> Option<DomainCreateInvoiceResponse> {
+        // Serialize request to JSON string
+        let body = match serde_json::to_string(&request) {
+            Ok(json) => json,
+            Err(e) => {
+                log!("Failed to serialize payment invoice request: {}", e);
+                return None;
+            }
+        };
+
+        // Make HTTP request to the payment API endpoint
+        let client = reqwest::Client::new();
+        let response = client
+            .post(
+                join_base_and_path_url(
+                    APP_URL.as_str(),
+                    "server_fn_api/create_payment_invoice_api",
+                )
+                .unwrap_or_else(|e| {
+                    log!("Failed to build URL: {}", e);
+                    format!(
+                        "{}/server_fn_api/create_payment_invoice_api",
+                        APP_URL.as_str()
+                    )
+                }),
+            )
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await;
+
+        match response {
+            Ok(resp) => {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+
+                if status == 200 {
+                    match Self::parse_server_response::<DomainCreateInvoiceResponse>(&text) {
+                        Ok(payment_response) => {
+                            log!("Payment invoice created successfully");
+                            Some(payment_response)
+                        }
+                        Err(e) => {
+                            log!("Failed to parse payment response: {}", e);
+                            None
+                        }
+                    }
+                } else {
+                    log!("Payment API error - Status: {}, Response: {}", status, text);
+                    None
+                }
+            }
+            Err(e) => {
+                log!("Payment API request failed: {:?}", e);
+                None
+            }
+        }
     }
 }
 

@@ -45,7 +45,11 @@ impl BookingError {
         match self {
             BookingError::ValidationError(msg) => format!("Please check your information: {}", msg),
             BookingError::ProviderError(_) => {
-                "Unable to process your booking request. Please try again.".to_string()
+                if self.is_room_unavailable() {
+                    "Sorry, the selected room is no longer available. Please search for alternative dates or rooms.".to_string()
+                } else {
+                    "Unable to process your booking request. Please try again.".to_string()
+                }
             }
             BookingError::BackendError(_) => {
                 "Unable to save your booking. Please try again.".to_string()
@@ -85,10 +89,34 @@ impl BookingError {
     pub fn category(&self) -> &'static str {
         match self {
             BookingError::ValidationError(_) => "validation",
-            BookingError::ProviderError(_) => "provider",
+            BookingError::ProviderError(_) => {
+                if self.is_room_unavailable() {
+                    "room_unavailable"
+                } else {
+                    "provider"
+                }
+            }
             BookingError::BackendError(_) => "backend",
             BookingError::NetworkError(_) => "network",
             BookingError::SerializationError(_) => "serialization",
+        }
+    }
+
+    /// Check if error indicates room unavailability
+    pub fn is_room_unavailable(&self) -> bool {
+        match self {
+            BookingError::ProviderError(provider_err) => {
+                let error_str = provider_err.to_string().to_lowercase();
+                error_str.contains("no prebook availability")
+                    || error_str.contains("no availability found")
+                    || error_str.contains("no room")
+                    || error_str.contains("fully booked")
+                    || error_str.contains("not available")
+                    || error_str.contains("no rates available")
+                    || error_str.contains("no room types")
+                    || error_str.contains("room no longer available")
+            }
+            _ => false,
         }
     }
 }
