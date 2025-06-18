@@ -165,38 +165,42 @@ pub struct GetPaymentStatusFromPaymentProvider;
 impl PipelineValidator for GetPaymentStatusFromPaymentProvider {
     #[instrument(name = "validate_get_payment_status", skip(self, event), err(Debug))]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
+        // Ensure that order_id exists in ServerSideBookingEvent and booking_id can be derived from order_id
+        if event.order_id.is_empty() {
+            error!("order_id is empty in ServerSideBookingEvent");
+            return Err("order_id is required but empty".to_string());
+        }
+
+        // Verify that app_reference can be derived from order_id
+        if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
+            error!(
+                "Failed to extract app_reference from order_id: {}",
+                event.order_id
+            );
+            return Err(format!(
+                "Failed to extract app_reference from order_id: {}",
+                event.order_id
+            ));
+        }
+
         if event.payment_id.is_some() {
-            // Check if backend_booking_struct exists and payment is already paid
+            // Payment ID provided - check external provider flow
             if let Some(ref backend_booking) = event.backend_booking_struct {
                 match &backend_booking.payment_details.payment_status {
                     BackendPaymentStatus::Paid(_) => {
-                        info!("Payment already paid in backend, skipping payment status check");
+                        info!("Payment already paid in backend, skipping external payment status check");
                         return Ok(PipelineDecision::Skip);
                     }
                     BackendPaymentStatus::Unpaid(_) => {
-                        info!("Payment not yet paid in backend, proceeding with payment status check");
+                        info!("Payment not yet paid in backend, proceeding with external payment status check");
                     }
                 }
             }
-
-            // Ensure that order_id exists in ServerSideBookingEvent and booking_id can be derived from order_id
-            if event.order_id.is_empty() {
-                error!("order_id is empty in ServerSideBookingEvent");
-                return Err("order_id is required but empty".to_string());
-            }
-
-            // Verify that app_reference can be derived from order_id
-            if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
-                error!("Failed to extract app_reference from order_id: {}", event.order_id);
-                return Err(format!(
-                    "Failed to extract app_reference from order_id: {}",
-                    event.order_id
-                ));
-            }
-
             Ok(PipelineDecision::Run)
         } else {
-            Ok(PipelineDecision::Skip)
+            // No payment ID - we'll extract status from backend_booking_struct
+            info!("No payment_id provided, will extract payment status from backend booking data");
+            Ok(PipelineDecision::Run)
         }
     }
 }
@@ -204,32 +208,54 @@ impl PipelineValidator for GetPaymentStatusFromPaymentProvider {
 #[async_trait]
 impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
     #[instrument(name = "execute_get_payment_status", skip(event, notifier), err(Debug))]
-    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
-        // step 1:  Retrieves the payment status  from API
-
-        // Get payment ID from event
-        let payment_id = event
-            .payment_id
-            .clone()
-            .and_then(|id| id.parse::<u64>().ok())
-            .ok_or_else(|| "Payment ID not found in event".to_string())?;
-
-        // Create request for payment status
-        let request = GetPaymentStatusRequest { payment_id };
-
-        // Get payment status with retry
-        let response = check_if_payment_status_finished_with_backoff(request, None).await?;
-        // info!("payment_status from API: {response:#?}");
-        // let response = get_payment_status_with_retry(request).await?;
-
-        // Get payment status string from response
-        let payment_status = response.get_payment_status();
-
-        // Create updated event with payment status
+    async fn execute(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         let mut updated_event = event;
-        updated_event.payment_status = Some(payment_status.clone());
-        updated_event.payment_id = Some(payment_id.to_string());
-        info!("Updated event: {:?}", updated_event);
+        let (payment_status, is_finished, source) = if let Some(ref payment_id_str) =
+            updated_event.payment_id
+        {
+            // Flow 1: External payment provider check
+            info!(
+                "Checking payment status from external provider for payment_id: {}",
+                payment_id_str
+            );
+
+            let payment_id = payment_id_str
+                .parse::<u64>()
+                .map_err(|e| format!("Invalid payment_id format: {}", e))?;
+
+            let request = GetPaymentStatusRequest { payment_id };
+            let response = check_if_payment_status_finished_with_backoff(request, None).await?;
+            let status = response.get_payment_status();
+            let finished = response.is_finished();
+
+            updated_event.payment_status = Some(status.clone());
+            (status, finished, "external_provider".to_string())
+        } else {
+            // Flow 2: Extract from backend booking data
+            info!("No payment_id provided, extracting payment status from backend booking data");
+
+            if let Some(ref backend_booking) = updated_event.backend_booking_struct {
+                let (status, finished) = match &backend_booking.payment_details.payment_status {
+                    BackendPaymentStatus::Paid(_) => ("finished".to_string(), true),
+                    BackendPaymentStatus::Unpaid(_) => ("waiting".to_string(), false),
+                };
+                info!("Extracted payment status from backend: {}", status);
+                updated_event.payment_status = Some(status.clone());
+                (status, finished, "backend_booking".to_string())
+            } else {
+                return Err(
+                    "No backend booking data available to extract payment status".to_string(),
+                );
+            }
+        };
+
+        info!(
+            "Payment status determined: {} (finished: {}, source: {})",
+            payment_status, is_finished, source
+        );
 
         // --- EMIT CUSTOM EVENT: PaymentStatusChecked ---
         if let Some(n) = notifier {
@@ -246,7 +272,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
                 step_name: Some("GetPaymentStatusFromPaymentProvider".to_string()),
                 event_type: NotifierEventType::PaymentStatusChecked {
                     status: payment_status.clone(),
-                    is_finished: response.is_finished(),
+                    is_finished,
                 },
                 email: updated_event.user_email.clone(),
             };
@@ -274,9 +300,57 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
         };
         let booking_id_clone = booking_id.clone();
 
-        // Create BePaymentApiResponse from the payment status response
-        let payment_api_response =
-            BePaymentApiResponse::from((response.clone(), "nowpayments".to_string()));
+        // Create BePaymentApiResponse based on the source of payment status
+        let payment_api_response = if source == "external_provider"
+            && updated_event.payment_id.is_some()
+        {
+            // For external provider, we already have the response from the API call above
+            // We need to reconstruct the GetPaymentStatusResponse for the conversion
+            let success_response = crate::api::payments::ports::SuccessGetPaymentStatusResponse {
+                payment_status: payment_status.clone(),
+                payment_id: updated_event
+                    .payment_id
+                    .as_ref()
+                    .unwrap()
+                    .parse::<u64>()
+                    .unwrap_or(0),
+                invoice_id: 0,   // We don't have this from the current flow
+                price_amount: 0, // Default value
+                price_currency: "USD".to_string(), // Default value
+                pay_amount: 0.0, // Default value
+                actually_paid: 0.0, // Default value
+                pay_currency: "USDC".to_string(), // Default value
+                order_id: order_id.clone(),
+                order_description: "Payment confirmation".to_string(),
+                purchase_id: 0, // Default value
+                created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                updated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            };
+            let get_payment_response = GetPaymentStatusResponse::Success(success_response);
+            BePaymentApiResponse::from((get_payment_response, "nowpayments".to_string()))
+        } else {
+            // Backend-extracted status - create a minimal response
+            BePaymentApiResponse {
+                payment_status: payment_status.clone(),
+                payment_id: updated_event
+                    .payment_id
+                    .as_ref()
+                    .and_then(|p| p.parse::<u64>().ok())
+                    .unwrap_or(0),
+                provider: "backend_extracted".to_string(),
+                created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                updated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                actually_paid: 0.0,
+                invoice_id: 0,
+                order_description: "Payment from backend data".to_string(),
+                pay_amount: 0.0,
+                pay_currency: "USDC".to_string(),
+                price_amount: 0,
+                purchase_id: 0,
+                order_id: order_id.clone(),
+                price_currency: "USD".to_string(),
+            }
+        };
 
         // Create PaymentDetails with the appropriate payment status
         let payment_details = PaymentDetails {

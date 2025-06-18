@@ -28,7 +28,10 @@ pub trait PipelineValidator: Send + Sync {
 /// Execution is stateless so it does not need &self.
 #[async_trait]
 pub trait PipelineExecutor: Send + Sync {
-    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String>;
+    async fn execute(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String>;
 }
 
 // --------------------------

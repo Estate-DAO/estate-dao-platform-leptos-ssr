@@ -359,7 +359,10 @@ async fn update_email_sent_status_in_canister(
 
 impl SendEmailAfterSuccessfullBooking {
     #[instrument(name = "send_email_run", skip(event, notifier), err(Debug))]
-    async fn run(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    async fn run(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         let config = EnvVarConfig::try_from_env();
         let email_client = EmailClient::new(config.email_client_config);
         let _ = email_client.send_email_gmail(&event).await?;
@@ -400,7 +403,10 @@ impl PipelineExecutor for SendEmailAfterSuccessfullBooking {
         skip(event, notifier),
         err(Debug)
     )]
-    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    async fn execute(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         SendEmailAfterSuccessfullBooking::run(event, notifier).await
     }
 }

@@ -33,7 +33,10 @@ impl PipelineValidator for MockStep {
 
 #[async_trait]
 impl PipelineExecutor for MockStep {
-    async fn execute(event: ServerSideBookingEvent, _notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    async fn execute(
+        event: ServerSideBookingEvent,
+        _notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         println!("Executing MockStep");
         Ok(event)
     }

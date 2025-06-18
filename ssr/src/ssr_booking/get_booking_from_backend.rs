@@ -3,7 +3,8 @@ use super::{
     ServerSideBookingEvent,
 };
 use crate::{
-    api::canister::get_user_booking::get_user_booking_backend, canister::backend,
+    api::canister::get_user_booking::get_user_booking_backend,
+    canister::backend,
     utils::booking_id::PaymentIdentifiers,
     utils::notifier::{self, Notifier},
     utils::notifier_event::{NotifierEvent, NotifierEventType},
@@ -16,8 +17,15 @@ use tracing::{info, instrument};
 pub struct GetBookingFromBackend;
 
 impl GetBookingFromBackend {
-    #[instrument(name = "get_booking_from_backend_run", skip(event, notifier), err(Debug))]
-    pub async fn run(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    #[instrument(
+        name = "get_booking_from_backend_run",
+        skip(event, notifier),
+        err(Debug)
+    )]
+    pub async fn run(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         // extract user email
         let user_email = event.user_email.clone();
         // extract booking id
@@ -97,18 +105,14 @@ impl PipelineValidator for GetBookingFromBackend {
     )]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
         // ensure user email is non empty
-
-        if event.payment_id.is_none() {
-            return Err("Payment ID is missing".to_string());
-        }
-
         if event.user_email.is_empty() {
             return Err("User email is missing".to_string());
         }
 
-        // if event.payment_status.is_none() {
-        //     return Err("Payment status is missing".to_string());
-        // }
+        // Ensure order_id exists for deriving app_reference
+        if event.order_id.is_empty() {
+            return Err("Order ID is missing".to_string());
+        }
 
         Ok(PipelineDecision::Run)
     }
@@ -116,8 +120,15 @@ impl PipelineValidator for GetBookingFromBackend {
 
 #[async_trait::async_trait]
 impl PipelineExecutor for GetBookingFromBackend {
-    #[instrument(name = "execute_get_booking_from_backend", skip(event, notifier), err(Debug))]
-    async fn execute(event: ServerSideBookingEvent, notifier: Option<&Notifier>) -> Result<ServerSideBookingEvent, String> {
+    #[instrument(
+        name = "execute_get_booking_from_backend",
+        skip(event, notifier),
+        err(Debug)
+    )]
+    async fn execute(
+        event: ServerSideBookingEvent,
+        notifier: Option<&Notifier>,
+    ) -> Result<ServerSideBookingEvent, String> {
         GetBookingFromBackend::run(event, notifier).await
     }
 }
