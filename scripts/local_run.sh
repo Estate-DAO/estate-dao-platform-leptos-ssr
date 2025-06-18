@@ -21,6 +21,15 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Create logs directory if it doesn't exist
+mkdir -p "$(pwd)/logs"
+
+# Create dated symlink for today's log
+TODAY=$(date +'%Y-%m-%d')
+
+# Also create a non-dated symlink for easy access
+ln -sf "$(pwd)/logs/estate_fe_local.log.${TODAY}" "$(pwd)/logs/estate-fe.log"
+
 # cargo leptos build --lib-features "local-lib${DEBUG_DISPLAY}" --bin-features "local-bin${DEBUG_DISPLAY}" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab" --bin-features "local-bin,mock-provab" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab,debug_display" --bin-features "local-bin,mock-provab,debug_display" || exit 1
@@ -35,7 +44,7 @@ export NOWPAYMENTS_API_HOST="http://localhost:3001"
 echo "NGROK_LOCALHOST_URL: $NGROK_LOCALHOST_URL"
 export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
 
-cargo leptos build --lib-features "local-lib,debug_display,mock-provab" --bin-features "local-bin,debug_display,mock-provab" || exit 1
+cargo leptos build --lib-features "local-lib,debug_display" --bin-features "local-bin,debug_display" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab,debug_display" --bin-features "local-bin,mock-provab,debug_display" || exit 1
 
 

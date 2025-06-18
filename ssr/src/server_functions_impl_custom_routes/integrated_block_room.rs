@@ -55,7 +55,7 @@ async fn process_integrated_block_room_request(
     tracing::Span::current().record("email", &request.email);
 
     let block_result = execute_block_room_operation(&state, &request).await?;
-    let backend_booking = create_backend_booking(&request, &block_result)?;
+    let backend_booking = create_backend_booking(&state, &request, &block_result).await?;
     let final_response = save_booking_to_backend(&request, backend_booking, &block_result).await?;
 
     Ok(final_response)
@@ -108,7 +108,8 @@ async fn execute_block_room_operation(
 }
 
 /// Create backend booking from request and block room response
-fn create_backend_booking(
+async fn create_backend_booking(
+    state: &estate_fe::view_state_layer::AppState,
     request: &IntegratedBlockRoomRequest,
     block_result: &estate_fe::domain::DomainBlockRoomResponse,
 ) -> Result<estate_fe::canister::backend::Booking, Response> {
@@ -121,7 +122,8 @@ fn create_backend_booking(
     let destination = extract_destination_from_request(request);
     let date_range = extract_date_range_from_request(request);
     let room_details = extract_room_details_from_request(request);
-    let hotel_details = build_hotel_details(request, block_result, &date_range, &room_details);
+    let hotel_details =
+        build_hotel_details(state, request, block_result, &date_range, &room_details).await;
 
     let backend_booking = BookingBackendConversions::create_backend_booking(
         Some(destination),
@@ -254,8 +256,29 @@ fn extract_room_details_from_request(request: &IntegratedBlockRoomRequest) -> Ve
         .collect()
 }
 
-/// Build hotel details with proper formatting
-fn build_hotel_details(
+/// Fetch actual hotel details from hotel service
+async fn fetch_actual_hotel_details(
+    state: &estate_fe::view_state_layer::AppState,
+    hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
+) -> Result<DomainHotelDetails, String> {
+    use estate_fe::{adapters::LiteApiAdapter, application_services::HotelService};
+
+    tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
+
+    // Create the hotel service with LiteApiAdapter
+    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    let hotel_service = HotelService::new(liteapi_adapter);
+
+    // Get hotel information
+    hotel_service
+        .get_hotel_details(hotel_criteria.clone())
+        .await
+        .map_err(|e| format!("Failed to fetch hotel details: {}", e))
+}
+
+/// Build hotel details with actual hotel information
+async fn build_hotel_details(
+    state: &estate_fe::view_state_layer::AppState,
     request: &IntegratedBlockRoomRequest,
     block_result: &estate_fe::domain::DomainBlockRoomResponse,
     date_range: &DomainSelectedDateRange,
@@ -277,18 +300,60 @@ fn build_hotel_details(
         })
         .collect();
 
+    // Try to fetch actual hotel details
+    let (
+        actual_hotel_name,
+        actual_address,
+        actual_description,
+        actual_facilities,
+        actual_amenities,
+        actual_images,
+        actual_star_rating,
+    ) = match fetch_actual_hotel_details(state, &request.block_room_request.hotel_info_criteria)
+        .await
+    {
+        Ok(hotel_details) => {
+            tracing::info!(
+                "Successfully fetched hotel details: {} at {}",
+                hotel_details.hotel_name,
+                hotel_details.address
+            );
+            (
+                hotel_details.hotel_name,
+                hotel_details.address,
+                hotel_details.description,
+                hotel_details.hotel_facilities,
+                hotel_details.amenities,
+                hotel_details.images,
+                hotel_details.star_rating,
+            )
+        }
+        Err(e) => {
+            tracing::warn!("Failed to fetch hotel details, using defaults: {}", e);
+            (
+                DEFAULT_HOTEL_NAME.to_string(),
+                DEFAULT_HOTEL_ADDRESS.to_string(),
+                DEFAULT_HOTEL_DESCRIPTION.to_string(),
+                vec![],
+                vec![],
+                vec![],
+                DEFAULT_STAR_RATING,
+            )
+        }
+    };
+
     DomainHotelDetails {
         checkin: formatted_dates.dd_month_yyyy_start(),
         checkout: formatted_dates.dd_month_yyyy_end(),
-        hotel_name: DEFAULT_HOTEL_NAME.to_string(),
+        hotel_name: actual_hotel_name,
         hotel_code: request.block_room_request.hotel_info_criteria.token.clone(),
-        star_rating: DEFAULT_STAR_RATING,
-        description: DEFAULT_HOTEL_DESCRIPTION.to_string(),
-        hotel_facilities: vec![],
-        address: DEFAULT_HOTEL_ADDRESS.to_string(),
-        images: vec![],
+        star_rating: actual_star_rating,
+        description: actual_description,
+        hotel_facilities: actual_facilities,
+        address: actual_address,
+        images: actual_images,
         all_rooms,
-        amenities: vec![],
+        amenities: actual_amenities,
     }
 }
 

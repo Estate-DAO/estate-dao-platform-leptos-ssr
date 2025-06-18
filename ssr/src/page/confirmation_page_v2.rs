@@ -3,12 +3,14 @@ use leptos_icons::Icon;
 use leptos_router::use_query_map;
 use std::collections::HashMap;
 
-use crate::api::client_side_api::{ClientSideApiClient, ConfirmationProcessRequest, ConfirmationProcessResponse};
+use crate::api::client_side_api::{
+    ClientSideApiClient, ConfirmationProcessRequest, ConfirmationProcessResponse,
+};
 use crate::component::{Divider, Navbar, NotificationData, NotificationListener, SpinnerGray};
 use crate::log;
 use crate::utils::app_reference::BookingId;
 use crate::view_state_layer::{
-    booking_context_state::BookingContextState, 
+    booking_context_state::BookingContextState,
     ui_confirmation_page_v2::{ConfirmationPageState, ConfirmationStep},
     GlobalStateForLeptos,
 };
@@ -33,7 +35,8 @@ pub fn ConfirmationPageV2() -> impl IntoView {
         ConfirmationPageState::initialize();
 
         // Extract payment_id from query params
-        let payment_id = query_map.with(|params| params.get("NP_payment_id").map(|p| p.to_string()));
+        let payment_id =
+            query_map.with(|params| params.get("NP_payment_id").map(|p| p.to_string()));
 
         // Read booking data from localStorage
         let booking_id = BookingId::extract_booking_id_from_local_storage();
@@ -51,12 +54,26 @@ pub fn ConfirmationPageV2() -> impl IntoView {
         ConfirmationPageState::set_payment_id(payment_id.clone());
         ConfirmationPageState::set_app_reference(app_reference.clone());
 
-        // Trigger backend booking workflow if payment_id is present
-        if let (Some(pay_id), Some(app_ref)) = (payment_id.clone(), app_reference.clone()) {
+        // Trigger backend booking workflow - support both flows
+        let should_trigger_workflow = match (payment_id.clone(), app_reference.clone()) {
+            (Some(_), Some(_)) => true, // Flow 1: Both payment_id and app_reference present
+            (None, Some(_)) => true,    // Flow 2: Only app_reference present (new flow)
+            _ => false,
+        };
+
+        if should_trigger_workflow {
             ConfirmationPageState::set_loading(true);
+
+            // Set step message based on flow type
+            let step_message = if payment_id.is_some() {
+                "Processing payment confirmation...".to_string()
+            } else {
+                "Processing booking confirmation...".to_string()
+            };
+
             ConfirmationPageState::advance_to_step(
                 ConfirmationStep::PaymentConfirmation,
-                "Processing payment confirmation...".to_string(),
+                step_message,
             );
 
             // Extract query parameters for API call
@@ -72,48 +89,69 @@ pub fn ConfirmationPageV2() -> impl IntoView {
             spawn_local(async move {
                 let api_client = ClientSideApiClient::new();
                 let (order_id, email) = BookingContextState::get_order_details_untracked();
-                let order_id = order_id.unwrap_or_else(|| app_ref.clone());
+                let app_ref_value = app_reference.unwrap(); // Safe because we checked above
+                let order_id = order_id.unwrap_or_else(|| app_ref_value.clone());
 
                 let request = ConfirmationProcessRequest {
-                    payment_id: Some(pay_id),
+                    payment_id, // This is now optional - could be None for new flow
                     app_reference: Some(order_id),
                     email,
                     query_params,
                 };
 
+                log!(
+                    "Triggering confirmation API - payment_id: {:?}, app_reference: {:?}, email: {:?}",
+                    request.payment_id,
+                    request.app_reference,
+                    request.email
+                );
+
                 match api_client.process_confirmation(request).await {
                     Some(response) => {
                         // Check if we have booking data first
                         let has_booking_data = response.booking_data.is_some();
-                        
+
                         // Handle booking data from API response first
                         if let Some(booking_data) = response.booking_data {
                             log!("Received booking data from API response");
-                            ConfirmationPageState::set_booking_details_from_json(Some(booking_data));
-                            
+                            ConfirmationPageState::set_booking_details_from_json(Some(
+                                booking_data,
+                            ));
+
                             // If we have booking data, we can show the completion immediately
                             ConfirmationPageState::advance_to_step(
                                 ConfirmationStep::Completed,
-                                "Your booking is confirmed! Details loaded from backend.".to_string()
+                                "Your booking is confirmed! Details loaded from backend."
+                                    .to_string(),
                             );
                             ConfirmationPageState::set_loading(false);
                         } else {
                             log!("No booking data in API response - will wait for SSE updates");
-                            ConfirmationPageState::add_step_detail("Waiting for real-time booking updates...".to_string());
+                            ConfirmationPageState::add_step_detail(
+                                "Waiting for real-time booking updates...".to_string(),
+                            );
                         }
 
                         if response.success {
-                            log!("Booking workflow triggered successfully: {}", response.message);
-                            ConfirmationPageState::add_step_detail("Payment confirmed, processing booking...".to_string());
+                            log!(
+                                "Booking workflow triggered successfully: {}",
+                                response.message
+                            );
+                            ConfirmationPageState::add_step_detail(
+                                "Payment confirmed, processing booking...".to_string(),
+                            );
                         } else {
                             log!("Booking workflow failed: {} - but booking data may still be available", response.message);
-                            
+
                             // Even if pipeline failed, we might have booking data from the pre-fetch
                             if !has_booking_data {
                                 ConfirmationPageState::batch_update_on_error(response.message);
                             } else {
                                 // We have booking data despite pipeline failure - show a warning but continue
-                                ConfirmationPageState::add_step_detail(format!("Pipeline issue: {} - but booking data retrieved", response.message));
+                                ConfirmationPageState::add_step_detail(format!(
+                                    "Pipeline issue: {} - but booking data retrieved",
+                                    response.message
+                                ));
                             }
                         }
                     }
@@ -124,10 +162,24 @@ pub fn ConfirmationPageV2() -> impl IntoView {
                     }
                 }
             });
-        } else if payment_id.is_some() && app_reference.is_none() {
-            ConfirmationPageState::batch_update_on_error(
-                "Payment ID found but booking reference missing. Please ensure you completed the payment process correctly.".to_string()
-            );
+        } else {
+            // Handle error cases
+            match (payment_id.clone(), app_reference.clone()) {
+                (Some(_), None) => {
+                    ConfirmationPageState::batch_update_on_error(
+                        "Payment ID found but booking reference missing. Please ensure you completed the payment process correctly.".to_string()
+                    );
+                }
+                (None, None) => {
+                    ConfirmationPageState::batch_update_on_error(
+                        "Missing booking reference. Please ensure you have a valid booking reference to view confirmation details.".to_string()
+                    );
+                }
+                _ => {
+                    // This shouldn't happen based on our logic above, but handle gracefully
+                    log!("Unexpected state in confirmation page initialization");
+                }
+            }
         }
     });
 
@@ -174,27 +226,47 @@ fn NotificationListenerWrapper() -> impl IntoView {
             let app_reference = ConfirmationPageState::get_app_reference().get();
             let payment_id = ConfirmationPageState::get_payment_id().get();
 
-            if let (Some(_app_ref), Some(_pay_id)) = (app_reference, payment_id) {
+            // SSE should work if we have app_reference (regardless of payment_id)
+            if let Some(_app_ref) = app_reference {
                 let order_id = BookingContextState::get_order_id_untracked().unwrap_or_default();
                 let email = BookingContextState::get_email_untracked().unwrap_or_default();
 
-                log!("NotificationListener setup - order_id: {}, email: {}", order_id, email);
+                if !order_id.is_empty() && !email.is_empty() {
+                    log!("NotificationListener setup - order_id: {}, email: {}, payment_id: {:?}", order_id, email, payment_id);
 
-                view! {
-                    <NotificationListener
-                        order_id={order_id.clone()}
-                        email={email.clone()}
-                        event_type="nowpayments".to_string()
-                        on_notification={Box::new(move |notification: NotificationData| {
-                            log!("Received notification: {:#?}", notification);
-                            ConfirmationPageState::update_from_sse_notification(&notification);
-                        })}
-                    />
-                }.into_view()
+                    // Choose event type based on whether we have payment_id
+                    let event_type = if payment_id.is_some() {
+                        "nowpayments".to_string()
+                    } else {
+                        "booking_confirmation".to_string() // Different event type for non-payment flow
+                    };
+
+                    view! {
+                        <NotificationListener
+                            order_id={order_id.clone()}
+                            email={email.clone()}
+                            event_type={event_type}
+                            on_notification={Box::new(move |notification: NotificationData| {
+                                log!("Received notification: {:#?}", notification);
+                                ConfirmationPageState::update_from_sse_notification(&notification);
+                            })}
+                        />
+                    }.into_view()
+                } else {
+                    view! {
+                        <div class="text-sm text-yellow-600 mb-4">
+                            "Missing order details for real-time updates"
+                        </div>
+                    }.into_view()
+                }
             } else {
                 view! {
                     <div class="text-sm text-yellow-600 mb-4">
-                        "No payment ID found - manual confirmation only"
+                        {if payment_id.is_some() {
+                            "Payment ID found but no booking reference - manual confirmation only"
+                        } else {
+                            "No booking reference found - unable to track confirmation status"
+                        }}
                     </div>
                 }.into_view()
             }
@@ -207,7 +279,7 @@ fn NotificationListenerWrapper() -> impl IntoView {
 fn IntegratedProgressStepper() -> impl IntoView {
     view! {
         <div class="flex flex-col items-center justify-center w-full py-4 sm:py-6 md:py-8">
-            
+
             // Step indicators
             <div class="flex flex-row items-center justify-center w-full overflow-x-auto px-2 pb-2">
                 {move || {
@@ -226,7 +298,7 @@ fn IntegratedProgressStepper() -> impl IntoView {
                         .enumerate()
                         .map(|(index, (step, label))| {
                             let is_current = current_step == step;
-                            let is_completed = completed_steps.contains(&step) || 
+                            let is_completed = completed_steps.contains(&step) ||
                                 (step == ConfirmationStep::Completed && current_step == ConfirmationStep::Completed);
 
                             let circle_classes = if is_completed {
@@ -282,7 +354,7 @@ fn IntegratedProgressStepper() -> impl IntoView {
                 <p class="text-sm sm:text-base text-gray-700 font-medium">
                     {move || ConfirmationPageState::get_current_step_message().get()}
                 </p>
-                
+
                 // Step details (debug mode or detailed progress)
                 <Show when=move || cfg!(feature = "debug_display")>
                     <div class="mt-2 text-xs text-gray-500">
@@ -312,9 +384,11 @@ fn IntegratedProgressStepper() -> impl IntoView {
 fn LoadingView() -> impl IntoView {
     view! {
         <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-blue-100 md:border-blue-200 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-8 lg:p-10 bg-white shadow-md md:shadow-lg space-y-4 sm:space-y-6 md:space-y-8 mx-auto mt-4 md:mt-10">
-            <div class="text-center">
-                <SpinnerGray />
-                <p class="mt-4 text-gray-600">
+            <div class="flex flex-col items-center justify-center text-center">
+                <div class="flex justify-center items-center">
+                    <SpinnerGray />
+                </div>
+            <p class="mt-4 text-gray-600">
                     {move || ConfirmationPageState::get_current_step_message().get()}
                 </p>
             </div>
@@ -478,11 +552,11 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                             {display_info.check_in_date_formatted}
                                         </p>
                                     </div>
-                                    
+
                                     <div class="flex items-center justify-center text-gray-400 text-xs md:text-sm">
                                         {format!("{} Night{}", display_info.number_of_nights, if display_info.number_of_nights > 1 { "s" } else { "" })}
                                     </div>
-                                    
+
                                     <div class="flex-1">
                                         <div class="flex items-center space-x-2">
                                             <Icon icon=icondata::FaCalendarSolid class="w-3 h-3 text-gray-500" />
@@ -531,8 +605,10 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                     }
                     None => {
                         view! {
-                            <div class="text-center text-gray-500">
-                                <SpinnerGray />
+                            <div class="flex flex-col items-center justify-center text-center text-gray-500">
+                                <div class="flex justify-center items-center">
+                                    <SpinnerGray />
+                                </div>
                                 <p class="mt-2">"Loading booking details..."</p>
                             </div>
                         }.into_view()

@@ -95,7 +95,6 @@ impl Default for GuestSelection {
     }
 }
 
-
 impl GlobalStateForLeptos for GuestSelection {}
 
 impl GuestSelection {
@@ -274,7 +273,7 @@ pub fn GuestQuantity() -> impl IntoView {
                                                 // Create reactive validation signals inspired by RoomCounterV1
                                                 let is_at_minimum = create_memo(move |_| children_signal.get() == 0);
                                                 let is_at_maximum = create_memo(move |_| children_signal.get() >= 10); // Max 10 children
-                                                
+
                                                 // Button event handlers inspired by both RoomCounterV1 and NumberCounterV2
                                                 let increment_children = move |_| {
                                                     if children_signal.get() < 10 { // Guard against maximum
@@ -282,11 +281,11 @@ pub fn GuestQuantity() -> impl IntoView {
                                                     }
                                                 };
                                                 let decrement_children = move |_| {
-                                                    if children_signal.get() > 0 { // Guard against minimum 
+                                                    if children_signal.get() > 0 { // Guard against minimum
                                                         GuestSelection::decrement_children();
                                                     }
                                                 };
-                                                
+
                                                 view! {
                                                     <button
                                                         class=move || format!(
@@ -316,43 +315,39 @@ pub fn GuestQuantity() -> impl IntoView {
 
                                     // !<-- Children Ages Grid - Responsive grid layout -->
                                     <div class="grid grid-cols-4 md:grid-cols-5 gap-2">
-{
-                                            let children_ages_signal = children_ages_signal.clone();
-                                            move || {
-                                                (0..children_signal.get())
-                                                    .map(|i| {
-                                                        let children_ages_signal = children_ages_signal.clone();
-                                                        view! {
-                                                            <input
-                                                                type="number"
-                                                                min=1
-                                                                max=18
-                                                                class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                name=format!("child_age[{}]", i)
-                                                                value={
-                                                                    let children_ages_signal = children_ages_signal.clone();
-                                                                    move || {
-                                                                        children_ages_signal.get().get_value_at(i as u32)
-                                                                    }
+                                        {move || {
+                                            (0..children_signal.get())
+                                                .map(|i| {
+                                                    let children_ages_signal = children_ages_signal.clone();
+                                                    view! {
+                                                        <input
+                                                            type="number"
+                                                            min=1
+                                                            max=18
+                                                            class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                            name=format!("child_age[{}]", i)
+                                                            prop:value={
+                                                                let children_ages_signal = children_ages_signal.clone();
+                                                                move || {
+                                                                    children_ages_signal.get().get_value_at(i as u32).to_string()
                                                                 }
-                                                                placeholder="Age"
-                                                                on:input={
-                                                                    let children_ages_signal = children_ages_signal.clone();
-                                                                    move |e| {
-                                                                        let age = event_target_value(&e);
-                                                                        log!("Setting child {} age to: {}", i, age);
-                                                                        children_ages_signal.update(|ages| {
-                                                                            ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
-                                                                        });
-                                                                    }
+                                                            }
+                                                            placeholder="Age"
+                                                            on:input={
+                                                                let children_ages_signal = children_ages_signal.clone();
+                                                                move |e| {
+                                                                    let age = event_target_value(&e);
+                                                                    log!("Setting child {} age to: {}", i, age);
+                                                                    children_ages_signal.update(|ages| {
+                                                                        ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
+                                                                    });
                                                                 }
-                                                            />
-                                                        }
-                                                    })
-                                                    .collect::<Vec<_>>()
-                                                    .into_view()
-                                            }
-                                        }
+                                                            }
+                                                        />
+                                                    }
+                                                })
+                                                .collect_view()
+                                        }}
                                     </div>
 
                                     <NumberCounterV2

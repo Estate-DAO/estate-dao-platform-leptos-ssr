@@ -694,8 +694,25 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 
             // Pass data to BlockRoomUIState
             BlockRoomUIState::set_selected_rooms(selected_rooms_with_data);
-            BlockRoomUIState::set_hotel_context(hotel_details);
+            BlockRoomUIState::set_hotel_context(hotel_details.clone());
             BlockRoomUIState::set_room_selection_summary(room_selection_summary);
+
+            // Also populate HotelInfoCtx for backward compatibility with block room page
+            if let Some(ref hotel_info) = hotel_details {
+                use crate::view_state_layer::view_state::HotelInfoCtx;
+                let hotel_image = hotel_info.images.first().cloned().unwrap_or_default();
+                HotelInfoCtx::set_selected_hotel_details(
+                    hotel_info.hotel_code.clone(),
+                    hotel_info.hotel_name.clone(),
+                    hotel_image,
+                    hotel_info.address.clone(),
+                );
+                log!(
+                    "Populated HotelInfoCtx from hotel details: {}, {}",
+                    hotel_info.hotel_name,
+                    hotel_info.address
+                );
+            }
 
             // Navigate to block room page
             let block_room_url = AppRoutes::BlockRoom.to_string();

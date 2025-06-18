@@ -37,7 +37,9 @@ impl Default for ConfirmationStep {
 impl ConfirmationStep {
     pub fn get_display_info(&self) -> (&'static str, &'static str) {
         match self {
-            ConfirmationStep::Initializing => ("Initializing", "Setting up your booking confirmation"),
+            ConfirmationStep::Initializing => {
+                ("Initializing", "Setting up your booking confirmation")
+            }
             ConfirmationStep::PaymentConfirmation => ("Payment", "Confirming your payment status"),
             ConfirmationStep::BookingProcessing => ("Booking", "Creating your hotel reservation"),
             ConfirmationStep::EmailSending => ("Email", "Sending confirmation details"),
@@ -80,16 +82,16 @@ pub struct ConfirmationPageState {
     // Workflow steps with integrated tracking
     pub current_step: RwSignal<ConfirmationStep>,
     pub completed_steps: RwSignal<Vec<ConfirmationStep>>,
-    
+
     // Step progress details
     pub step_progress: RwSignal<StepProgress>,
-    
+
     // API data
     pub payment_id: RwSignal<Option<String>>,
     pub app_reference: RwSignal<Option<String>>,
     pub booking_details: RwSignal<Option<backend::Booking>>,
     pub display_info: RwSignal<Option<BookingDisplayInfo>>,
-    
+
     // UI state
     pub loading: RwSignal<bool>,
     pub error: RwSignal<Option<String>>,
@@ -114,7 +116,7 @@ impl ConfirmationPageState {
     pub fn advance_to_step(step: ConfirmationStep, message: String) {
         let this = Self::get();
         let current_step = this.current_step.get_untracked();
-        
+
         // Mark previous step as completed if advancing
         if step.get_step_number() > current_step.get_step_number() {
             this.completed_steps.update(|completed| {
@@ -123,7 +125,7 @@ impl ConfirmationPageState {
                 }
             });
         }
-        
+
         // Update current step and progress
         this.current_step.set(step);
         this.step_progress.update(|progress| {
@@ -169,30 +171,37 @@ impl ConfirmationPageState {
         Self::add_step_detail(format!("{}: Processing step", notification.event_type));
 
         // Handle step transitions based on pipeline steps
-        match (notification.step.as_deref(), notification.event_type.as_str()) {
+        match (
+            notification.step.as_deref(),
+            notification.event_type.as_str(),
+        ) {
             (Some("GetPaymentStatusFromPaymentProvider"), "OnStepCompleted") => {
                 Self::advance_to_step(
                     ConfirmationStep::PaymentConfirmation,
-                    "Payment confirmed successfully".to_string()
+                    "Payment confirmed successfully".to_string(),
                 );
             }
             (Some("MakeBookingFromBookingProvider"), "OnStepCompleted") => {
                 Self::advance_to_step(
                     ConfirmationStep::BookingProcessing,
-                    "Hotel reservation created successfully".to_string()
+                    "Hotel reservation created successfully".to_string(),
                 );
             }
             (Some("GetBookingFromBackend"), "OnStepCompleted") => {
                 Self::update_step_message("Loading booking details...".to_string());
-                
+
                 // Set booking details if provided and not already loaded from API
                 if let Some(booking) = &notification.backend_booking_details {
                     let current_booking = Self::get().booking_details.get_untracked();
                     if current_booking.is_none() {
                         Self::set_booking_details(Some(booking.clone()));
-                        Self::add_step_detail("Booking details retrieved via real-time updates".to_string());
+                        Self::add_step_detail(
+                            "Booking details retrieved via real-time updates".to_string(),
+                        );
                     } else {
-                        Self::add_step_detail("Booking details confirmed via real-time updates".to_string());
+                        Self::add_step_detail(
+                            "Booking details confirmed via real-time updates".to_string(),
+                        );
                     }
                 }
             }
@@ -201,7 +210,7 @@ impl ConfirmationPageState {
                 if current_step != ConfirmationStep::Completed {
                     Self::advance_to_step(
                         ConfirmationStep::Completed,
-                        "Your booking is confirmed!".to_string()
+                        "Your booking is confirmed!".to_string(),
                     );
                 } else {
                     Self::add_step_detail("Confirmation email sent successfully".to_string());
@@ -211,7 +220,7 @@ impl ConfirmationPageState {
             (Some("MockStep"), "OnStepCompleted") => {
                 Self::advance_to_step(
                     ConfirmationStep::Completed,
-                    "Your booking is confirmed!".to_string()
+                    "Your booking is confirmed!".to_string(),
                 );
                 Self::get().loading.set(false);
             }
@@ -232,7 +241,7 @@ impl ConfirmationPageState {
         let this = Self::get();
         this.error.set(Some(error.clone()));
         this.loading.set(false);
-        
+
         this.step_progress.update(|progress| {
             progress.error_details = Some(error);
         });
@@ -243,16 +252,16 @@ impl ConfirmationPageState {
         let this = Self::get();
         this.loading.set(false);
         this.error.set(None);
-        
+
         if let Some(booking) = booking {
             Self::set_booking_details(Some(booking));
         }
-        
+
         // Advance to payment confirmation if we haven't started yet
         if this.current_step.get_untracked() == ConfirmationStep::Initializing {
             Self::advance_to_step(
                 ConfirmationStep::PaymentConfirmation,
-                "Processing payment confirmation...".to_string()
+                "Processing payment confirmation...".to_string(),
             );
         }
     }
@@ -262,7 +271,7 @@ impl ConfirmationPageState {
         let this = Self::get();
         this.loading.set(false);
         this.error.set(Some(error.clone()));
-        
+
         this.step_progress.update(|progress| {
             progress.error_details = Some(error);
         });
@@ -292,7 +301,8 @@ impl ConfirmationPageState {
 
         // Convert to display info using helper
         if let Some(booking) = booking {
-            let display_info = crate::utils::BackendIntegrationHelper::get_booking_display_info(&booking);
+            let display_info =
+                crate::utils::BackendIntegrationHelper::get_booking_display_info(&booking);
             this.display_info.set(Some(display_info));
         }
     }
@@ -357,7 +367,7 @@ impl ConfirmationPageState {
         Signal::derive(move || {
             let current_step = Self::get().current_step.get();
             let display_info = Self::get().display_info.get();
-            
+
             // Workflow is complete if we reached the final step AND have booking data
             current_step == ConfirmationStep::Completed && display_info.is_some()
         })
@@ -365,16 +375,12 @@ impl ConfirmationPageState {
 
     /// **Check if there's an error**
     pub fn has_error() -> Signal<bool> {
-        Signal::derive(move || {
-            Self::get().error.get().is_some()
-        })
+        Signal::derive(move || Self::get().error.get().is_some())
     }
 
     /// **Get current step display message**
     pub fn get_current_step_message() -> Signal<String> {
-        Signal::derive(move || {
-            Self::get().step_progress.get().current_message
-        })
+        Signal::derive(move || Self::get().step_progress.get().current_message)
     }
 
     /// **Check if step is completed**
@@ -387,8 +393,6 @@ impl ConfirmationPageState {
 
     /// **Check if step is current**
     pub fn is_step_current(step: ConfirmationStep) -> Signal<bool> {
-        Signal::derive(move || {
-            Self::get().current_step.get() == step
-        })
+        Signal::derive(move || Self::get().current_step.get() == step)
     }
 }

@@ -7,8 +7,8 @@ use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
 use crate::api::payments::{create_domain_request, PaymentProvider};
 use crate::app::AppRoutes;
 use crate::application_services::BookingService;
-use crate::component::{Divider, Navbar, SpinnerGray};
 use crate::component::ChildrenAgesSignalExt;
+use crate::component::{Divider, Navbar, SpinnerGray};
 use crate::domain::{
     DomainAdultDetail, DomainBlockRoomRequest, DomainChildDetail, DomainDestination,
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomData,
@@ -262,23 +262,58 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let adult_count = move || ui_search_ctx.guests.adults.get();
     let child_count = move || ui_search_ctx.guests.children.get();
 
-    // Hotel info signals with debugging
+    // Hotel info signals with enhanced data flow - prioritize BlockRoomUIState over HotelInfoCtx
     let hotel_name = move || {
-        let name = hotel_info_ctx.selected_hotel_name.get();
-        if name.is_empty() {
-            log!("Warning: hotel_name is empty in UI");
+        // Try to get hotel name from BlockRoomUIState (from hotel details page)
+        if let Some(hotel_details) = BlockRoomUIState::get_hotel_context() {
+            let name = hotel_details.hotel_name.clone();
+            log!("Hotel name from BlockRoomUIState: '{}'", name);
+            name
         } else {
-            log!("Hotel name in UI: '{}'", name);
+            // Fallback to HotelInfoCtx (from hotel list)
+            let name = hotel_info_ctx.selected_hotel_name.get();
+            if name.is_empty() {
+                log!("Warning: hotel_name is empty in both BlockRoomUIState and HotelInfoCtx");
+            } else {
+                log!("Hotel name from HotelInfoCtx: '{}'", name);
+            }
+            name
         }
-        name
     };
-    let hotel_address = move || hotel_info_ctx.selected_hotel_location.get();
-    let hotel_image = move || {
-        let img = hotel_info_ctx.selected_hotel_image.get();
-        if img.is_empty() {
-            "/img/home.webp".to_string()
+
+    let hotel_address = move || {
+        // Try to get hotel address from BlockRoomUIState (from hotel details page)
+        if let Some(hotel_details) = BlockRoomUIState::get_hotel_context() {
+            let address = hotel_details.address.clone();
+            log!("Hotel address from BlockRoomUIState: '{}'", address);
+            address
         } else {
-            img
+            // Fallback to HotelInfoCtx (from hotel list)
+            let address = hotel_info_ctx.selected_hotel_location.get();
+            log!("Hotel address from HotelInfoCtx: '{}'", address);
+            address
+        }
+    };
+
+    let hotel_image = move || {
+        // Try to get hotel image from BlockRoomUIState (from hotel details page)
+        if let Some(hotel_details) = BlockRoomUIState::get_hotel_context() {
+            let img = hotel_details.images.first().cloned().unwrap_or_default();
+            log!("Hotel image from BlockRoomUIState: '{}'", img);
+            if img.is_empty() {
+                "/img/home.webp".to_string()
+            } else {
+                img
+            }
+        } else {
+            // Fallback to HotelInfoCtx (from hotel list)
+            let img = hotel_info_ctx.selected_hotel_image.get();
+            log!("Hotel image from HotelInfoCtx: '{}'", img);
+            if img.is_empty() {
+                "/img/home.webp".to_string()
+            } else {
+                img
+            }
         }
     };
 

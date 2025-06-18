@@ -41,7 +41,10 @@ async fn fetch_booking_data(booking_id: &BookingId) -> Option<serde_json::Value>
             }
         }
         Ok(None) => {
-            tracing::warn!("No booking found in backend for booking_id: {:?}", booking_id);
+            tracing::warn!(
+                "No booking found in backend for booking_id: {:?}",
+                booking_id
+            );
             None
         }
         Err(e) => {
@@ -79,12 +82,11 @@ pub async fn process_confirmation_api_server_fn_route(
         }
     };
 
-    // Validate required parameters
-    let (payment_id, app_reference) = match (request.payment_id, request.app_reference) {
-        (Some(pay_id), Some(app_ref)) => (pay_id, app_ref),
-        _ => {
-            let error_msg =
-                "Missing required parameters: payment_id and app_reference are required";
+    // Validate required parameters - app_reference is required, payment_id is optional
+    let app_reference = match request.app_reference {
+        Some(app_ref) => app_ref,
+        None => {
+            let error_msg = "Missing required parameter: app_reference is required";
             tracing::error!("{}", error_msg);
             let error_response = json!({
                 "success": false,
@@ -96,32 +98,34 @@ pub async fn process_confirmation_api_server_fn_route(
         }
     };
 
+    // payment_id is optional - extract if available
+    let payment_id = request.payment_id;
+
     // Extract app_reference and order_id using existing utilities
     // The order_id from payment provider needs to be converted to get the actual booking order_id
     // payment_id is what we got from payment provider, but we need the order_id from app_reference
 
-    // First, try to extract email from order_id if it's the proper format
-    let (order_id, user_email) = if let Some(booking_id) = BookingId::from_order_id(&app_reference)
-    {
-        // app_reference is actually the order_id in proper format
+    // Extract email and order_id - support both flows
+    let (order_id, user_email) = if let Some(explicit_email) = request.email {
+        // New flow: email provided explicitly, use app_reference as order_id
+        (app_reference.clone(), explicit_email)
+    } else if let Some(booking_id) = BookingId::from_order_id(&app_reference) {
+        // Existing flow: app_reference is actually the order_id in proper format
         (app_reference.clone(), booking_id.email)
     } else {
-        // app_reference might be the simple app reference, need to build order_id
-        // For now, assume app_reference contains the order_id format
-        return {
-            let error_msg = format!(
-                "Failed to parse BookingId from app_reference: {}",
-                app_reference
-            );
-            tracing::error!("{}", error_msg);
-            let error_response = json!({
-                "success": false,
-                "message": error_msg,
-                "order_id": null,
-                "user_email": null
-            });
-            (StatusCode::BAD_REQUEST, error_response.to_string()).into_response()
-        };
+        // Neither explicit email nor valid order_id format
+        let error_msg = format!(
+            "Failed to extract email: either provide 'email' field or ensure app_reference is a valid order_id format: {}",
+            app_reference
+        );
+        tracing::error!("{}", error_msg);
+        let error_response = json!({
+            "success": false,
+            "message": error_msg,
+            "order_id": null,
+            "user_email": null
+        });
+        return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
     };
 
     if user_email.is_empty() {
@@ -160,7 +164,7 @@ pub async fn process_confirmation_api_server_fn_route(
 
     // Create ServerSideBookingEvent
     let event = ServerSideBookingEvent {
-        payment_id: Some(payment_id.clone()),
+        payment_id: payment_id.clone(), // Now optional
         order_id: order_id.clone(),
         provider: "nowpayments".to_string(),
         user_email: user_email.clone(),
@@ -177,24 +181,29 @@ pub async fn process_confirmation_api_server_fn_route(
     let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
     let send_email_step = SSRBookingPipelineStep::SendEmail(SendEmailAfterSuccessfullBooking);
 
-    let steps = vec![get_booking_step, payment_status_step, book_room_step, send_email_step];
+    let steps = vec![
+        get_booking_step,
+        payment_status_step,
+        book_room_step,
+        send_email_step,
+    ];
 
     tracing::info!(
-        "Executing booking pipeline for order_id: {}, payment_id: {}",
+        "Executing booking pipeline for order_id: {}, payment_id: {:?}",
         order_id,
         payment_id
     );
 
     // Execute the pipeline - this will publish events to the eventbus
     let pipeline_result = process_pipeline(event, &steps, None).await;
-    
+
     // Fetch booking data from backend regardless of pipeline success/failure
     let booking_data = fetch_booking_data(&booking_id).await;
-    
+
     match pipeline_result {
         Ok(final_event) => {
             tracing::info!(
-                "Booking pipeline completed successfully for payment_id: {}",
+                "Booking pipeline completed successfully for payment_id: {:?}",
                 payment_id
             );
 
@@ -209,7 +218,10 @@ pub async fn process_confirmation_api_server_fn_route(
             (StatusCode::OK, success_response.to_string()).into_response()
         }
         Err(e) => {
-            tracing::error!("Booking pipeline failed: {} - but still returning booking data if available", e);
+            tracing::error!(
+                "Booking pipeline failed: {} - but still returning booking data if available",
+                e
+            );
 
             let error_response = json!({
                 "success": false,
@@ -219,11 +231,7 @@ pub async fn process_confirmation_api_server_fn_route(
                 "booking_data": booking_data
             });
 
-            (
-                StatusCode::OK,
-                error_response.to_string(),
-            )
-                .into_response()
+            (StatusCode::OK, error_response.to_string()).into_response()
         }
     }
 }

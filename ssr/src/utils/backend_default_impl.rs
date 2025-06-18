@@ -223,7 +223,10 @@ impl Booking {
         self.book_room_status
             .as_ref()
             .map(|status| {
-                matches!(status.commit_booking.api_status, crate::canister::backend::BookingStatus::Confirmed)
+                matches!(
+                    status.commit_booking.api_status,
+                    crate::canister::backend::BookingStatus::Confirmed
+                )
             })
             .unwrap_or(false)
     }
@@ -256,17 +259,30 @@ impl Booking {
     }
     /// Format date as "04th April 2025"
     fn format_date_display(year: u32, month: u32, day: u32) -> String {
-        let month_names = ["", "January", "February", "March", "April", "May", "June",
-                          "July", "August", "September", "October", "November", "December"];
-        
+        let month_names = [
+            "",
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+        ];
+
         let month_name = month_names.get(month as usize).unwrap_or(&"");
         let day_suffix = match day % 10 {
             1 if day != 11 => "st",
-            2 if day != 12 => "nd", 
+            2 if day != 12 => "nd",
             3 if day != 13 => "rd",
-            _ => "th"
+            _ => "th",
         };
-        
+
         format!("{:02}{} {} {}", day, day_suffix, month_name, year)
     }
     /// Number of adults
@@ -285,11 +301,11 @@ impl Booking {
     pub fn get_number_of_nights(&self) -> u32 {
         let (start_y, start_m, start_d) = self.user_selected_hotel_room_details.date_range.start;
         let (end_y, end_m, end_d) = self.user_selected_hotel_room_details.date_range.end;
-        
+
         // Simple calculation - for production use proper date library
         let start_days = start_y * 365 + start_m * 30 + start_d;
         let end_days = end_y * 365 + end_m * 30 + end_d;
-        
+
         if end_days > start_days {
             end_days - start_days
         } else {
