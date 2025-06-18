@@ -6,231 +6,320 @@ use axum::{
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
     api::canister::add_booking::call_add_booking_backend,
-    domain::BookingError,
+    domain::{
+        BookingError, DomainDestination, DomainHotelDetails, DomainRoomData, DomainRoomOption,
+        DomainSelectedDateRange,
+    },
     utils::{app_reference::BookingId, booking_backend_conversions::BookingBackendConversions},
 };
 use serde_json::json;
 
-use super::{call_block_room_api, parse_json_request, IntegratedBlockRoomRequest};
+use super::{
+    call_block_room_api, parse_json_request, IntegratedBlockRoomRequest,
+    IntegratedBlockRoomResponse,
+};
+
+/// HTTP status code for partial success (room blocked but backend save failed)
+const PARTIAL_SUCCESS_STATUS: StatusCode = StatusCode::PARTIAL_CONTENT;
+
+/// Default values for hotel details
+const DEFAULT_HOTEL_NAME: &str = "Hotel";
+const DEFAULT_STAR_RATING: i32 = 4;
+const DEFAULT_HOTEL_DESCRIPTION: &str = "Hotel description";
+const DEFAULT_HOTEL_ADDRESS: &str = "Hotel address";
+const DEFAULT_PAYMENT_CURRENCY: &str = "USD";
 
 #[axum::debug_handler]
-#[tracing::instrument(skip(state))]
+#[tracing::instrument(skip(state), fields(booking_id = %"", email = %""))]
 pub async fn integrated_block_room_api_server_fn_route(
     State(state): State<AppState>,
     body: String,
 ) -> Response {
+    match process_integrated_block_room_request(state, body).await {
+        Ok(response) => response,
+        Err(response) => response,
+    }
+}
+
+/// Process the integrated block room request with proper error handling
+async fn process_integrated_block_room_request(
+    state: AppState,
+    body: String,
+) -> Result<Response, Response> {
+    tracing::info!("Processing integrated block room request");
+
+    let request = parse_request(&body)?;
+
+    // Update tracing span with request details
+    tracing::Span::current().record("booking_id", &request.booking_id);
+    tracing::Span::current().record("email", &request.email);
+
+    let block_result = execute_block_room_operation(&state, &request).await?;
+    let backend_booking = create_backend_booking(&request, &block_result)?;
+    let final_response = save_booking_to_backend(&request, backend_booking, &block_result).await?;
+
+    Ok(final_response)
+}
+
+/// Parse and validate the incoming request
+fn parse_request(body: &str) -> Result<IntegratedBlockRoomRequest, Response> {
+    tracing::debug!("Parsing request body: {}", &body[0..100.min(body.len())]);
+
+    parse_json_request(body).map_err(|_| {
+        let error_response = IntegratedBlockRoomResponse {
+            success: false,
+            message: "Invalid JSON request format".to_string(),
+            block_room_response: None,
+            booking_id: String::new(),
+        };
+        create_error_response(StatusCode::BAD_REQUEST, error_response)
+    })
+}
+
+/// Execute the block room operation
+async fn execute_block_room_operation(
+    state: &AppState,
+    request: &IntegratedBlockRoomRequest,
+) -> Result<estate_fe::domain::DomainBlockRoomResponse, Response> {
     tracing::info!(
-        "Starting integrated block room API with body: {}",
-        &body[0..100.min(body.len())]
+        "Executing block room operation for booking_id: {}",
+        request.booking_id
     );
 
-    // Parse the JSON request
-    let request: IntegratedBlockRoomRequest = match parse_json_request(&body) {
-        Ok(req) => {
-            tracing::info!("Successfully parsed integrated block room request");
-            req
-        }
-        Err(_) => {
-            // Custom error for this endpoint with specific response format
-            let error_response = json!({
-                "success": false,
-                "message": "Invalid JSON request format",
-                "block_room_response": null,
-                "booking_id": ""
-            });
-            return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-        }
-    };
-
-    // Extract data from request
-    let block_room_request = request.block_room_request;
-    let booking_id = request.booking_id;
-    let email = request.email;
-    let hotel_token = request.hotel_token;
-
-    tracing::info!(
-        "Processing integrated block room for booking_id: {}, email: {}",
-        booking_id,
-        email
-    );
-
-    // Step 1: Call block room API using shared helper
-    let block_result = match call_block_room_api(&state, block_room_request.clone()).await {
-        Ok(response) => {
+    call_block_room_api(state, request.block_room_request.clone())
+        .await
+        .map_err(|e| {
+            tracing::error!("Block room API call failed: {}", e);
+            let error_response = IntegratedBlockRoomResponse {
+                success: false,
+                message: format!("Block room failed: {}", e),
+                block_room_response: None,
+                booking_id: request.booking_id.clone(),
+            };
+            create_error_response(StatusCode::INTERNAL_SERVER_ERROR, error_response)
+        })
+        .map(|response| {
             tracing::info!(
-                "Block room API call successful: block_id = {}",
+                "Block room operation successful: block_id = {}",
                 response.block_id
             );
             response
-        }
-        Err(e) => {
-            tracing::error!("Block room API call failed: {:?}", e);
-            let error_response = json!({
-                "success": false,
-                "message": format!("Block room failed: {}", e),
-                "block_room_response": null,
-                "booking_id": booking_id
-            });
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                error_response.to_string(),
-            )
-                .into_response();
-        }
-    };
+        })
+}
 
-    // Step 2: Create backend booking using BookingBackendConversions
-    let backend_booking_result = async {
-        // Parse booking_id to get BookingId
-        let booking_id_struct = BookingId::from_order_id(&booking_id).ok_or_else(|| {
-            BookingError::ValidationError("Invalid booking_id format".to_string())
-        })?;
+/// Create backend booking from request and block room response
+fn create_backend_booking(
+    request: &IntegratedBlockRoomRequest,
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+) -> Result<estate_fe::canister::backend::Booking, Response> {
+    tracing::info!(
+        "Creating backend booking for booking_id: {}",
+        request.booking_id
+    );
 
-        // Create backend booking from block room data
-        let destination = block_room_request
-            .hotel_info_criteria
-            .search_criteria
-            .destination_city_name;
-        let destination_domain = estate_fe::domain::DomainDestination {
-            city_id: block_room_request
-                .hotel_info_criteria
-                .search_criteria
-                .destination_city_id,
-            city_name: destination.clone(),
-            country_code: block_room_request
-                .hotel_info_criteria
-                .search_criteria
-                .destination_country_code,
-            country_name: block_room_request
-                .hotel_info_criteria
-                .search_criteria
-                .destination_country_name,
+    let booking_id_struct = parse_booking_id(&request.booking_id)?;
+    let destination = extract_destination_from_request(request);
+    let date_range = extract_date_range_from_request(request);
+    let room_details = extract_room_details_from_request(request);
+    let hotel_details = build_hotel_details(request, block_result, &date_range, &room_details);
+
+    let backend_booking = BookingBackendConversions::create_backend_booking(
+        Some(destination),
+        date_range,
+        room_details,
+        hotel_details,
+        request.block_room_request.user_details.clone(),
+        booking_id_struct,
+        block_result.total_price.room_price,
+        DEFAULT_PAYMENT_CURRENCY.to_string(),
+        Some(block_result.block_id.clone()),
+        request.hotel_token.clone(),
+    )
+    .map_err(|e| {
+        tracing::error!("Failed to create backend booking: {}", e);
+        let error_response = IntegratedBlockRoomResponse {
+            success: false,
+            message: format!("Failed to create backend booking: {}", e),
+            block_room_response: Some(block_result.clone()),
+            booking_id: request.booking_id.clone(),
         };
+        create_error_response(StatusCode::INTERNAL_SERVER_ERROR, error_response)
+    })?;
 
-        let date_range = estate_fe::domain::DomainSelectedDateRange {
-            start: block_room_request
-                .hotel_info_criteria
-                .search_criteria
-                .check_in_date,
-            end: block_room_request
-                .hotel_info_criteria
-                .search_criteria
-                .check_out_date,
+    // Validate the booking
+    BookingBackendConversions::validate_backend_booking(&backend_booking).map_err(|e| {
+        tracing::error!("Backend booking validation failed: {}", e);
+        let error_response = IntegratedBlockRoomResponse {
+            success: false,
+            message: format!("Booking validation failed: {}", e),
+            block_room_response: Some(block_result.clone()),
+            booking_id: request.booking_id.clone(),
         };
+        create_error_response(StatusCode::INTERNAL_SERVER_ERROR, error_response)
+    })?;
 
-        // Extract room details from selected rooms
-        let room_details: Vec<estate_fe::domain::DomainRoomData> = block_room_request
-            .selected_rooms
-            .into_iter()
-            .map(|room| room.room_data)
-            .collect();
+    Ok(backend_booking)
+}
 
-        // Create temporary SelectedDateRange for date formatting
-        let formatted_dates = estate_fe::component::SelectedDateRange {
-            start: date_range.start,
-            end: date_range.end,
-        };
+/// Save booking to backend canister
+async fn save_booking_to_backend(
+    request: &IntegratedBlockRoomRequest,
+    backend_booking: estate_fe::canister::backend::Booking,
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+) -> Result<Response, Response> {
+    tracing::info!("Saving booking to backend canister");
 
-        // Extract user details from block room request
-        let user_details = block_room_request.user_details;
-
-        // Build hotel details
-        let hotel_details = estate_fe::domain::DomainHotelDetails {
-            checkin: formatted_dates.dd_month_yyyy_start(),
-            checkout: formatted_dates.dd_month_yyyy_end(),
-            hotel_name: "Hotel".to_string(), // Could be extracted from request if available
-            hotel_code: block_room_request.hotel_info_criteria.token.clone(),
-            star_rating: 4,
-            description: "Hotel description".to_string(),
-            hotel_facilities: vec![],
-            address: "Hotel address".to_string(),
-            images: vec![],
-            all_rooms: room_details
-                .iter()
-                .map(|room_data| estate_fe::domain::DomainRoomOption {
-                    price: block_result.total_price.clone(),
-                    room_data: room_data.clone(),
-                    meal_plan: None,
-                    occupancy_info: None,
-                })
-                .collect(),
-            amenities: vec![],
-        };
-
-        let payment_amount = block_result.total_price.room_price;
-        let payment_currency = "USD".to_string();
-        let block_room_id = Some(block_result.block_id.clone());
-
-        // Create backend booking
-        let backend_booking = BookingBackendConversions::create_backend_booking(
-            Some(destination_domain),
-            date_range,
-            room_details,
-            hotel_details,
-            user_details,
-            booking_id_struct,
-            payment_amount,
-            payment_currency,
-            block_room_id,
-            hotel_token,
-        )?;
-
-        // Validate the booking
-        BookingBackendConversions::validate_backend_booking(&backend_booking)?;
-
-        Ok::<_, BookingError>(backend_booking)
-    }
-    .await;
-
-    let backend_booking = match backend_booking_result {
-        Ok(booking) => booking,
-        Err(e) => {
-            tracing::error!("Failed to create backend booking: {:?}", e);
-            let error_response = json!({
-                "success": false,
-                "message": format!("Failed to create backend booking: {}", e),
-                "block_room_response": serde_json::to_value(&block_result).ok(),
-                "booking_id": booking_id
-            });
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                error_response.to_string(),
-            )
-                .into_response();
-        }
-    };
-
-    // Step 3: Save to backend canister
-    let canister_result = call_add_booking_backend(email.clone(), backend_booking).await;
-
-    match canister_result {
+    match call_add_booking_backend(request.email.clone(), backend_booking).await {
         Ok(_) => {
-            tracing::info!(
-                "Successfully saved booking to backend canister for booking_id: {}",
-                booking_id
-            );
-
-            let success_response = json!({
-                "success": true,
-                "message": "Room blocked and booking saved successfully",
-                "block_room_response": serde_json::to_value(&block_result).ok(),
-                "booking_id": booking_id
-            });
-
-            (StatusCode::OK, success_response.to_string()).into_response()
+            tracing::info!("Successfully saved booking to backend canister");
+            let success_response = IntegratedBlockRoomResponse {
+                success: true,
+                message: "Room blocked and booking saved successfully".to_string(),
+                block_room_response: Some(block_result.clone()),
+                booking_id: request.booking_id.clone(),
+            };
+            Ok(create_success_response(success_response))
         }
         Err(e) => {
             tracing::error!("Failed to save booking to canister: {}", e);
+            let error_response = IntegratedBlockRoomResponse {
+                success: false,
+                message: format!(
+                    "Room blocked successfully, but failed to save to backend: {}",
+                    e
+                ),
+                block_room_response: Some(block_result.clone()),
+                booking_id: request.booking_id.clone(),
+            };
+            Err(create_error_response(
+                PARTIAL_SUCCESS_STATUS,
+                error_response,
+            ))
+        }
+    }
+}
 
-            // Return partial success - block room succeeded but canister save failed
-            let error_response = json!({
-                "success": false,
-                "message": format!("Room blocked successfully, but failed to save to backend: {}", e),
-                "block_room_response": serde_json::to_value(&block_result).ok(),
-                "booking_id": booking_id
+/// Parse booking ID with proper error handling
+fn parse_booking_id(booking_id: &str) -> Result<BookingId, Response> {
+    BookingId::from_order_id(booking_id).ok_or_else(|| {
+        let error = BookingError::ValidationError("Invalid booking_id format".to_string());
+        tracing::error!("Booking ID parsing failed: {}", error);
+        let error_response = IntegratedBlockRoomResponse {
+            success: false,
+            message: format!("Invalid booking ID format: {}", error),
+            block_room_response: None,
+            booking_id: booking_id.to_string(),
+        };
+        create_error_response(StatusCode::BAD_REQUEST, error_response)
+    })
+}
+
+/// Extract destination information from request
+fn extract_destination_from_request(request: &IntegratedBlockRoomRequest) -> DomainDestination {
+    let search_criteria = &request
+        .block_room_request
+        .hotel_info_criteria
+        .search_criteria;
+
+    DomainDestination {
+        city_id: search_criteria.destination_city_id,
+        city_name: search_criteria.destination_city_name.clone(),
+        country_code: search_criteria.destination_country_code.clone(),
+        country_name: search_criteria.destination_country_name.clone(),
+    }
+}
+
+/// Extract date range from request
+fn extract_date_range_from_request(
+    request: &IntegratedBlockRoomRequest,
+) -> DomainSelectedDateRange {
+    let search_criteria = &request
+        .block_room_request
+        .hotel_info_criteria
+        .search_criteria;
+
+    DomainSelectedDateRange {
+        start: search_criteria.check_in_date,
+        end: search_criteria.check_out_date,
+    }
+}
+
+/// Extract room details from request
+fn extract_room_details_from_request(request: &IntegratedBlockRoomRequest) -> Vec<DomainRoomData> {
+    request
+        .block_room_request
+        .selected_rooms
+        .iter()
+        .map(|room| room.room_data.clone())
+        .collect()
+}
+
+/// Build hotel details with proper formatting
+fn build_hotel_details(
+    request: &IntegratedBlockRoomRequest,
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+    date_range: &DomainSelectedDateRange,
+    room_details: &[DomainRoomData],
+) -> DomainHotelDetails {
+    // Create temporary SelectedDateRange for date formatting
+    let formatted_dates = estate_fe::component::SelectedDateRange {
+        start: date_range.start,
+        end: date_range.end,
+    };
+
+    let all_rooms: Vec<DomainRoomOption> = room_details
+        .iter()
+        .map(|room_data| DomainRoomOption {
+            price: block_result.total_price.clone(),
+            room_data: room_data.clone(),
+            meal_plan: None,
+            occupancy_info: None,
+        })
+        .collect();
+
+    DomainHotelDetails {
+        checkin: formatted_dates.dd_month_yyyy_start(),
+        checkout: formatted_dates.dd_month_yyyy_end(),
+        hotel_name: DEFAULT_HOTEL_NAME.to_string(),
+        hotel_code: request.block_room_request.hotel_info_criteria.token.clone(),
+        star_rating: DEFAULT_STAR_RATING,
+        description: DEFAULT_HOTEL_DESCRIPTION.to_string(),
+        hotel_facilities: vec![],
+        address: DEFAULT_HOTEL_ADDRESS.to_string(),
+        images: vec![],
+        all_rooms,
+        amenities: vec![],
+    }
+}
+
+/// Create a success response with proper formatting
+fn create_success_response(response: IntegratedBlockRoomResponse) -> Response {
+    match serde_json::to_string(&response) {
+        Ok(json_string) => (StatusCode::OK, json_string).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to serialize success response: {}", e);
+            let fallback_response = json!({
+                "success": true,
+                "message": "Operation completed but response serialization failed",
+                "booking_id": response.booking_id
             });
+            (StatusCode::OK, fallback_response.to_string()).into_response()
+        }
+    }
+}
 
-            (StatusCode::PARTIAL_CONTENT, error_response.to_string()).into_response()
+/// Create an error response with proper formatting
+fn create_error_response(status: StatusCode, response: IntegratedBlockRoomResponse) -> Response {
+    match serde_json::to_string(&response) {
+        Ok(json_string) => (status, json_string).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to serialize error response: {}", e);
+            let fallback_response = json!({
+                "success": false,
+                "message": "An error occurred and response serialization failed",
+                "booking_id": response.booking_id
+            });
+            (status, fallback_response.to_string()).into_response()
         }
     }
 }
