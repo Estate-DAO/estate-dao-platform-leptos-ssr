@@ -8,9 +8,14 @@ pub use stripe_service::*;
 
 pub mod domain;
 pub mod ports;
-pub mod server_functions;
-pub mod service;
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        pub mod service;
+        pub use service::*;
+    }
+}
 
 pub use domain::*;
-pub use server_functions::*;
-pub use service::*;
+pub use translation_functions::*;
+pub mod translation_functions;
