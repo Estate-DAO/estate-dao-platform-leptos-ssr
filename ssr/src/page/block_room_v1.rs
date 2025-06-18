@@ -36,15 +36,27 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let navigate = use_navigate();
 
-    // Initialize form data on mount
+    // Initialize form data on mount - only once
+    let (initialized, set_initialized) = create_signal(false);
+
     create_effect(move |_| {
         let adults_count = ui_search_ctx.guests.adults.get() as usize;
         let children_count = ui_search_ctx.guests.children.get() as usize;
         let children_ages = ui_search_ctx.guests.children_ages.clone();
 
-        // Initialize adults and children
-        BlockRoomUIState::create_adults(adults_count);
-        BlockRoomUIState::create_children(children_count);
+        // Initialize adults and children only once
+        if !initialized.get_untracked() {
+            log!(
+                "Initializing form data for the first time - adults: {}, children: {}",
+                adults_count,
+                children_count
+            );
+            BlockRoomUIState::create_adults(adults_count);
+            BlockRoomUIState::create_children(children_count);
+            set_initialized.set(true);
+        } else {
+            log!("Skipping form data initialization - already initialized");
+        }
 
         // Set pricing data from HotelDetailsUIState (correct source) instead of PricingBookNowState
         let room_price_from_pricing_book_now =
@@ -249,8 +261,16 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let adult_count = move || ui_search_ctx.guests.adults.get();
     let child_count = move || ui_search_ctx.guests.children.get();
 
-    // Hotel info signals
-    let hotel_name = move || hotel_info_ctx.selected_hotel_name.get();
+    // Hotel info signals with debugging
+    let hotel_name = move || {
+        let name = hotel_info_ctx.selected_hotel_name.get();
+        if name.is_empty() {
+            log!("Warning: hotel_name is empty in UI");
+        } else {
+            log!("Hotel name in UI: '{}'", name);
+        }
+        name
+    };
     let hotel_address = move || hotel_info_ctx.selected_hotel_location.get();
     let hotel_image = move || {
         let img = hotel_info_ctx.selected_hotel_image.get();
@@ -596,8 +616,26 @@ pub fn GuestForm() -> impl IntoView {
 #[component]
 pub fn AdultFormSection(index: u32) -> impl IntoView {
     let update_adult = move |field: &str, value: String| {
-        BlockRoomUIState::update_adult(index as usize, field, value);
+        log!(
+            "AdultFormSection update_adult called - index: {}, field: '{}', value: '{}'",
+            index,
+            field,
+            value
+        );
+        BlockRoomUIState::update_adult(index as usize, field, value.clone());
         BlockRoomUIState::validate_form();
+
+        // Debug: Check if the update actually worked
+        let adults_list = BlockRoomUIState::get_adults_untracked();
+        if let Some(adult) = adults_list.get(index as usize) {
+            log!(
+                "After update - Adult {}: first_name='{}', email={:?}, phone={:?}",
+                index,
+                adult.first_name,
+                adult.email,
+                adult.phone
+            );
+        }
     };
 
     view! {
@@ -787,11 +825,25 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
         let block_room_state: BlockRoomUIState = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-        let email = block_room_state
-            .adults
-            .get_untracked()
-            .first()
-            .and_then(|adult| adult.email.clone());
+        // Debug logging for prebook action
+        let adults_list = block_room_state.adults.get_untracked();
+        log!("Prebook action - adults list: {:?}", adults_list);
+        if let Some(first_adult) = adults_list.first() {
+            log!(
+                "Prebook action - first adult email: {:?}",
+                first_adult.email
+            );
+            log!(
+                "Prebook action - first adult first_name: '{}'",
+                first_adult.first_name
+            );
+            log!(
+                "Prebook action - first adult phone: {:?}",
+                first_adult.phone
+            );
+        }
+
+        let email = adults_list.first().and_then(|adult| adult.email.clone());
 
         let Some(email) = email else {
             log!("Integrated prebook action failed - no primary adult email");
@@ -1260,14 +1312,27 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             // Get booking details
             let block_room_state: BlockRoomUIState = expect_context();
             let ui_search_ctx: UISearchCtx = expect_context();
+            let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-            // Validate required email
-            let Some(email) = block_room_state
-                .adults
-                .get_untracked()
-                .first()
-                .and_then(|adult| adult.email.clone())
-            else {
+            // Validate required email with debug logging
+            let adults_list = block_room_state.adults.get_untracked();
+            log!("Payment action - adults list: {:?}", adults_list);
+            if let Some(first_adult) = adults_list.first() {
+                log!(
+                    "Payment action - first adult email: {:?}",
+                    first_adult.email
+                );
+                log!(
+                    "Payment action - first adult first_name: '{}'",
+                    first_adult.first_name
+                );
+                log!(
+                    "Payment action - first adult phone: {:?}",
+                    first_adult.phone
+                );
+            }
+
+            let Some(email) = adults_list.first().and_then(|adult| adult.email.clone()) else {
                 log!("Payment creation failed - no primary adult email provided");
                 BlockRoomUIState::batch_update_on_error(
                     Some("payment".to_string()),
@@ -1284,8 +1349,8 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                 log!("Payment creation failed - could not generate app reference");
                 BlockRoomUIState::batch_update_on_error(
                     Some("payment".to_string()),
-                    Some("Reference generation failed".to_string()),
-                    Some("Unable to generate booking reference for payment".to_string()),
+                    Some("App Reference generation failed".to_string()),
+                    Some("Unable to generate app reference for payment".to_string()),
                 );
                 set_payment_loading.set(false);
                 set_selected_provider.set(None);
@@ -1299,12 +1364,19 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             let price_amount = (total_price() * 100.0) as u32; // Convert to cents
 
             // Create domain request using proper URL helper functions
+            let hotel_name = hotel_info_ctx.selected_hotel_name.get_untracked();
+            log!("Payment action - hotel_name: '{}'", hotel_name);
+
             let consts_provider: crate::api::consts::PaymentProvider = provider.clone().into();
             let domain_request = create_domain_request(
                 price_amount,
                 "USD".to_string(),
                 order_id,
-                "Hotel Room Booking".to_string(),
+                if hotel_name.is_empty() {
+                    "Hotel Room Booking".to_string()
+                } else {
+                    hotel_name
+                },
                 email.clone(),
                 get_ipn_callback_url(consts_provider.clone()),
                 get_payments_url_v2("success", consts_provider.clone()),

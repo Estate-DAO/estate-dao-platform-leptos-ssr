@@ -72,8 +72,22 @@ impl BlockRoomUIState {
 
     // Form data methods
     pub fn create_adults(count: usize) {
+        use crate::log;
+        log!(
+            "BlockRoomUIState::create_adults called with count: {}",
+            count
+        );
         let this: Self = expect_context();
-        this.adults.set(vec![AdultDetail::default(); count]);
+        let new_adults = vec![AdultDetail::default(); count];
+        log!("Created {} adults: {:?}", count, new_adults);
+        this.adults.set(new_adults);
+
+        // Verify it was set
+        let verification = this.adults.get_untracked();
+        log!(
+            "After create_adults - verification: {} adults in state",
+            verification.len()
+        );
     }
 
     pub fn create_children(count: usize) {
@@ -82,26 +96,74 @@ impl BlockRoomUIState {
     }
 
     pub fn update_adult(index: usize, field: &str, value: String) {
+        use crate::log;
+        log!(
+            "BlockRoomUIState::update_adult called - index: {}, field: '{}', value: '{}'",
+            index,
+            field,
+            value
+        );
+
         let this: Self = expect_context();
+        let adults_count_before = this.adults.get_untracked().len();
+        log!("Adults list length before update: {}", adults_count_before);
+
         this.adults.update(|list| {
+            log!("Inside adults.update closure - list length: {}", list.len());
             if let Some(adult) = list.get_mut(index) {
+                log!("Found adult at index {}, updating field '{}'", index, field);
                 match field {
-                    "first_name" => adult.first_name = value,
-                    "last_name" => adult.last_name = Some(value),
+                    "first_name" => {
+                        adult.first_name = value.clone();
+                        log!("Updated first_name to: '{}'", value);
+                    }
+                    "last_name" => {
+                        adult.last_name = Some(value.clone());
+                        log!("Updated last_name to: '{}'", value);
+                    }
                     "email" => {
                         if index == 0 {
-                            adult.email = Some(value)
+                            adult.email = Some(value.clone());
+                            log!("Updated email to: '{}'", value);
+                        } else {
+                            log!(
+                                "Skipped email update for non-primary adult (index: {})",
+                                index
+                            );
                         }
                     }
                     "phone" => {
                         if index == 0 {
-                            adult.phone = Some(value)
+                            adult.phone = Some(value.clone());
+                            log!("Updated phone to: '{}'", value);
+                        } else {
+                            log!(
+                                "Skipped phone update for non-primary adult (index: {})",
+                                index
+                            );
                         }
                     }
-                    _ => {}
+                    _ => {
+                        log!("Unknown field '{}', ignoring", field);
+                    }
                 }
+            } else {
+                log!("ERROR: No adult found at index {}", index);
             }
         });
+
+        // Verify the update worked
+        let adults_after = this.adults.get_untracked();
+        log!("Adults list length after update: {}", adults_after.len());
+        if let Some(adult) = adults_after.get(index) {
+            log!(
+                "After update verification - Adult {}: first_name='{}', email={:?}, phone={:?}",
+                index,
+                adult.first_name,
+                adult.email,
+                adult.phone
+            );
+        }
     }
 
     pub fn update_child(index: usize, field: &str, value: String) {
