@@ -34,6 +34,7 @@ cfg_if! {
             response::{IntoResponse, Response, sse::{Event, Sse, KeepAlive}},
         };
         use axum::{middleware, routing::get, Router, routing::post};
+        use tower_http::cors::{CorsLayer, Any};
 
         use leptos::*;
         use leptos::{get_configuration, logging::log, provide_context};
@@ -297,6 +298,11 @@ cfg_if! {
                 },
             );
 
+            let cors = CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any);
+
             let app = Router::new()
                 .route(
                     "/api/*fn_name",
@@ -308,6 +314,7 @@ cfg_if! {
                 .nest("/server_fn_api", api_routes())
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
+                .layer(cors)
                 .layer(trace_layer)
                 // Protect admin routes with browser challenge
                 .layer(

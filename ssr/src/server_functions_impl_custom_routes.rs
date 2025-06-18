@@ -2,7 +2,7 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, options, post},
     Router,
 };
 use estate_fe::view_state_layer::AppState;
@@ -133,30 +133,44 @@ fn filter_hotels_with_valid_pricing(
     search_result
 }
 
+// CORS preflight handler
+async fn handle_options() -> Response {
+    StatusCode::OK.into_response()
+}
+
 pub fn api_routes() -> Router<AppState> {
     Router::new()
-        .route("/search_hotel_api", post(search_hotel_api_server_fn_route))
-        .route("/block_room_api", post(block_room_api_server_fn_route))
-        .route("/book_room_api", post(book_room_api_server_fn_route))
+        .route(
+            "/search_hotel_api",
+            post(search_hotel_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/block_room_api",
+            post(block_room_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/book_room_api",
+            post(book_room_api_server_fn_route).options(handle_options),
+        )
         .route(
             "/get_hotel_info_api",
-            post(get_hotel_info_api_server_fn_route),
+            post(get_hotel_info_api_server_fn_route).options(handle_options),
         )
         .route(
             "/get_hotel_rates_api",
-            post(get_hotel_rates_api_server_fn_route),
+            post(get_hotel_rates_api_server_fn_route).options(handle_options),
         )
         .route(
             "/process_confirmation_api",
-            post(process_confirmation_api_server_fn_route),
+            post(process_confirmation_api_server_fn_route).options(handle_options),
         )
         .route(
             "/integrated_block_room_api",
-            post(integrated_block_room_api_server_fn_route),
+            post(integrated_block_room_api_server_fn_route).options(handle_options),
         )
         .route(
             "/create_payment_invoice_api",
-            post(create_payment_invoice_api_server_fn_route),
+            post(create_payment_invoice_api_server_fn_route).options(handle_options),
         )
 }
 
