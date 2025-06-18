@@ -5,5 +5,9 @@ cfg_if::cfg_if! {
     }
 }
 
+// BookingService is available on both client and server since it handles client-side calls to server functions
+pub mod booking_service;
+pub use booking_service::BookingService;
+
 pub use filter_types::{DomainSortDirection, DomainSortField, UISearchFilters, UISortOptions};
 pub mod filter_types;

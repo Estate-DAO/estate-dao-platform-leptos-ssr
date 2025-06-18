@@ -60,6 +60,10 @@ impl ChildrenAges {
             let _a = f.pop();
         });
     }
+
+    pub fn set_ages(&self, ages: Vec<u32>) {
+        self.0.set(ages);
+    }
 }
 
 impl GlobalStateForLeptos for GuestSelection {}
@@ -147,7 +151,7 @@ pub fn GuestQuantity() -> impl IntoView {
     });
 
     let search_ctx: UISearchCtx = expect_context();
-    let guest_selection = search_ctx.guests.get_untracked();
+    let guest_selection = search_ctx.guests;
 
     // Get direct references to the signals
     let adults_signal = guest_selection.adults;

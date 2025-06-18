@@ -14,9 +14,9 @@ cfg_if::cfg_if! {
             liteapi_hotel_search, LiteApiHotelResult, LiteApiHotelSearchRequest, LiteApiHotelSearchResponse,
         };
 
-        pub use l01_get_hotel_info::liteapi_hotel_rates;
-        pub mod l01_get_hotel_info;
-        pub use l01_get_hotel_info::{
+        pub use l01_get_hotel_info_rates::liteapi_hotel_rates;
+        pub mod l01_get_hotel_info_rates;
+        pub use l01_get_hotel_info_rates::{
             LiteApiError, LiteApiHotelData, LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiOccupancy,
             LiteApiRate, LiteApiRoomType,
         };
@@ -34,6 +34,13 @@ cfg_if::cfg_if! {
             LiteApiBookRequest, LiteApiBookResponse, LiteApiBookData, LiteApiBookHolder,
             LiteApiBookGuest, LiteApiBookMetadata, LiteApiGuestPayment, LiteApiPayment,
             LiteApiBookedHotel, LiteApiBookedRoom, LiteApiCancellationPolicies,
+        };
+
+        pub use l04_one_hotel_detail::liteapi_hotel_details;
+        pub mod l04_one_hotel_detail;
+        pub use l04_one_hotel_detail::{
+            LiteApiSingleHotelDetailRequest, LiteApiSingleHotelDetailResponse, LiteApiSingleHotelDetailData,
+            LiteApiHotelImage, LiteApiLocation, LiteApiFacility, LiteApiCheckinCheckoutTimes,
         };
 
     }

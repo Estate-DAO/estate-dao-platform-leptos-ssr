@@ -16,6 +16,8 @@ use reqwest::{header::HeaderMap, Method, RequestBuilder};
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 
+use crate::utils::route::join_base_and_path_url;
+
 #[async_trait::async_trait]
 /// Common trait for API clients that handle HTTP requests with JSON serialization/deserialization
 pub trait ApiClient: Clone + Debug + Default {
@@ -39,7 +41,8 @@ pub trait ApiClient: Clone + Debug + Default {
         Req: ApiRequestMeta + ApiRequest + Serialize + Send + 'static,
         Req::Response: Send + 'static,
     {
-        let full_url = format!("{}/{}", self.base_url(), Req::path_suffix());
+        let full_url = join_base_and_path_url(self.base_url().as_str(), Req::path_suffix())
+            .expect("Failed to join base and path URL");
         let reqb = self.request_builder(Req::METHOD, full_url);
         self.send_json_request(req, reqb).await
     }
@@ -53,7 +56,7 @@ pub trait ApiClient: Clone + Debug + Default {
     where
         Req: ApiRequestMeta + ApiRequest + Serialize,
     {
-        // self.log_json_payload(&req);
+        self.log_json_payload(&req);
 
         let reqb = if Req::METHOD == Method::GET {
             reqb.query(&req)
@@ -71,6 +74,12 @@ pub trait ApiClient: Clone + Debug + Default {
         let reqb = self.apply_conditional_headers(reqb);
 
         // Handle gzip if needed
+        crate::log!(
+            "{}",
+            format!("send_json_request:gzip: {}", Req::GZIP)
+                .bright_cyan()
+                .bold()
+        );
         let reqb = if Req::GZIP {
             self.set_gzip_headers(reqb)
         } else {
@@ -85,7 +94,34 @@ pub trait ApiClient: Clone + Debug + Default {
         &self,
         reqb: RequestBuilder,
     ) -> ApiClientResult<Req::Response> {
+        let reqb_clone = reqb.try_clone().unwrap();
+        // First build the request to log details
         let request = reqb
+            .build()
+            .map_err(|e| ApiError::RequestFailed(e.into()))?;
+
+        // Log the URL and query parameters
+        let url = request.url();
+        let query_params = url
+            .query_pairs()
+            .map(|(k, v)| format!("{}={}", k, v))
+            .collect::<Vec<_>>()
+            .join("&");
+
+        crate::log!(
+            "execute_request: method: {} path: {}\nQuery Params: {}\nFull URL: {}",
+            request.method(),
+            url.path(),
+            if query_params.is_empty() {
+                "<none>"
+            } else {
+                &query_params
+            },
+            url.as_str()
+        );
+
+        // Rebuild the request for execution since we can't reuse the built request
+        let request = reqb_clone
             .build()
             .map_err(|e| ApiError::RequestFailed(e.into()))?;
 
@@ -93,16 +129,82 @@ pub trait ApiClient: Clone + Debug + Default {
             .http_client()
             .execute(request)
             .await
-            .map_err(|e| (ApiError::RequestFailed(e.into())))?
+            .map_err(|e| (ApiError::RequestFailed(e.into())))?;
+
+        let status = response.status();
+
+        // Log response status for all responses
+        crate::log!(
+            "{}",
+            format!("Response Status: {}", status)
+                .bright_magenta()
+                .bold()
+        );
+
+        // Log response headers and content length for debugging
+        let headers = response.headers();
+        let content_length = headers
+            .get("content-length")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown");
+        let content_type = headers
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown");
+
+        crate::log!(
+            "{}",
+            format!(
+                "Response Headers - Content-Length: {}, Content-Type: {}",
+                content_length, content_type
+            )
+            .bright_cyan()
+            .bold()
+        );
+
+        if !status.is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Failed to read error response".to_string());
+            crate::log!(
+                "{}",
+                format!("Response Error - Status: {}, Body: {}", status, error_text)
+                    .bright_red()
+                    .bold()
+            );
+            return Err(ApiError::ResponseNotOK(format!(
+                "Status: {}, Body: {}",
+                status, error_text
+            )));
+        }
+
+        let response = response
             .text()
             .await
             .map_err(|e| ApiError::ResponseError(e.to_string()))?;
+
+        // Log raw response body for debugging
+        crate::log!(
+            "{}",
+            format!(
+                "Raw Response Body (length: {}): '{}'",
+                response.len(),
+                if response.len() > 500 {
+                    format!("{}...[truncated]", &response[..500])
+                } else {
+                    response.clone()
+                }
+            )
+            .bright_yellow()
+            .bold()
+        );
 
         let input = if Req::GZIP {
             let body_bytes = response.as_bytes();
             DeserializableInput::Bytes(body_bytes.to_vec())
         } else {
-            DeserializableInput::Text(response)
+            DeserializableInput::Text(response.clone())
         };
 
         let res = Req::deserialize_response(input)?;
@@ -208,7 +310,7 @@ pub trait ApiClient: Clone + Debug + Default {
 /// Trait for request metadata (similar to your ProvabReqMeta)
 pub trait ApiRequestMeta: Sized + Send {
     const METHOD: Method;
-    const GZIP: bool = true;
+    const GZIP: bool = false;
 
     #[cfg(feature = "mock-provab")]
     type Response: DeserializeOwned + Debug + MockableResponse + Send;
@@ -227,7 +329,12 @@ pub trait ApiRequestMeta: Sized + Send {
             format!(
                 "gzip = {} , response_bytes_or_string : {}\n\n\n",
                 Self::GZIP,
-                response_bytes_or_string.clone().to_string()
+                response_bytes_or_string
+                    .clone()
+                    .to_string()
+                    .chars()
+                    .take(4000)
+                    .collect::<String>()
             )
             .bright_yellow()
             .bold()
@@ -260,7 +367,8 @@ pub trait ApiRequest: ApiRequestMeta + Debug {
     fn base_path() -> String;
 
     fn path() -> String {
-        format!("{}/{}", Self::base_path(), Self::path_suffix())
+        join_base_and_path_url(Self::base_path().as_str(), Self::path_suffix())
+            .expect("Failed to join base and path URL")
     }
 
     /// The path suffix for this request (without the base URL)

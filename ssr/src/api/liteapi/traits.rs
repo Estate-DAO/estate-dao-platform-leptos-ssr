@@ -1,4 +1,5 @@
 use crate::api::api_client::ApiRequestMeta;
+use crate::utils::route::join_base_and_path_url;
 use reqwest::header::HeaderMap;
 
 /// Common trait for all LiteAPI requests
@@ -8,7 +9,8 @@ pub trait LiteApiReq: ApiRequestMeta + std::fmt::Debug {
     }
 
     fn path() -> String {
-        format!("{}/{}", Self::base_path(), Self::path_suffix())
+        join_base_and_path_url(&Self::base_path(), &Self::path_suffix())
+            .expect("Failed to join base and path URL")
     }
 
     fn path_suffix() -> &'static str;

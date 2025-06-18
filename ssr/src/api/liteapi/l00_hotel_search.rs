@@ -186,21 +186,3 @@ where
     let value = f64::deserialize(deserializer)?;
     Ok(value.floor() as i32)
 }
-
-// // Utility function to convert LiteAPI results to the common format used by the UI
-// impl From<&LiteApiHotelResult> for crate::api::provab::HotelResult {
-//     fn from(lite_hotel: &LiteApiHotelResult) -> Self {
-//         crate::api::provab::HotelResult {
-//             hotel_code: lite_hotel.id.clone(),
-//             hotel_name: lite_hotel.name.clone(),
-//             hotel_category: format!("{} Star", lite_hotel.stars),
-//             star_rating: lite_hotel.stars as u8,
-//             price: crate::api::provab::Price {
-//                 room_price: 0.0, // LiteAPI doesn't provide price in search - needs separate pricing call
-//                 currency_code: lite_hotel.currency.clone(),
-//             },
-//             hotel_picture: lite_hotel.main_photo.clone(),
-//             result_token: lite_hotel.id.clone(), // Use hotel ID as result token
-//         }
-//     }
-// }

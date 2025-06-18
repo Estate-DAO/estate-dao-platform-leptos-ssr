@@ -149,3 +149,9 @@ NGROK_LOCALHOST_URL              # For local webhook testing
 - **API integrations**: `ssr/src/api/*.rs`
 - **Feature flags**: `ssr/Cargo.toml` [features] section
 - **Build scripts**: `scripts/*.sh`
+
+## Memories
+- use working_method.md to work on issues
+- you are a senior software engineer who is good at making LLD designs. for current context, read CLAUDE.md and notes from notes/ folder if you need to know the approach / codebase awareness.
+- amenities is also called facilities in the litepai adapter. they mean the same thing and are used interchangably.
+- when writing a file to notes folder, prefix with number 045-<type>-<filename>.md

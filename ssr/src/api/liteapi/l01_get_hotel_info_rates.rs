@@ -66,12 +66,12 @@ pub struct LiteApiRate {
     // #[serde(rename = "occupancyNumber")]
     // pub occupancy_number: i32,
     pub name: String,
-    // #[serde(rename = "maxOccupancy")]
-    // pub max_occupancy: i32,
-    // #[serde(rename = "adultCount")]
-    // pub adult_count: i32,
-    // #[serde(rename = "childCount")]
-    // pub child_count: i32,
+    #[serde(rename = "maxOccupancy")]
+    pub max_occupancy: u32,
+    #[serde(rename = "adultCount")]
+    pub adult_count: u32,
+    #[serde(rename = "childCount")]
+    pub child_count: u32,
     #[serde(rename = "boardType")]
     pub board_type: String,
     #[serde(rename = "boardName")]
@@ -101,8 +101,8 @@ pub struct LiteApiRoomType {
     pub rates: Vec<LiteApiRate>,
     // #[serde(rename = "offerRetailRate")]
     // pub offer_retail_rate: LiteApiAmount,
-    // #[serde(rename = "suggestedSellingPrice")]
-    // pub suggested_selling_price: LiteApiAmount,
+    #[serde(rename = "suggestedSellingPrice")]
+    pub suggested_selling_price: LiteApiAmount,
     // #[serde(rename = "offerInitialPrice")]
     // pub offer_initial_price: LiteApiAmount,
     // #[serde(rename = "priceType")]
@@ -139,6 +139,8 @@ pub struct LiteApiHotelRatesResponse {
 }
 
 impl LiteApiHotelRatesResponse {
+    // if we only have request with one hotelId, we will get only that hotelId in response.
+    // hence we can safely assume .first() to be that hotel - since this will be used on hotel_details page
     pub fn get_first_hotel_data(&self) -> Option<&LiteApiHotelData> {
         self.data.as_ref()?.first()
     }

@@ -9,6 +9,11 @@ use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
+// Import the integrated request/response types
+use crate::application_services::booking_service::{
+    IntegratedBlockRoomRequest, IntegratedBlockRoomResponse,
+};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfirmationProcessRequest {
     pub payment_id: Option<String>,
@@ -276,6 +281,61 @@ impl ClientSideApiClient {
             }
             Err(e) => {
                 log!("Confirmation API call error: {}", e);
+                None
+            }
+        }
+    }
+
+    pub async fn integrated_block_room(
+        &self,
+        request: IntegratedBlockRoomRequest,
+    ) -> Option<IntegratedBlockRoomResponse> {
+        // Serialize request to JSON string
+        let body = match serde_json::to_string(&request) {
+            Ok(json) => json,
+            Err(e) => {
+                log!("Failed to serialize integrated block room request: {}", e);
+                return None;
+            }
+        };
+
+        let client = reqwest::Client::new();
+        let response = client
+            .post(
+                join_base_and_path_url(APP_URL.as_str(), "server_fn_api/integrated_block_room_api")
+                    .unwrap_or_else(|e| {
+                        log!("Failed to build URL: {}", e);
+                        format!(
+                            "{}/server_fn_api/integrated_block_room_api",
+                            APP_URL.as_str()
+                        )
+                    }),
+            )
+            .header("Content-Type", "application/json")
+            .body(body)
+            .send()
+            .await;
+
+        match response {
+            Ok(res) => {
+                if res.status().is_success() {
+                    match res.text().await {
+                        Ok(text) => Self::parse_server_response(&text).ok(),
+                        Err(e) => {
+                            log!("Failed to get integrated block room response text: {}", e);
+                            None
+                        }
+                    }
+                } else {
+                    log!(
+                        "Integrated block room API call failed with status: {}",
+                        res.status()
+                    );
+                    None
+                }
+            }
+            Err(e) => {
+                log!("Integrated block room API call error: {}", e);
                 None
             }
         }

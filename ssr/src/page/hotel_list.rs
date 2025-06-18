@@ -4,10 +4,11 @@ use leptos_router::use_navigate;
 // use crate::api::get_room;
 use crate::component::{Navbar, SkeletonCards};
 use crate::log;
-use crate::page::InputGroupContainer;
+use crate::page::{HotelListParams, InputGroupContainer};
+use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
-use crate::view_state_layer::ui_search_state::SearchListResults;
+use crate::view_state_layer::ui_search_state::{SearchListResults, UISearchCtx};
 use crate::view_state_layer::view_state::HotelInfoCtx;
 // use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 // use crate::state::search_state::HotelInfoResults;
@@ -21,6 +22,40 @@ use crate::{
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
+    let search_ctx: UISearchCtx = expect_context();
+    let navigate = use_navigate();
+    let query_map = leptos_router::use_query_map();
+
+    // Sync query params with state on page load (URL → State)
+    // This leverages use_query_map's built-in reactivity for browser navigation
+    // create_effect(move |_| {
+    //     let params = query_map.get();
+    //     if !params.0.is_empty() {
+    //         log!("Found query params in URL: {:?}", params);
+
+    //         if let Some(hotel_params) = HotelListParams::from_url_params(&params.0.into_iter().collect()) {
+    //             log!("Parsed hotel params from URL: {:?}", hotel_params);
+    //             hotel_params.sync_to_app_state();
+    //         }
+    //     }
+    // });
+
+    // Example: Manual URL updates (State → URL) when user performs actions
+    // This function can be called from search form submissions, filter changes, etc.
+    let update_url_with_current_state = move || {
+        let current_params = HotelListParams::from_search_context(&search_ctx);
+        current_params.update_url();
+        log!(
+            "Updated URL with current search state: {:?}",
+            current_params
+        );
+    };
+
+    // Example usage - this could be called from:
+    // - Search form submission: update_url_with_current_state();
+    // - Filter changes: update_url_with_current_state();
+    // - Sorting changes: update_url_with_current_state();
+
     // ensure that context is clear. no pending signals
     // todo (uncomment)
     // HotelInfoResults::reset();

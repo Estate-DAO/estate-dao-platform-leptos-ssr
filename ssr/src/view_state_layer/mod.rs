@@ -1,4 +1,6 @@
 pub mod api_error_state;
+pub mod booking_context_state;
+pub mod booking_conversions;
 pub mod confirmation_results_state;
 pub mod hotel_details_state;
 pub mod input_group_state;

@@ -24,7 +24,7 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             check_in_date,
             check_out_date,
             no_of_nights,
-            room_guests: vec![ctx.guests.get_untracked().into()],
+            room_guests: vec![ctx.guests.into()],
             destination_city_id: destination.city_id.parse().unwrap_or_default(),
             destination_city_name: destination.city,
             destination_country_code: destination.country_code,

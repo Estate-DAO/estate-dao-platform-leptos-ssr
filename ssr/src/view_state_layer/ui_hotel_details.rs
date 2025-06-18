@@ -1,4 +1,7 @@
-use crate::domain::{DomainHotelDetails, DomainRoomData};
+use crate::{
+    domain::{DomainHotelDetails, DomainRoomData, DomainRoomOption},
+    error, log, warn,
+};
 use leptos::*;
 use std::collections::HashMap;
 
@@ -9,9 +12,7 @@ pub struct HotelDetailsUIState {
     pub hotel_details: RwSignal<Option<DomainHotelDetails>>,
     pub loading: RwSignal<bool>,
     pub error: RwSignal<Option<String>>,
-    pub available_rooms: RwSignal<Vec<DomainRoomData>>,
-    pub selected_rooms: RwSignal<HashMap<String, u32>>, // room_type -> quantity
-    pub room_loading: RwSignal<bool>,
+    pub selected_rooms: RwSignal<HashMap<String, u32>>, // room_unique_id -> quantity
     // this is the aggregate price of all the rooms selected
     pub total_price: RwSignal<f64>,
 }
@@ -41,9 +42,7 @@ impl HotelDetailsUIState {
         this.hotel_details.set(None);
         this.loading.set(false);
         this.error.set(None);
-        this.available_rooms.set(vec![]);
         this.selected_rooms.set(HashMap::new());
-        this.room_loading.set(false);
         this.total_price.set(0.0);
     }
 
@@ -62,25 +61,22 @@ impl HotelDetailsUIState {
         this.error.get()
     }
 
-    // <!-- Room selection methods -->
-    pub fn set_available_rooms(rooms: Vec<DomainRoomData>) {
+    // <!-- Room selection methods using consolidated DomainHotelDetails.all_rooms -->
+    pub fn get_available_room_options() -> Vec<DomainRoomOption> {
         let this: Self = expect_context();
-        this.available_rooms.set(rooms);
+        if let Some(hotel_details) = this.hotel_details.get() {
+            hotel_details.all_rooms
+        } else {
+            vec![]
+        }
     }
 
     pub fn get_available_rooms() -> Vec<DomainRoomData> {
-        let this: Self = expect_context();
-        this.available_rooms.get()
-    }
-
-    pub fn set_room_loading(loading: bool) {
-        let this: Self = expect_context();
-        this.room_loading.set(loading);
-    }
-
-    pub fn is_room_loading() -> bool {
-        let this: Self = expect_context();
-        this.room_loading.get()
+        // Legacy method for compatibility - extracts room_data from all_rooms
+        Self::get_available_room_options()
+            .into_iter()
+            .map(|room_option| room_option.room_data)
+            .collect()
     }
 
     pub fn increment_room_counter(room_type: String) {
@@ -128,21 +124,65 @@ impl HotelDetailsUIState {
         this.selected_rooms.get()
     }
 
-    // <!-- Helper method to update total price when room selection changes -->
+    // <!-- Helper method to get selected rooms with their data and pricing -->
+    pub fn get_selected_rooms_with_data() -> Vec<(DomainRoomOption, u32)> {
+        let selected_rooms = Self::get_selected_rooms();
+        let available_room_options = Self::get_available_room_options();
+
+        selected_rooms
+            .into_iter()
+            .filter(|(_, quantity)| *quantity > 0)
+            .filter_map(|(room_id, quantity)| {
+                available_room_options
+                    .iter()
+                    .find(|option| option.room_data.room_unique_id == room_id)
+                    .map(|room_option| (room_option.clone(), quantity))
+            })
+            .collect()
+    }
+
+    // <!-- Calculate subtotal for given number of nights -->
+    pub fn calculate_subtotal_for_nights() -> f64 {
+        let selected_rooms_with_data = Self::get_selected_rooms_with_data();
+
+        selected_rooms_with_data
+            .iter()
+            .fold(0.0, |acc, (room_option, quantity)| {
+                acc + (room_option.price.room_price * *quantity as f64)
+                // acc + (room_option.price.room_price * *quantity as f64 * nights as f64)
+            })
+    }
+
+    // <!-- Calculate line total for a specific room -->
+    pub fn calculate_room_line_total(
+        room_option: &DomainRoomOption,
+        quantity: u32,
+        nights: u32,
+    ) -> f64 {
+        room_option.price.room_price * quantity as f64
+    }
+
+    // <!-- Format room breakdown text -->
+    pub fn format_room_breakdown_text(room_name: &str, quantity: u32, nights: u32) -> String {
+        format!(
+            "{} × {} × {} night{}",
+            room_name,
+            quantity,
+            nights,
+            if nights != 1 { "s" } else { "" }
+        )
+    }
+
+    // <!-- Helper method to update total price using helper functions -->
     fn update_total_price() {
         let this: Self = expect_context();
 
-        // Calculate total price based on selected rooms and available room data
-        let selected_rooms = this.selected_rooms.get();
-        let available_rooms = this.available_rooms.get();
-
-        let total = selected_rooms
+        // Use helper function to calculate total price per night (without nights multiplier)
+        let selected_rooms_with_data = Self::get_selected_rooms_with_data();
+        let total = selected_rooms_with_data
             .iter()
-            .fold(0.0, |acc, (room_type, &quantity)| {
-                // Find the room data for this room type to get price
-                // Note: This is a simplified calculation - in real implementation,
-                // you would need to match room_type to actual room pricing from hotel details
-                acc + (quantity as f64 * 100.0) // Placeholder price calculation
+            .fold(0.0, |acc, (room_option, quantity)| {
+                acc + (room_option.price.room_price * *quantity as f64)
             });
 
         this.total_price.set(total);

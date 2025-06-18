@@ -3,10 +3,11 @@ use std::sync::Arc;
 use crate::adapters::LiteApiAdapter;
 use crate::api::api_client::ApiClient;
 use crate::api::liteapi::{
-    liteapi_book_room, liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook,
-    LiteApiBookRequest, LiteApiBookResponse, LiteApiHTTPClient, LiteApiHotelRatesRequest,
-    LiteApiHotelRatesResponse, LiteApiHotelResult, LiteApiHotelSearchRequest,
-    LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest, LiteApiPrebookResponse,
+    liteapi_book_room, liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search,
+    liteapi_prebook, LiteApiBookRequest, LiteApiBookResponse, LiteApiHTTPClient,
+    LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiHotelResult,
+    LiteApiHotelSearchRequest, LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest,
+    LiteApiPrebookResponse, LiteApiSingleHotelDetailRequest, LiteApiSingleHotelDetailResponse,
 };
 use crate::ports::traits::HotelProviderPort;
 use crate::utils;
@@ -27,12 +28,18 @@ use async_trait::async_trait;
 
 #[async_trait]
 impl HotelProviderPort for LiteApiAdapter {
+    #[tracing::instrument(skip(self, ui_filters))]
     async fn search_hotels(
         &self,
         criteria: DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         let liteapi_request = Self::map_domain_search_to_liteapi(&criteria, ui_filters.clone());
+        crate::log!(
+            "LiteAPI search_hotels: calling search API with request: {:#?}",
+            liteapi_request
+        );
+
         let liteapi_response: LiteApiHotelSearchResponse = self
             .client
             .send(liteapi_request)
@@ -46,21 +53,36 @@ impl HotelProviderPort for LiteApiAdapter {
             .await
     }
 
-    async fn get_hotel_details(
+    #[tracing::instrument(skip(self))]
+    async fn get_single_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError> {
-        // First, get hotel information from search to get detailed hotel info
-        let hotel_search_request = LiteApiHotelSearchRequest {
-            country_code: criteria.search_criteria.destination_country_code.clone(),
-            city_name: criteria.search_criteria.destination_city_name.clone(),
-            offset: 0,
-            limit: 50,
+        // Get hotel ID from criteria
+        let hotel_id = if !criteria.hotel_ids.is_empty() {
+            let id = criteria.hotel_ids[0].clone();
+            crate::log!("LiteAPI get_hotel_details called with hotel_id: {}", id);
+            id
+        } else {
+            return Err(ProviderError::from_api_error(
+                ApiError::Other("Hotel IDs cannot be empty".to_string()),
+                ProviderNames::LiteApi,
+                ProviderSteps::HotelDetails,
+            ));
         };
 
-        let hotel_search_response: LiteApiHotelSearchResponse = self
+        // Only call rates API - LiteAPI hotel details endpoint doesn't seem to exist
+        let rates_request = Self::map_domain_info_to_liteapi_rates(&criteria)?;
+
+        crate::log!(
+            "LiteAPI get_hotel_details: calling rates API only for hotel_id: {}",
+            hotel_id
+        );
+
+        // Call rates API
+        let rates_response = self
             .client
-            .send(hotel_search_request)
+            .send(rates_request)
             .await
             .map_err(|e: ApiError| {
                 ProviderError::from_api_error(
@@ -70,49 +92,19 @@ impl HotelProviderPort for LiteApiAdapter {
                 )
             })?;
 
-        // Find the specific hotel in search results
-        let hotel_id = if !criteria.hotel_ids.is_empty() {
-            criteria.hotel_ids[0].clone()
-        } else {
-            criteria.token.clone()
-        };
+        // No separate hotel details data - will use search result data if available
+        let hotel_details_data = None;
 
-        let hotel_info = hotel_search_response
-            .data
-            .iter()
-            .find(|h| h.id == hotel_id)
-            .ok_or_else(|| {
-                ProviderError(Arc::new(ProviderErrorDetails {
-                    provider_name: ProviderNames::LiteApi,
-                    api_error: ApiError::Other(format!(
-                        "Hotel with ID {} not found in search results",
-                        hotel_id
-                    )),
-                    error_step: ProviderSteps::HotelDetails,
-                }))
-            })?;
-
-        // Convert domain criteria to LiteAPI rates request
-        let liteapi_request = Self::map_domain_info_to_liteapi_rates(&criteria)?;
-
-        // Call LiteAPI rates endpoint
-        let liteapi_response: LiteApiHotelRatesResponse = self
-            .client
-            .send(liteapi_request)
-            .await
-            .map_err(|e: ApiError| {
-            ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelDetails)
-        })?;
-
-        // Map response to domain hotel details using hotel info from search
-        Self::map_liteapi_rates_to_domain_details(
-            liteapi_response,
+        // Map response to domain hotel details using both hotel details and rates data
+        Self::map_liteapi_rates_and_details_to_domain(
+            rates_response,
+            hotel_details_data,
             &criteria.search_criteria,
-            Some(hotel_info),
+            None, // No search info available in this context
         )
         .map_err(|e| {
             // Log the error for debugging
-            crate::log!("LiteAPI rates mapping error: {:?}", e);
+            crate::log!("LiteAPI mapping error: {:?}", e);
             e
         })
     }

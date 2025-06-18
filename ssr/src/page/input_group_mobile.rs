@@ -37,7 +37,7 @@ pub fn InputGroupMobile() -> impl IntoView {
 
     // Format guest info display
     let guest_info_display = create_memo(move |_| {
-        let guest_selection = search_ctx.guests.get();
+        let guest_selection = &search_ctx.guests;
         let adults = guest_selection.adults.get();
         let children = guest_selection.children.get();
         let rooms = guest_selection.rooms.get();

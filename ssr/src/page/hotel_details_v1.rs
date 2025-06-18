@@ -133,18 +133,16 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
                 .map(|(_, icon)| *icon)
                 .unwrap_or(icondata::IoWifi);
 
-            let display_text = if text.len() > 10 {
-                let mut s = text[..10].to_string();
-                s.push('…');
-                s
-            } else {
-                text
-            };
+            // todo: truncate if needed later.
+            // let display_text = if text.len() > 10 {
+            //     let mut s = text[..10].to_string();
+            //     s.push('…');
+            //     s
+            // } else {
+            //     text
+            // };
 
-            Amenity {
-                icon,
-                text: display_text,
-            }
+            Amenity { icon, text }
         })
         .collect()
 }
@@ -165,200 +163,118 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    // Create action for fetching hotel details
-    let fetch_hotel_details = create_action(move |_: &()| {
-        let client = ClientSideApiClient::new();
+    // Create resource to fetch hotel details when page loads
+    // Following the pattern from block_room_v1.rs prebook_resource
+    let hotel_details_resource = create_resource(
+        move || {
+            // Wait for essential data to be ready before calling API
+            let hotel_code = hotel_info_ctx.hotel_code.get();
+            let destination = ui_search_ctx.destination.get();
+            let date_range = ui_search_ctx.date_range.get();
+            let has_hotel_code = !hotel_code.is_empty();
+            let has_destination = destination.is_some();
+            let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
-        async move {
-            // Set loading state
-            HotelDetailsUIState::set_loading(true);
-            HotelDetailsUIState::set_error(None);
-
-            // Get hotel code from context
-            let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
-            if hotel_code.is_empty() {
-                HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
-                HotelDetailsUIState::set_loading(false);
-                return;
-            }
-
-            // Create search criteria from UI context
-            let destination = ui_search_ctx.destination.get_untracked();
-            let date_range = ui_search_ctx.date_range.get_untracked();
-            let guests = ui_search_ctx.guests.get_untracked();
-
-            if destination.is_none() {
-                HotelDetailsUIState::set_error(Some("Search criteria not available".to_string()));
-                HotelDetailsUIState::set_loading(false);
-                return;
-            }
-
-            let destination = destination.unwrap();
-
-            // Create room guests
-            let room_guests = vec![DomainRoomGuest {
-                no_of_adults: guests.adults.get_untracked(),
-                no_of_children: guests.children.get_untracked(),
-                children_ages: if guests.children.get_untracked() > 0 {
-                    Some(
-                        guests
-                            .children_ages
-                            .get_untracked()
-                            .into_iter()
-                            .map(|age| age.to_string())
-                            .collect(),
-                    )
-                } else {
-                    None
-                },
-            }];
-
-            // Create search criteria
-            let search_criteria = DomainHotelSearchCriteria {
-                destination_city_id: destination.city_id.parse().unwrap_or(0),
-                destination_city_name: destination.city.clone(),
-                destination_country_code: destination.country_code.clone(),
-                destination_country_name: destination.country_name.clone(),
-                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                no_of_nights: date_range.no_of_nights(),
-                no_of_rooms: guests.rooms.get_untracked(),
-                room_guests,
-                guest_nationality: "US".to_string(), // Default for now
-            };
-
-            // Create hotel info criteria
-            let criteria = DomainHotelInfoCriteria {
-                token: hotel_code.clone(),
-                hotel_ids: vec![hotel_code],
-                search_criteria,
-            };
-
-            // Call API
-            match client.get_hotel_info(criteria).await {
-                Some(details) => {
-                    log!("Hotel details loaded successfully: {}", details.hotel_name);
-                    HotelDetailsUIState::set_hotel_details(Some(details));
+            // Return true when ready to call API
+            has_hotel_code && has_destination && has_valid_dates
+        },
+        move |is_ready| {
+            let guests_for_details = ui_search_ctx.guests.clone();
+            async move {
+                if !is_ready {
+                    log!("Hotel details resource: Not ready yet, waiting for data...");
+                    return None;
                 }
-                None => {
+
+                log!("Hotel details resource: Page data ready, fetching hotel details...");
+                HotelDetailsUIState::set_loading(true);
+                HotelDetailsUIState::set_error(None);
+
+                let client = ClientSideApiClient::new();
+                let guests_clone = guests_for_details.clone();
+
+                // Get hotel code from context
+                let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
+                if hotel_code.is_empty() {
+                    HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
+                    HotelDetailsUIState::set_loading(false);
+                    return None;
+                }
+
+                // Create search criteria from UI context
+                let destination = ui_search_ctx.destination.get_untracked();
+                let date_range = ui_search_ctx.date_range.get_untracked();
+                let guests = &guests_clone;
+
+                if destination.is_none() {
                     HotelDetailsUIState::set_error(Some(
-                        "Failed to load hotel details".to_string(),
+                        "Search criteria not available".to_string(),
                     ));
+                    HotelDetailsUIState::set_loading(false);
+                    return None;
+                }
+
+                let destination = destination.unwrap();
+
+                // Create room guests
+                let room_guests = vec![DomainRoomGuest {
+                    no_of_adults: guests.adults.get_untracked(),
+                    no_of_children: guests.children.get_untracked(),
+                    children_ages: if guests.children.get_untracked() > 0 {
+                        Some(
+                            guests
+                                .children_ages
+                                .get_untracked()
+                                .into_iter()
+                                .map(|age| age.to_string())
+                                .collect(),
+                        )
+                    } else {
+                        None
+                    },
+                }];
+
+                // Create search criteria
+                let search_criteria = DomainHotelSearchCriteria {
+                    destination_city_id: destination.city_id.parse().unwrap_or(0),
+                    destination_city_name: destination.city.clone(),
+                    destination_country_code: destination.country_code.clone(),
+                    destination_country_name: destination.country_name.clone(),
+                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                    no_of_nights: date_range.no_of_nights(),
+                    no_of_rooms: guests.rooms.get_untracked(),
+                    room_guests,
+                    guest_nationality: "US".to_string(), // Default for now
+                };
+
+                // Create hotel info criteria
+                let criteria = DomainHotelInfoCriteria {
+                    token: hotel_code.clone(),
+                    hotel_ids: vec![hotel_code],
+                    search_criteria,
+                };
+
+                // Call API
+                match client.get_hotel_info(criteria).await {
+                    Some(details) => {
+                        log!("Hotel details resource: Success - {}", details.hotel_name);
+                        HotelDetailsUIState::set_hotel_details(Some(details.clone()));
+                        HotelDetailsUIState::set_loading(false);
+                        Some(details)
+                    }
+                    None => {
+                        log!("Hotel details resource: Failed to load hotel details");
+                        HotelDetailsUIState::set_error(Some(
+                            "Failed to load hotel details".to_string(),
+                        ));
+                        HotelDetailsUIState::set_loading(false);
+                        None
+                    }
                 }
             }
-
-            HotelDetailsUIState::set_loading(false);
-        }
-    });
-
-    // / **Phase 3 API Integration: Hotel Rates Fetching**
-    // /
-    // / **Purpose**: Fetches available room types and rates for the selected hotel
-    // / **Trigger**: Automatically called after hotel details are loaded
-    // / **API**: Uses ClientSideApiClient::get_hotel_rates()
-    // / **State Management**: Updates HotelDetailsUIState with room data
-    // / **Error Handling**: Graceful fallback to mock data if API fails
-    let fetch_hotel_rates = create_action(move |_: &()| {
-        let client = ClientSideApiClient::new();
-
-        async move {
-            // Set room loading state
-            HotelDetailsUIState::set_room_loading(true);
-
-            // Get hotel code from context
-            let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
-            if hotel_code.is_empty() {
-                log!("No hotel code available for rates");
-                HotelDetailsUIState::set_room_loading(false);
-                return;
-            }
-
-            // Create search criteria from UI context
-            let destination = ui_search_ctx.destination.get_untracked();
-            let date_range = ui_search_ctx.date_range.get_untracked();
-            let guests = ui_search_ctx.guests.get_untracked();
-
-            if destination.is_none() {
-                log!("Search criteria not available for rates");
-                HotelDetailsUIState::set_room_loading(false);
-                return;
-            }
-
-            let destination = destination.unwrap();
-
-            // Create room guests
-            let room_guests = vec![DomainRoomGuest {
-                no_of_adults: guests.adults.get_untracked(),
-                no_of_children: guests.children.get_untracked(),
-                children_ages: if guests.children.get_untracked() > 0 {
-                    Some(
-                        guests
-                            .children_ages
-                            .get_untracked()
-                            .into_iter()
-                            .map(|age| age.to_string())
-                            .collect(),
-                    )
-                } else {
-                    None
-                },
-            }];
-
-            // Create search criteria
-            let search_criteria = DomainHotelSearchCriteria {
-                destination_city_id: destination.city_id.parse().unwrap_or(0),
-                destination_city_name: destination.city.clone(),
-                destination_country_code: destination.country_code.clone(),
-                destination_country_name: destination.country_name.clone(),
-                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                no_of_nights: date_range.no_of_nights(),
-                no_of_rooms: guests.rooms.get_untracked(),
-                room_guests,
-                guest_nationality: "US".to_string(), // Default for now
-            };
-
-            // Create hotel info criteria for rates
-            let criteria = DomainHotelInfoCriteria {
-                token: hotel_code.clone(),
-                hotel_ids: vec![hotel_code],
-                search_criteria,
-            };
-
-            // Call hotel rates API
-            match client.get_hotel_rates(criteria).await {
-                Some(hotel_details) => {
-                    log!("Hotel rates loaded successfully");
-                    // Extract room data from the hotel details
-                    let room_data = vec![hotel_details.first_room_details.room_data];
-                    HotelDetailsUIState::set_available_rooms(room_data);
-                }
-                None => {
-                    log!("Failed to load hotel rates");
-                }
-            }
-
-            HotelDetailsUIState::set_room_loading(false);
-        }
-    });
-
-    // Trigger API calls on component mount
-    create_effect(move |_| {
-        let hotel_code = hotel_info_ctx.hotel_code.get();
-        if !hotel_code.is_empty() {
-            log!("Fetching hotel details for: {}", hotel_code);
-            fetch_hotel_details.dispatch(());
-        }
-    });
-
-    // Trigger hotel rates fetching after hotel details are loaded
-    create_effect(move |_| {
-        let hotel_details = hotel_details_state.hotel_details.get();
-        if hotel_details.is_some() {
-            log!("Hotel details loaded, fetching rates...");
-            fetch_hotel_rates.dispatch(());
-        }
-    });
+        },
+    );
 
     let loaded = move || hotel_details_state.hotel_details.get().is_some();
     let is_loading = move || hotel_details_state.loading.get();
@@ -426,6 +342,14 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             <div class="flex flex-col items-center mt-6 p-4">
                 <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
             </div>
+
+            // <!-- Use resource pattern like prebook_resource in block_room_v1.rs -->
+            // <!-- The resource automatically triggers data loading when dependencies change -->
+            {move || {
+                // Trigger the resource loading but don't render anything
+                let _ = hotel_details_resource.get();
+                view! { <></> }
+            }}
 
             <Show
                 when=move || !is_loading()
@@ -605,7 +529,8 @@ pub fn HotelImages() -> impl IntoView {
 pub fn AmenitiesIconText(icon: icondata::Icon, #[prop(into)] text: String) -> impl IntoView {
     view! {
         <div class="flex items-center">
-            <Icon class="inline text-xl text-gray-600" icon=icon />
+        // todo: for now, we are showing a bullet only
+            <Icon class="inline text-xl text-gray-600" icon=icondata::BsDot />
             <span class="inline ml-2 text-sm text-gray-700">{text}</span>
         </div>
     }
@@ -622,9 +547,9 @@ pub fn AmenitiesIconText(icon: icondata::Icon, #[prop(into)] text: String) -> im
 pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    /// **Reactive State Management**:
-    /// Tracks room count for this specific room type using room_unique_id as key
-    /// Uses create_memo for efficient reactivity - only updates when selection changes
+    // **Reactive State Management**:
+    // Tracks room count for this specific room type using room_unique_id as key
+    // Uses create_memo for efficient reactivity - only updates when selection changes
     let room_count = create_memo({
         let room_key = room_unique_id.clone();
         move |_| {
@@ -704,32 +629,16 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     let booking_loading = create_rw_signal(false);
 
     // Reactive signals for pricing calculations
-    let selected_rooms = move || hotel_details_state.selected_rooms.get();
-    let hotel_details = move || hotel_details_state.hotel_details.get();
     let date_range = move || ui_search_ctx.date_range.get();
 
     // Calculate number of nights
     let number_of_nights = move || date_range().no_of_nights();
 
-    // Calculate room price per night from hotel details
-    let room_price_per_night = move || {
-        if let Some(details) = hotel_details() {
-            details.first_room_details.price.room_price
-        } else {
-            0.0
-        }
-    };
-
     // Calculate total selected rooms
-    let total_selected_rooms = move || selected_rooms().values().sum::<u32>();
+    let total_selected_rooms = move || HotelDetailsUIState::total_selected_rooms();
 
-    // Calculate subtotal (room price x nights x rooms)
-    let subtotal = move || {
-        let price_per_night = room_price_per_night();
-        let nights = number_of_nights();
-        let rooms = total_selected_rooms();
-        price_per_night * nights as f64 * rooms as f64
-    };
+    // Calculate subtotal using helper method
+    let subtotal = move || HotelDetailsUIState::calculate_subtotal_for_nights();
 
     // Check if any rooms are selected
     let has_rooms_selected = move || total_selected_rooms() > 0;
@@ -808,26 +717,39 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 }
             >
                 <div class="space-y-3">
-                    // <!-- Price calculation display -->
-                    <div class="flex justify-between items-center text-gray-700">
-                        <span>
-                            {move || {
-                                let rooms = total_selected_rooms();
-                                let nights = number_of_nights();
-                                if rooms == 1 {
-                                    format!("Room price × {} night{}", nights, if nights != 1 { "s" } else { "" })
-                                } else {
-                                    format!("{} rooms × {} night{}", rooms, nights, if nights != 1 { "s" } else { "" })
-                                }
-                            }}
-                        </span>
-                        <span class="font-medium">
-                            {move || format!("${:.2}", subtotal())}
-                        </span>
-                    </div>
+                    // <!-- Price calculation display - breakdown per room type -->
+                    // <For
+                    //     each=move || HotelDetailsUIState::get_selected_rooms_with_data()
+                    //     key=|(room_option, _)| room_option.room_data.room_unique_id.clone()
+                    //     let:room_data
+                    // >
+                    //     {
+                    //         let (room_option, quantity) = room_data;
+                    //         let room_name = room_option.room_data.room_name.clone();
+                    //         let room_price = room_option.price.room_price;
+                    //
+                    //         view! {
+                    //             <div class="flex justify-between items-center text-gray-700">
+                    //                 <span class="text-sm">
+                    //                     {move || {
+                    //                         let nights = number_of_nights();
+                    //                         HotelDetailsUIState::format_room_breakdown_text(&room_name, quantity, nights)
+                    //                     }}
+                    //                 </span>
+                    //                 <span class="font-medium text-sm">
+                    //                     {move || {
+                    //                         let nights = number_of_nights();
+                    //                         let line_total = HotelDetailsUIState::calculate_room_line_total(&room_option, quantity, nights);
+                    //                         format!("${:.2}", line_total)
+                    //                     }}
+                    //                 </span>
+                    //             </div>
+                    //         }
+                    //     }
+                    // </For>
 
                     // <!-- Divider -->
-                    <div class="border-t border-gray-200 my-3"></div>
+                    // <div class="border-t border-gray-200 my-3"></div>
 
                     // <!-- Total -->
                     <div class="flex justify-between items-center text-lg font-semibold">
@@ -881,38 +803,36 @@ pub fn PricingBookNowV1() -> impl IntoView {
     // **Smart Room Data Management**:
     // **Primary**: Uses real room data from get_hotel_rates() API
     // **Fallback**: Mock data when API is loading or unavailable
-    // **Price Source**: Extracts room_price from hotel_details.first_room_details
+    // **Price Source**: Extracts room_price from hotel_details.all_rooms
     // **Data Structure**: (room_name, price_per_night, room_unique_id)
     let available_rooms = move || {
-        let rooms = hotel_details_state.available_rooms.get();
-        if !rooms.is_empty() {
-            // Use real room data from API
-            rooms
+        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+            // Use real room data from all_rooms with individual pricing
+            hotel_details
+                .all_rooms
                 .into_iter()
-                .map(|room| {
-                    // Get price from hotel details if available
-                    let price = if let Some(hotel_details) = hotel_details_state.hotel_details.get()
-                    {
-                        hotel_details.first_room_details.price.room_price
-                    } else {
-                        150.0 // Fallback price
-                    };
-                    (room.room_name.clone(), price, room.room_unique_id.clone())
+                .take(5) // <!-- Limit to maximum 5 rooms for display -->
+                .map(|room_option| {
+                    (
+                        room_option.room_data.room_name.clone(),
+                        room_option.price.room_price,
+                        room_option.room_data.room_unique_id.clone(),
+                    )
                 })
                 .collect::<Vec<_>>()
         } else {
-            // No fallback rooms - show empty list when no API data available
+            // No fallback rooms - show empty list when no hotel data available
             vec![]
         }
     };
 
-    let is_rooms_loading = move || hotel_details_state.room_loading.get();
+    let is_rooms_loading = move || hotel_details_state.loading.get();
 
     // Reactive signals for display
     let total_price = create_memo(move |_| HotelDetailsUIState::total_room_price());
     let has_price = create_memo(move |_| total_price.get() > 0.0);
     let date_range = move || ui_search_ctx.date_range.get();
-    let guests = move || ui_search_ctx.guests.get();
+    let guests = ui_search_ctx.guests;
 
     // Format dates for display
     let check_in_display = move || {
@@ -936,19 +856,19 @@ pub fn PricingBookNowV1() -> impl IntoView {
         }
     };
 
-    let adults_count = move || guests().adults.get();
-    let rooms_count = move || guests().rooms.get();
+    let adults_count = move || guests.adults.get();
+    let rooms_count = move || guests.rooms.get();
 
     view! {
         <div class="flex flex-col space-y-4 shadow-lg rounded-xl p-4 md:p-8 bg-white">
             // <!-- Total Price Display (if price > 0) -->
-            <Show when=has_price>
-                <div class="bg-blue-50 rounded-lg p-4 mb-4">
-                    <div class="text-2xl font-bold text-blue-800 text-center">
-                        {move || format!("Total: ${:.2}", total_price.get())}
-                    </div>
-                </div>
-            </Show>
+            // <Show when=has_price>
+            //     <div class="bg-blue-50 rounded-lg p-4 mb-4">
+            //         <div class="text-2xl font-bold text-blue-800 text-center">
+            //             {move || format!("Total: ${:.2}", total_price.get())}
+            //         </div>
+            //     </div>
+            // </Show>
 
             // <!-- Search Context Summary -->
             <div class="bg-gray-50 rounded-lg p-4 space-y-3">

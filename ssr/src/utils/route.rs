@@ -48,12 +48,17 @@ pub fn go_to_root() {
 
 pub fn join_base_and_path_url(base: &str, path: &str) -> Result<String, String> {
     // Parse the base URL first
-    let base_url = Url::parse(base).map_err(|e| format!("Invalid base URL: {}", e))?;
+    let mut base_url = Url::parse(base).map_err(|e| format!("Invalid base URL: {}", e))?;
 
-    // Use the join method on Url
-    let full_url = base_url
-        .join(path)
-        .map_err(|e| format!("Invalid path: {}", e))?;
+    // Get the existing path from base URL and append the new path
+    let mut full_path = base_url.path().trim_end_matches('/').to_string();
+    if !path.starts_with('/') {
+        full_path.push('/');
+    }
+    full_path.push_str(path);
 
-    Ok(full_url.to_string())
+    // Set the combined path
+    base_url.set_path(&full_path);
+
+    Ok(base_url.to_string())
 }

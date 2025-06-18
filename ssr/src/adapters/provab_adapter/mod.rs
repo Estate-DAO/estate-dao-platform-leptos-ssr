@@ -29,6 +29,7 @@ use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
     DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
     DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice, DomainRoomData,
+    DomainRoomOccupancy, DomainRoomOption,
 };
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
@@ -140,9 +141,9 @@ impl ProvabAdapter {
             hotel_facilities: provab_details.hotel_facilities,
             address: provab_details.address,
             images: provab_details.images,
-            first_room_details: Self::map_provab_first_room_details_to_domain(
+            all_rooms: vec![Self::map_provab_first_room_details_to_room_option(
                 provab_details.first_room_details,
-            ),
+            )],
             amenities: provab_details.amenities,
         }
     }
@@ -171,6 +172,21 @@ impl ProvabAdapter {
         }
     }
 
+    fn map_provab_first_room_details_to_room_option(
+        provab_room: ProvabFirstRoomDetails,
+    ) -> DomainRoomOption {
+        DomainRoomOption {
+            price: Self::map_provab_detailed_price_to_domain(provab_room.price),
+            room_data: Self::map_provab_room_data_to_domain(
+                provab_room.room_data,
+                provab_room.room_name,
+            ),
+            meal_plan: None, // Provab doesn't provide meal plan info in first room details
+            occupancy_info: None, // Provab doesn't provide occupancy info in first room details
+        }
+    }
+
+    // Keep the old function for backward compatibility if needed elsewhere
     fn map_provab_first_room_details_to_domain(
         provab_room: ProvabFirstRoomDetails,
     ) -> DomainFirstRoomDetails {

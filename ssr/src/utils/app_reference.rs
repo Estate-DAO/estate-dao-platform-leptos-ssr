@@ -7,6 +7,7 @@ use log::info;
 // Import necessary modules
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use web_sys::window;
 
 use crate::canister::backend;
 use crate::{canister::backend::Booking, view_state_layer::local_storage::use_booking_id_store};
@@ -79,6 +80,39 @@ impl BookingId {
 
         set_state(Some(self.clone()));
         state
+    }
+
+    /// Extract app_reference from local storage as JSON string representation
+    /// Returns raw JSON string from localStorage, similar to how browser APIs work
+    pub fn extract_app_reference_from_local_storage() -> Option<String> {
+        #[cfg(not(feature = "ssr"))]
+        {
+            use web_sys::window;
+
+            use crate::api::consts::BOOKING_ID;
+            window()?
+                .local_storage()
+                .ok()??
+                .get_item(&BOOKING_ID)
+                .ok()?
+        }
+        #[cfg(feature = "ssr")]
+        {
+            None
+        }
+    }
+
+    /// Extract BookingId struct from local storage
+    /// Uses the same pattern as read_from_local_storage but with get_untracked for immediate access
+    pub fn extract_booking_id_from_local_storage() -> Option<BookingId> {
+        let (state, _, _) = use_booking_id_store();
+        state.get_untracked()
+    }
+
+    /// Extract email from local storage via BookingId
+    /// Convenience method that combines BookingId extraction with email access
+    pub fn extract_email_from_local_storage() -> Option<String> {
+        Self::extract_booking_id_from_local_storage().map(|booking_id| booking_id.email)
     }
 }
 

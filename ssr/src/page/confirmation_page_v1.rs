@@ -2,16 +2,14 @@ use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::{use_navigate, use_query_map};
 use std::collections::HashMap;
-use web_sys::window;
 
 use crate::api::client_side_api::{ClientSideApiClient, ConfirmationProcessRequest};
 use crate::component::{Divider, Navbar, NotificationData, NotificationListener, SpinnerGray};
 use crate::log;
-use crate::utils::{
-    app_reference::BookingId, booking_id::PaymentIdentifiers, BackendIntegrationHelper,
-};
+use crate::utils::app_reference::BookingId;
 use crate::view_state_layer::{
-    ui_confirmation_page::ConfirmationPageUIState, GlobalStateForLeptos,
+    booking_context_state::BookingContextState, ui_confirmation_page::ConfirmationPageUIState,
+    GlobalStateForLeptos,
 };
 
 /// **Phase 1: Main Confirmation Page V1 Component**
@@ -28,17 +26,24 @@ use crate::view_state_layer::{
 #[component]
 pub fn ConfirmationPageV1() -> impl IntoView {
     let confirmation_state: ConfirmationPageUIState = expect_context();
+    let booking_context: BookingContextState = expect_context();
     let query_map = use_query_map();
 
     // **Phase 1: Initialize state on component mount**
     create_effect(move |_| {
+        // Initialize confirmation page state
         ConfirmationPageUIState::initialize();
 
         // Extract payment_id from query params
-        let payment_id = query_map.with(|params| params.get("payment_id").map(|p| p.to_string()));
+        let payment_id =
+            query_map.with(|params| params.get("NP_payment_id").map(|p| p.to_string()));
 
-        // Extract app_reference from local storage (BookingId format)
-        let app_reference = extract_app_reference_from_local_storage();
+        // Read booking data from localStorage in parent component
+        let booking_id = BookingId::extract_booking_id_from_local_storage();
+        let app_reference = BookingId::extract_app_reference_from_local_storage();
+
+        // Initialize booking context state with data from localStorage
+        BookingContextState::initialize_with_data(booking_id.clone(), app_reference.clone());
 
         log!(
             "ConfirmationPageV1 - payment_id: {:?}, app_reference: {:?}",
@@ -68,20 +73,15 @@ pub fn ConfirmationPageV1() -> impl IntoView {
             // Spawn async task to call confirmation API
             spawn_local(async move {
                 let api_client = ClientSideApiClient::new();
-                // Convert app_reference to order_id format for API call
-                let order_id = if let Some(booking_id) = extract_booking_id_from_local_storage() {
-                    PaymentIdentifiers::order_id_from_app_reference(
-                        &booking_id.app_reference,
-                        &booking_id.email,
-                    )
-                } else {
-                    app_ref.clone() // fallback to raw app_ref
-                };
+                // Get order_id and email from centralized booking context
+                let (order_id, email) = BookingContextState::get_order_details_untracked();
+
+                let order_id = order_id.unwrap_or_else(|| app_ref.clone()); // fallback to raw app_ref
 
                 let request = ConfirmationProcessRequest {
                     payment_id: Some(pay_id),
                     app_reference: Some(order_id), // Send order_id format to server
-                    email: extract_email_from_local_storage(),
+                    email,
                     query_params,
                 };
 
@@ -121,6 +121,9 @@ pub fn ConfirmationPageV1() -> impl IntoView {
                 <Navbar />
             </div>
 
+            // **SSE Connection Status Indicator**
+            <SSEConnectionIndicator />
+
             // **Phase 2: SSE Integration - NotificationListener with extracted params**
             <NotificationListenerWrapper />
 
@@ -152,8 +155,7 @@ pub fn ConfirmationPageV1() -> impl IntoView {
 }
 
 /// **Phase 2: NotificationListener Integration**
-/// Wrapper component to extract order_id and email from app_reference and
-/// pass to NotificationListener for SSE event handling
+/// Wrapper component using centralized booking context for SSE event handling
 #[component]
 fn NotificationListenerWrapper() -> impl IntoView {
     let confirmation_state: ConfirmationPageUIState = expect_context();
@@ -163,19 +165,10 @@ fn NotificationListenerWrapper() -> impl IntoView {
             let app_reference = confirmation_state.app_reference.get();
             let payment_id = confirmation_state.payment_id.get();
 
-            if let (Some(app_ref), Some(pay_id)) = (app_reference, payment_id) {
-                // Extract order_id and email from BookingId
-                let (order_id, email) = if let Some(booking_id) = extract_booking_id_from_local_storage() {
-                    let order_id = PaymentIdentifiers::order_id_from_app_reference(&booking_id.app_reference, &booking_id.email);
-                    (order_id, booking_id.email)
-                } else {
-                    // Fallback: try to parse as order_id format
-                    if let Some(booking_id) = BookingId::from_order_id(&app_ref) {
-                        (app_ref.clone(), booking_id.email)
-                    } else {
-                        (app_ref.clone(), "".to_string())
-                    }
-                };
+            if let (Some(_app_ref), Some(_pay_id)) = (app_reference, payment_id) {
+                // Get order_id and email from centralized booking context
+                let order_id = BookingContextState::get_order_id_untracked().unwrap_or_default();
+                let email = BookingContextState::get_email_untracked().unwrap_or_default();
 
                 log!("NotificationListener setup - order_id: {}, email: {}", order_id, email);
 
@@ -511,39 +504,30 @@ fn BookingConfirmationDisplay() -> impl IntoView {
     }
 }
 
-// **Helper Functions**
-
-/// Extract app_reference from local storage (returns JSON string representation)
-fn extract_app_reference_from_local_storage() -> Option<String> {
-    #[cfg(not(feature = "ssr"))]
-    {
-        window()?
-            .local_storage()
-            .ok()??
-            .get_item("estatedao_booking_id")
-            .ok()?
+/// **SSE Connection Status Indicator**
+/// Shows a small indicator in the top-right to display SSE connection status
+#[component]
+fn SSEConnectionIndicator() -> impl IntoView {
+    view! {
+        <div class="fixed top-4 right-4 z-50">
+            <div class="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-md border">
+                <div class="flex items-center space-x-1">
+                    {move || {
+                        let is_connected = ConfirmationPageUIState::get_sse_connected().get();
+                        if is_connected {
+                            view! {
+                                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <span class="text-xs text-green-700 font-medium">"Connected"</span>
+                            }.into_view()
+                        } else {
+                            view! {
+                                <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                                <span class="text-xs text-red-700 font-medium">"Disconnected"</span>
+                            }.into_view()
+                        }
+                    }}
+                </div>
+            </div>
+        </div>
     }
-    #[cfg(feature = "ssr")]
-    {
-        None
-    }
-}
-
-/// Extract BookingId struct from local storage
-fn extract_booking_id_from_local_storage() -> Option<BookingId> {
-    #[cfg(not(feature = "ssr"))]
-    {
-        use crate::view_state_layer::local_storage::use_booking_id_store;
-        let (state, _, _) = use_booking_id_store();
-        state.get_untracked()
-    }
-    #[cfg(feature = "ssr")]
-    {
-        None
-    }
-}
-
-/// Extract email from local storage via BookingId
-fn extract_email_from_local_storage() -> Option<String> {
-    extract_booking_id_from_local_storage().map(|booking_id| booking_id.email)
 }

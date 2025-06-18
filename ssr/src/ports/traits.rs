@@ -30,7 +30,7 @@ pub trait HotelProviderPort {
     // ) -> impl Future<Output = Result<DomainHotelListAfterSearch, ProviderError>> + Send;
     // // ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>>;
 
-    async fn get_hotel_details(
+    async fn get_single_hotel_details(
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError>;

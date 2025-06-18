@@ -59,11 +59,6 @@ pub struct BlockRoomUIState {
     pub block_room_id: RwSignal<Option<String>>,
     pub block_room_called: RwSignal<bool>,
 
-    // // <!-- Phase 3.3: Real-time availability checking -->
-    // pub availability_checking: RwSignal<bool>,
-    // pub room_availability_status: RwSignal<Option<String>>, // "available", "limited", "unavailable"
-    // pub availability_last_checked: RwSignal<Option<String>>, // Timestamp of last check
-
     // <!-- Room selection data from hotel details -->
     pub selected_rooms: RwSignal<HashMap<String, (u32, DomainRoomData)>>, // room_id -> (quantity, room_data)
     pub hotel_context: RwSignal<Option<DomainHotelDetails>>,
@@ -210,7 +205,7 @@ impl BlockRoomUIState {
 
     pub fn get_total_price() -> f64 {
         let this: Self = expect_context();
-        this.total_price.get_untracked()
+        this.total_price.get()
     }
 
     // UI state methods
@@ -255,34 +250,6 @@ impl BlockRoomUIState {
         Self::get_retry_count() < 3 // Max 3 retry attempts
     }
 
-    // // <!-- Phase 3.3: Availability checking methods -->
-    // pub fn set_availability_checking(checking: bool) {
-    //     let this: Self = expect_context();
-    //     this.availability_checking.set(checking);
-    // }
-
-    // pub fn set_room_availability_status(status: Option<String>) {
-    //     let this: Self = expect_context();
-    //     let status_is_some = status.is_some();
-    //     this.room_availability_status.set(status);
-
-    //     // Update timestamp when status changes
-    //     if status_is_some {
-    //         let now = "timestamp_placeholder".to_string(); // Replace with actual timestamp in production
-    //         this.availability_last_checked.set(Some(now));
-    //     }
-    // }
-
-    // pub fn get_room_availability_status() -> Option<String> {
-    //     let this: Self = expect_context();
-    //     this.room_availability_status.get_untracked()
-    // }
-
-    // pub fn is_availability_checking() -> bool {
-    //     let this: Self = expect_context();
-    //     this.availability_checking.get_untracked()
-    // }
-
     pub fn set_show_payment_modal(show: bool) {
         let this: Self = expect_context();
         this.show_payment_modal.set(show);
@@ -297,6 +264,83 @@ impl BlockRoomUIState {
     pub fn set_block_room_called(called: bool) {
         let this: Self = expect_context();
         this.block_room_called.set(called);
+    }
+
+    // Update pricing from block room API response
+    pub fn update_pricing_from_api_response(total_price: f64, room_price: f64) {
+        let this: Self = expect_context();
+        this.total_price.set(total_price);
+        this.room_price.set(room_price);
+    }
+
+    // Detect if price has changed from original search price
+    pub fn has_price_changed_from_original(new_total_price: f64) -> bool {
+        let this: Self = expect_context();
+        let original_total = this.total_price.get_untracked();
+        (new_total_price - original_total).abs() > 0.01 // Allow for small floating point differences
+    }
+
+    // Get the difference between original and updated price
+    pub fn get_price_difference(new_total_price: f64) -> f64 {
+        let this: Self = expect_context();
+        let original_total = this.total_price.get_untracked();
+        new_total_price - original_total
+    }
+
+    // Static getter methods for reactive access
+    pub fn get_room_price() -> f64 {
+        let this: Self = expect_context();
+        this.room_price.get()
+    }
+
+    pub fn get_num_nights() -> u32 {
+        let this: Self = expect_context();
+        this.num_nights.get()
+    }
+
+    pub fn get_room_selection_summary() -> Vec<RoomSelectionSummary> {
+        let this: Self = expect_context();
+        this.room_selection_summary.get()
+    }
+
+    pub fn get_loading() -> bool {
+        let this: Self = expect_context();
+        this.loading.get()
+    }
+
+    pub fn get_block_room_called() -> bool {
+        let this: Self = expect_context();
+        this.block_room_called.get()
+    }
+
+    pub fn get_adults() -> Vec<AdultDetail> {
+        let this: Self = expect_context();
+        this.adults.get()
+    }
+
+    pub fn get_show_payment_modal() -> bool {
+        let this: Self = expect_context();
+        this.show_payment_modal.get()
+    }
+
+    pub fn get_error() -> Option<String> {
+        let this: Self = expect_context();
+        this.error.get()
+    }
+
+    pub fn get_hotel_context() -> Option<DomainHotelDetails> {
+        let this: Self = expect_context();
+        this.hotel_context.get()
+    }
+
+    pub fn get_form_valid() -> bool {
+        let this: Self = expect_context();
+        this.form_valid.get()
+    }
+
+    pub fn get_api_error_type() -> Option<String> {
+        let this: Self = expect_context();
+        this.api_error_type.get()
     }
 
     // Getter methods for untracked access
@@ -393,6 +437,58 @@ impl BlockRoomUIState {
             .sum()
     }
 
+    // Batch update methods to avoid signal borrow conflicts
+    pub fn batch_update_on_success(block_id: String, total_price: f64, room_price: f64) {
+        let this: Self = expect_context();
+
+        // Use untracked updates to avoid borrow conflicts
+        this.block_room_id.set(Some(block_id));
+        this.total_price.set(total_price);
+        this.room_price.set(room_price);
+
+        this.block_room_called.set(true);
+        this.show_payment_modal.set(true);
+        this.loading.set(false);
+
+        this.error.set(None);
+        this.api_error_type.set(None);
+        this.error_details.set(None);
+    }
+
+    pub fn batch_update_on_success_with_backend_error(
+        block_id: String,
+        total_price: f64,
+        room_price: f64,
+        error_message: Option<String>,
+    ) {
+        let this: Self = expect_context();
+
+        // Use untracked updates to avoid borrow conflicts
+        this.block_room_id.set(Some(block_id));
+        this.block_room_called.set(true);
+        this.total_price.set(total_price);
+        this.room_price.set(room_price);
+
+        this.loading.set(false);
+
+        this.error.set(error_message);
+        this.api_error_type.set(Some("backend".to_string()));
+    }
+
+    pub fn batch_update_on_error(
+        error_type: Option<String>,
+        user_message: Option<String>,
+        details: Option<String>,
+    ) {
+        let this: Self = expect_context();
+
+        // Use untracked updates to avoid borrow conflicts
+        this.loading.set(false);
+        this.api_error_type.set(error_type);
+        this.error.set(user_message);
+        this.error_details.set(details);
+    }
+
     // Reset method
     pub fn reset() {
         let this: Self = expect_context();
@@ -415,9 +511,6 @@ impl BlockRoomUIState {
         this.api_error_type.set(None);
         this.error_details.set(None);
         this.retry_count.set(0);
-        // this.availability_checking.set(false);
-        // this.room_availability_status.set(None);
-        // this.availability_last_checked.set(None);
     }
 }
 

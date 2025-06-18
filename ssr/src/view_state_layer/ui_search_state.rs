@@ -24,7 +24,7 @@ pub struct UISearchCtx {
     // invalid_cnt: RwSignal<u32>,
     pub destination: RwSignal<Option<Destination>>,
     pub date_range: RwSignal<SelectedDateRange>,
-    pub guests: RwSignal<GuestSelection>,
+    pub guests: GuestSelection,
     // pub on_form_reset: Trigger,
 }
 
@@ -44,7 +44,12 @@ impl UISearchCtx {
     pub fn set_guests(guests: GuestSelection) {
         let this: Self = expect_context();
 
-        this.guests.set(guests);
+        this.guests.adults.set(guests.adults.get_untracked());
+        this.guests.children.set(guests.children.get_untracked());
+        this.guests.rooms.set(guests.rooms.get_untracked());
+        this.guests
+            .children_ages
+            .set_ages(guests.children_ages.get_untracked());
     }
 
     pub fn log_state() {
@@ -52,15 +57,15 @@ impl UISearchCtx {
 
         log::info!(
             "\n\nguests.adults: {:?}",
-            this.guests.get_untracked().adults.get_untracked()
+            this.guests.adults.get_untracked()
         );
         log::info!(
             "guests.children: {:?}",
-            this.guests.get_untracked().children.get_untracked()
+            this.guests.children.get_untracked()
         );
         log::info!(
             "guests.children_ages: {:?}",
-            this.guests.get_untracked().children_ages.get_untracked()
+            this.guests.children_ages.get_untracked()
         );
 
         log::info!(

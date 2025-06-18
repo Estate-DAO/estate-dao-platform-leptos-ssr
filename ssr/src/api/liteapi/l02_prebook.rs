@@ -55,7 +55,7 @@ pub struct LiteApiPrebookRetailRate {
     #[cfg_attr(feature = "mock-provab", dummy(default))]
     pub initial_price: Option<String>, // Can be null, use String for mock compatibility
     #[serde(rename = "taxesAndFees")]
-    pub taxes_and_fees: Vec<LiteApiPrebookTaxAndFee>,
+    pub taxes_and_fees: Option<Vec<LiteApiPrebookTaxAndFee>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -64,6 +64,7 @@ pub struct LiteApiPrebookCancelPolicyInfo {
     #[serde(rename = "cancelTime")]
     pub cancel_time: String,
     pub amount: f64,
+    #[serde(default = "default_currency")]
     pub currency: String,
     #[serde(rename = "type")]
     pub policy_type: String,
@@ -103,8 +104,8 @@ pub struct LiteApiPrebookRate {
     #[serde(rename = "priceType")]
     pub price_type: String,
     pub commission: Vec<LiteApiPrebookAmount>,
-    #[serde(rename = "retailRate")]
-    pub retail_rate: LiteApiPrebookRetailRate,
+    #[serde(rename = "retailRate", skip_serializing_if = "Option::is_none")]
+    pub retail_rate: Option<LiteApiPrebookRetailRate>,
     #[serde(rename = "cancellationPolicies")]
     pub cancellation_policies: LiteApiPrebookCancellationPolicies,
     #[serde(rename = "paymentTypes")]
@@ -174,7 +175,7 @@ impl LiteApiPrebookResponse {
 // Custom trait implementation for prebook - uses different base URL
 impl LiteApiReq for LiteApiPrebookRequest {
     fn path_suffix() -> &'static str {
-        "rates/prebook?timeout=30"
+        "rates/prebook"
     }
 
     // Override the base path to use prebook base URL
@@ -202,6 +203,10 @@ impl ApiRequest for LiteApiPrebookRequest {
     fn custom_headers() -> HeaderMap {
         <Self as LiteApiReq>::custom_headers()
     }
+}
+
+fn default_currency() -> String {
+    "USD".to_string()
 }
 
 #[cfg(feature = "ssr")]

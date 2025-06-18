@@ -125,6 +125,21 @@ pub struct DomainRoomData {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainRoomOption {
+    pub price: DomainDetailedPrice,
+    pub room_data: DomainRoomData,
+    pub meal_plan: Option<String>, // Board type + board name (e.g., "Room Only")
+    pub occupancy_info: Option<DomainRoomOccupancy>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainRoomOccupancy {
+    pub max_occupancy: Option<u32>,
+    pub adult_count: Option<u32>,
+    pub child_count: Option<u32>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 
 pub struct DomainHotelDetails {
     pub checkin: String,
@@ -136,7 +151,7 @@ pub struct DomainHotelDetails {
     pub hotel_facilities: Vec<String>,
     pub address: String,
     pub images: Vec<String>,
-    pub first_room_details: DomainFirstRoomDetails,
+    pub all_rooms: Vec<DomainRoomOption>,
     pub amenities: Vec<String>,
 }
 
@@ -247,6 +262,13 @@ pub struct DomainUserDetails {
 
 // Block Room Types
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainSelectedRoomWithQuantity {
+    pub room_data: DomainRoomData,
+    pub quantity: u32,
+    pub price_per_night: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainBlockRoomRequest {
     // Hotel and search context
     pub hotel_info_criteria: DomainHotelInfoCriteria,
@@ -254,7 +276,10 @@ pub struct DomainBlockRoomRequest {
     // Guest details for the booking
     pub user_details: DomainUserDetails,
 
-    // Selected room from hotel details
+    // Selected rooms with quantities (supports multiple room types)
+    pub selected_rooms: Vec<DomainSelectedRoomWithQuantity>,
+
+    // Backward compatibility: First room (for providers that don't support multiple rooms yet)
     pub selected_room: DomainRoomData,
 
     // Additional booking context

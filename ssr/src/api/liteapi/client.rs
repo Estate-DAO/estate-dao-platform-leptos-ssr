@@ -55,6 +55,7 @@ impl ApiClient for LiteApiHTTPClient {
     fn default_headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.insert("Accept", "application/json".parse().unwrap());
+        headers.insert("Content-Type", "application/json".parse().unwrap());
 
         // Add LiteAPI key from EnvVarConfig
         let env_var_config = EnvVarConfig::expect_context_or_try_from_env();

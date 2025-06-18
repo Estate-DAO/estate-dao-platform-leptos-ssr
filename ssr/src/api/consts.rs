@@ -228,15 +228,15 @@ impl EnvVarConfig {
         // Get PROVAB_BASE_URL from environment or use the default
         let provab_base_url = match std::env::var("PROVAB_BASE_URL") {
             Ok(url) => {
-                log!("Using PROVAB_BASE_URL from environment: {}", url);
+                // log!("Using PROVAB_BASE_URL from environment: {}", url);
                 url
             }
             Err(_) => {
                 let default_url = get_default_provab_base_url().to_string();
-                log!(
-                    "PROVAB_BASE_URL not found in environment, using default: {}",
-                    default_url
-                );
+                // log!(
+                //     "PROVAB_BASE_URL not found in environment, using default: {}",
+                //     default_url
+                // );
                 default_url
             }
         };

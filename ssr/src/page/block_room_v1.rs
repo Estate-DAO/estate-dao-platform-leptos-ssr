@@ -4,11 +4,12 @@ use leptos_router::use_navigate;
 
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
+use crate::application_services::BookingService;
 use crate::component::{Divider, Navbar, SpinnerGray};
 use crate::domain::{
     DomainAdultDetail, DomainBlockRoomRequest, DomainChildDetail, DomainDestination,
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomData,
-    DomainRoomGuest, DomainSelectedDateRange, DomainUserDetails,
+    DomainRoomGuest, DomainSelectedDateRange, DomainSelectedRoomWithQuantity, DomainUserDetails,
 };
 use crate::log;
 use crate::utils::{
@@ -19,6 +20,7 @@ use crate::view_state_layer::hotel_details_state::PricingBookNowState;
 use crate::view_state_layer::ui_block_room::{
     AdultDetail, BlockRoomUIState, ChildDetail, RoomSelectionSummary,
 };
+use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
 
@@ -31,22 +33,63 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
     // Initialize form data on mount
     create_effect(move |_| {
-        let adults_count = ui_search_ctx.guests.get().adults.get() as usize;
-        let children_count = ui_search_ctx.guests.get().children.get() as usize;
-        let children_ages = ui_search_ctx.guests.get().children_ages.clone();
+        let adults_count = ui_search_ctx.guests.adults.get() as usize;
+        let children_count = ui_search_ctx.guests.children.get() as usize;
+        let children_ages = ui_search_ctx.guests.children_ages.clone();
 
         // Initialize adults and children
         BlockRoomUIState::create_adults(adults_count);
         BlockRoomUIState::create_children(children_count);
 
-        // Set pricing data from PricingBookNowState
-        let room_price = PricingBookNowState::total_room_price_for_all_user_selected_rooms();
+        // Set pricing data from HotelDetailsUIState (correct source) instead of PricingBookNowState
+        let room_price_from_pricing_book_now =
+            PricingBookNowState::total_room_price_for_all_user_selected_rooms();
+        let room_price_from_hotel_details = HotelDetailsUIState::total_room_price();
+
+        // Use the HotelDetailsUIState data since it has the correct pricing
+        let room_price = if room_price_from_hotel_details > 0.0 {
+            room_price_from_hotel_details
+        } else {
+            room_price_from_pricing_book_now
+        };
+
         let date_range = ui_search_ctx.date_range.get();
         let num_nights = date_range.no_of_nights();
 
+        log!("BlockRoomV1Page pricing initialization:");
+        log!(
+            "  room_price from PricingBookNowState: {}",
+            room_price_from_pricing_book_now
+        );
+        log!(
+            "  room_price from HotelDetailsUIState: {}",
+            room_price_from_hotel_details
+        );
+        log!("  final room_price selected: {}", room_price);
+        log!("  num_nights: {}", num_nights);
+
         BlockRoomUIState::set_room_price(room_price);
         BlockRoomUIState::set_num_nights(num_nights);
-        let _total = BlockRoomUIState::calculate_total_price();
+        let total = BlockRoomUIState::calculate_total_price();
+
+        log!("  calculated total: {}", total);
+        log!(
+            "  final room_price in state: {}",
+            BlockRoomUIState::get_room_price()
+        );
+
+        // Also try to get room selection summary to see if it's populated
+        let room_summary = BlockRoomUIState::get_room_selection_summary_untracked();
+        log!("  room_selection_summary length: {}", room_summary.len());
+        for (i, room) in room_summary.iter().enumerate() {
+            log!(
+                "    Room {}: {} x{} @ ${:.2}/night",
+                i + 1,
+                room.room_name,
+                room.quantity,
+                room.price_per_night
+            );
+        }
 
         log!(
             "BlockRoomV1Page initialized - adults: {}, children: {}, room_price: {}, nights: {}",
@@ -62,11 +105,124 @@ pub fn BlockRoomV1Page() -> impl IntoView {
         let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
     };
 
-    // Get reactive signals
-    let room_price = move || block_room_state.room_price.get();
-    let total_price = move || block_room_state.total_price.get();
-    let num_nights = move || block_room_state.num_nights.get();
-    let room_summary = move || block_room_state.room_selection_summary.get();
+    // Get reactive signals using static methods
+    let room_price = move || BlockRoomUIState::get_room_price();
+    let total_price = move || BlockRoomUIState::get_total_price();
+    let num_nights = move || BlockRoomUIState::get_num_nights();
+    let room_summary = move || BlockRoomUIState::get_room_selection_summary();
+
+    // Create resource to call prebook API when page loads
+    // Following the pattern from payment_handler.rs
+    //
+    // NOTE: This can be simplified using BookingService:
+    // let booking_service = BookingService::from_ui_context(LiteApiAdapter::default());
+    // let response = booking_service.block_room_and_save_to_backend(booking_id, hotel_token).await;
+    // let prebook_resource = create_resource(
+    //     move || {
+    //         // Wait for essential data to be ready before calling API
+    //         let room_price_val = room_price();
+    //         let adults_list = BlockRoomUIState::get_adults();
+    //         let hotel_code_val = hotel_info_ctx.hotel_code.get();
+
+    //         let has_room_price = room_price_val > 0.0;
+    //         let has_adults = !adults_list.is_empty();
+    //         let has_hotel_code = !hotel_code_val.is_empty();
+
+    //         log!("Prebook resource readiness check:");
+    //         log!("  room_price: {} (has_room_price: {})", room_price_val, has_room_price);
+    //         log!("  adults_count: {} (has_adults: {})", adults_list.len(), has_adults);
+    //         log!("  hotel_code: '{}' (has_hotel_code: {})", hotel_code_val, has_hotel_code);
+    //         log!("  overall_ready: {}", has_room_price && has_adults && has_hotel_code);
+
+    //         // Return true when ready to call API
+    //         has_room_price && has_adults && has_hotel_code
+    //     },
+    //     move |is_ready| async move {
+    //         if !is_ready {
+    //             log!("Prebook resource: Not ready yet, waiting for data... - {}", is_ready);
+    //             return None;
+    //         }
+
+    //         log!("Prebook resource: Page data ready, calling prebook API...");
+
+    //         // Build prebook request
+    //         match build_block_room_request().await {
+    //             Some(request) => {
+    //                 let client = ClientSideApiClient::new();
+    //                 log!(
+    //                     "Prebook resource: Making API call with request: {:?}",
+    //                     request
+    //                 );
+
+    //                 match client.block_room(request).await {
+    //                     Some(response) => {
+    //                         log!("Prebook resource: Success - {:?}", response);
+
+    //                         // Update pricing with data from block room API response
+    //                         let api_total_price = response.total_price.room_price;
+    //                         let api_room_price = if !response.blocked_rooms.is_empty() {
+    //                             response.blocked_rooms[0].price.room_price
+    //                         } else {
+    //                             response.total_price.room_price
+    //                         };
+
+    //                         log!(
+    //                             "Updating pricing from API - Total: ${:.2}, Room: ${:.2}",
+    //                             api_total_price,
+    //                             api_room_price
+    //                         );
+
+    //                         // Log price change if any
+    //                         if BlockRoomUIState::has_price_changed_from_original(api_total_price) {
+    //                             let difference =
+    //                                 BlockRoomUIState::get_price_difference(api_total_price);
+    //                             log!("Price changed from original by ${:.2}", difference);
+    //                         }
+
+    //                         // Save to backend after successful prebook
+    //                         if let Err(e) = save_booking_to_backend(&response.block_id).await {
+    //                             log!("Prebook resource: Failed to save to backend: {}", e);
+    //                             // Batch update all state changes to avoid borrow conflicts
+    //                             BlockRoomUIState::batch_update_on_success_with_backend_error(
+    //                                 response.block_id.clone(),
+    //                                 api_total_price,
+    //                                 api_room_price,
+    //                                 Some(format!("Room reserved but booking save failed: {}", e))
+    //                             );
+    //                             return Some(response.block_id);
+    //                         }
+
+    //                         // Batch update all state changes to avoid borrow conflicts
+    //                         BlockRoomUIState::batch_update_on_success(
+    //                             response.block_id.clone(),
+    //                             api_total_price,
+    //                             api_room_price,
+    //                         );
+    //                         Some(response.block_id)
+    //                     }
+    //                     None => {
+    //                         log!("Prebook resource: API call failed");
+    //                         BlockRoomUIState::batch_update_on_error(
+    //                             Some("server".to_string()),
+    //                             Some("Unable to reserve your room. Please try again.".to_string()),
+    //                             Some("Prebook API returned None response".to_string()),
+    //                         );
+    //                         None
+    //                     }
+    //                 }
+    //             }
+    //             None => {
+    //                 log!("Prebook resource: Failed to build request");
+    //                 BlockRoomUIState::batch_update_on_error(
+    //                     Some("validation".to_string()),
+    //                     Some("Invalid booking information. Please check your details.".to_string()),
+    //                     Some("Failed to build prebook request - missing required data".to_string()),
+    //                 );
+    //                 None
+    //             }
+    //         }
+    //     },
+    // );
 
     // <!-- Calculate totals from room selections -->
     let calculated_total = move || {
@@ -84,9 +240,9 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             .map(|room| room.price_per_night * room.quantity as f64)
             .sum::<f64>()
     };
-    let num_rooms = move || ui_search_ctx.guests.get().rooms.get();
-    let adult_count = move || ui_search_ctx.guests.get().adults.get();
-    let child_count = move || ui_search_ctx.guests.get().children.get();
+    let num_rooms = move || ui_search_ctx.guests.rooms.get();
+    let adult_count = move || ui_search_ctx.guests.adults.get();
+    let child_count = move || ui_search_ctx.guests.children.get();
 
     // Hotel info signals
     let hotel_name = move || hotel_info_ctx.selected_hotel_name.get();
@@ -109,6 +265,11 @@ pub fn BlockRoomV1Page() -> impl IntoView {
         <section class="relative min-h-screen bg-gray-50">
             <Navbar />
 
+            // Prebook API resource following payment_handler.rs pattern
+            // <Suspense>
+            //     {move || prebook_resource.get()}
+            // </Suspense>
+
             <div class="max-w-5xl mx-auto px-2 sm:px-6">
                 <div class="flex items-center py-4 md:py-8">
                     <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
@@ -118,8 +279,27 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                 </div>
             </div>
 
-            <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-4 md:gap-6">
-                // Left side - Form content
+            // Show form immediately on page load
+            // <Show
+            //     when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
+            //     fallback=move || view! {
+            //         <div class="flex justify-center items-center min-h-[calc(100vh-10rem)]">
+            //             <div class="flex flex-col items-center space-y-4">
+            //                 <SpinnerGray />
+            //                 <div class="text-center">
+            //                     <div class="font-semibold text-lg text-gray-700">
+            //                         "Checking Room Availability"
+            //                     </div>
+            //                     <div class="text-sm text-gray-600">
+            //                         "Please wait while we verify your room selection..."
+            //                     </div>
+            //                 </div>
+            //             </div>
+            //         </div>
+            //     }
+            // >
+                <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-4 md:gap-6">
+                    // Left side - Form content
                 <div class="w-full lg:w-3/5 flex flex-col gap-8 order-1">
                     // Hotel information card
                     <div class="p-2 sm:p-6 bg-white rounded-2xl shadow w-full">
@@ -202,10 +382,11 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     // Desktop confirm button
                     <ConfirmButton mobile=false />
                 </div>
-            </div>
+                </div>
 
-            // Payment Modal
-            <PaymentModal />
+                // Payment Modal
+                <PaymentModal />
+            // </Show>
         </section>
     }
 }
@@ -215,8 +396,8 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
 
-    let room_summary = move || block_room_state.room_selection_summary.get();
-    let num_nights = move || block_room_state.num_nights.get();
+    let room_summary = move || BlockRoomUIState::get_room_selection_summary();
+    let num_nights = move || BlockRoomUIState::get_num_nights();
 
     // Calculate totals from room selections
     let rooms_total_per_night = move || {
@@ -305,8 +486,8 @@ pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
 pub fn SelectedRoomsSummary() -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
 
-    let room_summary = move || block_room_state.room_selection_summary.get();
-    let hotel_context = move || block_room_state.hotel_context.get();
+    let room_summary = move || BlockRoomUIState::get_room_selection_summary();
+    let hotel_context = move || BlockRoomUIState::get_hotel_context();
 
     view! {
         <div class="bg-white rounded-2xl shadow p-4 sm:p-6 mb-6">
@@ -380,9 +561,9 @@ pub fn GuestForm() -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    let adult_count = move || ui_search_ctx.guests.get().adults.get();
-    let child_count = move || ui_search_ctx.guests.get().children.get();
-    let children_ages = ui_search_ctx.guests.get().children_ages.clone();
+    let adult_count = move || ui_search_ctx.guests.adults.get();
+    let child_count = move || ui_search_ctx.guests.children.get();
+    let children_ages = ui_search_ctx.guests.children_ages.clone();
 
     view! {
         <div class="guest-form mt-4 space-y-6">
@@ -516,7 +697,7 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
         BlockRoomUIState::validate_form();
     };
 
-    let age_value = ui_search_ctx.guests.get().children_ages.get_value_at(index);
+    let age_value = ui_search_ctx.guests.children_ages.get_value_at(index);
 
     view! {
         <div class="person-details mb-2">
@@ -590,11 +771,99 @@ pub fn TermsCheckbox() -> impl IntoView {
 #[component]
 pub fn ConfirmButton(mobile: bool) -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
-    let is_form_valid = move || block_room_state.form_valid.get();
+    let is_form_valid = move || BlockRoomUIState::get_form_valid();
+
+    // Create action for integrated prebook + backend save API call
+    let prebook_action = create_action(|_: &()| async move {
+        log!("Integrated prebook action triggered - calling integrated API");
+        BlockRoomUIState::set_loading(true);
+
+        // Get required data for integrated call
+        let block_room_state: BlockRoomUIState = expect_context();
+        let hotel_info_ctx: HotelInfoCtx = expect_context();
+
+        let email = block_room_state
+            .adults
+            .get_untracked()
+            .first()
+            .and_then(|adult| adult.email.clone());
+
+        let Some(email) = email else {
+            log!("Integrated prebook action failed - no primary adult email");
+            BlockRoomUIState::batch_update_on_error(
+                Some("validation".to_string()),
+                Some("Primary adult email is required".to_string()),
+                Some("Missing primary adult email for booking".to_string()),
+            );
+            return None;
+        };
+
+        // Generate booking ID
+        let app_reference_signal = generate_app_reference(email.clone());
+        let Some(booking_id) = app_reference_signal.get_untracked() else {
+            log!("Integrated prebook action failed - could not generate booking ID");
+            BlockRoomUIState::batch_update_on_error(
+                Some("validation".to_string()),
+                Some("Unable to generate booking reference".to_string()),
+                Some("Failed to generate app reference".to_string()),
+            );
+            return None;
+        };
+
+        let hotel_token = Some(hotel_info_ctx.hotel_code.get_untracked());
+
+        // Use BookingService for integrated call (block room + backend save in one call)
+        let booking_service = BookingService::new();
+
+        log!(
+            "Calling integrated block room service for booking_id: {}, email: {}",
+            booking_id.to_order_id(),
+            email
+        );
+
+        match booking_service
+            .block_room_with_backend_integration(booking_id.to_order_id(), email, hotel_token)
+            .await
+        {
+            Ok(_) => {
+                log!("Integrated prebook action: Successfully completed block room + backend save");
+
+                // For now, we don't get detailed pricing from the integrated response
+                // The UI pricing calculations are sufficient until we need API pricing updates
+                let current_total = BlockRoomUIState::get_total_price();
+                let current_room_price = BlockRoomUIState::get_room_price();
+
+                BlockRoomUIState::batch_update_on_success(
+                    booking_id.to_order_id(),
+                    current_total,
+                    current_room_price,
+                );
+
+                log!("Integrated prebook action: After batch_update_on_success - loading: {}, block_room_called: {}", 
+                     BlockRoomUIState::get_loading(), BlockRoomUIState::get_block_room_called());
+
+                Some(booking_id.to_order_id())
+            }
+            Err(e) => {
+                log!(
+                    "Integrated prebook action failed: {}",
+                    e.technical_details()
+                );
+                BlockRoomUIState::batch_update_on_error(
+                    Some("server".to_string()),
+                    Some(e.user_message()),
+                    Some(e.technical_details()),
+                );
+                None
+            }
+        }
+    });
 
     let open_modal = move |_| {
         if is_form_valid() {
+            // Open modal and call prebook API when confirm button is pressed
             BlockRoomUIState::set_show_payment_modal(true);
+            prebook_action.dispatch(());
         }
     };
 
@@ -637,110 +906,15 @@ pub fn PaymentModal() -> impl IntoView {
     let ui_search_ctx: UISearchCtx = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-    let show_modal = move || block_room_state.show_payment_modal.get();
-    let is_loading = move || block_room_state.loading.get();
-    let block_room_called = move || block_room_state.block_room_called.get();
+    let show_modal = move || BlockRoomUIState::get_show_payment_modal();
+    // let is_loading = move || BlockRoomUIState::get_loading();
+    // let block_room_called = move || BlockRoomUIState::get_block_room_called();
 
-    let room_price = move || block_room_state.room_price.get();
-    let total_price = move || block_room_state.total_price.get();
-    let num_nights = move || block_room_state.num_nights.get();
+    let room_price = move || BlockRoomUIState::get_room_price();
+    let total_price = move || BlockRoomUIState::get_total_price();
+    let num_nights = move || BlockRoomUIState::get_num_nights();
 
-    // Block room action
-    let block_room_action = create_action(move |_: &()| {
-        let client = ClientSideApiClient::new();
-
-        async move {
-            BlockRoomUIState::set_loading(true);
-            BlockRoomUIState::set_error(None);
-
-            // Build block room request
-            let request = build_block_room_request().await;
-            match request {
-                Some(req) => {
-                    log!("Calling block_room API with request: {:?}", req);
-                    match client.block_room(req).await {
-                        Some(response) => {
-                            log!("Block room successful: {:?}", response);
-                            BlockRoomUIState::set_block_room_id(Some(response.block_id.clone()));
-                            BlockRoomUIState::set_block_room_called(true);
-
-                            // Save to backend after successful block room
-                            if let Err(e) = save_booking_to_backend(&response.block_id).await {
-                                log!("Failed to save booking to backend: {}", e);
-                                BlockRoomUIState::set_error(Some(format!(
-                                    "Room blocked but booking save failed: {}",
-                                    e
-                                )));
-                            }
-                        }
-                        None => {
-                            log!("Block room failed");
-                            // <!-- Phase 3.2: Enhanced error handling with specific error types -->
-                            BlockRoomUIState::increment_retry_count();
-                            BlockRoomUIState::set_api_error(
-                                Some("server".to_string()),
-                                Some("Unable to reserve your room. Please try again.".to_string()),
-                                Some("Block room API returned None response".to_string()),
-                            );
-                        }
-                    }
-                }
-                None => {
-                    // <!-- Phase 3.2: Enhanced error handling for request building failure -->
-                    BlockRoomUIState::set_api_error(
-                        Some("validation".to_string()),
-                        Some("Invalid booking information. Please check your details.".to_string()),
-                        Some(
-                            "Failed to build block room request - missing required data"
-                                .to_string(),
-                        ),
-                    );
-                }
-            }
-
-            BlockRoomUIState::set_loading(false);
-        }
-    });
-
-    // <!-- Phase 3.3: Availability checking action before block room -->
-    // let availability_check_action = create_action(move |_: &()| async move {
-    //     BlockRoomUIState::set_availability_checking(true);
-
-    //     // Simulate availability check (in real implementation, call availability API)
-    //     // Simple delay simulation without external dependencies
-
-    //     // Simulate availability result - in real implementation, parse API response
-    //     let available = true; // For now, always available (replace with actual API call)
-
-    //     if available {
-    //         BlockRoomUIState::set_room_availability_status(Some("available".to_string()));
-    //     } else {
-    //         BlockRoomUIState::set_room_availability_status(Some("unavailable".to_string()));
-    //         BlockRoomUIState::set_api_error(
-    //             Some("room_unavailable".to_string()),
-    //             Some("Sorry, this room is no longer available. Please select a different room.".to_string()),
-    //             Some("Room availability check returned unavailable".to_string())
-    //         );
-    //     }
-
-    //     BlockRoomUIState::set_availability_checking(false);
-    // });
-
-    // Trigger availability check and then block room when modal opens
-    // create_effect(move |_| {
-    //     if show_modal() && !block_room_called() && !is_loading() {
-    //         // First check availability, then proceed to block room
-    //         let availability_status = BlockRoomUIState::get_room_availability_status();
-
-    //         if availability_status.is_none() && !BlockRoomUIState::is_availability_checking() {
-    //             // Start availability check
-    //             availability_check_action.dispatch(());
-    //         } else if availability_status == Some("available".to_string()) {
-    //             // Room is available, proceed with block room
-    //             block_room_action.dispatch(());
-    //         }
-    //     }
-    // });
+    // Note: Prebook API is now called when user clicks "Confirm & Book" button via action pattern
 
     let close_modal = move |_| {
         BlockRoomUIState::set_show_payment_modal(false);
@@ -764,20 +938,28 @@ pub fn PaymentModal() -> impl IntoView {
                     </button>
 
                     // <!-- Phase 4.2: Enhanced loading states and error components -->
-                    // <Show
-                    //     when=move || {!is_loading()
-                    //         // && !BlockRoomUIState::is_availability_checking()
-                    //     }
-                    //     fallback=move || view! {
-                    //         <EnhancedLoadingState />
-                    //     }
-                    // >
+                    <Show
+                        when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
+                        fallback=move || view! {
+                            <div class="flex flex-col justify-center items-center h-40 space-y-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <div class="text-center space-y-2">
+                                    <div class="font-semibold text-lg">
+                                        "Reserving Your Room"
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        "Securing your reservation for 15 minutes..."
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    >
                         // <!-- Phase 4.2: Enhanced error display -->
-                        <Show when=move || block_room_state.error.get().is_some()>
+                        <Show when=move || BlockRoomUIState::get_error().is_some()>
                             <EnhancedErrorDisplay />
                         </Show>
 
-                        <Show when=move || block_room_called() && block_room_state.error.get().is_none()>
+                        <Show when=move || BlockRoomUIState::get_error().is_none()>
                             <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                             <div class="flex flex-col gap-2 mb-6">
                                 <div class="flex justify-between items-end">
@@ -808,7 +990,7 @@ pub fn PaymentModal() -> impl IntoView {
                                 </div>
                             </div>
                         </Show>
-                    // </Show>
+                    </Show>
                 </div>
             </div>
         </Show>
@@ -956,8 +1138,8 @@ pub fn PaymentModal() -> impl IntoView {
 pub fn EnhancedErrorDisplay() -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
 
-    let error_message = move || block_room_state.error.get().unwrap_or_default();
-    let error_type = move || block_room_state.api_error_type.get();
+    let error_message = move || BlockRoomUIState::get_error().unwrap_or_default();
+    let error_type = move || BlockRoomUIState::get_api_error_type();
     let can_retry = move || BlockRoomUIState::can_retry();
 
     // Error-specific icons and colors
@@ -975,10 +1157,9 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
 
     let retry_action = move |_| {
         if can_retry() {
-            // Reset error state and try again
+            // Reset error state and try again (prebook API will recheck availability)
             BlockRoomUIState::set_error(None);
             BlockRoomUIState::set_api_error(None, None, None);
-            // BlockRoomUIState::set_room_availability_status(None);
             // Modal will automatically retry due to the effect
         }
     };
@@ -1049,269 +1230,6 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
     }
 }
 
-// Helper function to build block room request
-async fn build_block_room_request() -> Option<DomainBlockRoomRequest> {
-    let block_room_state: BlockRoomUIState = expect_context();
-    let ui_search_ctx: UISearchCtx = expect_context();
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
-
-    // Get form data
-    let adults = block_room_state.adults.get_untracked();
-    let children = block_room_state.children.get_untracked();
-
-    // Convert to domain types
-    let domain_adults: Vec<DomainAdultDetail> = adults
-        .into_iter()
-        .map(|adult| DomainAdultDetail {
-            email: adult.email,
-            first_name: adult.first_name,
-            last_name: adult.last_name,
-            phone: adult.phone,
-        })
-        .collect();
-
-    let domain_children: Vec<DomainChildDetail> = children
-        .into_iter()
-        .filter_map(|child| {
-            child.age.map(|age| DomainChildDetail {
-                age,
-                first_name: child.first_name,
-                last_name: child.last_name,
-            })
-        })
-        .collect();
-
-    let user_details = DomainUserDetails {
-        adults: domain_adults,
-        children: domain_children,
-    };
-
-    // Build hotel info criteria
-    let destination = ui_search_ctx.destination.get_untracked()?;
-    let date_range = ui_search_ctx.date_range.get_untracked();
-    let guests = ui_search_ctx.guests.get_untracked();
-
-    let room_guests = vec![DomainRoomGuest {
-        no_of_adults: guests.adults.get_untracked(),
-        no_of_children: guests.children.get_untracked(),
-        children_ages: if guests.children.get_untracked() > 0 {
-            Some(
-                guests
-                    .children_ages
-                    .get_untracked()
-                    .into_iter()
-                    .map(|age| age.to_string())
-                    .collect(),
-            )
-        } else {
-            None
-        },
-    }];
-
-    let search_criteria = DomainHotelSearchCriteria {
-        destination_city_id: destination.city_id.parse().unwrap_or(0),
-        destination_city_name: destination.city.clone(),
-        destination_country_code: destination.country_code.clone(),
-        destination_country_name: destination.country_name.clone(),
-        check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-        check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-        no_of_nights: date_range.no_of_nights(),
-        no_of_rooms: guests.rooms.get_untracked(),
-        room_guests,
-        guest_nationality: "US".to_string(),
-    };
-
-    let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
-    let hotel_info_criteria = DomainHotelInfoCriteria {
-        token: hotel_code.clone(),
-        hotel_ids: vec![hotel_code],
-        search_criteria,
-    };
-
-    // <!-- Phase 3.1: Use real room selection data from BlockRoomUIState -->
-    let selected_rooms_data = block_room_state.selected_rooms.get_untracked();
-
-    // Use the first selected room for the API call
-    // TODO: Enhance API to support multiple room types in future
-    let selected_room = if let Some((_, (_, room_data))) = selected_rooms_data.iter().next() {
-        room_data.clone()
-    } else {
-        // Fallback to basic room data if no selection available
-        DomainRoomData {
-            room_name: "Default Room".to_string(),
-            room_unique_id: "default_room".to_string(),
-            rate_key: "default_rate".to_string(),
-            offer_id: "".to_string(),
-        }
-    };
-
-    let total_guests = guests.adults.get_untracked() + guests.children.get_untracked();
-
-    Some(DomainBlockRoomRequest {
-        hotel_info_criteria,
-        user_details,
-        selected_room,
-        total_guests,
-        special_requests: None,
-    })
-}
-
-// Helper function to save booking to backend after successful block room
-async fn save_booking_to_backend(block_room_id: &str) -> Result<(), String> {
-    use crate::api::canister::add_booking::add_booking_backend;
-
-    let block_room_state: BlockRoomUIState = expect_context();
-    let ui_search_ctx: UISearchCtx = expect_context();
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
-
-    // Generate app reference and booking ID
-    let email = block_room_state
-        .adults
-        .get_untracked()
-        .first()
-        .and_then(|adult| adult.email.clone())
-        .ok_or("Primary adult email is required")?;
-
-    let app_reference_signal = generate_app_reference(email.clone());
-    let booking_id = app_reference_signal
-        .get_untracked()
-        .ok_or("Failed to generate app reference")?;
-
-    // Get form data and convert to domain types
-    let adults = block_room_state.adults.get_untracked();
-    let children = block_room_state.children.get_untracked();
-
-    let domain_adults: Vec<DomainAdultDetail> = adults
-        .into_iter()
-        .map(|adult| DomainAdultDetail {
-            email: adult.email,
-            first_name: adult.first_name,
-            last_name: adult.last_name,
-            phone: adult.phone,
-        })
-        .collect();
-
-    let domain_children: Vec<DomainChildDetail> = children
-        .into_iter()
-        .filter_map(|child| {
-            child.age.map(|age| DomainChildDetail {
-                age,
-                first_name: child.first_name,
-                last_name: child.last_name,
-            })
-        })
-        .collect();
-
-    let user_details = DomainUserDetails {
-        adults: domain_adults,
-        children: domain_children,
-    };
-
-    // Build destination and date range
-    let destination = ui_search_ctx
-        .destination
-        .get_untracked()
-        .map(|dest| DomainDestination {
-            city_id: dest.city_id.parse().unwrap_or(0),
-            city_name: dest.city,
-            country_code: dest.country_code,
-            country_name: dest.country_name,
-        });
-
-    let date_range = {
-        let dr = ui_search_ctx.date_range.get_untracked();
-        DomainSelectedDateRange {
-            start: dr.start,
-            end: dr.end,
-        }
-    };
-
-    // Build hotel details
-    let hotel_details = DomainHotelDetails {
-        checkin: date_range.start.0.to_string()
-            + "-"
-            + &date_range.start.1.to_string()
-            + "-"
-            + &date_range.start.2.to_string(),
-        checkout: date_range.end.0.to_string()
-            + "-"
-            + &date_range.end.1.to_string()
-            + "-"
-            + &date_range.end.2.to_string(),
-        hotel_name: hotel_info_ctx.selected_hotel_name.get_untracked(),
-        hotel_code: hotel_info_ctx.hotel_code.get_untracked(),
-        star_rating: 4,                               // Default, should come from API
-        description: "Hotel description".to_string(), // Should come from API
-        hotel_facilities: vec![],                     // Should come from API
-        address: hotel_info_ctx.selected_hotel_location.get_untracked(),
-        images: vec![hotel_info_ctx.selected_hotel_image.get_untracked()],
-        first_room_details: crate::domain::DomainFirstRoomDetails {
-            price: crate::domain::DomainDetailedPrice {
-                published_price: block_room_state.total_price.get_untracked(),
-                published_price_rounded_off: block_room_state.total_price.get_untracked(),
-                offered_price: block_room_state.total_price.get_untracked(),
-                offered_price_rounded_off: block_room_state.total_price.get_untracked(),
-                room_price: block_room_state.total_price.get_untracked(),
-                tax: 0.0,
-                extra_guest_charge: 0.0,
-                child_charge: 0.0,
-                other_charges: 0.0,
-                currency_code: "USD".to_string(),
-            },
-            room_data: crate::domain::DomainRoomData {
-                room_name: "Selected Room".to_string(),
-                room_unique_id: block_room_id.to_string(),
-                rate_key: "".to_string(),
-                offer_id: "".to_string(),
-            },
-        },
-        amenities: vec![], // Should come from API
-    };
-
-    // Get room details
-    let selected_rooms_data = block_room_state.selected_rooms.get_untracked();
-    let room_details: Vec<DomainRoomData> = selected_rooms_data
-        .into_iter()
-        .map(|(_, (_, room_data))| room_data)
-        .collect();
-
-    let payment_amount = block_room_state.total_price.get_untracked();
-    let payment_currency = "USD".to_string();
-
-    // Create backend booking using the integration helper
-    let backend_booking = BackendIntegrationHelper::create_backend_booking(
-        destination,
-        date_range,
-        room_details,
-        hotel_details,
-        user_details,
-        booking_id.clone().into(),
-        payment_amount,
-        payment_currency,
-    );
-
-    // Update the backend booking with block room ID
-    let mut backend_booking = backend_booking;
-    backend_booking
-        .user_selected_hotel_room_details
-        .hotel_details
-        .block_room_id = block_room_id.to_string();
-    backend_booking
-        .user_selected_hotel_room_details
-        .hotel_details
-        .hotel_token = hotel_info_ctx.hotel_code.get_untracked();
-
-    // Serialize and save to backend
-    let booking_json = serde_json::to_string(&backend_booking)
-        .map_err(|e| format!("Failed to serialize booking: {}", e))?;
-
-    add_booking_backend(email, booking_json)
-        .await
-        .map_err(|e| format!("Failed to save booking to backend: {}", e))?;
-
-    log!(
-        "Successfully saved booking to backend with ID: {}",
-        booking_id.app_reference
-    );
-    Ok(())
-}
+// Note: build_block_room_request and save_booking_to_backend functions removed
+// The integrated server function now handles both the block room API call and backend save
+// using BookingConversions::ui_to_block_room_request() on the server side

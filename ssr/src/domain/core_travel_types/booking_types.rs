@@ -224,7 +224,7 @@ pub struct DomainBookingContext {
 
     // Original occupancy information from the search/rates request
     // This helps validate guest counts and room assignments
-    pub room_occupancies: Vec<DomainRoomOccupancy>,
+    pub room_occupancies: Vec<DomainRoomOccupancyForBooking>,
 
     // Total number of guests across all rooms
     pub total_guests: u32,
@@ -234,7 +234,7 @@ pub struct DomainBookingContext {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DomainRoomOccupancy {
+pub struct DomainRoomOccupancyForBooking {
     // Room number (1-indexed)
     pub room_number: u32,
 

@@ -88,7 +88,7 @@ pub trait ProvabReqMeta: Sized + Send {
             format!(
                 "gzip = {} , response_bytes_or_string : {}\n\n\n",
                 Self::GZIP,
-                response_bytes_or_string.clone().to_string()
+                &(response_bytes_or_string.clone().to_string())[..500]
             )
             .bright_yellow()
             .bold()

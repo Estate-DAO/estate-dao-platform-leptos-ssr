@@ -11,6 +11,9 @@ pub use hotel_details_v1::*;
 mod hotel_list;
 pub use hotel_list::*;
 
+mod hotel_list_params;
+pub use hotel_list_params::*;
+
 mod block_room;
 pub use block_room::*;
 

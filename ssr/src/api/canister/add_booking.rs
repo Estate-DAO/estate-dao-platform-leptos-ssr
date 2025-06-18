@@ -11,7 +11,7 @@ use crate::view_state_layer::ui_search_state::{
 use crate::log;
 use leptos::*;
 
-#[server]
+// #[server]
 pub async fn add_booking_backend(email: String, booking: String) -> Result<String, ServerFnError> {
     // log!("\n booking args {:?}", booking);
     let booking_struct = serde_json::from_str::<Booking>(&booking)
