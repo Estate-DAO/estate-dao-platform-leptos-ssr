@@ -36,7 +36,7 @@ pub fn NotificationListener(
         use gloo_net::eventsource::futures::EventSource as GlooEventSource;
 
         // Build the URL with query parameters
-        let mut url = "/api/events".to_string();
+        let mut url = "/stream/events".to_string();
         let mut params = Vec::new();
 
         if let Some(id) = &order_id {

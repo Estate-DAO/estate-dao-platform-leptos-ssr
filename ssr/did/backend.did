@@ -115,6 +115,7 @@ service : {
   add_controller : (principal) -> (Result_1);
   get_all_bookings : () -> (vec BookingSummary) query;
   get_booking_by_id : (BookingId) -> (opt Booking) query;
+  get_booking_id_by_payment_id : (nat64) -> (opt BookingId) query;
   get_controllers : () -> (vec principal) query;
   get_email_sent : (BookingId) -> (Result_2) query;
   get_user_bookings : (text) -> (opt vec Booking) query;

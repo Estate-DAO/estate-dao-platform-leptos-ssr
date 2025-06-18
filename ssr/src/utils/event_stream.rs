@@ -28,7 +28,7 @@ pub struct EventStreamParams {
     pub event_type: Option<String>,
 }
 
-/// Handler for the /api/events endpoint
+/// Handler for the /stream/events endpoint
 #[instrument(
     skip(state),
     fields(

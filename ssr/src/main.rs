@@ -302,11 +302,10 @@ cfg_if! {
                     "/api/*fn_name",
                     get(server_fn_handler).post(server_fn_handler),
                 )
-                // .route("/ipn/webhook", post(nowpayments_webhook))
-                // .route("/api/events", get(event_stream_handler))
+                .route("/ipn/webhook", post(nowpayments_webhook))
+                .route("/stream/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))
                 .nest("/server_fn_api", api_routes())
-                // .route("/api/counter-events", get(counter_events))  // For backward compatibility
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(trace_layer)
