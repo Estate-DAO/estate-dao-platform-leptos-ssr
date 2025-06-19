@@ -77,8 +77,8 @@ pub enum AppRoutes {
     HotelDetails,
     BlockRoom,
     Confirmation,
-    ConfirmationV1,
-    ConfirmationV2,
+    // ConfirmationV1,
+    // ConfirmationV2,
     AdminPanel,
     // Notifications
 }
@@ -91,8 +91,8 @@ impl AppRoutes {
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
             AppRoutes::Confirmation => "/confirmation",
-            AppRoutes::ConfirmationV1 => "/confirmation-v1",
-            AppRoutes::ConfirmationV2 => "/confirmation-v2",
+            // AppRoutes::ConfirmationV1 => "/confirmation-v1",
+            // AppRoutes::ConfirmationV2 => "/confirmation-v2",
             AppRoutes::AdminPanel => "/admin-panel",
             // AppRoutes::Notifications => "/notifications"
         }
@@ -105,8 +105,8 @@ impl AppRoutes {
             Self::HotelDetails,
             Self::BlockRoom,
             Self::Confirmation,
-            Self::ConfirmationV1,
-            Self::ConfirmationV2,
+            // Self::ConfirmationV1,
+            // Self::ConfirmationV2,
             Self::AdminPanel,
             // Self::Notifications,
         ]
@@ -120,8 +120,8 @@ impl AppRoutes {
             AppRoutes::HotelDetails => 0.8,
             AppRoutes::BlockRoom => 0.7,
             AppRoutes::Confirmation => 0.6,
-            AppRoutes::ConfirmationV1 => 0.6,
-            AppRoutes::ConfirmationV2 => 0.6,
+            // AppRoutes::ConfirmationV1 => 0.6,
+            // AppRoutes::ConfirmationV2 => 0.6,
             AppRoutes::AdminPanel => 0.1,
             // AppRoutes::Notifications => 0.5,
         }
@@ -227,9 +227,9 @@ pub fn App() -> impl IntoView {
                     <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
                     <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
                     <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
-                    <Route path=AppRoutes::Confirmation.to_string() view=SSEConfirmationPage />
-                    <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
-                    <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
+                    <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPageV2 />
+                    // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
+                    // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
                     <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                     // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
