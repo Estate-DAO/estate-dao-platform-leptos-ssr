@@ -241,7 +241,7 @@ impl BookingConversions {
         };
 
         let payment = DomainPaymentInfo {
-            method: DomainPaymentMethod::Wallet, // Default to wallet for crypto payments
+            method: DomainPaymentMethod::default(), // Default to wallet for crypto payments
         };
 
         Ok(DomainBookRoomRequest {

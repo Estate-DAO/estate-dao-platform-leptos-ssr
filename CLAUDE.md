@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Essential Commands
 
-### Development
+### Development (Script-based)
 ```bash
 # Run local development server
 bash scripts/local_run.sh
@@ -34,6 +34,30 @@ cargo leptos end-to-end
 
 # Install pre-commit hooks
 bash scripts/install_pre_commit.sh
+```
+
+### Development (Just-based - Alternative)
+```bash
+# Run local development server
+just dev
+
+# Type checking only
+just check
+
+# Run with mocked APIs
+just dev-mock
+
+# Run with debug display
+just dev-debug
+
+# View logs
+just logs
+
+# Run specific test
+just test <test_name>
+
+# Production build and run
+just prod
 ```
 
 ### Single Test
@@ -61,6 +85,7 @@ ssr/src/
 - **release-lib/release-bin**: Staging 
 - **release-lib-prod/release-bin-prod**: Production
 - **mock-provab**: Mock external hotel APIs
+- **mock-block-room-fail**: Mock room blocking failures (testing)
 - **debug_log**: Enable debug logging
 - **debug_display**: Show debug components in UI
 - **ga4**: Google Analytics integration
@@ -149,9 +174,20 @@ NGROK_LOCALHOST_URL              # For local webhook testing
 - **API integrations**: `ssr/src/api/*.rs`
 - **Feature flags**: `ssr/Cargo.toml` [features] section
 - **Build scripts**: `scripts/*.sh`
+- **Task runner**: `justfile` - Alternative commands using Just task runner
+- **Logs**: `logs/estate-fe.log` - Current day's logs (symlinked), check with `tail -f logs/estate-fe.log`
+
+
+
+- You run in an environment where ast-grep ('sg') is available; whenever a search requires syntax-aware or structural matching, default to 'sg --lang rust -p '<pattern>'' (or set '--lang' appropriately) and avoid falling back to text-only tools like 'rg' or 'grep' unless I explicitly request a plain-text search.
+
+
 
 ## Memories
 - use working_method.md to work on issues
 - you are a senior software engineer who is good at making LLD designs. for current context, read CLAUDE.md and notes from notes/ folder if you need to know the approach / codebase awareness.
 - amenities is also called facilities in the litepai adapter. they mean the same thing and are used interchangably.
-- when writing a file to notes folder, prefix with number 045-<type>-<filename>.md
+- when writing a file to notes folder, prefix with the next number in the folder <three digit padded number>-<type>-<filename>.md
+- log files for the local development is at `logs/estate-fe.log` make sure to read it from end (tail) when debugging with logs . api issues etc.
+- when implementing a plan, keep updating the checklist as you finish the tasks fro the checklist. see if you can do multiple tasks in checklist parallely - by spawning sub agents
+- You run in an environment where ast-grep ('sg') is available; whenever a search requires syntax-aware or structural matching, default to 'sg --lang rust -p '<pattern>'' (or set '--lang' appropriately) and avoid falling back to text-only tools like 'rg' or 'grep' unless I explicitly request a plain-text search.

@@ -86,12 +86,12 @@ pub fn DestinationPickerV5() -> impl IntoView {
     };
 
     let handle_focus = move |_: leptos::ev::FocusEvent| {
-        leptos::logging::log!("Focus event triggered");
+        log!("Focus event triggered");
         set_is_open.set(true);
     };
 
     let handle_click = move |ev: MouseEvent| {
-        leptos::logging::log!(
+        log!(
             "Click event triggered, current is_open: {}",
             is_open.get_untracked()
         );
@@ -104,7 +104,7 @@ pub fn DestinationPickerV5() -> impl IntoView {
         let _ = UISearchCtx::set_destination(dest.clone());
         set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
         set_is_open.set(false);
-        leptos::logging::log!(
+        log!(
             "Dropdown should be closed now, is_open: {}",
             is_open.get_untracked()
         );
@@ -194,7 +194,10 @@ pub fn DestinationPickerV5() -> impl IntoView {
     // Add this function inside your component, before the view! macro
     let highlight_match = move |text: &str, search: &str| -> View {
         if search.is_empty() {
-            return view! { {text.to_string()} }.into_view();
+            return view! {
+                {text.to_string()}
+            }
+            .into_view();
         }
 
         let search_lower = search.to_lowercase();
@@ -213,7 +216,10 @@ pub fn DestinationPickerV5() -> impl IntoView {
             }
             .into_view()
         } else {
-            view! { text.to_string() }.into_view()
+            view! {
+                {text.to_string()}
+            }
+            .into_view()
         }
     };
 
@@ -247,9 +253,9 @@ pub fn DestinationPickerV5() -> impl IntoView {
 
                 // Dropdown - Debug version
                 {move || {
-                    leptos::logging::log!("Dropdown render check - is_open: {}", is_open.get());
+                    log!("Dropdown render check - is_open: {}", is_open.get());
                     if is_open.get() {
-                        leptos::logging::log!("Rendering dropdown");
+                        log!("Rendering dropdown");
                         Some(view! {
                             <div
                                 id="destination-dropdown"
@@ -258,7 +264,7 @@ pub fn DestinationPickerV5() -> impl IntoView {
                             >
                                 {move || {
                                     let options = filtered_options.get();
-                                    leptos::logging::log!("Filtered options count: {}", options.len());
+                                    log!("Filtered options count: {}", options.len());
 
                                     if options.is_empty() {
                                         view! {
@@ -283,7 +289,7 @@ pub fn DestinationPickerV5() -> impl IntoView {
                                                     role="option"
                                                     aria-selected=move || (active_index.get() == i).to_string()
                                                     on:click=move |ev| {
-                                                        leptos::logging::log!("Option clicked");
+                                                        log!("Option clicked");
                                                         ev.stop_propagation();
                                                         select_option(dest_for_click.clone());
                                                     }
@@ -300,7 +306,7 @@ pub fn DestinationPickerV5() -> impl IntoView {
                             </div>
                         })
                     } else {
-                        leptos::logging::log!("Not rendering dropdown - closed");
+                        log!("Not rendering dropdown - closed");
                         None
                     }
                 }}

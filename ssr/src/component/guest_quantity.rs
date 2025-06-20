@@ -17,41 +17,69 @@ use leptos_icons::*;
 use std::ops::Index;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct ChildrenAges(Vec<u32>);
+pub struct ChildrenAges(RwSignal<Vec<u32>>);
 
 impl ChildrenAges {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self(RwSignal::new(Vec::new()))
     }
 
     pub fn get_untracked(&self) -> Vec<u32> {
-        self.0.clone()
+        self.0.get_untracked()
     }
 
     pub fn get_value_at(&self, index: u32) -> u32 {
-        self.0.get(index as usize).copied().unwrap_or(5)
+        self.0
+            .get_untracked()
+            .get(index as usize)
+            .copied()
+            .unwrap_or(5)
     }
 
     pub fn update_children_ages(&mut self, index: u32, age: u32) {
-        if let Some(existing_age) = self.0.get_mut(index as usize) {
-            *existing_age = age;
-        }
+        log!(
+            "[children_signal] Updating child age at index {} to {}",
+            index,
+            age
+        );
+        self.0.update(|vec| {
+            if let Some(existing_age) = vec.get_mut(index as usize) {
+                *existing_age = age;
+            }
+        });
     }
 
     pub fn push_children_ages(&mut self) {
-        self.0.push(10);
+        log!("[children_signal] Pushing new child age (10) to vector");
+        self.0.update(|vec| vec.push(10));
     }
 
     pub fn pop_children_ages(&mut self) {
-        self.0.pop();
+        log!("[children_signal] Popping child age from vector");
+        self.0.update(|vec| {
+            vec.pop();
+        });
     }
 
     pub fn set_ages(&mut self, ages: Vec<u32>) {
-        self.0 = ages;
+        log!("[children_signal] Setting children ages to: {:?}", ages);
+        self.0.set(ages);
     }
 
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.0.get_untracked().len()
+    }
+
+    pub fn set_vec(&self, ages: Vec<u32>) {
+        log!(
+            "[children_signal] Setting children ages vector to: {:?}",
+            ages
+        );
+        self.0.set(ages);
+    }
+
+    pub fn get_signal(&self) -> RwSignal<Vec<u32>> {
+        self.0
     }
 }
 
@@ -60,19 +88,19 @@ impl IntoIterator for ChildrenAges {
     type IntoIter = std::vec::IntoIter<u32>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
+        self.0.get_untracked().into_iter()
     }
 }
 
 impl From<Vec<u32>> for ChildrenAges {
     fn from(vec: Vec<u32>) -> Self {
-        Self(vec)
+        Self(RwSignal::new(vec))
     }
 }
 
 impl From<ChildrenAges> for Vec<u32> {
     fn from(ages: ChildrenAges) -> Self {
-        ages.0
+        ages.0.get_untracked()
     }
 }
 
@@ -81,7 +109,7 @@ pub struct GuestSelection {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
     pub rooms: RwSignal<u32>,
-    pub children_ages: RwSignal<ChildrenAges>,
+    pub children_ages: ChildrenAges,
 }
 
 impl Default for GuestSelection {
@@ -90,7 +118,7 @@ impl Default for GuestSelection {
             adults: RwSignal::new(2),
             children: RwSignal::new(0),
             rooms: RwSignal::new(SEARCH_COMPONENT_ROOMS_DEFAULT), // Set default value for rooms to 1
-            children_ages: RwSignal::new(ChildrenAges::new()),
+            children_ages: ChildrenAges::new(),
         }
     }
 }
@@ -125,15 +153,29 @@ impl GuestSelection {
     // }
 
     pub fn increment_children() {
-        let this = Self::get();
+        let search_ctx: UISearchCtx = expect_context();
+        let this = search_ctx.guests;
         this.children.update(|n| *n += 1);
-        this.children_ages.update(|ages| ages.push_children_ages());
+        log!(
+            "[children_signal] Incrementing children count to: {}",
+            this.children.get_untracked()
+        );
+        log!("[children_signal] Incrementing children count");
+        this.children_ages.get_signal().update(|vec| vec.push(10));
     }
 
     pub fn decrement_children() {
-        let this = Self::get();
+        let search_ctx: UISearchCtx = expect_context();
+        let this = search_ctx.guests;
         this.children.update(|n| *n = n.saturating_sub(1));
-        this.children_ages.update(|ages| ages.pop_children_ages());
+        log!(
+            "[children_signal] Decrementing children count to: {}",
+            this.children.get_untracked()
+        );
+        log!("[children_signal] Decrementing children count");
+        this.children_ages.get_signal().update(|vec| {
+            vec.pop();
+        });
     }
 
     pub fn increment_rooms() {
@@ -157,11 +199,11 @@ impl GuestSelection {
 
     pub fn get_children_ages() -> Vec<u32> {
         let this = Self::get();
-        this.children_ages.get_untracked().get_untracked()
+        this.children_ages.get_untracked()
     }
     pub fn get_children_age_at(i: u32) -> u32 {
         let this = Self::get();
-        this.children_ages.get_untracked().get_value_at(i)
+        this.children_ages.get_value_at(i)
     }
     // pub fn reactive_length(&self) {
     //     let no_of_child = self.children.get_untracked();
@@ -173,21 +215,19 @@ impl GuestSelection {
     // }
 }
 
-// Extension trait to add missing methods to RwSignal<ChildrenAges>
+// Extension trait to add missing methods to ChildrenAges
 pub trait ChildrenAgesSignalExt {
     fn get_value_at(&self, index: u32) -> u32;
     fn set_ages(&self, ages: Vec<u32>);
 }
 
-impl ChildrenAgesSignalExt for RwSignal<ChildrenAges> {
+impl ChildrenAgesSignalExt for ChildrenAges {
     fn get_value_at(&self, index: u32) -> u32 {
-        self.get_untracked().get_value_at(index)
+        self.get_value_at(index)
     }
 
     fn set_ages(&self, ages: Vec<u32>) {
-        self.update(|children_ages| {
-            children_ages.set_ages(ages);
-        });
+        self.0.set(ages);
     }
 }
 
@@ -211,13 +251,29 @@ pub fn GuestQuantity() -> impl IntoView {
     let adults_signal = guest_selection.adults;
     let children_signal = guest_selection.children;
     let rooms_signal = guest_selection.rooms;
-    let children_ages_signal = guest_selection.children_ages;
+    let children_ages_signal = guest_selection.children_ages.get_signal();
+
+    log!(
+        "[children_signal] Initial children_signal value: {}",
+        children_signal.get_untracked()
+    );
+    log!(
+        "[children_signal] Initial children_ages_signal value: {:?}",
+        children_ages_signal.get_untracked()
+    );
 
     let guest_count_display = create_memo(move |_prev| {
+        let adults = adults_signal.get();
+        let children = children_signal.get();
+        log!(
+            "[children_signal] Updating guest_count_display: Adults = {}, Children = {}",
+            adults,
+            children
+        );
         format!(
             "{} • {}",
-            pluralize(adults_signal.get(), "adult", "adults"),
-            pluralize(children_signal.get(), "child", "children")
+            pluralize(adults, "adult", "adults"),
+            pluralize(children, "child", "children")
         )
     });
 
@@ -316,37 +372,44 @@ pub fn GuestQuantity() -> impl IntoView {
                                     // !<-- Children Ages Grid - Responsive grid layout -->
                                     <div class="grid grid-cols-4 md:grid-cols-5 gap-2">
                                         {move || {
-                                            (0..children_signal.get())
-                                                .map(|i| {
-                                                    let children_ages_signal = children_ages_signal.clone();
-                                                    view! {
-                                                        <input
-                                                            type="number"
-                                                            min=1
-                                                            max=18
-                                                            class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                            name=format!("child_age[{}]", i)
-                                                            prop:value={
-                                                                let children_ages_signal = children_ages_signal.clone();
-                                                                move || {
-                                                                    children_ages_signal.get().get_value_at(i as u32).to_string()
+                                            let count = children_signal.get();
+                                            log!("[children_signal] Creating {} input fields", count);
+                                            if count > 0 {
+                                                (0..count)
+                                                    .map(|i| {
+                                                        let children_ages_signal = children_ages_signal;
+                                                        view! {
+                                                            <input
+                                                                type="number"
+                                                                min=1
+                                                                max=18
+                                                                class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                name=format!("child_age[{}]", i)
+                                                                prop:value={
+                                                                    move || {
+                                                                        children_ages_signal.get().get(i as usize).copied().unwrap_or(5).to_string()
+                                                                    }
                                                                 }
-                                                            }
-                                                            placeholder="Age"
-                                                            on:input={
-                                                                let children_ages_signal = children_ages_signal.clone();
-                                                                move |e| {
-                                                                    let age = event_target_value(&e);
-                                                                    log!("Setting child {} age to: {}", i, age);
-                                                                    children_ages_signal.update(|ages| {
-                                                                        ages.update_children_ages(i as u32, age.parse().unwrap_or(10));
-                                                                    });
+                                                                placeholder="Age"
+                                                                on:input={
+                                                                    move |e| {
+                                                                        let age = event_target_value(&e);
+                                                                        log!("[children_signal] Setting child {} age to: {}", i, age);
+                                                                        children_ages_signal.update(|vec| {
+                                                                            if let Some(existing_age) = vec.get_mut(i as usize) {
+                                                                                *existing_age = age.parse().unwrap_or(10);
+                                                                            }
+                                                                        });
+                                                                        log!("[children_signal] Children ages after update: {:?}", children_ages_signal.get_untracked());
+                                                                    }
                                                                 }
-                                                            }
-                                                        />
-                                                    }
-                                                })
-                                                .collect_view()
+                                                            />
+                                                        }
+                                                    })
+                                                    .collect_view()
+                                            } else {
+                                                view! {}.into_view()
+                                            }
                                         }}
                                     </div>
 

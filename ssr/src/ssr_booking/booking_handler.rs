@@ -384,9 +384,9 @@ fn backend_booking_to_domain_book_room_request(
         original_search_criteria,
     };
 
-    // Set payment method to Wallet for crypto payments
+    // Set payment method to default for crypto payments
     let payment = DomainPaymentInfo {
-        method: DomainPaymentMethod::Wallet,
+        method: DomainPaymentMethod::default(),
     };
 
     Ok(DomainBookRoomRequest {

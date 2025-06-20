@@ -65,6 +65,14 @@ pub enum DomainPaymentMethod {
     Wallet,
 }
 
+impl DomainPaymentMethod {
+    /// Returns the default payment method for the application
+    /// Centralized location to change the default payment method across the entire codebase
+    pub fn default() -> Self {
+        DomainPaymentMethod::AccCreditCard
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainGuestPaymentInfo {
     pub address: DomainPaymentAddress,
