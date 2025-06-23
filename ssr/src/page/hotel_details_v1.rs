@@ -1,13 +1,14 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::use_navigate;
+use leptos_router::{use_navigate, use_query_map};
 
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
 use crate::domain::{DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest};
 use crate::log;
-use crate::page::InputGroupContainer;
+use crate::page::{HotelDetailsParams, InputGroupContainer};
+use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
@@ -162,12 +163,63 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
+    let query_map = use_query_map();
+
+    // <!-- Query params handling for shareable URLs -->
+    // Sync query params with state on page load (URL → State)
+    create_effect(move |_| {
+        let params = query_map.get();
+        if !params.0.is_empty() {
+            log!("Found query params in URL: {:?}", params);
+
+            if let Some(hotel_params) =
+                HotelDetailsParams::from_url_params(&params.0.into_iter().collect())
+            {
+                log!("Parsed hotel params from URL: {:?}", hotel_params);
+                hotel_params.sync_to_app_state();
+            }
+        }
+    });
+
+    // <!-- Function to update URL with current search state -->
+    // This can be called when navigating to this page from hotel list
+    let update_url_with_current_state = move || {
+        if let Some(current_params) = HotelDetailsParams::from_current_context() {
+            current_params.update_url();
+            log!(
+                "Updated URL with current hotel details state: {:?}",
+                current_params
+            );
+        }
+    };
+
+    // <!-- Auto-update URL when essential data becomes available -->
+    create_effect(move |_| {
+        let hotel_code = hotel_info_ctx.hotel_code.get();
+        let destination = ui_search_ctx.destination.get();
+        let date_range = ui_search_ctx.date_range.get();
+
+        let has_essential_data = !hotel_code.is_empty()
+            && destination.is_some()
+            && date_range.start != (0, 0, 0)
+            && date_range.end != (0, 0, 0);
+
+        if has_essential_data {
+            // Only update URL if query params are empty (to avoid infinite loops)
+            let current_params = query_map.get();
+            if current_params.0.is_empty() {
+                update_url_with_current_state();
+            }
+        }
+    });
 
     // Create resource to fetch hotel details when page loads
     // Following the pattern from block_room_v1.rs prebook_resource
+    // Enhanced to work with query params for shareable URLs
     let hotel_details_resource = create_resource(
         move || {
             // Wait for essential data to be ready before calling API
+            // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
             let destination = ui_search_ctx.destination.get();
             let date_range = ui_search_ctx.date_range.get();
@@ -176,7 +228,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
             // Return true when ready to call API
-            has_hotel_code && has_destination && has_valid_dates
+            let is_ready = has_hotel_code && has_destination && has_valid_dates;
+
+            log!("Hotel details resource readiness check: hotel_code={}, destination={}, dates={}, ready={}", 
+                has_hotel_code, has_destination, has_valid_dates, is_ready);
+
+            is_ready
         },
         move |is_ready| {
             let guests_for_details = ui_search_ctx.guests.clone();
@@ -202,6 +259,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 }
 
                 // Create search criteria from UI context
+                // This will work whether data came from direct navigation or URL query params
                 let destination = ui_search_ctx.destination.get_untracked();
                 let date_range = ui_search_ctx.date_range.get_untracked();
                 let guests = &guests_clone;
@@ -247,6 +305,14 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     room_guests,
                     guest_nationality: "US".to_string(), // Default for now
                 };
+
+                log!("Using search criteria for hotel details API: destination={}, dates={:?}-{:?}, guests={}+{}+{}", 
+                    search_criteria.destination_city_name,
+                    search_criteria.check_in_date,
+                    search_criteria.check_out_date,
+                    search_criteria.room_guests[0].no_of_adults,
+                    search_criteria.room_guests[0].no_of_children,
+                    search_criteria.no_of_rooms);
 
                 // Create hotel info criteria
                 let criteria = DomainHotelInfoCriteria {

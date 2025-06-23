@@ -2,9 +2,10 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 // use crate::api::get_room;
+use crate::api::client_side_api::ClientSideApiClient;
 use crate::component::{Navbar, SkeletonCards};
 use crate::log;
-use crate::page::{HotelListParams, InputGroupContainer};
+use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -28,22 +29,77 @@ pub fn HotelListPage() -> impl IntoView {
 
     // Sync query params with state on page load (URL → State)
     // This leverages use_query_map's built-in reactivity for browser navigation
-    // create_effect(move |_| {
-    //     let params = query_map.get();
-    //     if !params.0.is_empty() {
-    //         log!("Found query params in URL: {:?}", params);
+    create_effect(move |_| {
+        let params = query_map.get();
+        if !params.0.is_empty() {
+            log!("Found query params in URL: {:?}", params);
 
-    //         if let Some(hotel_params) = HotelListParams::from_url_params(&params.0.into_iter().collect()) {
-    //             log!("Parsed hotel params from URL: {:?}", hotel_params);
-    //             hotel_params.sync_to_app_state();
-    //         }
-    //     }
-    // });
+            if let Some(hotel_params) =
+                HotelListParams::from_url_params(&params.0.into_iter().collect())
+            {
+                log!("Parsed hotel params from URL: {:?}", hotel_params);
+                hotel_params.sync_to_app_state();
+            }
+        }
+    });
+
+    // Clone search_ctx for use in different closures
+    let search_ctx_for_resource = search_ctx.clone();
+    let search_ctx_for_url_update = search_ctx.clone();
+
+    // Hotel search resource - triggers when search context is available
+    let hotel_search_resource = create_resource(
+        move || {
+            // Track search context changes reactively
+            let destination = search_ctx_for_resource.destination.get();
+            let date_range = search_ctx_for_resource.date_range.get();
+            let adults = search_ctx_for_resource.guests.adults.get();
+
+            let has_destination = destination.is_some();
+            let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
+            let has_guests = adults > 0;
+
+            // Return true when ready to search
+            let is_ready = has_destination && has_valid_dates && has_guests;
+
+            log!(
+                "Hotel search resource readiness: destination={}, dates={}, guests={}, ready={}",
+                has_destination,
+                has_valid_dates,
+                has_guests,
+                is_ready
+            );
+
+            is_ready
+        },
+        move |is_ready| {
+            let search_ctx_clone = search_ctx_for_resource.clone();
+            async move {
+                if !is_ready {
+                    log!("Hotel search resource: Not ready yet, waiting for search criteria...");
+                    return None;
+                }
+
+                log!("Hotel search resource: Search criteria ready, performing hotel search...");
+
+                // Use the same API client as root.rs
+                let api_client = ClientSideApiClient::new();
+                let result = api_client.search_hotel(search_ctx_clone.into()).await;
+
+                log!("Hotel search API completed");
+
+                // Set results in the same way as root.rs
+                SearchListResults::set_search_results(result.clone());
+
+                Some(result)
+            }
+        },
+    );
 
     // Example: Manual URL updates (State → URL) when user performs actions
     // This function can be called from search form submissions, filter changes, etc.
     let update_url_with_current_state = move || {
-        let current_params = HotelListParams::from_search_context(&search_ctx);
+        let current_params = HotelListParams::from_search_context(&search_ctx_for_url_update);
         current_params.update_url();
         log!(
             "Updated URL with current search state: {:?}",
@@ -91,11 +147,20 @@ pub fn HotelListPage() -> impl IntoView {
                     // <FilterAndSortBy />
                 </div>
 
+                // Use resource pattern with Suspense for automatic loading states
+                <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
+                    {move || {
+                        // Trigger the resource loading but don't render anything
+                        let _ = hotel_search_resource.get();
+                        view! { <></> }
+                    }}
+                </Suspense>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
                     <Show
                         when=move || search_list_page.search_result.get().is_some()
-                        fallback=fallback
+                        fallback=move || view! { <></> }
                     >
 
                         {move || {
@@ -152,13 +217,15 @@ pub fn HotelCard(
 
     let search_list_page: SearchListResults = expect_context();
     let search_list_page_clone = search_list_page.clone();
+    let search_ctx: UISearchCtx = expect_context();
 
     let navigate = use_navigate();
+    let navigate_clone = navigate.clone();
 
     let hotel_code_cloned = hotel_code.clone();
 
     let search_hotel_info_action = create_action(move |_| {
-        let nav = navigate.clone();
+        let nav = navigate_clone.clone();
         let search_list_page = search_list_page.clone();
         let hotel_code = hotel_code.clone();
         log!("from action -- {search_list_page:?}");
@@ -192,7 +259,7 @@ pub fn HotelCard(
     });
 
     let hotel_code_2_cloned = hotel_code_cloned.clone();
-    let search_hotel_room_action = create_action(move |_| {
+    let search_hotel_room_action = create_action(move |_: &()| {
         let search_list_page = search_list_page_clone.clone();
         let hotel_code = hotel_code_2_cloned.clone();
         async move {
@@ -222,9 +289,17 @@ pub fn HotelCard(
             // Reset hotel details state
             HotelDetailsUIState::reset();
 
-            // Dispatch actions to fetch data
-            search_hotel_room_action.dispatch(());
-            search_hotel_info_action.dispatch(())
+            // Generate query params for shareable URL
+            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
+                log!("Generated hotel details params: {:?}", hotel_params);
+                let shareable_url = hotel_params.to_shareable_url();
+                log!("Navigating to hotel details with query params: {}", shareable_url);
+                navigate(&shareable_url, Default::default());
+            } else {
+                log!("Failed to generate hotel params, using fallback navigation");
+                // Fallback to original navigation
+                search_hotel_info_action.dispatch(());
+            }
         }>
             <div class={class}>
                 <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">

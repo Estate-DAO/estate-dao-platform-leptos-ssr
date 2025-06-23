@@ -8,6 +8,28 @@ use leptos::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[server(LookupDestinationById)]
+pub async fn lookup_destination_by_id(
+    city_id: String,
+) -> Result<Option<Destination>, ServerFnError> {
+    use std::io::BufReader;
+
+    let file = match std::fs::File::open("city.json") {
+        Ok(f) => f,
+        Err(_) => return Ok(None),
+    };
+
+    let reader = BufReader::new(file);
+    let destinations: Vec<Destination> = match serde_json::from_reader(reader) {
+        Ok(d) => d,
+        Err(_) => return Ok(None),
+    };
+
+    let destination = destinations.iter().find(|d| d.city_id == city_id).cloned();
+
+    Ok(destination)
+}
+
 /// Hotel List page state that can be encoded in URL via base64
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HotelListParams {
@@ -173,15 +195,22 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
 
         // Set destination if available
         if let Some(city_id) = &self.destination {
-            // TODO: Look up full destination object from city_id
-            // For now, create a placeholder destination
-            let destination = Destination {
-                city_id: city_id.clone(),
-                city: "Unknown".to_string(), // Would need to lookup from city list
-                country_name: "Unknown".to_string(),
-                country_code: "XX".to_string(),
-            };
-            UISearchCtx::set_destination(destination);
+            // Spawn async lookup task
+            let city_id = city_id.clone();
+            spawn_local(async move {
+                if let Ok(Some(destination)) = lookup_destination_by_id(city_id.clone()).await {
+                    UISearchCtx::set_destination(destination);
+                } else {
+                    // Fallback to placeholder if lookup fails
+                    let destination = Destination {
+                        city_id: city_id.clone(),
+                        city: "Unknown".to_string(),
+                        country_name: "Unknown".to_string(),
+                        country_code: "XX".to_string(),
+                    };
+                    UISearchCtx::set_destination(destination);
+                }
+            });
         }
 
         // Set date range if available

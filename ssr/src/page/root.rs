@@ -18,6 +18,8 @@ use crate::{
         FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
         SelectedDateRange,
     },
+    page::HotelListParams,
+    utils::query_params::QueryParamsSync,
     view_state_layer::ui_search_state::{SearchListResults, UISearchCtx},
 };
 // use chrono::{Datelike, NaiveDate};
@@ -176,8 +178,23 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         async move {
             log!("Search button clicked");
             log!("[root.rs] About to navigate to hotel list page");
-            //  move to the hotel listing page
-            nav(AppRoutes::HotelList.to_string(), Default::default());
+
+            // Generate query params for hotel list with current search context
+            let hotel_list_params = HotelListParams::from_search_context(&search_ctx);
+            let hotel_list_url = format!(
+                "{}?{}",
+                AppRoutes::HotelList.to_string(),
+                url::form_urlencoded::Serializer::new(String::new())
+                    .extend_pairs(&hotel_list_params.to_url_params())
+                    .finish()
+            );
+            log!(
+                "[root.rs] Generated hotel list URL with params: {}",
+                hotel_list_url
+            );
+
+            //  move to the hotel listing page with query params
+            nav(&hotel_list_url, Default::default());
             log!("[root.rs] Navigation triggered");
 
             // call server function inside action
@@ -185,11 +202,11 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // spawn_local(async move {
             // on mobile, collapse the full input and goback to InputGroupMobile component
             InputGroupState::set_show_full_input(false);
-            log!("[root.rs] spawn_local started for search_hotel");
-            // Use the ClientSideApiClient to make the API call
-            let api_client = ClientSideApiClient::new();
-            let result = api_client.search_hotel(search_ctx.into()).await;
-            log!("[root.rs] search_hotel completed");
+            // log!("[root.rs] spawn_local started for search_hotel");
+            // // Use the ClientSideApiClient to make the API call
+            // let api_client = ClientSideApiClient::new();
+            // let result = api_client.search_hotel(search_ctx.into()).await;
+            // log!("[root.rs] search_hotel completed");
             // log!("SEARCH_HOTEL_API: {result:?}");
             SearchListResults::set_search_results(result);
             log!("[root.rs] SearchListResults set");
