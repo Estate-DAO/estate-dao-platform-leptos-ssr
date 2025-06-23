@@ -382,23 +382,25 @@ pub fn GuestQuantity() -> impl IntoView {
                                                         <label class="text-xs text-gray-500 font-medium">
                                                             {format!("Child {}", i + 1)}
                                                         </label>
-                                                        <input
-                                                            type="number"
-                                                            value=age_value
-                                                            min="0"
-                                                            max="17"
-                                                            on:input=move |ev| {
+                                                        <select
+                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                                            on:change=move |ev| {
                                                                 let value = event_target_value(&ev).parse().unwrap_or(10);
-                                                                let clamped_value = value.min(17).max(0);
                                                                 // Update the children_ages state directly
                                                                 children_ages_signal.update(|ages| {
                                                                     if let Some(age) = ages.get_mut(i as usize) {
-                                                                        *age = clamped_value;
+                                                                        *age = value;
                                                                     }
                                                                 });
                                                             }
-                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        />
+                                                            prop:value=age_value.to_string()
+                                                        >
+                                                            {(0..=17).map(|age| {
+                                                                view! {
+                                                                    <option value=age.to_string()>{age.to_string()}</option>
+                                                                }
+                                                            }).collect::<Vec<_>>()}
+                                                        </select>
                                                     </div>
                                                 }
                                             }).collect::<Vec<_>>()
@@ -485,24 +487,26 @@ pub fn GuestQuantity() -> impl IntoView {
                                                         <label class="text-xs text-gray-500 font-medium">
                                                             {format!("Child {}", i + 1)}
                                                         </label>
-                                                        <input
-                                                            type="number"
-                                                            prop:value=move || age_signal.get().to_string()
-                                                            min="0"
-                                                            max="17"
-                                                            on:input=move |ev| {
+                                                        <select
+                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                                            on:change=move |ev| {
                                                                 let value = event_target_value(&ev).parse().unwrap_or(10);
-                                                                let clamped_value = value.min(17).max(0);
-                                                                age_signal.set(clamped_value);
+                                                                age_signal.set(value);
                                                                 // Update the children_ages state
                                                                 children_ages_signal.update(|ages| {
                                                                     if let Some(age) = ages.get_mut(i as usize) {
-                                                                        *age = clamped_value;
+                                                                        *age = value;
                                                                     }
                                                                 });
                                                             }
-                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        />
+                                                            prop:value=move || age_signal.get().to_string()
+                                                        >
+                                                            {(0..=17).map(|age| {
+                                                                view! {
+                                                                    <option value=age.to_string()>{age.to_string()}</option>
+                                                                }
+                                                            }).collect::<Vec<_>>()}
+                                                        </select>
                                                     </div>
                                                 }
                                             }).collect::<Vec<_>>()
