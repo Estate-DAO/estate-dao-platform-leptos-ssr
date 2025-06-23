@@ -308,6 +308,7 @@ impl LiteApiAdapter {
         }
     }
 
+    // #[tracing::instrument]
     // Map LiteAPI rates response and hotel details to domain hotel details
     fn map_liteapi_rates_and_details_to_domain(
         liteapi_rates_response: LiteApiHotelRatesResponse,

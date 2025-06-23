@@ -178,11 +178,6 @@ impl GuestSelection {
         });
     }
 
-    pub fn increment_rooms() {
-        let this = Self::get();
-        this.rooms.update(|n| *n += 1);
-    }
-
     pub fn get_adults() -> u32 {
         let this = Self::get();
         this.adults.get_untracked()
@@ -253,23 +248,65 @@ pub fn GuestQuantity() -> impl IntoView {
     let rooms_signal = guest_selection.rooms;
     let children_ages_signal = guest_selection.children_ages.get_signal();
 
-    log!(
-        "[children_signal] Initial children_signal value: {}",
-        children_signal.get_untracked()
-    );
-    log!(
-        "[children_signal] Initial children_ages_signal value: {:?}",
-        children_ages_signal.get_untracked()
-    );
+    // **Robust Counter Logic - Inspired by RoomCounterV1**
+    // Create local closures with boundary checks and safety validations
+
+    // Adults counter logic (minimum 1) - directly use signals to avoid move issues
+    let increment_adults = move || {
+        adults_signal.update(|n| *n += 1);
+    };
+    let decrement_adults = move || {
+        if adults_signal.get() > 1 {
+            // Additional safety check
+            adults_signal.update(|n| *n = n.saturating_sub(1));
+        }
+    };
+
+    // Children counter logic (minimum 0) - directly use signals to avoid move issues
+    let increment_children = move || {
+        children_signal.update(|n| *n += 1);
+        // Also update children ages array
+        children_ages_signal.update(|vec| vec.push(10));
+    };
+    let decrement_children = move || {
+        if children_signal.get() > 0 {
+            // Additional safety check
+            children_signal.update(|n| *n = n.saturating_sub(1));
+            // Also update children ages array
+            children_ages_signal.update(|vec| {
+                vec.pop();
+            });
+        }
+    };
+
+    // Rooms counter logic (minimum 1) - directly use signals to avoid move issues
+    let increment_rooms = move || {
+        rooms_signal.update(|n| *n += 1);
+    };
+    let decrement_rooms = move || {
+        if rooms_signal.get() > 1 {
+            // Additional safety check
+            rooms_signal.update(|n| *n = n.saturating_sub(1));
+        }
+    };
+
+    // log!(
+    //     "[children_signal] Initial children_signal value: {}",
+    //     children_signal.get_untracked()
+    // );
+    // log!(
+    //     "[children_signal] Initial children_ages_signal value: {:?}",
+    //     children_ages_signal.get_untracked()
+    // );
 
     let guest_count_display = create_memo(move |_prev| {
         let adults = adults_signal.get();
         let children = children_signal.get();
-        log!(
-            "[children_signal] Updating guest_count_display: Adults = {}, Children = {}",
-            adults,
-            children
-        );
+        // log!(
+        //     "[children_signal] Updating guest_count_display: Adults = {}, Children = {}",
+        //     adults,
+        //     children
+        // );
         format!(
             "{} • {}",
             pluralize(adults, "adult", "adults"),
@@ -278,177 +315,227 @@ pub fn GuestQuantity() -> impl IntoView {
     });
 
     view! {
-        <div class="relative w-full h-full">
+        <div class="relative flex items-center w-full">
             <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::BsPerson class="text-black font-light" />
+                <Icon icon=icondata::BiUserRegular class="text-black font-extralight" />
             </div>
 
-            <div class="flex items-center h-full">
             <button
-                id="guestsDropdown"
-                class="w-full flex-0 py-2 pl-10 text-left text-gray-700 text-sm font-light bg-transparent rounded-full focus:outline-none"
+                class="w-full py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left flex items-center justify-around"
                 on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
             >
-                {{ move || guest_count_display }}
+                <div class="text-gray-500">{guest_count_display}</div>
+                <div>
+                // <div class="absolute inset-y-0 right-3 flex items-center">
+                    <Icon icon=icon() class="text-gray-600 text-sm" />
+                </div>
             </button>
 
-            </div>
-            <div class="absolute inset-y-2 text-xl right-3 flex items-center">
-                <Icon icon=icon class="text-black" />
-            </div>
-
             <Show when=move || is_open()>
-                // !<-- Main Modal Container -->
+                // !<-- Mobile Overlay -->
+                <div class="md:hidden fixed inset-0 z-[9999] bg-black/50" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)></div>
+
+                // !<-- Desktop: Positioned dropdown aligned to right edge of parent container -->
                 <div
-                    class="fixed inset-0 z-[9999]"
-                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
+                    class="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] hidden md:block"
+                    on:click=|e| e.stop_propagation()
                 >
-                    // !<-- Content Container - Centered on desktop, bottom sheet on mobile -->
-                    <div
-                        class="fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:right-0 md:left-auto md:bottom-auto md:max-w-[400px] md:w-[400px] z-[9999]"
-                        on:click=|e| e.stop_propagation()
-                    >
-                        <div class="relative md:border-1 md:border-gray-400 md:rounded-2xl md:shadow-xl md:z-[9999]">
-                            <div class="bg-white px-4 py-6 md:rounded-2xl">
-                                // !<-- Guest Selection Section -->
-                                <div class="space-y-6">
-                                    <NumberCounterV2
-                                        label="Adults"
-                                        counter=adults_signal
-                                        class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                                        on_increment=move || {
-                                            adults_signal.update(|n| *n += 1);
-                                        }
-                                        min=1_u32
-                                    />
+                    <div class="p-6 space-y-6">
+                        // !<-- Guest Selection Section -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-left">"Guests and Rooms"</h3>
 
-                                    <div class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                        <p>"Children"</p>
-                                        <div class="flex items-center space-x-1">
-                                            {
-                                                // Create reactive validation signals inspired by RoomCounterV1
-                                                let is_at_minimum = create_memo(move |_| children_signal.get() == 0);
-                                                let is_at_maximum = create_memo(move |_| children_signal.get() >= 10); // Max 10 children
+                            // !<-- Adults Counter -->
+                            <NumberCounterV2
+                                label="Adults"
+                                class="py-2"
+                                counter=adults_signal
+                                on_increment=increment_adults
+                                on_decrement=decrement_adults
+                                min=1u32
+                            />
 
-                                                // Button event handlers inspired by both RoomCounterV1 and NumberCounterV2
-                                                let increment_children = move |_| {
-                                                    if children_signal.get() < 10 { // Guard against maximum
-                                                        GuestSelection::increment_children();
-                                                    }
-                                                };
-                                                let decrement_children = move |_| {
-                                                    if children_signal.get() > 0 { // Guard against minimum
-                                                        GuestSelection::decrement_children();
-                                                    }
-                                                };
+                            <Divider />
+
+                            // !<-- Children Counter -->
+                            <NumberCounterV2
+                                label="Children"
+                                class="py-2"
+                                counter=children_signal
+                                on_increment=increment_children
+                                on_decrement=decrement_children
+                            />
+
+                            // !<-- Children Ages Grid -->
+                            <Show when=move || { children_signal.get() > 0 }>
+                                <div class="pl-4 space-y-3">
+                                    <p class="text-sm text-gray-600 font-medium">"Ages of children"</p>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        {move || {
+                                            let children_count = children_signal.get();
+                                            (0..children_count).map(|i| {
+                                                // Create a stable age signal that won't be recreated on every render
+                                                let age_value = children_ages_signal.get_untracked().get(i as usize).cloned().unwrap_or(10);
 
                                                 view! {
-                                                    <button
-                                                        class=move || format!(
-                                                            "ps-2 py-1 text-2xl {}",
-                                                            if is_at_minimum() { "opacity-50 cursor-not-allowed" } else { "" }
-                                                        )
-                                                        disabled=is_at_minimum
-                                                        on:click=decrement_children
-                                                    >
-                                                        {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
-                                                    </button>
-                                                    <p class="text-center w-6">{move || children_signal.get()}</p>
-                                                    <button
-                                                        class=move || format!(
-                                                            "py-1 text-2xl {}",
-                                                            if is_at_maximum() { "opacity-50 cursor-not-allowed" } else { "" }
-                                                        )
-                                                        disabled=is_at_maximum
-                                                        on:click=increment_children
-                                                    >
-                                                        "+"
-                                                    </button>
+                                                    <div class="flex flex-col items-center space-y-2">
+                                                        <label class="text-xs text-gray-500 font-medium">
+                                                            {format!("Child {}", i + 1)}
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            value=age_value
+                                                            min="0"
+                                                            max="17"
+                                                            on:input=move |ev| {
+                                                                let value = event_target_value(&ev).parse().unwrap_or(10);
+                                                                let clamped_value = value.min(17).max(0);
+                                                                // Update the children_ages state directly
+                                                                children_ages_signal.update(|ages| {
+                                                                    if let Some(age) = ages.get_mut(i as usize) {
+                                                                        *age = clamped_value;
+                                                                    }
+                                                                });
+                                                            }
+                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        />
+                                                    </div>
                                                 }
-                                            }
-                                        </div>
-                                    </div>
-
-                                    // !<-- Children Ages Grid - Responsive grid layout -->
-                                    <div class="grid grid-cols-4 md:grid-cols-5 gap-2">
-                                        {move || {
-                                            let count = children_signal.get();
-                                            log!("[children_signal] Creating {} input fields", count);
-                                            if count > 0 {
-                                                (0..count)
-                                                    .map(|i| {
-                                                        let children_ages_signal = children_ages_signal;
-                                                        view! {
-                                                            <input
-                                                                type="number"
-                                                                min=1
-                                                                max=18
-                                                                class="p-2 border border-gray-300 w-full rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                name=format!("child_age[{}]", i)
-                                                                prop:value={
-                                                                    move || {
-                                                                        children_ages_signal.get().get(i as usize).copied().unwrap_or(5).to_string()
-                                                                    }
-                                                                }
-                                                                placeholder="Age"
-                                                                on:input={
-                                                                    move |e| {
-                                                                        let age = event_target_value(&e);
-                                                                        log!("[children_signal] Setting child {} age to: {}", i, age);
-                                                                        children_ages_signal.update(|vec| {
-                                                                            if let Some(existing_age) = vec.get_mut(i as usize) {
-                                                                                *existing_age = age.parse().unwrap_or(10);
-                                                                            }
-                                                                        });
-                                                                        log!("[children_signal] Children ages after update: {:?}", children_ages_signal.get_untracked());
-                                                                    }
-                                                                }
-                                                            />
-                                                        }
-                                                    })
-                                                    .collect_view()
-                                            } else {
-                                                view! {}.into_view()
-                                            }
+                                            }).collect::<Vec<_>>()
                                         }}
                                     </div>
-
-                                    <NumberCounterV2
-                                        label="Rooms"
-                                        counter=rooms_signal
-                                        class="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                                        on_increment=move || {
-                                            rooms_signal.update(|n| *n += 1);
-                                        }
-                                        min=1_u32
-                                    />
+                                    <p class="text-xs text-gray-500">"Ages 0-17"</p>
                                 </div>
+                            </Show>
 
-                                // !<-- Apply Button Section - Responsive styling -->
-                                <div class="bg-white px-2 py-2 mt-6">
-                                    <div class="flex justify-center">
-                                        <button
-                                            type="button"
-                                            class="w-full text-sm md:w-48 bg-blue-500 text-white md:hover:bg-blue-600 py-3 md:py-2.5 rounded-full transition-colors shadow-sm hover:shadow-md"
-                                            on:click=move |ev| {
-                                                ev.prevent_default();
+                            <Divider />
 
-                                                log::info!(
-                                                    "Adults: {}, Children: {}, Ages: {:?}",
-                                                    GuestSelection::get_adults(),
-                                                    GuestSelection::get_children(),
-                                                    GuestSelection::get_children_ages()
+                            // !<-- Rooms Counter -->
+                            <NumberCounterV2
+                                label="Rooms"
+                                class="py-2"
+                                counter=rooms_signal
+                                on_increment=increment_rooms
+                                on_decrement=decrement_rooms
+                                min=1u32
+                            />
+                        </div>
+
+                        // !<-- Apply Button Section -->
+                        <div class="flex justify-center pt-4">
+                            <button
+                                type="button"
+                                class="w-48 bg-blue-500 text-white py-2 rounded-full hover:bg-blue-600 transition-colors text-sm font-medium"
+                                on:click=move |_| {
+                                    InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                }
+                            >
+                                "Apply"
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                // !<-- Mobile: Bottom sheet -->
+                <div
+                    class="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-white rounded-t-lg"
+                    on:click=|e| e.stop_propagation()
+                >
+                    <div class="p-6 space-y-6">
+                        // !<-- Guest Selection Section -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-center">"Guests and Rooms"</h3>
+
+                            // !<-- Adults Counter -->
+                            <NumberCounterV2
+                                label="Adults"
+                                class="py-2"
+                                counter=adults_signal
+                                on_increment=increment_adults
+                                on_decrement=decrement_adults
+                                min=1u32
+                            />
+
+                            <Divider />
+
+                            // !<-- Children Counter -->
+                            <NumberCounterV2
+                                label="Children"
+                                class="py-2"
+                                counter=children_signal
+                                on_increment=increment_children
+                                on_decrement=decrement_children
+                            />
+
+                            // !<-- Children Ages Grid -->
+                            <Show when=move || { children_signal.get() > 0 }>
+                                <div class="pl-4 space-y-3">
+                                    <p class="text-sm text-gray-600 font-medium">"Ages of children"</p>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        {move || {
+                                            let children_count = children_signal.get();
+                                            (0..children_count).map(|i| {
+                                                // Create a stable age signal that won't be recreated on every render
+                                                let age_signal = create_rw_signal(
+                                                    children_ages_signal.get().get(i as usize).cloned().unwrap_or(10)
                                                 );
 
-                                                UISearchCtx::log_state();
-                                                InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
-                                            }
-                                        >
-                                            "Apply"
-                                        </button>
+                                                view! {
+                                                    <div class="flex flex-col items-center space-y-2">
+                                                        <label class="text-xs text-gray-500 font-medium">
+                                                            {format!("Child {}", i + 1)}
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            prop:value=move || age_signal.get().to_string()
+                                                            min="0"
+                                                            max="17"
+                                                            on:input=move |ev| {
+                                                                let value = event_target_value(&ev).parse().unwrap_or(10);
+                                                                let clamped_value = value.min(17).max(0);
+                                                                age_signal.set(clamped_value);
+                                                                // Update the children_ages state
+                                                                children_ages_signal.update(|ages| {
+                                                                    if let Some(age) = ages.get_mut(i as usize) {
+                                                                        *age = clamped_value;
+                                                                    }
+                                                                });
+                                                            }
+                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        />
+                                                    </div>
+                                                }
+                                            }).collect::<Vec<_>>()
+                                        }}
                                     </div>
+                                    <p class="text-xs text-gray-500">"Ages 0-17"</p>
                                 </div>
-                            </div>
+                            </Show>
+
+                            <Divider />
+
+                            // !<-- Rooms Counter -->
+                            <NumberCounterV2
+                                label="Rooms"
+                                class="py-2"
+                                counter=rooms_signal
+                                on_increment=increment_rooms
+                                on_decrement=decrement_rooms
+                                min=1u32
+                            />
+                        </div>
+
+                        // !<-- Apply Button Section -->
+                        <div class="flex justify-center pt-4">
+                            <button
+                                type="button"
+                                class="w-full bg-blue-500 text-white py-3 rounded-full hover:bg-blue-600 transition-colors text-sm font-medium"
+                                on:click=move |_| {
+                                    InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                }
+                            >
+                                "Apply"
+                            </button>
                         </div>
                     </div>
                 </div>

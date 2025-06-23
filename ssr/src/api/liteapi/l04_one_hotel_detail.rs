@@ -124,7 +124,7 @@ pub struct LiteApiSingleHotelDetailData {
     pub name: String,
     #[serde(rename = "hotelDescription")]
     pub hotel_description: String,
-    #[serde(rename = "hotelImportantInformation")]
+    #[serde(rename = "hotelImportantInformation", default)]
     pub hotel_important_information: String,
     #[serde(rename = "checkinCheckoutTimes")]
     pub checkin_checkout_times: LiteApiCheckinCheckoutTimes,
@@ -142,6 +142,7 @@ pub struct LiteApiSingleHotelDetailData {
     pub address: String,
     #[serde(rename = "hotelFacilities")]
     pub hotel_facilities: Vec<String>,
+    #[serde(default)]
     pub zip: String,
     pub chain: String,
     pub facilities: Vec<LiteApiFacility>,

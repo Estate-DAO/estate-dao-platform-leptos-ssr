@@ -236,6 +236,7 @@ impl HotelProviderPort for LiteApiAdapter {
         ))
     }
 
+    // #[tracing::instrument(skip(self))]
     async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,

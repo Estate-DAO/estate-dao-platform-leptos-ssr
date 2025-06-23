@@ -345,11 +345,13 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
             // <!-- Use resource pattern like prebook_resource in block_room_v1.rs -->
             // <!-- The resource automatically triggers data loading when dependencies change -->
-            {move || {
+            <Suspense fallback=move || view! { <></> }>
+                {move || {
                 // Trigger the resource loading but don't render anything
                 let _ = hotel_details_resource.get();
                 view! { <></> }
             }}
+            </Suspense>
 
             <Show
                 when=move || !is_loading()
@@ -391,7 +393,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                                 <div class="w-full md:w-3/5 flex flex-col space-y-6">
                                     <div class="bg-white rounded-xl shadow-md p-6 mb-2">
                                         <div class="text-xl mb-2 font-semibold">About</div>
-                                        <div class="mb-2 text-gray-700">{move || clip_to_30_words(&description_signal())}</div>
+                                        <div class="mb-2 text-gray-700" inner_html=move || description_signal()></div>
                                     </div>
 
                                     <div class="bg-white rounded-xl shadow-md p-6 mb-2">

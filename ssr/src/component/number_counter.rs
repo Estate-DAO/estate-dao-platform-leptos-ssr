@@ -45,22 +45,25 @@ pub fn NumberCounterV2(
     #[prop(default = "".into(), into)] class: String,
     counter: RwSignal<u32>,
     on_increment: impl Fn() + 'static,
-    #[prop(optional)] on_decrement: Option<Box<dyn Fn() + 'static>>,
+    #[prop(optional)] on_decrement: Option<impl Fn() + 'static>,
     #[prop(optional, into)] min: Option<u32>,
 ) -> impl IntoView {
     let merged_class = format!("flex items-center justify-between {}", class);
     let min_value = min.unwrap_or(0);
     let is_min = move || counter.get() <= min_value;
 
-    let decrement = move |_| {
-        if counter.get() <= min_value {
-            return; // Already at or below minimum, do nothing
-        }
+    let decrement = {
+        let on_decrement = on_decrement;
+        move |_| {
+            if counter.get() <= min_value {
+                return; // Already at or below minimum, do nothing
+            }
 
-        if let Some(decr) = &on_decrement {
-            decr();
-        } else {
-            counter.update(|n| *n = n.saturating_sub(1));
+            if let Some(ref decr) = on_decrement {
+                decr();
+            } else {
+                counter.update(|n| *n = n.saturating_sub(1));
+            }
         }
     };
 

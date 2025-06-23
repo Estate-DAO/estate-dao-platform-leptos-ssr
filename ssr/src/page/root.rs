@@ -261,7 +261,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             // <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
             <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none">
-                <div class="flex h-[56px] px-6">
+                <div class="relative flex h-[56px] px-6">
                     <GuestQuantity />
                 </div>
             </div>
