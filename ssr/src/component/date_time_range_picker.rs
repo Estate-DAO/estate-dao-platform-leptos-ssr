@@ -366,26 +366,32 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                         </div>
 
                         <div class="bg-white px-2 py-2">
-                            <Show
-                                when=move || {
-                                    let range = selected_range.get();
-                                    range.start != (0, 0, 0) && range.end != (0, 0, 0)
-                                }
-                            >
-                                <div class="flex justify-center">
-                                    <button
-                                        type="button"
-                                        class="w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 text-white  py-3 md:py-2 rounded-full hover:bg-blue-600 transition-colors"
-                                        on:click=move |ev: _| {
-                                            // ev.prevent_default();
-                                            // ev.stop_propagation();
+                            <div class="flex justify-center">
+                                <button
+                                    type="button"
+                                    class=move || {
+                                        let range = selected_range.get();
+                                        let has_both_dates = range.start != (0, 0, 0) && range.end != (0, 0, 0);
+                                        if has_both_dates {
+                                            "w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 text-white py-3 md:py-2 rounded-full hover:bg-blue-600 transition-colors"
+                                        } else {
+                                            "w-full text-sm md:w-48 mt-6 mb-2 bg-gray-300 text-gray-500 py-3 md:py-2 rounded-full cursor-not-allowed transition-colors"
+                                        }
+                                    }
+                                    disabled=move || {
+                                        let range = selected_range.get();
+                                        !(range.start != (0, 0, 0) && range.end != (0, 0, 0))
+                                    }
+                                    on:click=move |ev: _| {
+                                        let range = selected_range.get();
+                                        if range.start != (0, 0, 0) && range.end != (0, 0, 0) {
                                             InputGroupState::toggle_dialog(OpenDialogComponent::None)
                                         }
-                                    >
-                                        "Apply"
-                                    </button>
-                                </div>
-                            </Show>
+                                    }
+                                >
+                                    "Apply"
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
