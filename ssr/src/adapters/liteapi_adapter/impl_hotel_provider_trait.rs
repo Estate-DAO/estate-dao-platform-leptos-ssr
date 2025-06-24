@@ -89,6 +89,19 @@ impl HotelProviderPort for LiteApiAdapter {
             self.client.send(rates_request)
         ) {
             Ok((hotel_details_response, rates_response)) => {
+                // Check if hotel has room data - if not, skip this hotel
+                if hotel_details_response.data.rooms.is_empty() {
+                    crate::log!("Hotel {} has no room data, skipping hotel", hotel_id);
+                    return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                        provider_name: ProviderNames::LiteApi,
+                        api_error: ApiError::Other(format!(
+                            "Hotel {} has no room data available and should be skipped",
+                            hotel_id
+                        )),
+                        error_step: ProviderSteps::HotelDetails,
+                    })));
+                }
+
                 crate::log!(
                     "Successfully retrieved both hotel details and rates for hotel_id: {}",
                     hotel_id

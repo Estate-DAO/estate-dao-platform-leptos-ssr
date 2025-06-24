@@ -165,6 +165,7 @@ pub struct LiteApiSingleHotelDetailData {
     pub child_allowed: bool,
     #[serde(rename = "petsAllowed")]
     pub pets_allowed: bool,
+    #[serde(default)]
     pub rooms: Vec<LiteApiRoom>,
     // Simplified policies and sentiment_analysis fields for now
     // Can be expanded later if needed
