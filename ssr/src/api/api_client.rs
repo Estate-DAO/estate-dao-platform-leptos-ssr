@@ -90,6 +90,21 @@ pub trait ApiClient: Clone + Debug + Default {
     }
 
     /// Execute the HTTP request and handle the response
+    #[inline]
+    fn format_response_body_for_log(&self, response: String) -> String {
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "debug_log")] {
+                response
+            } else {
+                if response.len() > 500 {
+                    format!("{}...[truncated]", &response[..500])
+                } else {
+                    response
+                }
+            }
+        }
+    }
+
     async fn execute_request<Req: ApiRequestMeta>(
         &self,
         reqb: RequestBuilder,
@@ -190,11 +205,7 @@ pub trait ApiClient: Clone + Debug + Default {
             format!(
                 "Raw Response Body (length: {}): '{}'",
                 response.len(),
-                if response.len() > 500 {
-                    format!("{}...[truncated]", &response[..500])
-                } else {
-                    response.clone()
-                }
+                self.format_response_body_for_log(response.clone())
             )
             .bright_yellow()
             .bold()
@@ -329,12 +340,7 @@ pub trait ApiRequestMeta: Sized + Send {
             format!(
                 "gzip = {} , response_bytes_or_string : {}\n\n\n",
                 Self::GZIP,
-                response_bytes_or_string
-                    .clone()
-                    .to_string()
-                    .chars()
-                    .take(4000)
-                    .collect::<String>()
+                format_deserializable_input_for_log(response_bytes_or_string.clone())
             )
             .bright_yellow()
             .bold()
@@ -359,6 +365,18 @@ pub trait ApiRequestMeta: Sized + Send {
         })?;
 
         Ok(res)
+    }
+}
+
+#[inline]
+fn format_deserializable_input_for_log(input: DeserializableInput) -> String {
+    let s = input.to_string();
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "debug_log")] {
+            s
+        } else {
+            s.chars().take(4000).collect::<String>()
+        }
     }
 }
 

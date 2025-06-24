@@ -88,7 +88,9 @@ impl HotelProviderPort for LiteApiAdapter {
             self.client.send(hotel_details_request),
             self.client.send(rates_request)
         ) {
-            Ok((hotel_details_response, rates_response)) => {
+            Ok((mut hotel_details_response, rates_response)) => {
+                // Populate main_photo from other image fields if it's empty
+                hotel_details_response.data.populate_main_photo_if_empty();
                 // Check if hotel has room data - if not, skip this hotel
                 if hotel_details_response.data.rooms.is_empty() {
                     crate::log!("Hotel {} has no room data, skipping hotel", hotel_id);
@@ -102,18 +104,35 @@ impl HotelProviderPort for LiteApiAdapter {
                     })));
                 }
 
+                // Check if hotel details are empty (name, description, address, etc.)
+                if Self::is_hotel_details_empty(&hotel_details_response.data) {
+                    crate::log!("Hotel {} has empty details, skipping hotel", hotel_id);
+                    return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                        provider_name: ProviderNames::LiteApi,
+                        api_error: ApiError::Other(format!(
+                            "Hotel {} has empty details and should be skipped",
+                            hotel_id
+                        )),
+                        error_step: ProviderSteps::HotelDetails,
+                    })));
+                }
+
                 crate::log!(
-                    "Successfully retrieved both hotel details and rates for hotel_id: {}",
+                    "✅ Successfully retrieved both hotel details and rates for hotel_id: {}",
                     hotel_id
+                );
+                crate::log!(
+                    "📊 Hotel has {} rooms, main_photo: '{}', {} facilities, description length: {}",
+                    hotel_details_response.data.rooms.len(),
+                    if hotel_details_response.data.main_photo.is_empty() { "EMPTY" } else { "Available" },
+                    hotel_details_response.data.hotel_facilities.len(),
+                    hotel_details_response.data.hotel_description.len()
                 );
                 (Some(hotel_details_response.data), rates_response)
             }
             Err(e) => {
-                crate::log!(
-                    "One or both API calls failed for hotel_id: {}, error: {:?}",
-                    hotel_id,
-                    e
-                );
+                // Log detailed failure analysis
+                Self::log_api_failure_details(&hotel_id, &e);
 
                 // Try rates API alone as fallback
                 let rates_request_fallback = Self::map_domain_info_to_liteapi_rates(&criteria)?;
@@ -130,8 +149,11 @@ impl HotelProviderPort for LiteApiAdapter {
                         })?;
 
                 crate::log!(
-                    "Successfully retrieved rates as fallback for hotel_id: {}",
+                    "✅ Successfully retrieved rates as fallback for hotel_id: {} - Hotel details will use basic info",
                     hotel_id
+                );
+                crate::log!(
+                    "ℹ️  Impact: No detailed hotel information (images, description, facilities) available for this hotel"
                 );
                 (None, rates_response)
             }

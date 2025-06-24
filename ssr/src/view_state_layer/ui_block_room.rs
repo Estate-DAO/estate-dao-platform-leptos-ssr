@@ -203,7 +203,9 @@ impl BlockRoomUIState {
 
     // Helper function for phone validation
     pub fn is_valid_phone(phone: &str) -> bool {
-        phone.chars().all(|c| c.is_ascii_digit())
+        // todo (validation): maybe validate phone numbers to have specific format
+        true
+        // phone.chars().all(|c| c.is_ascii_digit())
         // && phone.len() >= 10
     }
 

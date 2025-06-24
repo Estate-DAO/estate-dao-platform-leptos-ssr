@@ -41,6 +41,87 @@ impl LiteApiAdapter {
         Self { client }
     }
 
+    // --- Helper functions ---
+    fn is_hotel_details_empty(hotel_details: &LiteApiSingleHotelDetailData) -> bool {
+        // Check if essential hotel details are empty or meaningless
+        let name_empty = hotel_details.name.trim().is_empty();
+        let description_empty = hotel_details.hotel_description.trim().is_empty();
+        let address_empty = hotel_details.address.trim().is_empty();
+        let no_images = hotel_details.main_photo.trim().is_empty()
+            && hotel_details.hotel_images.is_empty()
+            && hotel_details
+                .thumbnail
+                .as_ref()
+                .map_or(true, |t| t.trim().is_empty());
+
+        // Consider hotel details empty if name is empty or if all other essential fields are empty
+        name_empty || (description_empty && address_empty && no_images)
+    }
+
+    fn log_api_failure_details(hotel_id: &str, error: &ApiError) {
+        // Enhanced logging to understand which API failed and why
+        crate::log!(
+            "❌ LiteAPI parallel call failure for hotel_id: {} - Detailed analysis:",
+            hotel_id
+        );
+
+        // Try to determine which API specifically failed
+        crate::log!("🔍 Error details: {:?}", error);
+
+        // Check if this is a deserialization error (like missing main_photo)
+        if let ApiError::JsonParseFailed(ref json_error) = error {
+            crate::log!(
+                "📝 JSON Deserialization Error - This likely means the hotel details API response is missing expected fields"
+            );
+            crate::log!("🔧 JSON Error Details: {}", json_error);
+
+            if json_error.contains("main_photo") {
+                crate::log!(
+                    "📸 Specific Issue: main_photo field is missing from hotel details response"
+                );
+            }
+            if json_error.contains("missing field") {
+                crate::log!("🏷️  Missing Field Error: The API response structure doesn't match our expected schema");
+            }
+        } else {
+            crate::log!("🌐 Non-JSON Error: This could be a network issue, HTTP error, or other API problem");
+        }
+
+        crate::log!(
+            "🔄 Attempting fallback to rates-only API for hotel_id: {}",
+            hotel_id
+        );
+    }
+
+    fn log_pricing_filter_results(
+        original_count: usize,
+        hotels_without_pricing_ids: &[String],
+        final_count: usize,
+    ) {
+        let hotels_without_pricing_count = hotels_without_pricing_ids.len();
+
+        if hotels_without_pricing_count > 0 {
+            crate::log!(
+                "LiteAPI search filtering: Found {} hotels total, {} without pricing ({}%), {} with valid pricing retained",
+                original_count,
+                hotels_without_pricing_count,
+                if original_count > 0 { (hotels_without_pricing_count * 100) / original_count } else { 0 },
+                final_count
+            );
+
+            // Log the specific hotel IDs that were filtered out
+            crate::log!(
+                "🚫 Hotels without valid pricing (filtered out): [{}]",
+                hotels_without_pricing_ids.join(", ")
+            );
+        } else if original_count > 0 {
+            crate::log!(
+                "LiteAPI search filtering: All {} hotels had valid pricing",
+                original_count
+            );
+        }
+    }
+
     // --- Mapping functions ---
     fn map_domain_search_to_liteapi(
         domain_criteria: &DomainHotelSearchCriteria,
@@ -57,9 +138,32 @@ impl LiteApiAdapter {
     fn map_liteapi_search_to_domain(
         liteapi_response: LiteApiHotelSearchResponse,
     ) -> DomainHotelListAfterSearch {
+        let original_hotels = liteapi_response.data;
+        let original_count = original_hotels.len();
+
+        // Filter out hotels with empty details
+        let filtered_out_hotels: Vec<LiteApiHotelResult> = original_hotels
+            .iter()
+            .filter(|hotel| Self::is_search_hotel_details_empty(hotel))
+            .cloned()
+            .collect();
+
+        let valid_hotels: Vec<LiteApiHotelResult> = original_hotels
+            .into_iter()
+            .filter(|hotel| !Self::is_search_hotel_details_empty(hotel))
+            .collect();
+
+        let final_count = valid_hotels.len();
+
+        // Log filtering results with detailed reasons
+        Self::log_search_hotel_filter_results_simple(
+            original_count,
+            &filtered_out_hotels,
+            final_count,
+        );
+
         DomainHotelListAfterSearch {
-            hotel_results: liteapi_response
-                .data
+            hotel_results: valid_hotels
                 .into_iter()
                 .map(|hotel| Self::map_liteapi_hotel_to_domain(hotel))
                 .collect(),
@@ -193,11 +297,14 @@ impl LiteApiAdapter {
     // Filter out hotels with zero pricing from search results
     fn filter_hotels_with_valid_pricing(domain_results: &mut DomainHotelListAfterSearch) {
         let original_count = domain_results.hotel_results.len();
-        let hotels_without_pricing = domain_results
+
+        // Collect hotel IDs without valid pricing for logging
+        let hotels_without_pricing_ids: Vec<String> = domain_results
             .hotel_results
             .iter()
             .filter(|hotel| hotel.price.room_price <= 0.0)
-            .count();
+            .map(|hotel| hotel.hotel_code.clone())
+            .collect();
 
         domain_results
             .hotel_results
@@ -205,17 +312,81 @@ impl LiteApiAdapter {
 
         let final_count = domain_results.hotel_results.len();
 
-        if hotels_without_pricing > 0 {
+        // Use separate logging function
+        Self::log_pricing_filter_results(original_count, &hotels_without_pricing_ids, final_count);
+    }
+
+    fn is_search_hotel_details_empty(hotel: &LiteApiHotelResult) -> bool {
+        // Check if essential hotel details are empty or meaningless in search results
+        let name_empty = hotel.name.trim().is_empty();
+        let description_empty = hotel.hotel_description.trim().is_empty();
+        let address_empty = hotel.address.trim().is_empty();
+        let no_main_photo = hotel.main_photo.trim().is_empty();
+        let no_thumbnail = hotel
+            .thumbnail
+            .as_ref()
+            .map_or(true, |t| t.trim().is_empty());
+        let no_images = no_main_photo && no_thumbnail;
+
+        // Consider hotel details empty if:
+        // 1. Name is empty (critical field)
+        // 2. Description is empty AND no main photo (key visual content missing)
+        // 3. All essential fields are empty (name, description, address, images)
+        name_empty
+            || (description_empty && no_main_photo)
+            || (description_empty && address_empty && no_images)
+    }
+
+    fn log_search_hotel_filter_results_simple(
+        original_count: usize,
+        filtered_out_hotels: &[LiteApiHotelResult],
+        final_count: usize,
+    ) {
+        let filtered_count = filtered_out_hotels.len();
+
+        if filtered_count > 0 {
             crate::log!(
-                "LiteAPI search filtering: Found {} hotels total, {} without pricing ({}%), {} with valid pricing retained",
+                "LiteAPI search hotel details filtering: Found {} hotels total, {} with empty details ({}%), {} with valid details retained",
                 original_count,
-                hotels_without_pricing,
-                if original_count > 0 { (hotels_without_pricing * 100) / original_count } else { 0 },
+                filtered_count,
+                if original_count > 0 { (filtered_count * 100) / original_count } else { 0 },
                 final_count
             );
+
+            // Log detailed reasons for each filtered hotel
+            for hotel in filtered_out_hotels {
+                let mut reasons = Vec::new();
+
+                if hotel.name.trim().is_empty() {
+                    reasons.push("empty name");
+                }
+                if hotel.hotel_description.trim().is_empty() {
+                    reasons.push("empty description");
+                }
+                if hotel.address.trim().is_empty() {
+                    reasons.push("empty address");
+                }
+                if hotel.main_photo.trim().is_empty() {
+                    reasons.push("empty main_photo");
+                }
+                if hotel
+                    .thumbnail
+                    .as_ref()
+                    .map_or(true, |t| t.trim().is_empty())
+                {
+                    reasons.push("empty thumbnail");
+                }
+
+                crate::log!(
+                    "🚫 Hotel filtered out: {} (ID: {}) - Reasons: [{}]",
+                    hotel.name,
+                    hotel.id,
+                    reasons.join(", ")
+                );
+            }
         } else if original_count > 0 {
             crate::log!(
-                "LiteAPI search filtering: All {} hotels had valid pricing",
+                "LiteAPI search hotel details filtering: All {} hotels had valid details",
                 original_count
             );
         }
@@ -331,6 +502,21 @@ impl LiteApiAdapter {
             })));
         }
 
+        // Check if hotel details are empty when provided
+        if let Some(ref details) = hotel_details {
+            if Self::is_hotel_details_empty(details) {
+                crate::log!("Hotel details are empty, filtering out this hotel");
+                return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                    provider_name: ProviderNames::LiteApi,
+                    api_error: ApiError::Other(
+                        "Hotel has empty or insufficient details and should be filtered out"
+                            .to_string(),
+                    ),
+                    error_step: ProviderSteps::HotelDetails,
+                })));
+            }
+        }
+
         // Get first hotel data - because we show this on hotel details page, we only request the data for one hotel
         let hotel_data = liteapi_rates_response
             .get_first_hotel_data()
@@ -411,13 +597,14 @@ impl LiteApiAdapter {
                 let rooms_with_images: std::collections::HashSet<String> = details
                     .rooms
                     .iter()
-                    .filter(|room| {
-                        !room.photos.is_empty()
-                            && room
-                                .photos
-                                .iter()
-                                .any(|photo| !photo.url.is_empty() || !photo.hd_url.is_empty())
-                    })
+                    // todo (room filtering): filter rooms based on image availability
+                    // .filter(|room| {
+                    //     !room.photos.is_empty()
+                    //         && room
+                    //             .photos
+                    //             .iter()
+                    //             .any(|photo| !photo.url.is_empty() || !photo.hd_url.is_empty())
+                    // })
                     .map(|room| room.room_name.clone())
                     .collect();
 

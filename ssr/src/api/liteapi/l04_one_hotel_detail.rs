@@ -129,8 +129,9 @@ pub struct LiteApiSingleHotelDetailData {
     #[serde(rename = "checkinCheckoutTimes")]
     pub checkin_checkout_times: LiteApiCheckinCheckoutTimes,
     // for_claude_hint: hotel_images is not received in the final api response because of some reason
-    #[serde(rename = "hotelImages")]
+    #[serde(rename = "hotelImages", default)]
     pub hotel_images: Vec<LiteApiHotelImage>,
+    #[serde(default)]
     pub main_photo: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thumbnail: Option<String>,
@@ -169,6 +170,51 @@ pub struct LiteApiSingleHotelDetailData {
     pub rooms: Vec<LiteApiRoom>,
     // Simplified policies and sentiment_analysis fields for now
     // Can be expanded later if needed
+}
+
+impl LiteApiSingleHotelDetailData {
+    // Populate main_photo from other image fields if it's empty
+    pub fn populate_main_photo_if_empty(&mut self) {
+        if self.main_photo.trim().is_empty() {
+            // Try to use thumbnail first
+            if let Some(ref thumbnail) = self.thumbnail {
+                if !thumbnail.trim().is_empty() {
+                    self.main_photo = thumbnail.clone();
+                    return;
+                }
+            }
+
+            // Try to use the first hotel image with default_image = true
+            if let Some(default_image) = self
+                .hotel_images
+                .iter()
+                .find(|img| img.default_image && !img.url.trim().is_empty())
+            {
+                self.main_photo = default_image.url.clone();
+                return;
+            }
+
+            // Try to use the first hotel image with HD URL
+            if let Some(first_hd_image) = self
+                .hotel_images
+                .iter()
+                .find(|img| !img.url_hd.trim().is_empty())
+            {
+                self.main_photo = first_hd_image.url_hd.clone();
+                return;
+            }
+
+            // Try to use the first hotel image with regular URL
+            if let Some(first_image) = self
+                .hotel_images
+                .iter()
+                .find(|img| !img.url.trim().is_empty())
+            {
+                self.main_photo = first_image.url.clone();
+                return;
+            }
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

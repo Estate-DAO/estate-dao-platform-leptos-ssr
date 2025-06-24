@@ -308,18 +308,6 @@ impl ProvabReqMeta for BookRoomRequest {
     fn deserialize_response(
         response_bytes_or_string: DeserializableInput,
     ) -> ApiClientResult<Self::Response> {
-        //   taken as it is from client.rs - default trait impl
-        // log!(
-        //     "{}",
-        //     format!(
-        //         "gzip = {} , response_bytes_or_string : {}\n\n\n",
-        //         Self::GZIP,
-        //         response_bytes_or_string.clone().take(500).to_string()
-        //     )
-        //     .bright_yellow()
-        //     .bold()
-        // );
-
         let decompressed_body = match response_bytes_or_string {
             DeserializableInput::Bytes(body_bytes) => {
                 String::from_utf8(body_bytes).map_err(|e| {

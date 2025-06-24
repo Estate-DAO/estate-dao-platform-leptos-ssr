@@ -32,11 +32,7 @@ pub async fn get_hotel_info_api_server_fn_route(
             let error_response = json!({
                 "error": format!("Failed to get hotel info: {}", e)
             });
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                error_response.to_string(),
-            )
-                .into_response()
+            (StatusCode::BAD_REQUEST, error_response.to_string()).into_response()
         })?;
 
     // <!-- Serialize response to string -->
