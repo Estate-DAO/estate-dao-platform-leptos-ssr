@@ -2,12 +2,12 @@
 // use leptos::logging::log;
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::domain::{DomainHotelListAfterSearch, DomainHotelSearchCriteria};
+use crate::utils::search_action::create_search_action_with_ui_state;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::{log, utils};
 use leptos::*;
 use leptos_icons::*;
 use leptos_query::QueryResult;
-use leptos_router::use_navigate;
 
 use crate::component::{DestinationPickerV5, Footer, MostPopular, Navbar};
 use crate::{
@@ -159,63 +159,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             .unwrap_or_else(|| "".to_string())
     });
 
-    let navigate = use_navigate();
-    let search_action = create_action(move |_| {
-        log!("[root.rs] search_action create_action callback started");
-        SearchListResults::reset();
-        log!("[root.rs] SearchListResults reset");
-
-        // close all the dialogs
-        InputGroupState::toggle_dialog(OpenDialogComponent::None);
-        log!("[root.rs] Dialogs closed");
-
-        let nav = navigate.clone();
-        let search_ctx = search_ctx.clone();
-        local_disabled.set(true);
-        log!("[root.rs] local_disabled set to true");
-
-        // utils::send_wrap(
-        async move {
-            log!("Search button clicked");
-            log!("[root.rs] About to navigate to hotel list page");
-
-            // Generate query params for hotel list with current search context
-            let hotel_list_params = HotelListParams::from_search_context(&search_ctx);
-            let hotel_list_url = format!(
-                "{}?{}",
-                AppRoutes::HotelList.to_string(),
-                url::form_urlencoded::Serializer::new(String::new())
-                    .extend_pairs(&hotel_list_params.to_url_params())
-                    .finish()
-            );
-            log!(
-                "[root.rs] Generated hotel list URL with params: {}",
-                hotel_list_url
-            );
-
-            //  move to the hotel listing page with query params
-            nav(&hotel_list_url, Default::default());
-            log!("[root.rs] Navigation triggered");
-
-            // call server function inside action
-            // utils::send_wrap(async move {
-            // spawn_local(async move {
-            // on mobile, collapse the full input and goback to InputGroupMobile component
-            InputGroupState::set_show_full_input(false);
-            // log!("[root.rs] spawn_local started for search_hotel");
-            // // Use the ClientSideApiClient to make the API call
-            // let api_client = ClientSideApiClient::new();
-            // let result = api_client.search_hotel(search_ctx.into()).await;
-            // log!("[root.rs] search_hotel completed");
-            // log!("SEARCH_HOTEL_API: {result:?}");
-            SearchListResults::set_search_results(result);
-            log!("[root.rs] SearchListResults set");
-            local_disabled.set(false);
-            log!("[root.rs] local_disabled set to false");
-            // });
-        }
-        // )
-    });
+    // Use shared search action with UI state management
+    let search_action = create_search_action_with_ui_state(local_disabled);
 
     // let close_closure = move |_: ()| {
     //     log!("[root.rs] close panel");

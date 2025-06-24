@@ -13,6 +13,7 @@ pub mod parent_resource;
 pub mod query_params;
 pub mod responsive;
 pub mod route;
+pub mod search_action;
 pub mod sort_json;
 
 cfg_if::cfg_if! {

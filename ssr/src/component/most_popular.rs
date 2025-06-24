@@ -1,19 +1,16 @@
 use chrono::NaiveDate;
 // use leptos::logging::log;
-use crate::api::client_side_api::ClientSideApiClient;
 use crate::log;
-use crate::view_state_layer::ui_search_state::SearchListResults;
 use leptos::*;
 use leptos_icons::*;
-use leptos_router::use_navigate;
 use leptos_use::{use_timestamp_with_controls, UseTimestampReturn};
 use serde::{Deserialize, Serialize};
 
 use crate::component::GuestSelection;
+use crate::utils::search_action::create_default_search_action;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::{
     // api::search_hotel,
-    app::AppRoutes,
     component::SelectedDateRange,
     utils::date::{get_year_month_day, next_day},
     view_state_layer::ui_search_state::UISearchCtx,
@@ -133,28 +130,8 @@ pub fn MostPopular() -> impl IntoView {
         end: next_2_next_date.get(),
     });
 
-    let navigate = use_navigate();
-    let search_action = create_action(move |()| {
-        let nav = navigate.clone();
-        let search_ctx = search_ctx.clone();
-        async move {
-            log!("Search button clicked");
-
-            SearchListResults::reset();
-
-            //  move to the hotel listing page
-            nav(AppRoutes::HotelList.to_string(), Default::default());
-
-            // call server function inside action
-            spawn_local(async move {
-                log!("spawn_local - search_hotel called ClientSideApiClient");
-                let api_client = ClientSideApiClient::new();
-                let result = api_client.search_hotel(search_ctx.into()).await;
-                // log!("SEARCH_HOTEL_API: {result:?}");
-                SearchListResults::set_search_results(result);
-            });
-        }
-    });
+    // Use shared search action with default configuration
+    let search_action = create_default_search_action();
 
     let QueryResult {
         data: destinations_resource,
