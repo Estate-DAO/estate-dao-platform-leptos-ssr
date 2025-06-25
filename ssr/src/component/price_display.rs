@@ -27,7 +27,9 @@ pub fn PriceDisplay(
             <span class=price_class>{move || formatted_price()}</span>
             <Show
                 when=move || !appended_text.clone().is_none()
-                fallback=move || view! { <span class=subtext_class.clone()>" / night"</span> }
+                fallback=move || view! { <span class=subtext_class.clone()>""</span> }
+                // todo (per_night): if multiple nights are selected, then api returns price for all nights at once.
+                // fallback=move || view! { <span class=subtext_class.clone()>" / night"</span> }
             >
                 <span class=subtext_class_clone.clone()>{appended_text_clone.clone()}</span>
             </Show>
