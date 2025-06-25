@@ -162,6 +162,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     // Use shared search action with UI state management
     let search_action = create_search_action_with_ui_state(local_disabled);
 
+    log!("[root.rs InputGroup] Search action created with UI state management");
+
     // let close_closure = move |_: ()| {
     //     log!("[root.rs] close panel");
     //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
@@ -234,7 +236,16 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <button
                 on:click=move |ev| {
                     ev.prevent_default();
-                    search_action.dispatch(())
+                    log!("[root.rs InputGroup] Search button clicked, about to dispatch search action");
+
+                    // Log current UISearchCtx state before dispatch
+                    let current_search_ctx: UISearchCtx = expect_context();
+                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - destination: {:?}", current_search_ctx.destination.get());
+                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - date_range: {:?}", current_search_ctx.date_range.get());
+                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - adults: {}", current_search_ctx.guests.adults.get());
+
+                    search_action.dispatch(());
+                    log!("[root.rs InputGroup] Search action dispatched");
                 }
                 class=move || {
                     format!(" {} rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())

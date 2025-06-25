@@ -21,11 +21,9 @@ use super::{view_state::HotelInfoCtx, GlobalStateForLeptos};
 
 #[derive(Clone, Default, Debug)]
 pub struct UISearchCtx {
-    // invalid_cnt: RwSignal<u32>,
     pub destination: RwSignal<Option<Destination>>,
     pub date_range: RwSignal<SelectedDateRange>,
     pub guests: GuestSelection,
-    // pub on_form_reset: Trigger,
 }
 
 impl UISearchCtx {

@@ -17,19 +17,9 @@ use crate::{
     },
     error_template::{AppError, ErrorTemplate},
     page::{
-        AdminPanelPage,
-        BlockRoomPage,
-        BlockRoomV1Page,
-        ConfirmationPage,
-        ConfirmationPageV1,
-        ConfirmationPageV2,
-        HotelDetailsPage,
-        HotelDetailsV1Page,
-        HotelListPage,
-        // PaymentBookingStatusUpdates,
-        RootPage,
-        // SSEBookingStatusUpdates,
-        SSEConfirmationPage,
+        AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage, ConfirmationPageV1,
+        ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page, HotelListPage,
+        PreviousSearchContext, RootPage, SSEConfirmationPage,
     },
     view_state_layer::{
         api_error_state::ApiErrorState,
@@ -163,7 +153,7 @@ pub fn App() -> impl IntoView {
 
     provide_context(InputGroupState::default());
 
-    // provide_context(SearchCtx::default());
+    provide_context(PreviousSearchContext::default());
     provide_context(UISearchCtx::default());
     provide_context(SearchListResults::default());
 

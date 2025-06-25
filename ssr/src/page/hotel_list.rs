@@ -3,7 +3,7 @@ use leptos_router::use_navigate;
 
 // use crate::api::get_room;
 use crate::api::client_side_api::ClientSideApiClient;
-use crate::component::{Navbar, SkeletonCards};
+use crate::component::{Destination, GuestSelection, Navbar, SkeletonCards};
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
 use crate::utils::query_params::QueryParamsSync;
@@ -11,15 +11,60 @@ use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComp
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::{SearchListResults, UISearchCtx};
 use crate::view_state_layer::view_state::HotelInfoCtx;
+use crate::view_state_layer::GlobalStateForLeptos;
 // use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
 // use crate::state::search_state::HotelInfoResults;
 use crate::{
     // api::hotel_info,
     app::AppRoutes,
+    component::SelectedDateRange,
     component::{FilterAndSortBy, PriceDisplay, StarRating},
     page::InputGroup,
     // state::{search_state::SearchListResults, view_state::HotelInfoCtx},
 };
+
+//  this is only for this page to track if the bar changes.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PreviousSearchContext {
+    pub destination: Option<Destination>,
+    pub date_range: Option<SelectedDateRange>,
+    pub adults: u32,
+    pub children: u32,
+    pub rooms: u32,
+    /// false by default
+    pub first_time_filled: bool,
+}
+
+impl GlobalStateForLeptos for PreviousSearchContext {}
+
+impl PreviousSearchContext {
+    pub fn update(new_ctx: UISearchCtx) {
+        let mut this: Self = expect_context();
+        // let mut this = Self::get();
+        this.destination = new_ctx.destination.get_untracked();
+        this.rooms = new_ctx.guests.rooms.get_untracked();
+        this.children = new_ctx.guests.children.get_untracked();
+        this.adults = new_ctx.guests.adults.get_untracked();
+        log!("[PreviousSearchContext] updated: {:?}", this);
+
+        provide_context(this);
+    }
+
+    pub fn update_first_time_filled(new_ctx: UISearchCtx) {
+        let mut this: Self = expect_context();
+        Self::update(new_ctx);
+        this.first_time_filled = true;
+        provide_context(this);
+    }
+
+    pub fn reset_first_time_filled() {
+        let mut this: Self = expect_context();
+        this.first_time_filled = false;
+        provide_context(this);
+    }
+}
+
+//
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
@@ -27,18 +72,21 @@ pub fn HotelListPage() -> impl IntoView {
     let navigate = use_navigate();
     let query_map = leptos_router::use_query_map();
 
+    let search_ctx2: UISearchCtx = expect_context();
+
     // Sync query params with state on page load (URL → State)
     // This leverages use_query_map's built-in reactivity for browser navigation
     create_effect(move |_| {
         let params = query_map.get();
         if !params.0.is_empty() {
-            log!("Found query params in URL: {:?}", params);
+            // log!("Found query params in URL: {:?}", params);
 
             if let Some(hotel_params) =
                 HotelListParams::from_url_params(&params.0.into_iter().collect())
             {
-                log!("Parsed hotel params from URL: {:?}", hotel_params);
+                // log!("Parsed hotel params from URL: {:?}", hotel_params);
                 hotel_params.sync_to_app_state();
+                PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
             }
         }
     });
@@ -54,19 +102,50 @@ pub fn HotelListPage() -> impl IntoView {
             let destination = search_ctx_for_resource.destination.get();
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
+            let children = search_ctx_for_resource.guests.children.get();
+            let rooms = search_ctx_for_resource.guests.rooms.get();
 
-            let has_destination = destination.is_some();
+            // log!("[hotel_search_resource] destination: {:?}", destination);
+            // log!("[hotel_search_resource] date_range: {:?}", date_range);
+            // log!("[hotel_search_resource] adults: {:?}", adults);
+            // log!("[hotel_search_resource] children: {:?}", children);
+            // log!("[hotel_search_resource] rooms: {:?}", rooms);
+
+            // Get fresh context each time (this makes it reactive to context changes)
+            let previous_search_ctx = expect_context::<PreviousSearchContext>();
+
+            // log!("[hotel_search_resource] previous_search_ctx: {:?}", previous_search_ctx);
+
+            let previous_destination = previous_search_ctx.destination.clone();
+            let previous_adults = previous_search_ctx.adults;
+            let previous_children = previous_search_ctx.children;
+            let previous_rooms = previous_search_ctx.rooms;
+
+            let is_same_destination = destination == previous_destination;
+            let is_same_adults = adults == previous_adults;
+            let is_same_children = children == previous_children;
+            let is_same_rooms = rooms == previous_rooms;
+
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
-            let has_guests = adults > 0;
+            let has_valid_search_data = destination.is_some() && adults > 0 && rooms > 0;
+            let is_first_load =
+                previous_destination.is_none() && previous_adults == 0 && previous_rooms == 0;
 
             // Return true when ready to search
-            let is_ready = has_destination && has_valid_dates && has_guests;
+            let is_ready = has_valid_dates
+                && has_valid_search_data
+                && (is_first_load || // First load with valid data - always search
+                 (is_same_destination && is_same_adults && is_same_children && is_same_rooms)); // Subsequent loads - only if same data
 
             log!(
-                "Hotel search resource readiness: destination={}, dates={}, guests={}, ready={}",
-                has_destination,
+                "[hotel_search_resource] readiness: is_same_destination={}, is_same_adults={}, is_same_children={}, is_same_rooms={}, has_valid_dates={}, has_valid_search_data={}, is_first_load={}, ready={}",
+                is_same_destination,
+                is_same_adults,
+                is_same_children,
+                is_same_rooms,
                 has_valid_dates,
-                has_guests,
+                has_valid_search_data,
+                is_first_load,
                 is_ready
             );
 
@@ -74,22 +153,27 @@ pub fn HotelListPage() -> impl IntoView {
         },
         move |is_ready| {
             let search_ctx_clone = search_ctx_for_resource.clone();
+            let search_ctx_clone2 = search_ctx_for_resource.clone();
             async move {
                 if !is_ready {
-                    log!("Hotel search resource: Not ready yet, waiting for search criteria...");
+                    log!("[hotel_search_resource] Not ready yet, waiting for search criteria...");
                     return None;
                 }
 
-                log!("Hotel search resource: Search criteria ready, performing hotel search...");
+                log!("[hotel_search_resource] Search criteria ready, performing hotel search...");
 
                 // Use the same API client as root.rs
                 let api_client = ClientSideApiClient::new();
                 let result = api_client.search_hotel(search_ctx_clone.into()).await;
 
-                log!("Hotel search API completed");
+                log!("[hotel_search_resource] Hotel search API completed");
 
                 // Set results in the same way as root.rs
                 SearchListResults::set_search_results(result.clone());
+                PreviousSearchContext::update(search_ctx_clone2.clone());
+
+                // Reset first_time_filled flag after successful search
+                PreviousSearchContext::reset_first_time_filled();
 
                 Some(result)
             }

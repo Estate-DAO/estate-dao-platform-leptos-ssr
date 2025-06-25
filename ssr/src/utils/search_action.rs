@@ -4,7 +4,7 @@ use leptos_router::use_navigate;
 use crate::{
     app::AppRoutes,
     log,
-    page::HotelListParams,
+    page::{HotelListParams, PreviousSearchContext},
     utils::route::join_path_and_query_params,
     view_state_layer::{
         input_group_state::{InputGroupState, OpenDialogComponent},
@@ -41,6 +41,7 @@ impl Default for SearchActionConfig {
 pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
     let navigate = use_navigate();
     let search_ctx: UISearchCtx = expect_context();
+    let previous_search_ctx = expect_context::<PreviousSearchContext>();
 
     create_action(move |_| {
         log!(
@@ -95,6 +96,18 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
                 log!("Using simple navigation without query params");
                 AppRoutes::HotelList.to_string().to_string()
             };
+
+            log!("[hotel_search_resource] hotel_list_url: {}", hotel_list_url);
+            // to track and trigger changes for next resource load
+            PreviousSearchContext::update(search_ctx.clone());
+
+            {
+                let previous_search_ctx = expect_context::<PreviousSearchContext>();
+                log!(
+                    "[hotel_search_resource] previous_search_ctx from search_action: {:?}",
+                    previous_search_ctx
+                );
+            }
 
             // Navigate to hotel list page
             // The hotel list page will handle loading data based on query parameters

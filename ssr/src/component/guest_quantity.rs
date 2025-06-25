@@ -242,7 +242,8 @@ impl GuestSelection {
         let this = Self::get();
         this.children_ages.get_value_at(i)
     }
-    // pub fn reactive_length(&self) {
+
+    //  fn reactive_length(&self) {
     //     let no_of_child = self.children.get_untracked();
     //     if no_of_child > 0 {
     //         self.children_ages.push_children_ages();
