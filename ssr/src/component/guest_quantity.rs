@@ -335,9 +335,10 @@ pub fn GuestQuantity() -> impl IntoView {
                 // !<-- Mobile Overlay -->
                 <div class="md:hidden fixed inset-0 z-[9999] bg-black/50" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)></div>
 
-                // !<-- Desktop: Positioned dropdown aligned to right edge of parent container -->
+                // !<-- Desktop: Positioned dropdown aligned to right edge, extending beyond section -->
                 <div
                     class="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] hidden md:block"
+                    style="transform: translateX(calc(100% - 320px));"
                     on:click=|e| e.stop_propagation()
                 >
                     <div class="p-6 space-y-6">
@@ -374,8 +375,10 @@ pub fn GuestQuantity() -> impl IntoView {
                                         {move || {
                                             let children_count = children_signal.get();
                                             (0..children_count).map(|i| {
-                                                // Create a stable age signal that won't be recreated on every render
-                                                let age_value = children_ages_signal.get_untracked().get(i as usize).cloned().unwrap_or(10);
+                                                // Create a reactive age value that updates with the signal
+                                                let age_value = move || {
+                                                    children_ages_signal.get().get(i as usize).cloned().unwrap_or(10)
+                                                };
 
                                                 view! {
                                                     <div class="flex flex-col items-center space-y-2">
@@ -393,7 +396,7 @@ pub fn GuestQuantity() -> impl IntoView {
                                                                     }
                                                                 });
                                                             }
-                                                            prop:value=age_value.to_string()
+                                                            prop:value=move || age_value().to_string()
                                                         >
                                                             {(0..=17).map(|age| {
                                                                 view! {
@@ -477,10 +480,10 @@ pub fn GuestQuantity() -> impl IntoView {
                                         {move || {
                                             let children_count = children_signal.get();
                                             (0..children_count).map(|i| {
-                                                // Create a stable age signal that won't be recreated on every render
-                                                let age_signal = create_rw_signal(
+                                                // Create a reactive age value that updates with the signal
+                                                let age_value = move || {
                                                     children_ages_signal.get().get(i as usize).cloned().unwrap_or(10)
-                                                );
+                                                };
 
                                                 view! {
                                                     <div class="flex flex-col items-center space-y-2">
@@ -491,15 +494,14 @@ pub fn GuestQuantity() -> impl IntoView {
                                                             class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
                                                             on:change=move |ev| {
                                                                 let value = event_target_value(&ev).parse().unwrap_or(10);
-                                                                age_signal.set(value);
-                                                                // Update the children_ages state
+                                                                // Update the children_ages state directly
                                                                 children_ages_signal.update(|ages| {
                                                                     if let Some(age) = ages.get_mut(i as usize) {
                                                                         *age = value;
                                                                     }
                                                                 });
                                                             }
-                                                            prop:value=move || age_signal.get().to_string()
+                                                            prop:value=move || age_value().to_string()
                                                         >
                                                             {(0..=17).map(|age| {
                                                                 view! {

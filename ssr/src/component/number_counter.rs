@@ -1,3 +1,4 @@
+use crate::log;
 use leptos::*;
 
 #[component]
@@ -50,18 +51,31 @@ pub fn NumberCounterV2(
 ) -> impl IntoView {
     let merged_class = format!("flex items-center justify-between {}", class);
     let min_value = min.unwrap_or(0);
-    let is_min = move || counter.get() <= min_value;
+    let is_min = create_memo(move |_| {
+        let current_value = counter.get();
+        let at_min = current_value <= min_value;
+        // log!(
+        //     "[NumberCounterV2] Checking if at minimum: {} <= {} = {}",
+        //     current_value,
+        //     min_value,
+        //     at_min
+        // );
+        at_min
+    });
 
     let decrement = {
         let on_decrement = on_decrement;
         move |_| {
-            if counter.get() <= min_value {
+            if is_min.get() {
+                // log!("[NumberCounterV2] Already at or below minimum, do nothing");
                 return; // Already at or below minimum, do nothing
             }
 
             if let Some(ref decr) = on_decrement {
+                // log!("[NumberCounterV2] Decrementing via callback");
                 decr();
             } else {
+                // log!("[NwumberCounterV2] Decrementing directly");
                 counter.update(|n| *n = n.saturating_sub(1));
             }
         }
@@ -74,10 +88,10 @@ pub fn NumberCounterV2(
                 <button
                     class=move || format!(
                         "ps-2 py-1 text-2xl {}",
-                        if is_min() { "opacity-50 cursor-not-allowed" } else { "" }
+                        if is_min.get() { "opacity-50 cursor-not-allowed" } else { "" }
                     )
-                    on:click=decrement
-                    disabled=is_min()
+                    on:click=move |arg| decrement(arg)
+                    disabled=move || is_min.get()
                 >
                     {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
                 </button>
