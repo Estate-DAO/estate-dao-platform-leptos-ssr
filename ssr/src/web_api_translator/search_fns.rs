@@ -16,14 +16,15 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
         let check_in_date = ctx.date_range.get_untracked().start;
         let check_out_date = ctx.date_range.get_untracked().end;
         let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
-        // let no_of_nights = 2;
 
         // todo (better hanlding)
         let destination: Destination = ctx.destination.get_untracked().unwrap_or_default();
+
         let request = DomainHotelSearchCriteria {
             check_in_date,
             check_out_date,
             no_of_nights,
+            no_of_rooms: ctx.guests.rooms.get_untracked(),
             room_guests: vec![ctx.guests.into()],
             destination_city_id: destination.city_id.parse().unwrap_or_default(),
             destination_city_name: destination.city,

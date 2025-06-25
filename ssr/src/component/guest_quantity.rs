@@ -152,6 +152,48 @@ impl GuestSelection {
     //     }]
     // }
 
+    pub fn increment_adults() {
+        let search_ctx: UISearchCtx = expect_context();
+        let this = search_ctx.guests;
+        this.adults.update(|n| *n += 1);
+        log!(
+            "[adults_signal] Incrementing adults count to: {}",
+            this.adults.get_untracked()
+        );
+        log!("[adults_signal] Incrementing adults count");
+    }
+    pub fn decrement_adults() {
+        let search_ctx: UISearchCtx = expect_context();
+        let this = search_ctx.guests;
+        this.adults.update(|n| *n = n.saturating_sub(1));
+        log!(
+            "[adults_signal] Decrementing adults count to: {}",
+            this.adults.get_untracked()
+        );
+        log!("[adults_signal] Decrementing adults count");
+    }
+
+    pub fn increment_rooms() {
+        let search_ctx: UISearchCtx = expect_context();
+        let this = search_ctx.guests;
+        this.rooms.update(|n| *n += 1);
+        log!(
+            "[rooms_signal] Incrementing rooms count to: {}",
+            this.rooms.get_untracked()
+        );
+        log!("[rooms_signal] Incrementing rooms count");
+    }
+    pub fn decrement_rooms() {
+        let search_ctx: UISearchCtx = expect_context();
+        let this = search_ctx.guests;
+        this.rooms.update(|n| *n = n.saturating_sub(1));
+        log!(
+            "[rooms_signal] Decrementing rooms count to: {}",
+            this.rooms.get_untracked()
+        );
+        log!("[rooms_signal] Decrementing rooms count");
+    }
+
     pub fn increment_children() {
         let search_ctx: UISearchCtx = expect_context();
         let this = search_ctx.guests;
@@ -252,43 +294,10 @@ pub fn GuestQuantity() -> impl IntoView {
     // Create local closures with boundary checks and safety validations
 
     // Adults counter logic (minimum 1) - directly use signals to avoid move issues
-    let increment_adults = move || {
-        adults_signal.update(|n| *n += 1);
-    };
-    let decrement_adults = move || {
-        if adults_signal.get() > 1 {
-            // Additional safety check
-            adults_signal.update(|n| *n = n.saturating_sub(1));
-        }
-    };
 
     // Children counter logic (minimum 0) - directly use signals to avoid move issues
-    let increment_children = move || {
-        children_signal.update(|n| *n += 1);
-        // Also update children ages array
-        children_ages_signal.update(|vec| vec.push(10));
-    };
-    let decrement_children = move || {
-        if children_signal.get() > 0 {
-            // Additional safety check
-            children_signal.update(|n| *n = n.saturating_sub(1));
-            // Also update children ages array
-            children_ages_signal.update(|vec| {
-                vec.pop();
-            });
-        }
-    };
 
     // Rooms counter logic (minimum 1) - directly use signals to avoid move issues
-    let increment_rooms = move || {
-        rooms_signal.update(|n| *n += 1);
-    };
-    let decrement_rooms = move || {
-        if rooms_signal.get() > 1 {
-            // Additional safety check
-            rooms_signal.update(|n| *n = n.saturating_sub(1));
-        }
-    };
 
     // log!(
     //     "[children_signal] Initial children_signal value: {}",
@@ -351,8 +360,8 @@ pub fn GuestQuantity() -> impl IntoView {
                                 label="Adults"
                                 class="py-2"
                                 counter=adults_signal
-                                on_increment=increment_adults
-                                on_decrement=decrement_adults
+                                on_increment=GuestSelection::increment_adults
+                                on_decrement=GuestSelection::decrement_adults
                                 min=1u32
                             />
 
@@ -363,8 +372,8 @@ pub fn GuestQuantity() -> impl IntoView {
                                 label="Children"
                                 class="py-2"
                                 counter=children_signal
-                                on_increment=increment_children
-                                on_decrement=decrement_children
+                                on_increment=GuestSelection::increment_children
+                                on_decrement=GuestSelection::decrement_children
                             />
 
                             // !<-- Children Ages Grid -->
@@ -420,8 +429,8 @@ pub fn GuestQuantity() -> impl IntoView {
                                 label="Rooms"
                                 class="py-2"
                                 counter=rooms_signal
-                                on_increment=increment_rooms
-                                on_decrement=decrement_rooms
+                                on_increment=GuestSelection::increment_rooms
+                                on_decrement=GuestSelection::decrement_rooms
                                 min=1u32
                             />
                         </div>
@@ -456,8 +465,8 @@ pub fn GuestQuantity() -> impl IntoView {
                                 label="Adults"
                                 class="py-2"
                                 counter=adults_signal
-                                on_increment=increment_adults
-                                on_decrement=decrement_adults
+                                on_increment=GuestSelection::increment_adults
+                                on_decrement=GuestSelection::decrement_adults
                                 min=1u32
                             />
 
@@ -468,8 +477,8 @@ pub fn GuestQuantity() -> impl IntoView {
                                 label="Children"
                                 class="py-2"
                                 counter=children_signal
-                                on_increment=increment_children
-                                on_decrement=decrement_children
+                                on_increment=GuestSelection::increment_children
+                                on_decrement=GuestSelection::decrement_children
                             />
 
                             // !<-- Children Ages Grid -->
@@ -525,8 +534,8 @@ pub fn GuestQuantity() -> impl IntoView {
                                 label="Rooms"
                                 class="py-2"
                                 counter=rooms_signal
-                                on_increment=increment_rooms
-                                on_decrement=decrement_rooms
+                                on_increment=GuestSelection::increment_rooms
+                                on_decrement=GuestSelection::decrement_rooms
                                 min=1u32
                             />
                         </div>
