@@ -11,7 +11,8 @@ use serde_json::json;
 
 use super::parse_json_request;
 
-#[axum::debug_handler]
+#[cfg_attr(feature = "debug_log", axum::debug_handler)]
+#[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
 pub async fn get_hotel_info_api_server_fn_route(
     State(state): State<AppState>,
     body: String,
@@ -32,7 +33,7 @@ pub async fn get_hotel_info_api_server_fn_route(
             let error_response = json!({
                 "error": format!("Failed to get hotel info: {}", e)
             });
-            (StatusCode::BAD_REQUEST, error_response.to_string()).into_response()
+            (StatusCode::UNPROCESSABLE_ENTITY, error_response.to_string()).into_response()
         })?;
 
     // <!-- Serialize response to string -->

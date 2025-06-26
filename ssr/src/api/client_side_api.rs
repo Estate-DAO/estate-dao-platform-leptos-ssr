@@ -61,7 +61,7 @@ impl ClientSideApiClient {
         endpoint: &str,
         body: String,
         context: &str,
-    ) -> Option<T> {
+    ) -> Result<T, String> {
         let client = reqwest::Client::new();
         let response = client
             .post(Self::build_api_url(endpoint))
@@ -72,22 +72,56 @@ impl ClientSideApiClient {
 
         match response {
             Ok(res) => {
-                if res.status().is_success() {
-                    match res.text().await {
-                        Ok(text) => Self::parse_server_response(&text).ok(),
-                        Err(e) => {
-                            log!("Failed to get {} response text: {}", context, e);
-                            None
+                let status = res.status();
+                match res.text().await {
+                    Ok(text) => {
+                        if status.is_success() {
+                            Self::parse_server_response(&text)
+                        } else {
+                            // Handle error responses (400, 422, etc.) by extracting the error message
+                            let error_msg = if let Ok(error_json) =
+                                serde_json::from_str::<serde_json::Value>(&text)
+                            {
+                                if let Some(error_msg) =
+                                    error_json.get("error").and_then(|v| v.as_str())
+                                {
+                                    log!(
+                                        "{} API call failed with status {}: {}",
+                                        context,
+                                        status,
+                                        error_msg
+                                    );
+                                    error_msg.to_string()
+                                } else {
+                                    log!(
+                                        "{} API call failed with status {}: {}",
+                                        context,
+                                        status,
+                                        text
+                                    );
+                                    format!("API call failed with status {}", status)
+                                }
+                            } else {
+                                log!(
+                                    "{} API call failed with status {}: {}",
+                                    context,
+                                    status,
+                                    text
+                                );
+                                format!("API call failed with status {}", status)
+                            };
+                            Err(error_msg)
                         }
                     }
-                } else {
-                    log!("{} API call failed with status: {}", context, res.status());
-                    None
+                    Err(e) => {
+                        log!("Failed to get {} response text: {}", context, e);
+                        Err(format!("Failed to get response text: {}", e))
+                    }
                 }
             }
             Err(e) => {
                 log!("{} API call error: {}", context, e);
-                None
+                Err(format!("Network error: {}", e))
             }
         }
     }
@@ -98,6 +132,16 @@ impl ClientSideApiClient {
         context: &str,
     ) -> Option<Res> {
         let body = Self::serialize_request(&request, context)?;
+        Self::make_post_request(endpoint, body, context).await.ok()
+    }
+
+    async fn api_call_with_error<Req: Serialize, Res: DeserializeOwned>(
+        request: Req,
+        endpoint: &str,
+        context: &str,
+    ) -> Result<Res, String> {
+        let body = Self::serialize_request(&request, context)
+            .ok_or_else(|| format!("Failed to serialize {} request", context))?;
         Self::make_post_request(endpoint, body, context).await
     }
 
@@ -111,8 +155,8 @@ impl ClientSideApiClient {
     pub async fn get_hotel_info(
         &self,
         request: DomainHotelInfoCriteria,
-    ) -> Option<DomainHotelDetails> {
-        Self::api_call(
+    ) -> Result<DomainHotelDetails, String> {
+        Self::api_call_with_error(
             request,
             "server_fn_api/get_hotel_info_api",
             "get hotel info",

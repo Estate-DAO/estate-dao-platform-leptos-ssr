@@ -343,20 +343,20 @@ pub fn HotelCard(
     });
 
     let hotel_code_2_cloned = hotel_code_cloned.clone();
-    let search_hotel_room_action = create_action(move |_: &()| {
-        let search_list_page = search_list_page_clone.clone();
-        let hotel_code = hotel_code_2_cloned.clone();
-        async move {
-            // let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
-            // call server function inside action
-            spawn_local(async move {
-                // todo (uncomment)
-                // let result = get_room(hotel_room_request).await.ok();
-                // log!("SEARCH_ROOM_API: {result:?}");
-                // HotelInfoResults::set_room_results(result);
-            });
-        }
-    });
+    // let search_hotel_room_action = create_action(move |_: &()| {
+    //     let search_list_page = search_list_page_clone.clone();
+    //     let hotel_code = hotel_code_2_cloned.clone();
+    //     async move {
+    //         // let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
+    //         // call server function inside action
+    //         spawn_local(async move {
+    //             // todo (uncomment)
+    //             // let result = get_room(hotel_room_request).await.ok();
+    //             // log!("SEARCH_ROOM_API: {result:?}");
+    //             // HotelInfoResults::set_room_results(result);
+    //         });
+    //     }
+    // });
 
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
@@ -369,6 +369,7 @@ pub fn HotelCard(
             // Set hotel code in context for hotel details page
             hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
             log!("hotel_code: {}", hotel_code_cloned);
+            log!("hotel_code from hotel_view_info_ctx: {}", hotel_view_info_ctx.hotel_code.get());
 
             // Reset hotel details state
             HotelDetailsUIState::reset();

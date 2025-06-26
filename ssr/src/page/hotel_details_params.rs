@@ -39,12 +39,12 @@ impl HotelDetailsParams {
     /// Create from current search context state and hotel info
     pub fn from_current_context() -> Option<Self> {
         let search_ctx: UISearchCtx = expect_context();
-        // let hotel_info_ctx: HotelInfoCtx = expect_context();
+        let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-        // let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
-        // if hotel_code.is_empty() {
-        //     return None;
-        // }
+        let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
+        if hotel_code.is_empty() {
+            return None;
+        }
 
         let destination = search_ctx.destination.get_untracked()?;
         let date_range = search_ctx.date_range.get_untracked();
@@ -58,7 +58,7 @@ impl HotelDetailsParams {
 
         Some(Self {
             // we don't need hotel code for serach query. only destination, date range and guests are needed
-            hotel_code: "".to_string(),
+            hotel_code: hotel_code.clone(),
             destination_city_id: destination.city_id.parse().unwrap_or(0),
             destination_city_name: destination.city.clone(),
             destination_country_code: destination.country_code.clone(),

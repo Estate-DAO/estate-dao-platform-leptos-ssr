@@ -323,17 +323,15 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Call API
                 match client.get_hotel_info(criteria).await {
-                    Some(details) => {
+                    Ok(details) => {
                         log!("Hotel details resource: Success - {}", details.hotel_name);
                         HotelDetailsUIState::set_hotel_details(Some(details.clone()));
                         HotelDetailsUIState::set_loading(false);
                         Some(details)
                     }
-                    None => {
-                        log!("Hotel details resource: Failed to load hotel details");
-                        HotelDetailsUIState::set_error(Some(
-                            "Failed to load hotel details".to_string(),
-                        ));
+                    Err(error_msg) => {
+                        log!("Hotel details resource: Error - {}", error_msg);
+                        HotelDetailsUIState::set_error(Some(error_msg));
                         HotelDetailsUIState::set_loading(false);
                         None
                     }
@@ -428,10 +426,33 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     fallback=move || view! {
                         <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
                             <div class="bg-white rounded-xl shadow-md p-6">
-                                <div class="text-xl font-semibold text-red-600 mb-2">Error</div>
-                                <div class="text-gray-700">
-                                    {error_message().unwrap_or_else(|| "Unknown error occurred".to_string())}
-                                </div>
+                                {
+                                    let error = error_message().unwrap_or_else(|| "Unknown error occurred".to_string());
+                                    // Check if this is the specific "no rooms available" error
+                                    if error.contains("No room types or rates available") || error.contains("fully booked") {
+                                        view! {
+                                            <div class="text-center">
+                                                <div class="text-6xl mb-4">"🏨"</div>
+                                                <div class="text-xl font-semibold text-orange-600 mb-2">No Rooms Available</div>
+                                                <div class="text-gray-700 mb-4">
+                                                    "This hotel may be fully booked for your selected dates."
+                                                </div>
+                                                <div class="text-sm text-gray-600">
+                                                    "Please try different dates or check other hotels in the area."
+                                                </div>
+                                            </div>
+                                        }
+                                    } else {
+                                        view! {
+                                            <div>
+                                                <div class="text-xl font-semibold text-red-600 mb-2">Error</div>
+                                                <div class="text-gray-700">
+                                                    {error}
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                }
                             </div>
                         </div>
                     }
