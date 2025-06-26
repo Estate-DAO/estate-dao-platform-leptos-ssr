@@ -35,6 +35,7 @@ use crate::ports::ProviderNames;
 use crate::utils::date::date_tuple_to_dd_mm_yyyy;
 use async_trait::async_trait;
 use std::sync::Arc;
+use tracing::info;
 
 #[async_trait]
 impl HotelProviderPort for ProvabAdapter {
@@ -54,6 +55,7 @@ impl HotelProviderPort for ProvabAdapter {
             .map_err(|e: ApiError| {
                 ProviderError::from_api_error(e, ProviderNames::Provab, ProviderSteps::HotelSearch)
             })?;
+        info!(?provab_response, "Got Provab search response");
         Ok(Self::map_provab_search_to_domain(provab_response))
         // }
         // .boxed_local()
@@ -73,6 +75,7 @@ impl HotelProviderPort for ProvabAdapter {
             .map_err(|e: ApiError| {
                 ProviderError::from_api_error(e, ProviderNames::Provab, ProviderSteps::HotelDetails)
             })?;
+        info!(?provab_response, "Got Provab hotel details response");
         Self::map_provab_hotel_info_to_domain(provab_response)
     }
     // .boxed_local()
@@ -100,6 +103,7 @@ impl HotelProviderPort for ProvabAdapter {
                 )
             })?;
 
+        info!(?provab_response, "Got Provab block room response");
         // Map response to domain block room response
         Self::map_provab_block_to_domain(provab_response, &block_request)
     }

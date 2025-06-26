@@ -213,6 +213,42 @@ impl LiteApiSingleHotelDetailData {
                 self.main_photo = first_image.url.clone();
                 return;
             }
+
+            // As a last resort, try to use room photos (main photo from rooms)
+            for room in &self.rooms {
+                if let Some(room_main_photo) = room
+                    .photos
+                    .iter()
+                    .find(|photo| photo.main_photo && !photo.url.trim().is_empty())
+                {
+                    self.main_photo = room_main_photo.url.clone();
+                    return;
+                }
+            }
+
+            // If no main room photo, try any room photo with HD URL
+            for room in &self.rooms {
+                if let Some(room_photo) = room
+                    .photos
+                    .iter()
+                    .find(|photo| !photo.hd_url.trim().is_empty())
+                {
+                    self.main_photo = room_photo.hd_url.clone();
+                    return;
+                }
+            }
+
+            // If no HD room photo, try any room photo with regular URL
+            for room in &self.rooms {
+                if let Some(room_photo) = room
+                    .photos
+                    .iter()
+                    .find(|photo| !photo.url.trim().is_empty())
+                {
+                    self.main_photo = room_photo.url.clone();
+                    return;
+                }
+            }
         }
     }
 }

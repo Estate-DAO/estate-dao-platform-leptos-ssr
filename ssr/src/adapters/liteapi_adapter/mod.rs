@@ -30,6 +30,7 @@ use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, Pro
 use crate::ports::ProviderNames;
 use crate::utils::date::date_tuple_to_dd_mm_yyyy;
 use async_trait::async_trait;
+use tracing::{error, info, warn};
 
 #[derive(Clone)]
 pub struct LiteApiAdapter {
@@ -47,6 +48,8 @@ impl LiteApiAdapter {
         let name_empty = hotel_details.name.trim().is_empty();
         let description_empty = hotel_details.hotel_description.trim().is_empty();
         let address_empty = hotel_details.address.trim().is_empty();
+
+        // A hotel has no images only if ALL image fields are empty (using &&, not ||)
         let no_images = hotel_details.main_photo.trim().is_empty()
             && hotel_details.hotel_images.is_empty()
             && hotel_details
@@ -54,8 +57,36 @@ impl LiteApiAdapter {
                 .as_ref()
                 .map_or(true, |t| t.trim().is_empty());
 
-        // Consider hotel details empty if name is empty or if all other essential fields are empty
-        name_empty || (description_empty && address_empty && no_images)
+        let is_empty = name_empty || (description_empty && address_empty && no_images);
+
+        // Add comprehensive logging to understand why hotels are considered empty
+        if is_empty {
+            warn!(
+                hotel_id = %hotel_details.id,
+                name_empty = %name_empty,
+                description_empty = %description_empty,
+                address_empty = %address_empty,
+                no_images = %no_images,
+                main_photo_empty = %hotel_details.main_photo.trim().is_empty(),
+                hotel_images_count = %hotel_details.hotel_images.len(),
+                thumbnail_empty = %hotel_details.thumbnail.as_ref().map_or(true, |t| t.trim().is_empty()),
+                "Hotel details considered empty"
+            );
+        } else {
+            info!(
+                hotel_id = %hotel_details.id,
+                name_empty = %name_empty,
+                description_empty = %description_empty,
+                address_empty = %address_empty,
+                no_images = %no_images,
+                main_photo_empty = %hotel_details.main_photo.trim().is_empty(),
+                hotel_images_count = %hotel_details.hotel_images.len(),
+                thumbnail_empty = %hotel_details.thumbnail.as_ref().map_or(true, |t| t.trim().is_empty()),
+                "Hotel details validation passed"
+            );
+        }
+
+        is_empty
     }
 
     fn log_api_failure_details(hotel_id: &str, error: &ApiError) {
@@ -194,11 +225,11 @@ impl LiteApiAdapter {
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         let mut domain_results = Self::map_liteapi_search_to_domain(liteapi_response.clone());
 
-        // (todo): review hotel_search - Extract hotel IDs (max 50 as per plan)
+        // (todo): review hotel_search - Extract hotel IDs (max 100 as per plan)
         let hotel_ids: Vec<String> = liteapi_response
             .data
             .iter()
-            .take(50)
+            .take(100)
             .map(|hotel| hotel.id.clone())
             .collect();
 
@@ -227,10 +258,13 @@ impl LiteApiAdapter {
             })?;
 
         // Log the rates response structure
+        if let Some(error) = &rates_response.error {
+            error!(?error, "Error in liteapi rates response");
+        }
 
-        if let Some(error) = &rates_response.error {}
-
-        if let Some(data) = &rates_response.data {}
+        if let Some(data) = &rates_response.data {
+            info!(?data, "Got liteapi rates response data");
+        }
 
         // Check if rates response indicates no availability
         if rates_response.is_no_availability() {
@@ -275,13 +309,17 @@ impl LiteApiAdapter {
                                 },
                             );
                         } else {
+                            warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no suggested selling price in rate");
                         }
                     } else {
+                        warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no rates in room type");
                     }
                 } else {
+                    warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no room types available");
                 }
             }
         } else {
+            warn!("No data in liteapi rates response - all hotels will have no pricing");
         }
 
         // Update search results with pricing
@@ -290,6 +328,7 @@ impl LiteApiAdapter {
             if let Some(price) = hotel_prices.get(&hotel.hotel_code) {
                 hotel.price = price.clone();
             } else {
+                warn!(hotel_code = %hotel.hotel_code, "No pricing data found for hotel in rates response");
             }
         }
     }
