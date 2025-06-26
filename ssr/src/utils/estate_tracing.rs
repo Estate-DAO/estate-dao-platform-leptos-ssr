@@ -25,6 +25,15 @@ pub fn init_tracing() {
 
     #[cfg(feature = "debug_log_file")]
     {
+        // // very opinionated init of tracing, look as is source to make your own
+        let _guard = init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers();
+        if let Err(e) = _guard {
+            tracing::error!(
+                "Failed to init tracing via init_tracing_opentelemetry: {}",
+                e
+            );
+        }
+
         use tracing_appender::rolling;
         // Create a rolling daily file appender under "logs/estate_fe_local.log.YYYY-MM-DD"
         let file_appender = rolling::daily("logs", "estate_fe_local.log");

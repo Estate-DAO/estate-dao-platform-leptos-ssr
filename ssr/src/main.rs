@@ -275,9 +275,17 @@ cfg_if! {
         }
 
         #[tokio::main]
-        async fn main() {
+        async fn main() -> anyhow::Result<()> {
             better_panic::install();
-            estate_tracing::init_tracing();
+            // estate_tracing::init_tracing();
+
+        use telemetry_axum;
+        let config_telemetry = telemetry_axum::Config::default();
+
+        let (logger_provider, tracer_provider, metrics_provider) =
+            telemetry_axum::init_telemetry(&config_telemetry)
+                .map_err(|e| anyhow::Error::new(e))?;
+
 
             estate_fe::utils::debug_local_env();
 
@@ -302,6 +310,7 @@ cfg_if! {
                 .allow_methods(Any)
                 .allow_headers(Any);
 
+
             let app = Router::new()
                 .route(
                     "/api/*fn_name",
@@ -321,21 +330,43 @@ cfg_if! {
                 )
                 .with_state(res);
 
-            let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-            logging::log!("listening on http://{}", &addr);
 
-            axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-                .await
-                .unwrap();
 
+                let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+                logging::log!("listening on http://{}", &addr);
+
+                axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+                    .await
+                    .unwrap();
+
+                //   cleanup tracing config.
+
+                if let Some(logger_provider) = logger_provider {
+                    if let Err(e) = logger_provider.shutdown() {
+                        println!("error shutting down logger provider: {e}");
+                    }
+                }
+                if let Err(e) = tracer_provider.shutdown() {
+                    println!("error shutting down tracer provider: {e}");
+                }
+                if let Some(metrics_provider) = metrics_provider {
+                    if let Err(e) = metrics_provider.shutdown() {
+                        println!("error shutting down metrics provider: {e}");
+                    }
+                }
+
+                info!("shut down");
+
+            Ok(())
         }
 
     }
 }
 
 #[cfg(not(feature = "ssr"))]
-pub fn main() {
+pub fn main() -> anyhow::Result<()> {
     // no client-side main function
     // unless we want this to work with e.g., Trunk for a purely client-side app
     // see lib.rs for hydration function instead
+    Ok(())
 }
