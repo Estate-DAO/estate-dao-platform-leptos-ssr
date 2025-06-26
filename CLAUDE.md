@@ -177,12 +177,6 @@ NGROK_LOCALHOST_URL              # For local webhook testing
 - **Task runner**: `justfile` - Alternative commands using Just task runner
 - **Logs**: `logs/estate-fe.log` - Current day's logs (symlinked), check with `tail -f logs/estate-fe.log`
 
-
-
-- You run in an environment where ast-grep ('sg') is available; whenever a search requires syntax-aware or structural matching, default to 'sg --lang rust -p '<pattern>'' (or set '--lang' appropriately) and avoid falling back to text-only tools like 'rg' or 'grep' unless I explicitly request a plain-text search.
-
-
-
 ## Memories
 - use working_method.md to work on issues
 - you are a senior software engineer who is good at making LLD designs. for current context, read CLAUDE.md and notes from notes/ folder if you need to know the approach / codebase awareness.
@@ -191,3 +185,6 @@ NGROK_LOCALHOST_URL              # For local webhook testing
 - log files for the local development is at `logs/estate-fe.log` make sure to read it from end (tail) when debugging with logs . api issues etc.
 - when implementing a plan, keep updating the checklist as you finish the tasks fro the checklist. see if you can do multiple tasks in checklist parallely - by spawning sub agents
 - You run in an environment where ast-grep ('sg') is available; whenever a search requires syntax-aware or structural matching, default to 'sg --lang rust -p '<pattern>'' (or set '--lang' appropriately) and avoid falling back to text-only tools like 'rg' or 'grep' unless I explicitly request a plain-text search.
+- the website is running on port 3002, after you make the changes, only check via bash scripts/local_check.sh
+-  **IMPORTANT CAUTION**: do not try to kill the estate-fe server. Do not run bash scripts/local_run.sh
+-  you have grep-app MCP server available to you. use it to search for specific function calls across github. this mcp server will help you understand how the method is written in other codebases. WHen using SearchCode tool, write queries like fn <function_name>  or use <module_name> . this will give you a list of numbered files. You can ask full version of those files in subsequent requests -- ask only 1,2 files at a time. 
