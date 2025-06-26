@@ -631,43 +631,43 @@ impl LiteApiAdapter {
         }
 
         // Filter rooms based on image availability if hotel details are available and have room data
-        if let Some(details) = &hotel_details {
-            if !details.rooms.is_empty() {
-                let rooms_with_images: std::collections::HashSet<String> = details
-                    .rooms
-                    .iter()
-                    // todo (room filtering): filter rooms based on image availability
-                    // .filter(|room| {
-                    //     !room.photos.is_empty()
-                    //         && room
-                    //             .photos
-                    //             .iter()
-                    //             .any(|photo| !photo.url.is_empty() || !photo.hd_url.is_empty())
-                    // })
-                    .map(|room| room.room_name.clone())
-                    .collect();
+        // if let Some(details) = &hotel_details {
+        //     if !details.rooms.is_empty() {
+        //         let rooms_with_images: std::collections::HashSet<String> = details
+        //             .rooms
+        //             .iter()
+        //             // todo (room filtering): filter rooms based on image availability
+        //             // .filter(|room| {
+        //             //     !room.photos.is_empty()
+        //             //         && room
+        //             //             .photos
+        //             //             .iter()
+        //             //             .any(|photo| !photo.url.is_empty() || !photo.hd_url.is_empty())
+        //             // })
+        //             .map(|room| room.room_name.clone())
+        //             .collect();
 
-                if !rooms_with_images.is_empty() {
-                    let original_room_count = all_rooms.len();
-                    all_rooms.retain(|room_option| {
-                        rooms_with_images.contains(&room_option.room_data.room_name)
-                    });
-                    let filtered_room_count = all_rooms.len();
+        //         if !rooms_with_images.is_empty() {
+        //             let original_room_count = all_rooms.len();
+        //             all_rooms.retain(|room_option| {
+        //                 rooms_with_images.contains(&room_option.room_data.room_name)
+        //             });
+        //             let filtered_room_count = all_rooms.len();
 
-                    if filtered_room_count < original_room_count {
-                        crate::log!(
-                            "LiteAPI room filtering: Filtered out {} rooms without images, {} rooms retained",
-                            original_room_count - filtered_room_count,
-                            filtered_room_count
-                        );
-                    }
-                } else {
-                    crate::log!("LiteAPI room filtering: Hotel details available but no rooms have images, keeping all rooms from rates API");
-                }
-            } else {
-                crate::log!("LiteAPI room filtering: Hotel details available but rooms array is empty, keeping all rooms from rates API");
-            }
-        }
+        //             if filtered_room_count < original_room_count {
+        //                 crate::log!(
+        //                     "LiteAPI room filtering: Filtered out {} rooms without images, {} rooms retained",
+        //                     original_room_count - filtered_room_count,
+        //                     filtered_room_count
+        //                 );
+        //             }
+        //         } else {
+        //             crate::log!("LiteAPI room filtering: Hotel details available but no rooms have images, keeping all rooms from rates API");
+        //         }
+        //     } else {
+        //         crate::log!("LiteAPI room filtering: Hotel details available but rooms array is empty, keeping all rooms from rates API");
+        //     }
+        // }
 
         // Ensure we have at least one room
         if all_rooms.is_empty() {
