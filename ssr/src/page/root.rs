@@ -258,7 +258,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         when=move || disabled.get()
                         fallback=move || {
                             view! {
-                                // <!-- Adjusted icon size and padding for better visibility -->
                                 <Icon
                                     icon=icondata::AiSearchOutlined
                                     class=format!("{} p-1 text-2xl", bg_search_icon_class())
@@ -266,8 +265,6 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                             }
                         }
                     >
-                        // <!-- Adjusted icon size and padding for better visibility -->
-                        // Show Search icon for desktop, Search word for mobile
                         <Icon
                             icon=icondata::AiSearchOutlined
                             class=format!("{} p-1 text-2xl", bg_search_icon_class())
@@ -281,14 +278,10 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     when=move || disabled.get()
                     fallback=move || {
                         view! {
-                            // <!-- Adjusted icon size and padding for better visibility -->
                             <div class="disabled">Search</div>
                         }
                     }
                 >
-                    // <!-- Adjusted icon size and padding for better visibility -->
-                    // Show Search icon for desktop, Search word for mobile
-
                         Search
                 </Show>
                 </div>
