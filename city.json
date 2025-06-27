@@ -95,7 +95,7 @@
     "city_name": "Bali",
     "country_name": "Indonesia",
     "country_code": "ID",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Besakih_Bali_Indonesia_Pura-Besakih-02.jpg/640px-Besakih_Bali_Indonesia_Pura-Besakih-02.jpg"
+    "image_url": ""
   },
   {
     "city_code": "906",
@@ -620,6 +620,13 @@
     "city_name": "Houston",
     "country_name": "United States",
     "country_code": "US",
+    "image_url": ""
+  },
+  {
+    "city_code": "0000",
+    "city_name": "Kolkata",
+    "country_name": "India",
+    "country_code": "IN",
     "image_url": ""
   },
   {
