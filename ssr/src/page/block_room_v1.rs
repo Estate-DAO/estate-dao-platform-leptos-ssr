@@ -1058,16 +1058,16 @@ pub fn PaymentModal() -> impl IntoView {
                             <div class="flex flex-col gap-2 mb-6">
                                 <div class="flex justify-between items-end">
                                     <span class="text-lg font-bold">{move || format!("${:.2}", room_price())}</span>
-                                    <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+                                    // <span class="ml-1 text-base font-normal text-gray-600">/night</span>
                                 </div>
-                                <div class="flex justify-between items-center text-base">
-                                    <span class="text-gray-700">
-                                        {move || format!("${:.2} x {} nights", room_price(), num_nights())}
-                                    </span>
-                                    <span class="font-semibold">
-                                        {move || format!("${:.2}", room_price() * num_nights() as f64)}
-                                    </span>
-                                </div>
+                                // <div class="flex justify-between items-center text-base">
+                                //     // <span class="text-gray-700">
+                                //     //     {move || format!("${:.2} x {} nights", room_price(), num_nights())}
+                                //     // </span>
+                                //     <span class="font-semibold">
+                                //         {move || format!("${:.2}", room_price() * num_nights() as f64)}
+                                //     </span>
+                                // </div>
                                 <Divider class="my-2".into() />
                                 <div class="flex justify-between items-center font-bold text-lg mb-2">
                                     <span>Total</span>

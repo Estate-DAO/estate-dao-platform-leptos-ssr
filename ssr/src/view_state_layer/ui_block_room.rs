@@ -551,6 +551,8 @@ impl BlockRoomUIState {
         this.api_error_type.set(error_type);
         this.error.set(user_message);
         this.error_details.set(details);
+        // Close payment modal when error occurs so error is properly visible
+        this.show_payment_modal.set(false);
     }
 
     // Reset method

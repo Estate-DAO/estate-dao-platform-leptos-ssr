@@ -677,10 +677,10 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
     // / **Responsive**: Works on mobile and desktop with proper touch targets
 
     view! {
-        <div class="flex flex-row items-start justify-between border-b border-gray-300 py-2">
+        <div class="flex flex-row items-center justify-between border-b border-gray-300 py-2">
             // <!-- Robust wrap: flex-1 min-w-0 for text, flex-shrink-0 for counter, items-start for top align -->
             <p class="w-0 flex-1 min-w-0 font-medium text-sm md:text-base break-words whitespace-normal">
-                {format!("{} - ${:.2}/night", room_type, room_price)}
+                {format!("{} - ${:.2}", room_type, room_price)}
             </p>
             <div class="flex-shrink-0">
                 // <!-- Original CSS styling with my functional implementation -->
