@@ -139,7 +139,7 @@ impl PaymentServiceImpl {
                     description: Some("Hotel Room Booking".to_string()),
                     metadata: None,
                 },
-                unit_amount: domain_request.price_amount,
+                unit_amount: domain_request.price_amount * 100, // stripe api exepects price in cents
             },
             quantity: 1,
         };
