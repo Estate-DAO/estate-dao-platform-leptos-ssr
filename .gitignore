@@ -21,8 +21,11 @@ bun.lockb
 *.log
 *.json
 
+
 !city.json
 !ssr/did/canister_ids.json
+!package.json 
+
 
 patches/*
 .env

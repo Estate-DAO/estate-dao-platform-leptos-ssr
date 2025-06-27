@@ -1,2 +1,12 @@
-# Ignore compiled artifacts
+# Exclude Rust target directories
 target/
+ssr/target/
+
+# Optional: Other common exclusions
+.git/
+.gitignore
+README.md
+.env.local
+.env.development
+node_modules/
+*.log
