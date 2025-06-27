@@ -44,13 +44,21 @@ export NOWPAYMENTS_API_HOST="http://localhost:3001"
 echo "NGROK_LOCALHOST_URL: $NGROK_LOCALHOST_URL"
 export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
 
+export LEPTOS_HASH_FILES="true"
+# FOR LOCAL BUILDS 
+
 cargo leptos build --lib-features "local-lib,debug_display" --bin-features "local-bin,debug_display" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab,debug_display" --bin-features "local-bin,mock-provab,debug_display" || exit 1
+./target/debug/estate-fe
 
 
 # # LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS
-./target/debug/estate-fe
 
-# LOCAL=true PROVAB_HEADERS=$PROVAB_HEADERS cargo leptos serve
+
+
+# FOR STAGING  BUILDS 
+# cargo leptos build --lib-features "release-lib" --bin-features "release-bin" --release || exit 1
+# ./target/release/estate-fe
+
 
 set +a
