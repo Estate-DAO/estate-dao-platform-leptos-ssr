@@ -298,12 +298,37 @@ cfg_if! {
             .build()
             .await;
 
-            let trace_layer = tower_http::trace::TraceLayer::new_for_http().make_span_with(
-                |request: &axum::extract::Request<_>| {
-                    let uri = request.uri().to_string();
-                    tracing::info_span!("http_request", method = ?request.method(), uri)
-                },
-            );
+            let trace_layer = tower_http::trace::TraceLayer::new_for_http()
+                .make_span_with(|request: &axum::extract::Request<_>| {
+                    let method = request.method();
+                    let uri = request.uri();
+                    let route = request
+                        .extensions()
+                        .get::<axum::extract::MatchedPath>()
+                        .map(|path| path.as_str())
+                        .unwrap_or_else(|| uri.path());
+
+                    tracing::info_span!(
+                        "http_request",
+                        method = %method,
+                        uri = %uri,
+                        route = route,
+                        // OpenTelemetry semantic conventions
+                        otel.name = format!("{} {}", method, route),
+                        otel.kind = "server",
+                        http.method = %method,
+                        http.url = %uri,
+                        http.route = route,
+                        service.name = "estate_fe",
+                    )
+                })
+                .on_response(|response: &axum::response::Response, latency: std::time::Duration, _span: &tracing::Span| {
+                    tracing::info!(
+                        status_code = response.status().as_u16(),
+                        latency_ms = latency.as_millis(),
+                        "request completed"
+                    );
+                });
 
             let cors = CorsLayer::new()
                 .allow_origin(Any)
