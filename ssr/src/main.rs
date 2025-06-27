@@ -280,7 +280,15 @@ cfg_if! {
             // estate_tracing::init_tracing();
 
         use telemetry_axum;
+        #[cfg(feature = "debug_log")]
         let config_telemetry = telemetry_axum::Config::default();
+
+        #[cfg(not(feature = "debug_log"))]
+        let config_telemetry = telemetry_axum::Config{
+            exporter: telemetry_axum::Exporter::Stdout,
+            propagate: false,
+            ..Default::default()
+        };
 
         let (logger_provider, tracer_provider, metrics_provider) =
             telemetry_axum::init_telemetry(&config_telemetry)
