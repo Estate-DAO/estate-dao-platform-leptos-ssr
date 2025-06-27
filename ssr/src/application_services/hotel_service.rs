@@ -42,11 +42,19 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         // <!-- 1. Call the provider with core criteria and UI filters -->
         // <!-- The adapter will try to use UI filters if its specific API supports them -->
-        let domain_result = self
+        let mut domain_result = self
             .provider
             .search_hotels(core_criteria, ui_filters)
             // .await
             .await?;
+
+        // todo (sorting) allow this sorting based on the sort options later.
+        domain_result.hotel_results.sort_by(|a, b| {
+            a.price
+                .room_price
+                .partial_cmp(&b.price.room_price)
+                .unwrap_or(Ordering::Equal)
+        });
 
         // todo (filtering) is not implemented at the moment
         // filtering is of two types. API based (ui filters get transformed to query params) or application based (filtering is done in the application)
