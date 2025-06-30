@@ -1,6 +1,7 @@
 use crate::api::payments::domain::{
-    DomainCreateInvoiceRequest, DomainCreateInvoiceResponse, PaymentProvider, PaymentService,
-    PaymentServiceError,
+    DomainCreateInvoiceRequest, DomainCreateInvoiceResponse, DomainGetPaymentStatusRequest,
+    DomainGetPaymentStatusResponse, PaymentProvider, PaymentService, PaymentServiceError,
+    PaymentStatus,
 };
 use crate::api::payments::ports::{CreateInvoiceRequest, PaymentGateway, PaymentGatewayParams};
 use crate::api::payments::{NowPayments, StripeEstate};
@@ -38,6 +39,28 @@ impl PaymentService for PaymentServiceImpl {
         match request.provider {
             PaymentProvider::NowPayments => self.create_nowpayments_invoice(request).await,
             PaymentProvider::Stripe => self.create_stripe_invoice(request).await,
+        }
+    }
+
+    async fn get_payment_status(
+        &self,
+        request: DomainGetPaymentStatusRequest,
+    ) -> Result<DomainGetPaymentStatusResponse, PaymentServiceError> {
+        log!(
+            "Getting payment status for payment_id: {}, provider: {:?}",
+            request.payment_id,
+            request.provider
+        );
+
+        // Auto-detect provider if not specified
+        let provider = match request.provider {
+            Some(p) => p,
+            None => self.detect_provider_from_payment_id(&request.payment_id)?,
+        };
+
+        match provider {
+            PaymentProvider::NowPayments => self.get_nowpayments_status(request.payment_id).await,
+            PaymentProvider::Stripe => self.get_stripe_status(request.payment_id).await,
         }
     }
 }
@@ -179,6 +202,165 @@ impl PaymentServiceImpl {
         );
 
         Ok(domain_response)
+    }
+
+    /// Auto-detect payment provider from payment ID format
+    fn detect_provider_from_payment_id(
+        &self,
+        payment_id: &str,
+    ) -> Result<PaymentProvider, PaymentServiceError> {
+        if payment_id.starts_with("cs_") {
+            // Stripe checkout session IDs start with 'cs_'
+            Ok(PaymentProvider::Stripe)
+        } else if payment_id.chars().all(|c| c.is_ascii_digit()) {
+            // NowPayments payment IDs are numeric
+            Ok(PaymentProvider::NowPayments)
+        } else {
+            Err(PaymentServiceError::InvalidRequest(format!(
+                "Cannot detect provider from payment ID: {}",
+                payment_id
+            )))
+        }
+    }
+
+    /// Get payment status from NowPayments
+    async fn get_nowpayments_status(
+        &self,
+        payment_id: String,
+    ) -> Result<DomainGetPaymentStatusResponse, PaymentServiceError> {
+        log!("Getting NowPayments status for payment_id: {}", payment_id);
+
+        // Parse payment_id to u64 for NowPayments API
+        let payment_id_u64 = payment_id.parse::<u64>().map_err(|_| {
+            PaymentServiceError::InvalidRequest(format!(
+                "Invalid NowPayments payment ID format: {}",
+                payment_id
+            ))
+        })?;
+
+        // Initialize NowPayments client
+        let nowpayments = NowPayments::default();
+
+        // Create the request using the existing ports::GetPaymentStatusRequest
+        let nowpayments_request = crate::api::payments::ports::GetPaymentStatusRequest {
+            payment_id: payment_id_u64,
+        };
+
+        match nowpayments.send(nowpayments_request).await {
+            Ok(nowpayments_response) => {
+                log!(
+                    "NowPayments status retrieved successfully for payment_id: {}",
+                    payment_id
+                );
+
+                // Handle both Success and Failure response variants
+                match nowpayments_response {
+                    crate::api::payments::ports::GetPaymentStatusResponse::Success(
+                        success_response,
+                    ) => {
+                        let status = match success_response.payment_status.as_str() {
+                            "waiting" | "confirming" => PaymentStatus::Pending,
+                            "confirmed" | "finished" => PaymentStatus::Completed,
+                            "failed" => PaymentStatus::Failed,
+                            "refunded" => PaymentStatus::Refunded,
+                            "expired" => PaymentStatus::Expired,
+                            _ => PaymentStatus::Unknown,
+                        };
+
+                        let domain_response = DomainGetPaymentStatusResponse {
+                            payment_id: payment_id.clone(),
+                            status,
+                            amount_total: Some(success_response.price_amount),
+                            currency: Some(success_response.price_currency.clone()),
+                            provider: PaymentProvider::NowPayments,
+                            raw_provider_data: serde_json::to_string(&success_response)
+                                .unwrap_or_else(|_| "Failed to serialize response".to_string()),
+                            order_id: Some(success_response.order_id.clone()),
+                            customer_email: None, // NowPayments doesn't return customer email
+                        };
+
+                        Ok(domain_response)
+                    }
+                    crate::api::payments::ports::GetPaymentStatusResponse::Failure(
+                        failure_response,
+                    ) => {
+                        error!("NowPayments API returned failure: {:?}", failure_response);
+
+                        let domain_response = DomainGetPaymentStatusResponse {
+                            payment_id: payment_id.clone(),
+                            status: PaymentStatus::Failed,
+                            amount_total: None,
+                            currency: None,
+                            provider: PaymentProvider::NowPayments,
+                            raw_provider_data: serde_json::to_string(&failure_response)
+                                .unwrap_or_else(|_| "Failed to serialize response".to_string()),
+                            order_id: None,
+                            customer_email: None,
+                        };
+
+                        Ok(domain_response)
+                    }
+                }
+            }
+            Err(e) => {
+                error!("NowPayments status check failed: {}", e);
+                Err(PaymentServiceError::ProviderError(format!(
+                    "NowPayments error: {}",
+                    e
+                )))
+            }
+        }
+    }
+
+    /// Get payment status from Stripe
+    async fn get_stripe_status(
+        &self,
+        session_id: String,
+    ) -> Result<DomainGetPaymentStatusResponse, PaymentServiceError> {
+        log!("Getting Stripe status for session_id: {}", session_id);
+
+        // Call the Stripe server function
+        match crate::api::payments::stripe_service::stripe_get_session_status(session_id.clone())
+            .await
+        {
+            Ok(stripe_response) => {
+                log!(
+                    "Stripe status retrieved successfully for session_id: {}",
+                    session_id
+                );
+
+                // Convert Stripe response to domain response
+                // Priority: Use payment_status over session status for completed payments
+                let status = if stripe_response.payment_status
+                    == crate::api::payments::stripe_service::StripePaymentStatusEnum::Paid
+                {
+                    PaymentStatus::Completed
+                } else {
+                    stripe_response.status.clone().into()
+                };
+
+                let domain_response = DomainGetPaymentStatusResponse {
+                    payment_id: session_id.clone(),
+                    status,
+                    amount_total: stripe_response.amount_total.map(|amt| amt as u64),
+                    currency: stripe_response.currency.clone(),
+                    provider: PaymentProvider::Stripe,
+                    raw_provider_data: serde_json::to_string(&stripe_response)
+                        .unwrap_or_else(|_| "Failed to serialize response".to_string()),
+                    order_id: stripe_response.client_reference_id.clone(),
+                    customer_email: stripe_response.customer_email.clone(),
+                };
+
+                Ok(domain_response)
+            }
+            Err(e) => {
+                error!("Stripe status check failed: {}", e);
+                Err(PaymentServiceError::ProviderError(format!(
+                    "Stripe error: {}",
+                    e
+                )))
+            }
+        }
     }
 }
 

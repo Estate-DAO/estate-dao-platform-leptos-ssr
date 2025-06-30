@@ -75,6 +75,52 @@ pub struct ProviderResponseData {
     pub created_at: String,
 }
 
+/// Payment status enumeration (provider-agnostic)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PaymentStatus {
+    Pending,   // Payment initiated but not completed
+    Completed, // Payment successfully completed
+    Failed,    // Payment failed
+    Cancelled, // Payment cancelled by user
+    Expired,   // Payment session expired
+    Refunded,  // Payment was refunded
+    Unknown,   // Status cannot be determined
+}
+
+impl PaymentStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PaymentStatus::Pending => "pending",
+            PaymentStatus::Completed => "completed",
+            PaymentStatus::Failed => "failed",
+            PaymentStatus::Cancelled => "cancelled",
+            PaymentStatus::Expired => "expired",
+            PaymentStatus::Refunded => "refunded",
+            PaymentStatus::Unknown => "unknown",
+        }
+    }
+}
+
+/// Domain struct for payment status request (provider-agnostic)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainGetPaymentStatusRequest {
+    pub payment_id: String,                // session_id or payment_id
+    pub provider: Option<PaymentProvider>, // Optional - can auto-detect from ID format
+}
+
+/// Domain struct for payment status response (provider-agnostic)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DomainGetPaymentStatusResponse {
+    pub payment_id: String,             // session_id or payment_id
+    pub status: PaymentStatus,          // Unified enum
+    pub amount_total: Option<u64>,      // Total amount in smallest currency unit
+    pub currency: Option<String>,       // Currency code (USD, etc.)
+    pub provider: PaymentProvider,      // Which provider handled this payment
+    pub raw_provider_data: String,      // Raw provider response for debugging
+    pub order_id: Option<String>,       // Associated order ID if available
+    pub customer_email: Option<String>, // Customer email if available
+}
+
 /// Trait for payment service abstraction
 #[async_trait]
 pub trait PaymentService {
@@ -83,6 +129,12 @@ pub trait PaymentService {
         &self,
         request: DomainCreateInvoiceRequest,
     ) -> Result<DomainCreateInvoiceResponse, PaymentServiceError>;
+
+    /// Get payment status for a payment ID (auto-detects provider if not specified)
+    async fn get_payment_status(
+        &self,
+        request: DomainGetPaymentStatusRequest,
+    ) -> Result<DomainGetPaymentStatusResponse, PaymentServiceError>;
 }
 
 /// Payment service errors

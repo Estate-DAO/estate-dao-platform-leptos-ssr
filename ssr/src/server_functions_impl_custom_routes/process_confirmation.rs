@@ -55,6 +55,7 @@ async fn fetch_booking_data(booking_id: &BookingId) -> Option<serde_json::Value>
 }
 
 #[axum::debug_handler]
+#[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
 pub async fn process_confirmation_api_server_fn_route(
     State(state): State<AppState>,
     body: String,

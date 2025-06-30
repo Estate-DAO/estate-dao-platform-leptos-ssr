@@ -541,7 +541,7 @@ pub struct StripeCreateCheckoutSessionResponse {
     client_reference_id: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 #[serde(rename_all = "snake_case")]
 /// Use this status to fullfill the order
@@ -589,6 +589,71 @@ impl From<StripeCreateCheckoutSessionResponse> for CreateInvoiceResponse {
     }
 }
 
+/// Stripe checkout session retrieval request
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StripeGetCheckoutSession {
+    pub session_id: String,
+}
+
+impl PaymentGatewayParams for StripeGetCheckoutSession {
+    fn path_suffix(&self) -> String {
+        format!("/v1/checkout/sessions/{}", self.session_id)
+    }
+}
+
+impl PaymentGateway for StripeGetCheckoutSession {
+    const METHOD: Method = Method::GET;
+    type PaymentGatewayResponse = StripeGetCheckoutSessionResponse;
+}
+
+/// Stripe checkout session retrieval response
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct StripeGetCheckoutSessionResponse {
+    pub id: String,
+    pub object: String,
+    pub amount_subtotal: Option<i64>,
+    pub amount_total: Option<i64>,
+    pub currency: Option<String>,
+    pub customer_email: Option<String>,
+    pub payment_status: StripePaymentStatusEnum,
+    pub status: StripeCheckoutSessionStatusEnum,
+    pub metadata: HashMap<String, String>,
+    pub client_reference_id: Option<String>,
+    pub created: u64,
+    pub expires_at: Option<u64>,
+    pub success_url: Option<String>,
+    pub cancel_url: Option<String>,
+}
+
+impl From<StripePaymentStatusEnum> for crate::api::payments::domain::PaymentStatus {
+    fn from(stripe_status: StripePaymentStatusEnum) -> Self {
+        match stripe_status {
+            StripePaymentStatusEnum::Unpaid => crate::api::payments::domain::PaymentStatus::Pending,
+            StripePaymentStatusEnum::Paid => crate::api::payments::domain::PaymentStatus::Completed,
+            StripePaymentStatusEnum::NoPaymentRequired => {
+                crate::api::payments::domain::PaymentStatus::Completed
+            }
+        }
+    }
+}
+
+impl From<StripeCheckoutSessionStatusEnum> for crate::api::payments::domain::PaymentStatus {
+    fn from(session_status: StripeCheckoutSessionStatusEnum) -> Self {
+        match session_status {
+            StripeCheckoutSessionStatusEnum::Open => {
+                crate::api::payments::domain::PaymentStatus::Pending
+            }
+            StripeCheckoutSessionStatusEnum::Complete => {
+                crate::api::payments::domain::PaymentStatus::Completed
+            }
+            StripeCheckoutSessionStatusEnum::Expired => {
+                crate::api::payments::domain::PaymentStatus::Expired
+            }
+        }
+    }
+}
+
 #[server]
 pub async fn stripe_create_invoice(
     request: String,
@@ -600,6 +665,56 @@ pub async fn stripe_create_invoice(
 
     let stripe = StripeEstate::default();
     match stripe.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => Err(ServerFnError::ServerError(e.to_string())),
+    }
+}
+
+// #[server]
+pub async fn stripe_get_session_status(
+    session_id: String,
+) -> Result<StripeGetCheckoutSessionResponse, ServerFnError> {
+    log!("[Stripe] GET_CHECKOUT_SESSION: {session_id:?}");
+
+    let request = StripeGetCheckoutSession { session_id };
+
+    let stripe = StripeEstate::default();
+    match stripe.send(request).await {
+        Ok(response) => Ok(response),
+        Err(e) => Err(ServerFnError::ServerError(e.to_string())),
+    }
+}
+
+/// Unified server function to get payment status from any payment provider
+pub async fn get_payment_status(
+    payment_id: String,
+    provider: Option<String>, // Optional provider hint ("stripe" or "nowpayments")
+) -> Result<crate::api::payments::domain::DomainGetPaymentStatusResponse, ServerFnError> {
+    use crate::api::payments::domain::{
+        DomainGetPaymentStatusRequest, PaymentProvider, PaymentService,
+    };
+    use crate::api::payments::service::PaymentServiceImpl;
+
+    log!(
+        "[Payment] GET_STATUS: payment_id={}, provider={:?}",
+        payment_id,
+        provider
+    );
+
+    // Convert optional string provider to PaymentProvider enum
+    let provider_enum = provider.as_ref().and_then(|p| match p.as_str() {
+        "stripe" => Some(PaymentProvider::Stripe),
+        "nowpayments" => Some(PaymentProvider::NowPayments),
+        _ => None,
+    });
+
+    let request = DomainGetPaymentStatusRequest {
+        payment_id,
+        provider: provider_enum,
+    };
+
+    let payment_service = PaymentServiceImpl::new();
+    match payment_service.get_payment_status(request).await {
         Ok(response) => Ok(response),
         Err(e) => Err(ServerFnError::ServerError(e.to_string())),
     }
