@@ -78,9 +78,17 @@ impl StripeEstate {
             } else {
                 let url = req.build_url(&self.api_host)?;
                 log!("[Stripe] url = {url:#?}");
-                // For debugging serialization issues with .form()
+                // Log serialized form data for debugging
                 match serde_urlencoded::to_string(&req) {
-                    Ok(form_str) => log!("[Stripe] Serialized form data: {}", form_str),
+                    Ok(form_str) => {
+                        log!("[Stripe] Serialized form data: {}", form_str);
+                        // Check specifically for line_items
+                        if form_str.contains("line_items") {
+                            log!("[Stripe] ✅ line_items found in serialized data");
+                        } else {
+                            error!("[Stripe] ❌ line_items MISSING from serialized data!");
+                        }
+                    },
                     Err(e) => error!("[Stripe] Failed to serialize form data with serde_urlencoded: {:?}", e),
                 }
 
@@ -317,7 +325,20 @@ impl StripeCreateCheckoutSession {
         ui_mode: StripeUIModeEnum,
     ) -> Self {
         // Call build_form_fields to populate the map
+        log!(
+            "[Stripe] Constructor: Processing {} line items",
+            line_items_vec.len()
+        );
         let generated_form_fields = build_form_fields(&line_items_vec, optional_metadata.as_ref());
+        log!(
+            "[Stripe] Constructor: Generated {} form fields",
+            generated_form_fields.len()
+        );
+
+        // Log first few form fields for debugging
+        for (key, value) in generated_form_fields.iter().take(5) {
+            log!("[Stripe] Form field: {}={}", key, value);
+        }
 
         Self {
             success_url,
@@ -640,3 +661,158 @@ pub async fn stripe_create_invoice(
 //         StripeUIModeEnum::Hosted,
 //     ))
 // }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_stripe_checkout_session_form_serialization() {
+        // Arrange: Create test data
+        let line_item = StripeLineItem {
+            price_data: StripePriceData {
+                currency: "USD".to_string(),
+                unit_amount: 18400,
+                product_data: StripeProductData {
+                    name: "Hotel Test".to_string(),
+                    description: Some("Test booking".to_string()),
+                    metadata: None,
+                },
+            },
+            quantity: 1,
+        };
+
+        let mut metadata_map = HashMap::new();
+        metadata_map.insert("order_id".to_string(), "test_order_123".to_string());
+        let metadata = StripeMetadata::new(metadata_map).unwrap();
+
+        let session = StripeCreateCheckoutSession::new(
+            "https://example.com/success".to_string(),
+            "https://example.com/cancel".to_string(),
+            vec![line_item],
+            "payment".to_string(),
+            Some(metadata),
+            "test_order_123".to_string(),
+            "test@example.com".to_string(),
+            StripeUIModeEnum::Hosted,
+        );
+
+        // Act: Serialize to form data
+        let form_data = serde_urlencoded::to_string(&session);
+
+        // Assert: Check expected format
+        if let Err(e) = &form_data {
+            println!("Serialization error: {:?}", e);
+        }
+        assert!(
+            form_data.is_ok(),
+            "Serialization should succeed, but got error: {:?}",
+            form_data.err()
+        );
+        let form_string = form_data.unwrap();
+
+        println!("Form data: {}", form_string);
+
+        // Assert line items
+        assert!(
+            form_string.contains("line_items%5B0%5D%5Bprice_data%5D%5Bcurrency%5D=USD")
+                || form_string.contains("line_items[0][price_data][currency]=USD")
+        );
+        assert!(
+            form_string.contains("line_items%5B0%5D%5Bprice_data%5D%5Bunit_amount%5D=18400")
+                || form_string.contains("line_items[0][price_data][unit_amount]=18400")
+        );
+        assert!(
+            form_string.contains("line_items%5B0%5D%5Bquantity%5D=1")
+                || form_string.contains("line_items[0][quantity]=1")
+        );
+
+        // Assert metadata
+        assert!(
+            form_string.contains("metadata%5Border_id%5D=test_order_123")
+                || form_string.contains("metadata[order_id]=test_order_123")
+        );
+
+        // Assert client reference ID
+        assert!(form_string.contains("client_reference_id=test_order_123"));
+
+        // Assert customer email
+        assert!(form_string.contains("customer_email=test%40example.com"));
+    }
+
+    #[test]
+    fn test_stripe_checkout_session_form_serialization_with_actual_client_id() {
+        // Arrange: Create test data
+        let line_item = StripeLineItem {
+            price_data: StripePriceData {
+                currency: "USD".to_string(),
+                unit_amount: 18400,
+                product_data: StripeProductData {
+                    name: "Hotel Test".to_string(),
+                    description: Some("Test booking".to_string()),
+                    metadata: None,
+                },
+            },
+            quantity: 1,
+        };
+
+        let mut metadata_map = HashMap::new();
+        metadata_map.insert("order_id".to_string(), "test_order_123".to_string());
+        let metadata = StripeMetadata::new(metadata_map).unwrap();
+
+        let session = StripeCreateCheckoutSession::new(
+            "https://example.com/success".to_string(),
+            "https://example.com/cancel".to_string(),
+            vec![line_item],
+            "payment".to_string(),
+            Some(metadata),
+            "NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com".to_string(),
+            "tripathi.abhishek.iitkgp@gmail.com".to_string(),
+            StripeUIModeEnum::Hosted,
+        );
+
+        // Act: Serialize to form data
+        let form_data = serde_urlencoded::to_string(&session);
+
+        // Assert: Check expected format
+        assert!(form_data.is_ok(), "Serialization should succeed");
+        let form_string = form_data.unwrap();
+
+        println!("Form data: {}", form_string);
+
+        // Assert line items
+        assert!(
+            form_string.contains("line_items%5B0%5D%5Bprice_data%5D%5Bcurrency%5D=USD")
+                || form_string.contains("line_items[0][price_data][currency]=USD")
+        );
+        assert!(
+            form_string.contains("line_items%5B0%5D%5Bprice_data%5D%5Bunit_amount%5D=18400")
+                || form_string.contains("line_items[0][price_data][unit_amount]=18400")
+        );
+        assert!(
+            form_string.contains("line_items%5B0%5D%5Bquantity%5D=1")
+                || form_string.contains("line_items[0][quantity]=1")
+        );
+
+        // Assert metadata
+        assert!(
+            form_string.contains("metadata%5Border_id%5D=test_order_123")
+                || form_string.contains("metadata[order_id]=test_order_123")
+        );
+
+        // Assert client reference ID
+        assert!(
+            form_string.contains(
+                "client_reference_id=NP%246%3AABC123%2434%3Atripathi.abhishek.iitkgp%40gmail.com"
+            ) || form_string
+                .contains("client_reference_id=NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com")
+        );
+
+        // Assert customer email
+        assert!(
+            form_string.contains("customer_email=tripathi.abhishek.iitkgp%40gmail.com")
+                || form_string.contains("customer_email=tripathi.abhishek.iitkgp@gmail.com")
+        );
+    }
+}

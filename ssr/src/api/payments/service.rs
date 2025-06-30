@@ -151,17 +151,16 @@ impl PaymentServiceImpl {
         let metadata = StripeMetadata::new(metadata_map)
             .map_err(|e| PaymentServiceError::InvalidRequest(format!("Invalid metadata: {}", e)))?;
 
-        let stripe_request = StripeCreateCheckoutSession {
-            success_url: domain_request.callback_urls.success_url,
-            cancel_url: domain_request.callback_urls.cancel_url,
-            line_items: vec![line_item],
-            mode: "payment".to_string(),
-            metadata: Some(metadata),
-            client_reference_id: domain_request.order_id,
-            customer_email: domain_request.customer_email.clone(),
-            ui_mode: StripeUIModeEnum::Hosted,
-            form_fields: HashMap::new(),
-        };
+        let stripe_request = StripeCreateCheckoutSession::new(
+            domain_request.callback_urls.success_url,
+            domain_request.callback_urls.cancel_url,
+            vec![line_item],
+            "payment".to_string(),
+            Some(metadata),
+            domain_request.order_id,
+            domain_request.customer_email.clone(),
+            StripeUIModeEnum::Hosted,
+        );
 
         Ok(stripe_request)
     }
