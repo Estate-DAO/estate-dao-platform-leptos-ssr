@@ -1382,7 +1382,9 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             };
 
             // Generate booking ID and order ID
-            let Some((email_from_local_storage, app_ref_from_local_storage)) = BookingId::read_from_storage() else {
+            let Some((email_from_local_storage, app_ref_from_local_storage)) =
+                BookingId::read_from_storage()
+            else {
                 log!("Payment creation failed - could not generate app reference");
                 BlockRoomUIState::batch_update_on_error(
                     Some("payment".to_string()),

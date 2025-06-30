@@ -40,6 +40,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
 // Import all route modules
+mod admin_payment;
 mod block_room;
 mod book_room;
 mod create_payment_invoice;
@@ -193,5 +194,17 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/create_payment_invoice_api",
             post(create_payment_invoice_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/admin/check_payment_status",
+            post(admin_payment::check_payment_status).options(handle_options),
+        )
+        .route(
+            "/admin/get_backend_booking",
+            post(admin_payment::get_backend_booking).options(handle_options),
+        )
+        .route(
+            "/admin/update_payment",
+            post(admin_payment::update_payment_details).options(handle_options),
         )
 }

@@ -17,9 +17,9 @@ use crate::{
     },
     error_template::{AppError, ErrorTemplate},
     page::{
-        AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage, ConfirmationPageV1,
-        ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page, HotelListPage,
-        PreviousSearchContext, RootPage, SSEConfirmationPage,
+        AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
+        ConfirmationPageV1, ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
+        HotelListPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
     },
     view_state_layer::{
         api_error_state::ApiErrorState,
@@ -70,6 +70,7 @@ pub enum AppRoutes {
     // ConfirmationV1,
     // ConfirmationV2,
     AdminPanel,
+    AdminEditPanel,
     // Notifications
 }
 
@@ -84,6 +85,7 @@ impl AppRoutes {
             // AppRoutes::ConfirmationV1 => "/confirmation-v1",
             // AppRoutes::ConfirmationV2 => "/confirmation-v2",
             AppRoutes::AdminPanel => "/admin-panel",
+            AppRoutes::AdminEditPanel => "/admin-edit-panel",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -98,6 +100,7 @@ impl AppRoutes {
             // Self::ConfirmationV1,
             // Self::ConfirmationV2,
             Self::AdminPanel,
+            Self::AdminEditPanel,
             // Self::Notifications,
         ]
         .into_iter()
@@ -112,7 +115,7 @@ impl AppRoutes {
             AppRoutes::Confirmation => 0.6,
             // AppRoutes::ConfirmationV1 => 0.6,
             // AppRoutes::ConfirmationV2 => 0.6,
-            AppRoutes::AdminPanel => 0.1,
+            _ => 0.1,
             // AppRoutes::Notifications => 0.5,
         }
     }
@@ -221,6 +224,7 @@ pub fn App() -> impl IntoView {
                     // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
                     // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
                     <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
+                    <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                     // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>

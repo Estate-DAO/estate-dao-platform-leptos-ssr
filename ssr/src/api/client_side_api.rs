@@ -1,5 +1,7 @@
 use crate::api::consts::APP_URL;
 use crate::api::payments::domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse};
+use crate::api::payments::ports::GetPaymentStatusResponse;
+use crate::canister::backend::{Booking, PaymentDetails};
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
     DomainHotelListAfterSearch, DomainHotelSearchCriteria,
@@ -30,6 +32,25 @@ pub struct ConfirmationProcessResponse {
     pub order_id: Option<String>,
     pub user_email: Option<String>,
     pub booking_data: Option<serde_json::Value>,
+}
+
+// Admin Payment API Types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckPaymentStatusRequest {
+    pub payment_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetBackendBookingRequest {
+    pub email: String,
+    pub app_reference: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdatePaymentRequest {
+    pub email: String,
+    pub app_reference: String,
+    pub payment_details: PaymentDetails,
 }
 
 #[derive(Clone)]
@@ -229,6 +250,37 @@ impl ClientSideApiClient {
         }
 
         result
+    }
+
+    // Admin Payment API Methods
+    pub async fn check_payment_status(
+        &self,
+        request: CheckPaymentStatusRequest,
+    ) -> Option<GetPaymentStatusResponse> {
+        Self::api_call(
+            request,
+            "server_fn_api/admin/check_payment_status",
+            "check payment status",
+        )
+        .await
+    }
+
+    pub async fn get_backend_booking(&self, request: GetBackendBookingRequest) -> Option<Booking> {
+        Self::api_call(
+            request,
+            "server_fn_api/admin/get_backend_booking",
+            "get backend booking",
+        )
+        .await
+    }
+
+    pub async fn update_payment_details(&self, request: UpdatePaymentRequest) -> Option<String> {
+        Self::api_call(
+            request,
+            "server_fn_api/admin/update_payment",
+            "update payment details",
+        )
+        .await
     }
 }
 

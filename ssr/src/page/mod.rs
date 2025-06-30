@@ -40,3 +40,6 @@ pub use input_group_container::*;
 
 mod admin_panel;
 pub use admin_panel::*;
+
+mod admin_edit_panel;
+pub use admin_edit_panel::*;
