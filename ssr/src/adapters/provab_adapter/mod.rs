@@ -98,9 +98,11 @@ impl ProvabAdapter {
                     .into_iter()
                     .map(|hotel| Self::map_provab_hotel_to_domain(hotel))
                     .collect(),
+                pagination: None, // Provab adapter does not support pagination yet
             },
             None => DomainHotelListAfterSearch {
                 hotel_results: vec![],
+                pagination: None, // No results, no pagination
             },
         }
     }

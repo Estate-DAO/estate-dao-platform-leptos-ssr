@@ -115,6 +115,7 @@ impl HotelDetailsParams {
             no_of_rooms: self.rooms,
             room_guests,
             guest_nationality: self.guest_nationality.clone(),
+            pagination: None, // No pagination for hotel details
         }
     }
 

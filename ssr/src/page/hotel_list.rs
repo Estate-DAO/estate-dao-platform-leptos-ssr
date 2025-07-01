@@ -3,13 +3,13 @@ use leptos_router::use_navigate;
 
 // use crate::api::get_room;
 use crate::api::client_side_api::ClientSideApiClient;
-use crate::component::{Destination, GuestSelection, Navbar, SkeletonCards};
+use crate::component::{Destination, GuestSelection, Navbar, PaginationControls, PaginationInfo, SkeletonCards};
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
-use crate::view_state_layer::ui_search_state::{SearchListResults, UISearchCtx};
+use crate::view_state_layer::ui_search_state::{SearchListResults, UISearchCtx, UIPaginationState};
 use crate::view_state_layer::view_state::HotelInfoCtx;
 use crate::view_state_layer::GlobalStateForLeptos;
 // use crate::state::input_group_state::{InputGroupState, OpenDialogComponent};
@@ -74,6 +74,10 @@ pub fn HotelListPage() -> impl IntoView {
 
     let search_ctx2: UISearchCtx = expect_context();
 
+    // Initialize pagination state
+    let pagination_state: UIPaginationState = expect_context();
+    
+
     // Sync query params with state on page load (URL → State)
     // This leverages use_query_map's built-in reactivity for browser navigation
     create_effect(move |_| {
@@ -95,7 +99,7 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx_for_resource = search_ctx.clone();
     let search_ctx_for_url_update = search_ctx.clone();
 
-    // Hotel search resource - triggers when search context is available
+    // Hotel search resource - triggers when search context or pagination changes
     let hotel_search_resource = create_resource(
         move || {
             // Track search context changes reactively
@@ -104,6 +108,10 @@ pub fn HotelListPage() -> impl IntoView {
             let adults = search_ctx_for_resource.guests.adults.get();
             let children = search_ctx_for_resource.guests.children.get();
             let rooms = search_ctx_for_resource.guests.rooms.get();
+            
+            // Track pagination changes reactively
+            let current_page = pagination_state.current_page.get();
+            let page_size = pagination_state.page_size.get();
 
             // log!("[hotel_search_resource] destination: {:?}", destination);
             // log!("[hotel_search_resource] date_range: {:?}", date_range);
@@ -125,17 +133,23 @@ pub fn HotelListPage() -> impl IntoView {
             let is_same_adults = adults == previous_adults;
             let is_same_children = children == previous_children;
             let is_same_rooms = rooms == previous_rooms;
+            let is_same_search_criteria = is_same_destination && is_same_adults && is_same_children && is_same_rooms;
 
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
             let has_valid_search_data = destination.is_some() && adults > 0 && rooms > 0;
             let is_first_load =
                 previous_destination.is_none() && previous_adults == 0 && previous_rooms == 0;
 
+            // Reset pagination to first page when search criteria change
+            if !is_same_search_criteria && !is_first_load {
+                UIPaginationState::reset_to_first_page();
+            }
+
             // Return true when ready to search
             let is_ready = has_valid_dates
                 && has_valid_search_data
                 && (is_first_load || // First load with valid data - always search
-                 (is_same_destination && is_same_adults && is_same_children && is_same_rooms)); // Subsequent loads - only if same data
+                    is_same_search_criteria); // Always search for same criteria (includes pagination changes)
 
             log!(
                 "[hotel_search_resource] readiness: is_same_destination={}, is_same_adults={}, is_same_children={}, is_same_rooms={}, has_valid_dates={}, has_valid_search_data={}, is_first_load={}, ready={}",
@@ -171,6 +185,11 @@ pub fn HotelListPage() -> impl IntoView {
                 // Set results in the same way as root.rs
                 SearchListResults::set_search_results(result.clone());
                 PreviousSearchContext::update(search_ctx_clone2.clone());
+
+                // Update pagination metadata from search results
+                if let Some(ref response) = result {
+                    UIPaginationState::set_pagination_meta(response.pagination.clone());
+                }
 
                 // Reset first_time_filled flag after successful search
                 PreviousSearchContext::reset_first_time_filled();
@@ -281,6 +300,20 @@ pub fn HotelListPage() -> impl IntoView {
                                     .collect_view()
                             }
                         }}
+                    </Show>
+                    
+                    // Pagination controls - only show when we have results
+                    <Show
+                        when=move || {
+                            search_list_page.search_result.get()
+                                .map_or(false, |result| !result.hotel_list().is_empty())
+                        }
+                        fallback=move || view! { <></> }
+                    >
+                        <div class="col-span-full">
+                            <PaginationInfo />
+                            <PaginationControls />
+                        </div>
                     </Show>
                 </div>
             </div>

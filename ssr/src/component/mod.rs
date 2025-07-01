@@ -17,6 +17,9 @@ pub use filter::*;
 mod star_rating;
 pub use star_rating::*;
 
+mod pagination_controls;
+pub use pagination_controls::*;
+
 mod price_display;
 pub use price_display::*;
 

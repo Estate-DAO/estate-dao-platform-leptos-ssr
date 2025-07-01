@@ -34,7 +34,7 @@ use crate::{
         ui_confirmation_page::ConfirmationPageUIState,
         ui_confirmation_page_v2::ConfirmationPageState,
         ui_hotel_details::HotelDetailsUIState,
-        ui_search_state::{SearchListResults, UISearchCtx},
+        ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx},
         view_state::{BlockRoomCtx, HotelInfoCtx},
     },
 };
@@ -155,6 +155,8 @@ pub fn App() -> impl IntoView {
     // provide_context(EnvVarConfig::try_from_env());
 
     provide_context(InputGroupState::default());
+
+    provide_context(UIPaginationState::default());
 
     provide_context(PreviousSearchContext::default());
     provide_context(UISearchCtx::default());

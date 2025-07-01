@@ -27,6 +27,23 @@ pub struct DomainRoomGuest {
     pub children_ages: Option<Vec<String>>,
 }
 
+// <!-- Pagination types for hotel search -->
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainPaginationParams {
+    pub page: Option<u32>,       // 1-based page number
+    pub page_size: Option<u32>,  // Results per page (default: 200, max: 5000)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainPaginationMeta {
+    pub page: u32,
+    pub page_size: u32,
+    pub total_results: Option<u32>,    // If available from API
+    pub has_next_page: bool,
+    pub has_previous_page: bool,
+}
+
 // ROOM TYPES and HOTEL TYPES
 // Domain types for hotel search and booking - provider-agnostic
 
@@ -49,6 +66,9 @@ pub struct DomainHotelSearchCriteria {
     pub no_of_rooms: u32,
     pub room_guests: Vec<DomainRoomGuest>,
     pub guest_nationality: String,
+
+    // <!-- Pagination information -->
+    pub pagination: Option<DomainPaginationParams>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -80,6 +100,7 @@ pub struct DomainHotelAfterSearch {
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct DomainHotelListAfterSearch {
     pub hotel_results: Vec<DomainHotelAfterSearch>,
+    pub pagination: Option<DomainPaginationMeta>,
 }
 
 // <!-- Hotel Details Types -->
@@ -174,6 +195,7 @@ impl Default for DomainHotelSearchCriteria {
                 no_of_children: 0,
                 children_ages: None,
             }],
+            pagination: None, // <!-- Default to no pagination (first page) -->
         }
     }
 }

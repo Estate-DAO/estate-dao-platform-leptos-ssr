@@ -23,5 +23,7 @@ tracing-subscriber = { workspace = true, features = [
     "std",
     "json",
 ] }
+tracing-appender = "0.2"
+once_cell = "1.18"
 thiserror = { workspace = true }
 uuid = { version = "1.16.0", features = ["serde", "v7"] }

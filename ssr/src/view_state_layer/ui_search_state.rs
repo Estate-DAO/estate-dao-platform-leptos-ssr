@@ -6,7 +6,7 @@ use crate::{
     // },
     canister::backend,
     component::{Destination, GuestSelection, SelectedDateRange},
-    domain::DomainHotelListAfterSearch,
+    domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams},
     utils::app_reference::generate_app_reference,
 };
 // use leptos::logging::log;
@@ -125,6 +125,14 @@ impl SearchListResults {
             .unwrap_or_default()
     }
 
+    pub fn get_pagination_meta() -> Option<DomainPaginationMeta> {
+        Self::from_leptos_context()
+            .search_result
+            .get_untracked()
+            .as_ref()
+            .and_then(|response| response.pagination.clone())
+    }
+
     // pub fn hotel_info_request(&self, hotel_code: &str) -> HotelInfoRequest {
     //     let token = Self::get_result_token(hotel_code.into());
     //     HotelInfoRequest { token }
@@ -134,4 +142,88 @@ impl SearchListResults {
     //     let token = Self::get_result_token(hotel_code.into());
     //     HotelRoomRequest { token }
     // }
+}
+
+//  ==================================================================
+
+#[derive(Debug, Clone)]
+pub struct UIPaginationState {
+    pub current_page: RwSignal<u32>,
+    pub page_size: RwSignal<u32>,
+    pub pagination_meta: RwSignal<Option<DomainPaginationMeta>>,
+}
+
+impl GlobalStateForLeptos for UIPaginationState {}
+
+impl UIPaginationState {
+    pub fn get_pagination_params() -> Option<DomainPaginationParams> {
+        let this: Self = expect_context();
+        let current_page = this.current_page.get_untracked();
+        let page_size = this.page_size.get_untracked();
+        
+        // Only return pagination params if not defaults
+        if current_page != 1 || page_size != 20 {
+            Some(DomainPaginationParams {
+                page: Some(current_page),
+                page_size: Some(page_size),
+            })
+        } else {
+            None // Use backend defaults
+        }
+    }
+
+    pub fn set_current_page(page: u32) {
+        let this: Self = expect_context();
+        this.current_page.set(page.max(1));
+    }
+
+    pub fn set_page_size(size: u32) {
+        let this: Self = expect_context();
+        this.page_size.set(size.max(1).min(200)); // Enforce reasonable limits
+    }
+
+    pub fn set_pagination_meta(meta: Option<DomainPaginationMeta>) {
+        let this: Self = expect_context();
+        this.pagination_meta.set(meta);
+    }
+
+    pub fn go_to_next_page() {
+        let this: Self = expect_context();
+        let current = this.current_page.get_untracked();
+        let meta = this.pagination_meta.get_untracked();
+        
+        if let Some(pagination_meta) = meta {
+            if pagination_meta.has_next_page {
+                this.current_page.set(current + 1);
+            }
+        }
+    }
+
+    pub fn go_to_previous_page() {
+        let this: Self = expect_context();
+        let current = this.current_page.get_untracked();
+        let meta = this.pagination_meta.get_untracked();
+        
+        if let Some(pagination_meta) = meta {
+            if pagination_meta.has_previous_page && current > 1 {
+                this.current_page.set(current - 1);
+            }
+        }
+    }
+
+    pub fn reset_to_first_page() {
+        let this: Self = expect_context();
+        this.current_page.set(1);
+        this.pagination_meta.set(None);
+    }
+}
+
+impl Default for UIPaginationState {
+    fn default() -> Self {
+        Self {
+            current_page: create_rw_signal(1),
+            page_size: create_rw_signal(20), // Default page size
+            pagination_meta: create_rw_signal(None),
+        }
+    }
 }

@@ -24,6 +24,11 @@ use tracing_subscriber::{
 use utils::default_true;
 use uuid::Uuid;
 
+use once_cell::sync::OnceCell;
+use tracing_appender::non_blocking::WorkerGuard;
+// Static to hold the guard and keep it alive for the lifetime of the app
+static FILE_GUARD: OnceCell<WorkerGuard> = OnceCell::new();
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields, rename_all = "kebab-case")]
 pub struct Config {
@@ -38,6 +43,9 @@ pub struct Config {
     pub otlp_endpoint: String,
     #[serde(default = "default_true")]
     pub propagate: bool,
+    #[serde(default = "default_file_path")]
+    /// The path to the file to write logs to.
+    pub file_path: String,
 }
 
 impl Default for Config {
@@ -48,6 +56,7 @@ impl Default for Config {
             exporter: Exporter::default(),
             otlp_endpoint: default_otlp_endpoint(),
             propagate: default_true(),
+            file_path: default_file_path(),
         }
     }
 }
@@ -57,12 +66,20 @@ impl Default for Config {
 pub enum Exporter {
     Stdout,
     Otlp,
+    File,
     #[default]
     Both,
+    /// File + Console logging (no OTLP)
+    FileAndStdout,
+    /// File + OTLP + Console logging (all three)
+    All,
 }
 
 fn default_service_name() -> String {
     "estate_fe".to_string()
+}
+fn default_file_path() -> String {
+    "logs/telemetry.log".to_string()
 }
 
 fn default_level() -> String {
@@ -87,6 +104,8 @@ pub enum TelemetryError {
     Subscriber(#[from] TryInitError),
     #[error("Otel http metrics error")]
     OtelHttpMetrics,
+    #[error("File IO error: {0}")]
+    FileIO(#[from] std::io::Error),
 }
 
 fn resource(config: &Config) -> Resource {
@@ -144,7 +163,188 @@ pub fn init_telemetry(
                 Some(metrics_provider),
             ))
         }
+        Exporter::File => {
+            let tracer_provider = init_file(config)?;
+            Ok((None, tracer_provider, None))
+        }
+        Exporter::FileAndStdout => {
+            let tracer_provider = init_file_with_stdout(config)?;
+            Ok((None, tracer_provider, None))
+        }
+        Exporter::All => {
+            let (logger_provider, tracer_provider, metrics_provider) = init_all(config)?;
+            Ok((
+                Some(logger_provider),
+                tracer_provider,
+                Some(metrics_provider),
+            ))
+        }
     }
+}
+
+fn init_file(config: &Config) -> Result<SdkTracerProvider, TelemetryError> {
+    let resource = resource(config);
+
+    // Extract directory from file_path
+    let file_path = std::path::Path::new(&config.file_path);
+    if let Some(dir) = file_path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+
+    let file_appender = tracing_appender::rolling::daily(
+        file_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new(".")),
+        file_path
+            .file_name()
+            .unwrap_or_else(|| std::ffi::OsStr::new("telemetry.log")),
+    );
+
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+    let _ = FILE_GUARD.set(guard);
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_writer)
+        .with_ansi(false)
+        .with_target(true)
+        .with_filter(env_filter(config)?);
+
+    let registry = tracing_subscriber::registry().with(file_layer);
+
+    let tracer_provider =
+        tracer_provider(config, resource.clone()).map_err(TelemetryError::TraceExporterBuild)?;
+    opentelemetry::global::set_tracer_provider(tracer_provider.clone());
+
+    registry.try_init()?;
+    log_panics::init();
+
+    Ok(tracer_provider)
+}
+
+fn init_file_with_stdout(config: &Config) -> Result<SdkTracerProvider, TelemetryError> {
+    let resource = resource(config);
+
+    // Extract directory from file_path
+    let file_path = std::path::Path::new(&config.file_path);
+    if let Some(dir) = file_path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+
+    let file_appender = tracing_appender::rolling::daily(
+        file_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new(".")),
+        file_path
+            .file_name()
+            .unwrap_or_else(|| std::ffi::OsStr::new("telemetry.log")),
+    );
+
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+    let _ = FILE_GUARD.set(guard);
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_writer)
+        .with_ansi(false)
+        .with_target(true)
+        .with_filter(env_filter(config)?);
+
+    let stdout_layer = tracing_subscriber::fmt::layer()
+        .pretty()
+        .with_file(true)
+        .with_line_number(true)
+        .with_filter(env_filter(config)?);
+
+    let registry = tracing_subscriber::registry()
+        .with(file_layer)
+        .with(stdout_layer);
+
+    let tracer_provider =
+        tracer_provider(config, resource.clone()).map_err(TelemetryError::TraceExporterBuild)?;
+    let tracer = tracer_provider.tracer(config.service_name.clone());
+    let filter = env_filter(config)?;
+    let tracing_layer = tracing_opentelemetry::layer()
+        .with_tracer(tracer)
+        .with_filter(filter);
+
+    registry.with(tracing_layer).try_init()?;
+    opentelemetry::global::set_tracer_provider(tracer_provider.clone());
+
+    log_panics::init();
+
+    Ok(tracer_provider)
+}
+
+fn init_all(
+    config: &Config,
+) -> Result<(SdkLoggerProvider, SdkTracerProvider, SdkMeterProvider), TelemetryError> {
+    let resource = resource(config);
+
+    // Extract directory from file_path
+    let file_path = std::path::Path::new(&config.file_path);
+    if let Some(dir) = file_path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+
+    let file_appender = tracing_appender::rolling::daily(
+        file_path
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new(".")),
+        file_path
+            .file_name()
+            .unwrap_or_else(|| std::ffi::OsStr::new("telemetry.log")),
+    );
+
+    let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
+    let _ = FILE_GUARD.set(guard);
+
+    // logging
+    let logger_provider =
+        logger_provider(config, resource.clone()).map_err(TelemetryError::LogExporterBuild)?;
+    let otel_layer =
+        opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(&logger_provider);
+    let filter = env_filter(config)?;
+    let otel_layer = otel_layer.with_filter(filter);
+
+    // tracing
+    let tracer_provider =
+        tracer_provider(config, resource.clone()).map_err(TelemetryError::TraceExporterBuild)?;
+    let tracer = tracer_provider.tracer(config.service_name.clone());
+    let filter = env_filter(config)?;
+    let tracing_layer = tracing_opentelemetry::layer()
+        .with_tracer(tracer)
+        .with_filter(filter);
+
+    // file layer
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_writer(file_writer)
+        .with_ansi(false)
+        .with_target(true)
+        .with_filter(env_filter(config)?);
+
+    // stdout layer
+    let stdout_layer = tracing_subscriber::fmt::layer()
+        .pretty()
+        .with_file(true)
+        .with_line_number(true)
+        .with_filter(env_filter(config)?);
+
+    tracing_subscriber::registry()
+        .with(file_layer)
+        .with(stdout_layer)
+        .with(tracing_layer)
+        .with(otel_layer)
+        .try_init()?;
+
+    // metrics
+    let metrics_provider =
+        metrics_provider(config, resource.clone()).map_err(TelemetryError::MetricExporterBuild)?;
+
+    global::set_meter_provider(metrics_provider.clone());
+    global::set_tracer_provider(tracer_provider.clone());
+
+    log_panics::init();
+
+    Ok((logger_provider, tracer_provider, metrics_provider))
 }
 
 fn init_otlp(
@@ -270,7 +470,7 @@ fn tracer_provider(
     resource: Resource,
 ) -> Result<SdkTracerProvider, ExporterBuildError> {
     match &config.exporter {
-        Exporter::Stdout => {
+        Exporter::Stdout | Exporter::File | Exporter::FileAndStdout => {
             Ok(SdkTracerProvider::builder()
                 .with_resource(resource)
                 // we don't need an exporter here for stdout since we really
@@ -280,7 +480,7 @@ fn tracer_provider(
                 .with_max_attributes_per_span(16)
                 .build())
         }
-        Exporter::Otlp | Exporter::Both => {
+        Exporter::Otlp | Exporter::Both | Exporter::All => {
             let exporter = SpanExporter::builder()
                 .with_tonic()
                 .with_endpoint(config.otlp_endpoint.clone())

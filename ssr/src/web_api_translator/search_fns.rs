@@ -7,7 +7,7 @@ cfg_if::cfg_if! {
 use crate::component::SelectedDateRange;
 use crate::component::{Destination, GuestSelection};
 use crate::domain::{DomainHotelListAfterSearch, DomainRoomGuest};
-use crate::{domain::DomainHotelSearchCriteria, view_state_layer::ui_search_state::UISearchCtx};
+use crate::{domain::DomainHotelSearchCriteria, view_state_layer::ui_search_state::{UISearchCtx, UIPaginationState}};
 use crate::{log, utils};
 use leptos::*;
 
@@ -20,6 +20,11 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
         // todo (better hanlding)
         let destination: Destination = ctx.destination.get_untracked().unwrap_or_default();
 
+        // Get pagination parameters from UI state if available
+        let pagination = expect_context::<UIPaginationState>()
+            .map(|_| UIPaginationState::get_pagination_params())
+            .flatten();
+
         let request = DomainHotelSearchCriteria {
             check_in_date,
             check_out_date,
@@ -30,6 +35,7 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             destination_city_name: destination.city,
             destination_country_code: destination.country_code,
             destination_country_name: destination.country_name,
+            pagination,
             ..Default::default()
         };
 

@@ -34,8 +34,8 @@ setup-logs:
     set -euo pipefail
     mkdir -p "$(pwd)/logs"
     TODAY=$(date +'%Y-%m-%d')
-    ln -sf "$(pwd)/logs/estate_fe_local.log.${TODAY}" "$(pwd)/logs/estate-fe.log"
-    echo "Logs directory setup complete. Today's log: logs/estate_fe_local.log.${TODAY}"
+    ln -sf "$(pwd)/logs/telemetry.log.${TODAY}" "$(pwd)/logs/estate-fe.log"
+    echo "Logs directory setup complete. Today's log: logs/telemetry.log.${TODAY}"
 
 # Type checking only
 check:

@@ -5035,6 +5035,7 @@ version = "0.1.0"
 dependencies = [
  "http",
  "log-panics",
+ "once_cell",
  "opentelemetry",
  "opentelemetry-appender-tracing",
  "opentelemetry-http",
@@ -5045,6 +5046,7 @@ dependencies = [
  "tower 0.4.13",
  "tower-http",
  "tracing",
+ "tracing-appender",
  "tracing-opentelemetry",
  "tracing-subscriber",
  "uuid",

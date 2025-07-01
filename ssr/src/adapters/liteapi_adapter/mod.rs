@@ -23,8 +23,8 @@ use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
     DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice, DomainRoomData,
-    DomainRoomOccupancy, DomainRoomOption,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPaginationMeta, 
+    DomainPaginationParams, DomainPrice, DomainRoomData, DomainRoomOccupancy, DomainRoomOption,
 };
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
@@ -153,16 +153,45 @@ impl LiteApiAdapter {
         }
     }
 
+    // --- Pagination Helper Functions ---
+    fn calculate_offset_limit(pagination: &Option<crate::domain::DomainPaginationParams>) -> (i32, i32) {
+        match pagination {
+            Some(params) => {
+                let page = params.page.unwrap_or(1).max(1);
+                let page_size = params.page_size.unwrap_or(200).min(5000).max(1);
+                let offset = (page - 1) * page_size;
+                (offset as i32, page_size as i32)
+            }
+            None => (0, 200), // Default: first page, 200 results
+        }
+    }
+
+    fn create_pagination_meta(
+        page: u32,
+        page_size: u32,
+        returned_count: usize,
+    ) -> crate::domain::DomainPaginationMeta {
+        crate::domain::DomainPaginationMeta {
+            page,
+            page_size,
+            total_results: None, // LiteAPI doesn't provide total count
+            has_next_page: returned_count as u32 == page_size, // Assume more if full page
+            has_previous_page: page > 1,
+        }
+    }
+
     // --- Mapping functions ---
     fn map_domain_search_to_liteapi(
         domain_criteria: &DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
     ) -> LiteApiHotelSearchRequest {
+        let (offset, limit) = Self::calculate_offset_limit(&domain_criteria.pagination);
+        
         LiteApiHotelSearchRequest {
             country_code: domain_criteria.destination_country_code.clone(),
             city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
-            offset: 0,
-            limit: 50,
+            offset,
+            limit,
         }
     }
 
@@ -198,6 +227,7 @@ impl LiteApiAdapter {
                 .into_iter()
                 .map(|hotel| Self::map_liteapi_hotel_to_domain(hotel))
                 .collect(),
+            pagination: None, // Will be set by calling function if needed
         }
     }
 
@@ -270,6 +300,7 @@ impl LiteApiAdapter {
         if rates_response.is_no_availability() {
             return Ok(DomainHotelListAfterSearch {
                 hotel_results: vec![],
+                pagination: None,
             });
         }
 
@@ -283,6 +314,16 @@ impl LiteApiAdapter {
 
         // Filter out hotels with zero pricing
         Self::filter_hotels_with_valid_pricing(&mut domain_results);
+
+        // Add pagination metadata if pagination params are provided
+        if let Some(ref pagination_params) = search_criteria.pagination {
+            let page = pagination_params.page.unwrap_or(1);
+            let page_size = pagination_params.page_size.unwrap_or(200);
+            let returned_count = domain_results.hotel_results.len();
+            
+            let pagination_meta = Self::create_pagination_meta(page, page_size, returned_count);
+            domain_results.pagination = Some(pagination_meta);
+        }
 
         Ok(domain_results)
     }
@@ -1431,7 +1472,11 @@ impl LiteApiAdapter {
                     currency: policy.currency,
                 })
                 .collect(),
-            hotel_remarks: data.cancellation_policies.hotel_remarks,
+            hotel_remarks: if data.cancellation_policies.hotel_remarks.is_empty() {
+                None
+            } else {
+                Some(data.cancellation_policies.hotel_remarks.join(". "))
+            },
             refundable_tag: data.cancellation_policies.refundable_tag,
         };
 
