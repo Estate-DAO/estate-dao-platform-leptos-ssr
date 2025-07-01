@@ -304,7 +304,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     no_of_rooms: guests.rooms.get_untracked(),
                     room_guests,
                     guest_nationality: "US".to_string(), // Default for now
-                    pagination: None, // No pagination for hotel details
+                    pagination: None,                    // No pagination for hotel details
                 };
 
                 log!("Using search criteria for hotel details API: destination={}, dates={:?}-{:?}, guests={}+{}+{}", 

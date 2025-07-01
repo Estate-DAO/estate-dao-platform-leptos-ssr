@@ -20,7 +20,7 @@ use crate::{
     },
     page::HotelListParams,
     utils::query_params::QueryParamsSync,
-    view_state_layer::ui_search_state::{SearchListResults, UISearchCtx},
+    view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx},
 };
 // use chrono::{Datelike, NaiveDate};
 use crate::page::InputGroupContainer;
@@ -237,6 +237,10 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                 on:click=move |ev| {
                     ev.prevent_default();
                     log!("[root.rs InputGroup] Search button clicked, about to dispatch search action");
+
+                    // Reset pagination to first page when search is clicked
+                    UIPaginationState::reset_to_first_page();
+                    log!("[root.rs InputGroup] Pagination reset to first page");
 
                     // Log current UISearchCtx state before dispatch
                     let current_search_ctx: UISearchCtx = expect_context();

@@ -31,15 +31,15 @@ pub struct DomainRoomGuest {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainPaginationParams {
-    pub page: Option<u32>,       // 1-based page number
-    pub page_size: Option<u32>,  // Results per page (default: 200, max: 5000)
+    pub page: Option<u32>,      // 1-based page number
+    pub page_size: Option<u32>, // Results per page (default: 200, max: 5000)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainPaginationMeta {
     pub page: u32,
     pub page_size: u32,
-    pub total_results: Option<u32>,    // If available from API
+    pub total_results: Option<u32>, // If available from API
     pub has_next_page: bool,
     pub has_previous_page: bool,
 }

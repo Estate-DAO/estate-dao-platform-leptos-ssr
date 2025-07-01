@@ -281,7 +281,11 @@ cfg_if! {
 
         use telemetry_axum;
         #[cfg(feature = "debug_log")]
-        let config_telemetry = telemetry_axum::Config::default();
+        let config_telemetry = telemetry_axum::Config{
+            exporter: telemetry_axum::Exporter::All,
+            propagate: false,
+            ..Default::default()
+        };
 
         // remove otlp endpoint in prod
         #[cfg(not(feature = "debug_log"))]

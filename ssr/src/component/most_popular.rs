@@ -13,7 +13,7 @@ use crate::{
     // api::search_hotel,
     component::SelectedDateRange,
     utils::date::{get_year_month_day, next_day},
-    view_state_layer::ui_search_state::UISearchCtx,
+    view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
 };
 
 use super::Destination;
@@ -177,6 +177,10 @@ pub fn MostPopular() -> impl IntoView {
                                                     log!("[most_popular.rs] Card clicked - AFTER prevent_default");
                                                     ev.stop_propagation();
                                                     log!("[most_popular.rs] Card clicked - AFTER stop_propagation");
+
+                                                    // Reset pagination to first page when card is clicked
+                                                    UIPaginationState::reset_to_first_page();
+                                                    log!("[most_popular.rs] Pagination reset to first page");
 
                                                     // Directly update search context
                                                     log!("[most_popular.rs] Setting destination");

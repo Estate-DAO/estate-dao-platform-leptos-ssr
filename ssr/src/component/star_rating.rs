@@ -10,7 +10,7 @@ where
 {
     let derived_rating = Signal::derive(move || rating());
     create_effect(move |_| {
-        log!("derived_rating: {}", derived_rating.get());
+        // log!("derived_rating: {}", derived_rating.get());
     });
 
     view! {

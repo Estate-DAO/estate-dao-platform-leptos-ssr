@@ -23,7 +23,7 @@ use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
     DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPaginationMeta, 
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPaginationMeta,
     DomainPaginationParams, DomainPrice, DomainRoomData, DomainRoomOccupancy, DomainRoomOption,
 };
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
@@ -128,6 +128,7 @@ impl LiteApiAdapter {
         original_count: usize,
         hotels_without_pricing_ids: &[String],
         final_count: usize,
+        rates_response: &LiteApiHotelRatesResponse,
     ) {
         let hotels_without_pricing_count = hotels_without_pricing_ids.len();
 
@@ -145,6 +146,24 @@ impl LiteApiAdapter {
                 "🚫 Hotels without valid pricing (filtered out): [{}]",
                 hotels_without_pricing_ids.join(", ")
             );
+
+            // // Log the raw API response for debugging
+            // match serde_json::to_string_pretty(rates_response) {
+            //     Ok(api_response_json) => {
+            //         crate::log!(
+            //             "📋 LiteAPI Rates Response (Raw) for filtered hotels: {}",
+            //             api_response_json
+            //         );
+            //     }
+            //     Err(e) => {
+            //         crate::log!(
+            //             "⚠️ Failed to serialize LiteAPI rates response for logging: {}",
+            //             e
+            //         );
+            //         // Fallback to debug format
+            //         crate::log!("📋 LiteAPI Rates Response (Debug): {:?}", rates_response);
+            //     }
+            // }
         } else if original_count > 0 {
             crate::log!(
                 "LiteAPI search filtering: All {} hotels had valid pricing",
@@ -154,28 +173,50 @@ impl LiteApiAdapter {
     }
 
     // --- Pagination Helper Functions ---
-    fn calculate_offset_limit(pagination: &Option<crate::domain::DomainPaginationParams>) -> (i32, i32) {
+    fn calculate_offset_limit(
+        pagination: &Option<crate::domain::DomainPaginationParams>,
+    ) -> (i32, i32) {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(200).min(5000).max(1);
+                let page_size = params.page_size.unwrap_or(20).min(5000).max(1);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 200), // Default: first page, 200 results
+            None => (0, 500), // Default: first page, 500 results
         }
     }
 
-    fn create_pagination_meta(
+    // fn create_pagination_meta(
+    //     page: u32,
+    //     page_size: u32,
+    //     returned_count: usize,
+    // ) -> crate::domain::DomainPaginationMeta {
+    //     crate::domain::DomainPaginationMeta {
+    //         page,
+    //         page_size,
+    //         total_results: None, // LiteAPI doesn't provide total count
+    //         has_next_page: returned_count as u32 == page_size, // Assume more if full page
+    //         has_previous_page: page > 1,
+    //     }
+    // }
+
+    fn create_pagination_meta_with_original_count(
         page: u32,
         page_size: u32,
         returned_count: usize,
+        original_count_from_api: usize,
+        requested_limit: usize,
     ) -> crate::domain::DomainPaginationMeta {
+        // Better logic: has_next_page based on original API response count
+        // If LiteAPI returned exactly what we requested, there might be more
+        let has_next_page = original_count_from_api >= requested_limit;
+
         crate::domain::DomainPaginationMeta {
             page,
             page_size,
             total_results: None, // LiteAPI doesn't provide total count
-            has_next_page: returned_count as u32 == page_size, // Assume more if full page
+            has_next_page,
             has_previous_page: page > 1,
         }
     }
@@ -186,7 +227,15 @@ impl LiteApiAdapter {
         ui_filters: UISearchFilters,
     ) -> LiteApiHotelSearchRequest {
         let (offset, limit) = Self::calculate_offset_limit(&domain_criteria.pagination);
-        
+
+        // Debug logging for pagination parameters
+        crate::log!(
+            "🔍 LiteAPI Pagination Debug: pagination_params={:?}, calculated offset={}, limit={}",
+            domain_criteria.pagination,
+            offset,
+            limit
+        );
+
         LiteApiHotelSearchRequest {
             country_code: domain_criteria.destination_country_code.clone(),
             city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
@@ -253,6 +302,9 @@ impl LiteApiAdapter {
         liteapi_response: LiteApiHotelSearchResponse,
         search_criteria: &DomainHotelSearchCriteria,
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
+        // Track original count before any filtering
+        let original_count_from_liteapi = liteapi_response.data.len();
+
         let mut domain_results = Self::map_liteapi_search_to_domain(liteapi_response.clone());
 
         // (todo): review hotel_search - Extract hotel IDs (max 100 as per plan)
@@ -313,16 +365,34 @@ impl LiteApiAdapter {
         Self::merge_pricing_into_search_results(&mut domain_results, rates_response.clone());
 
         // Filter out hotels with zero pricing
-        Self::filter_hotels_with_valid_pricing(&mut domain_results);
+        Self::filter_hotels_with_valid_pricing(&mut domain_results, &rates_response);
 
         // Add pagination metadata if pagination params are provided
         if let Some(ref pagination_params) = search_criteria.pagination {
             let page = pagination_params.page.unwrap_or(1);
             let page_size = pagination_params.page_size.unwrap_or(200);
             let returned_count = domain_results.hotel_results.len();
-            
-            let pagination_meta = Self::create_pagination_meta(page, page_size, returned_count);
+
+            // Check if we got the full requested amount from LiteAPI (before filtering)
+            let requested_limit = page_size as usize;
+
+            let pagination_meta = Self::create_pagination_meta_with_original_count(
+                page,
+                page_size,
+                returned_count,
+                original_count_from_liteapi,
+                requested_limit,
+            );
+
+            // Debug logging for pagination metadata
+            crate::log!(
+                "📊 Pagination Metadata: page={}, page_size={}, returned_count={}, original_count={}, has_next={}, has_previous={}",
+                pagination_meta.page, pagination_meta.page_size, returned_count, original_count_from_liteapi, pagination_meta.has_next_page, pagination_meta.has_previous_page
+            );
+
             domain_results.pagination = Some(pagination_meta);
+        } else {
+            crate::log!("⚠️ No pagination params provided, pagination metadata will be None");
         }
 
         Ok(domain_results)
@@ -375,7 +445,10 @@ impl LiteApiAdapter {
     }
 
     // Filter out hotels with zero pricing from search results
-    fn filter_hotels_with_valid_pricing(domain_results: &mut DomainHotelListAfterSearch) {
+    fn filter_hotels_with_valid_pricing(
+        domain_results: &mut DomainHotelListAfterSearch,
+        rates_response: &LiteApiHotelRatesResponse,
+    ) {
         let original_count = domain_results.hotel_results.len();
 
         // Collect hotel IDs without valid pricing for logging
@@ -392,8 +465,13 @@ impl LiteApiAdapter {
 
         let final_count = domain_results.hotel_results.len();
 
-        // Use separate logging function
-        Self::log_pricing_filter_results(original_count, &hotels_without_pricing_ids, final_count);
+        // Use separate logging function with API response
+        Self::log_pricing_filter_results(
+            original_count,
+            &hotels_without_pricing_ids,
+            final_count,
+            rates_response,
+        );
     }
 
     fn is_search_hotel_details_empty(hotel: &LiteApiHotelResult) -> bool {

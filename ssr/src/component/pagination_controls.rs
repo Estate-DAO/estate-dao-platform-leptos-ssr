@@ -1,5 +1,6 @@
-use leptos::*;
+use crate::utils::browser;
 use crate::view_state_layer::ui_search_state::UIPaginationState;
+use leptos::*;
 
 #[component]
 pub fn PaginationControls() -> impl IntoView {
@@ -7,21 +8,26 @@ pub fn PaginationControls() -> impl IntoView {
 
     let handle_previous_page = move |_| {
         UIPaginationState::go_to_previous_page();
+
+        // Scroll to top after pagination
+        browser::scroll_to_top();
     };
 
     let handle_next_page = move |_| {
+        // crate::log!("[PAGINATION-DEBUG] 🔄 Next button clicked!");
         UIPaginationState::go_to_next_page();
+        // crate::log!("[PAGINATION-DEBUG] 🔄 go_to_next_page() called");
+
+        // Scroll to top after pagination
+        browser::scroll_to_top();
     };
 
     view! {
         <div class="flex items-center justify-center space-x-4 py-6">
             <button
                 on:click=handle_previous_page
-                disabled=move || {
-                    pagination_state.pagination_meta.get()
-                        .map_or(true, |meta| !meta.has_previous_page)
-                }
-                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium 
+                disabled=move || UIPaginationState::is_previous_button_disabled()
+                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium
                        hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed 
                        transition-colors duration-200"
             >
@@ -38,7 +44,7 @@ pub fn PaginationControls() -> impl IntoView {
                         {move || pagination_state.current_page.get().to_string()}
                     </span>
                 </span>
-                
+
                 {move || {
                     pagination_state.pagination_meta.get()
                         .map(|meta| {
@@ -54,11 +60,8 @@ pub fn PaginationControls() -> impl IntoView {
 
             <button
                 on:click=handle_next_page
-                disabled=move || {
-                    pagination_state.pagination_meta.get()
-                        .map_or(true, |meta| !meta.has_next_page)
-                }
-                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium 
+                disabled=move || UIPaginationState::is_next_button_disabled()
+                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium
                        hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed 
                        transition-colors duration-200"
             >
@@ -82,12 +85,12 @@ pub fn PaginationInfo() -> impl IntoView {
                     .map(|meta| {
                         let start = (meta.page - 1) * meta.page_size + 1;
                         let end = meta.page * meta.page_size;
-                        
+
                         view! {
                             <span>
-                                "Showing " 
+                                "Showing "
                                 <span class="font-semibold">{start.to_string()}</span>
-                                " - " 
+                                " - "
                                 <span class="font-semibold">{end.to_string()}</span>
                                 " results"
                                 {meta.total_results

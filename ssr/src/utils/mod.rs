@@ -4,6 +4,7 @@ pub mod backend_default_impl;
 pub mod backend_integration_helpers;
 pub mod booking_backend_conversions;
 pub mod booking_id;
+pub mod browser;
 mod colored_print;
 pub mod date;
 pub mod host;

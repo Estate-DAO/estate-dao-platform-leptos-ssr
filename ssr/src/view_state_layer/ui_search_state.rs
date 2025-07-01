@@ -160,16 +160,12 @@ impl UIPaginationState {
         let this: Self = expect_context();
         let current_page = this.current_page.get_untracked();
         let page_size = this.page_size.get_untracked();
-        
-        // Only return pagination params if not defaults
-        if current_page != 1 || page_size != 20 {
-            Some(DomainPaginationParams {
-                page: Some(current_page),
-                page_size: Some(page_size),
-            })
-        } else {
-            None // Use backend defaults
-        }
+
+        // Always return pagination params to ensure frontend controls pagination
+        Some(DomainPaginationParams {
+            page: Some(current_page),
+            page_size: Some(page_size),
+        })
     }
 
     pub fn set_current_page(page: u32) {
@@ -184,6 +180,13 @@ impl UIPaginationState {
 
     pub fn set_pagination_meta(meta: Option<DomainPaginationMeta>) {
         let this: Self = expect_context();
+
+        // Debug logging for pagination metadata setting
+        // crate::log!(
+        //     "[PAGINATION-DEBUG] 🔧 UIPaginationState::set_pagination_meta called with: {:?}",
+        //     meta
+        // );
+
         this.pagination_meta.set(meta);
     }
 
@@ -191,11 +194,19 @@ impl UIPaginationState {
         let this: Self = expect_context();
         let current = this.current_page.get_untracked();
         let meta = this.pagination_meta.get_untracked();
-        
+
+        // crate::log!("[PAGINATION-DEBUG] 🔄 go_to_next_page: current={}, meta={:?}", current, meta);
+
         if let Some(pagination_meta) = meta {
             if pagination_meta.has_next_page {
+                // crate::log!("[PAGINATION-DEBUG] 🔄 Setting current_page from {} to {}", current, current + 1);
                 this.current_page.set(current + 1);
+                // crate::log!("[PAGINATION-DEBUG] 🔄 Current page updated to: {}", this.current_page.get_untracked());
+            } else {
+                // crate::log!("[PAGINATION-DEBUG] 🔄 No next page available (has_next_page=false)");
             }
+        } else {
+            // crate::log!("[PAGINATION-DEBUG] 🔄 No pagination meta available");
         }
     }
 
@@ -203,7 +214,7 @@ impl UIPaginationState {
         let this: Self = expect_context();
         let current = this.current_page.get_untracked();
         let meta = this.pagination_meta.get_untracked();
-        
+
         if let Some(pagination_meta) = meta {
             if pagination_meta.has_previous_page && current > 1 {
                 this.current_page.set(current - 1);
@@ -216,13 +227,46 @@ impl UIPaginationState {
         this.current_page.set(1);
         this.pagination_meta.set(None);
     }
+
+    // Button state methods following the established pattern
+    pub fn is_previous_button_disabled() -> bool {
+        let this: Self = expect_context();
+        let meta_option = this.pagination_meta.get(); // Make reactive!
+        let is_disabled = meta_option
+            .as_ref()
+            .map_or(true, |meta| !meta.has_previous_page);
+
+        // Debug logging for button states
+        // crate::log!(
+        //     "[PAGINATION-DEBUG] 🔘 Previous Button Debug: pagination_meta={:?}, disabled={}",
+        //     meta_option, is_disabled
+        // );
+
+        is_disabled
+    }
+
+    pub fn is_next_button_disabled() -> bool {
+        let this: Self = expect_context();
+        let meta_option = this.pagination_meta.get(); // Make reactive!
+        let is_disabled = meta_option
+            .as_ref()
+            .map_or(true, |meta| !meta.has_next_page);
+
+        // Debug logging for button states
+        // crate::log!(
+        //     "[PAGINATION-DEBUG] 🔘 Next Button Debug: pagination_meta={:?}, disabled={}",
+        //     meta_option, is_disabled
+        // );
+
+        is_disabled
+    }
 }
 
 impl Default for UIPaginationState {
     fn default() -> Self {
         Self {
             current_page: create_rw_signal(1),
-            page_size: create_rw_signal(20), // Default page size
+            page_size: create_rw_signal(500), // Default page size
             pagination_meta: create_rw_signal(None),
         }
     }
