@@ -12,6 +12,9 @@ use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[cfg(not(feature = "ssr"))]
+use web_sys;
+
 // Import the integrated request/response types
 use crate::application_services::booking_service::{
     IntegratedBlockRoomRequest, IntegratedBlockRoomResponse,
@@ -78,18 +81,69 @@ impl ClientSideApiClient {
         })
     }
 
+    fn get_basic_auth_header() -> Option<String> {
+        #[cfg(not(feature = "ssr"))]
+        {
+            use base64::{engine::general_purpose, Engine as _};
+
+            // In a real application, you would get these from secure storage
+            // For now, we'll use browser prompt or stored credentials
+            if let Some(window) = web_sys::window() {
+                // Try to get stored credentials from sessionStorage
+                if let Ok(Some(storage)) = window.session_storage() {
+                    if let Ok(Some(username)) = storage.get_item("admin_username") {
+                        if let Ok(Some(password)) = storage.get_item("admin_password") {
+                            let credentials = format!("{}:{}", username, password);
+                            let encoded = general_purpose::STANDARD.encode(credentials.as_bytes());
+                            return Some(format!("Basic {}", encoded));
+                        }
+                    }
+                }
+
+                // Fallback: prompt user for credentials
+                if let Ok(Some(username)) = window.prompt_with_message("Enter admin username:") {
+                    if let Ok(Some(password)) = window.prompt_with_message("Enter admin password:")
+                    {
+                        let credentials = format!("{}:{}", username, password);
+                        let encoded = general_purpose::STANDARD.encode(credentials.as_bytes());
+
+                        // Store credentials in sessionStorage for this session
+                        if let Ok(Some(storage)) = window.session_storage() {
+                            let _ = storage.set_item("admin_username", &username);
+                            let _ = storage.set_item("admin_password", &password);
+                        }
+
+                        return Some(format!("Basic {}", encoded));
+                    }
+                }
+            }
+            None
+        }
+        #[cfg(feature = "ssr")]
+        {
+            None
+        }
+    }
+
     async fn make_post_request<T: DeserializeOwned>(
         endpoint: &str,
         body: String,
         context: &str,
     ) -> Result<T, String> {
         let client = reqwest::Client::new();
-        let response = client
+        let mut request_builder = client
             .post(Self::build_api_url(endpoint))
             .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await;
+            .body(body);
+
+        // Add basic auth headers for admin endpoints
+        if endpoint.contains("/admin/") {
+            if let Some(auth_header) = Self::get_basic_auth_header() {
+                request_builder = request_builder.header("Authorization", auth_header);
+            }
+        }
+
+        let response = request_builder.send().await;
 
         match response {
             Ok(res) => {

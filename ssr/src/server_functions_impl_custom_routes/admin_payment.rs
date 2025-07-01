@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -19,11 +19,25 @@ use estate_fe::{
 use serde_json::json;
 use tracing::{error, info, instrument};
 
+use crate::basic_auth::validate_basic_auth_from_headers;
+
 #[instrument(name = "check_payment_status_handler", skip(state))]
 pub async fn check_payment_status(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<CheckPaymentStatusRequest>,
 ) -> Response {
+    // Validate authentication
+    if let Err(status_code) = validate_basic_auth_from_headers(&headers, &state) {
+        return (
+            status_code,
+            Json(json!({
+                "error": "Authentication required",
+                "details": "Invalid or missing basic authentication credentials"
+            })),
+        )
+            .into_response();
+    }
     info!(
         "Checking payment status for payment_id: {}",
         request.payment_id
@@ -55,8 +69,20 @@ pub async fn check_payment_status(
 #[instrument(name = "get_backend_booking_handler", skip(state))]
 pub async fn get_backend_booking(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<GetBackendBookingRequest>,
 ) -> Response {
+    // Validate authentication
+    if let Err(status_code) = validate_basic_auth_from_headers(&headers, &state) {
+        return (
+            status_code,
+            Json(json!({
+                "error": "Authentication required",
+                "details": "Invalid or missing basic authentication credentials"
+            })),
+        )
+            .into_response();
+    }
     info!(
         "Getting backend booking for email: {}, app_reference: {}",
         request.email, request.app_reference
@@ -92,8 +118,20 @@ pub async fn get_backend_booking(
 #[instrument(name = "update_payment_details_handler", skip(state))]
 pub async fn update_payment_details(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<UpdatePaymentRequest>,
 ) -> Response {
+    // Validate authentication
+    if let Err(status_code) = validate_basic_auth_from_headers(&headers, &state) {
+        return (
+            status_code,
+            Json(json!({
+                "error": "Authentication required",
+                "details": "Invalid or missing basic authentication credentials"
+            })),
+        )
+            .into_response();
+    }
     info!(
         "Updating payment details for email: {}, app_reference: {}",
         request.email, request.app_reference
