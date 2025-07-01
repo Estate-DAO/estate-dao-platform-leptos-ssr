@@ -197,7 +197,7 @@ pub struct LiteApiCancellationPolicies {
     #[serde(rename = "cancelPolicyInfos")]
     pub cancel_policy_infos: Vec<LiteApiCancelPolicyInfo>,
     #[serde(rename = "hotelRemarks")]
-    pub hotel_remarks: Option<String>,
+    pub hotel_remarks: Vec<String>,
     #[serde(rename = "refundableTag")]
     pub refundable_tag: String,
 }
