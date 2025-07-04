@@ -16,10 +16,8 @@ use crate::domain::{
     DomainRoomGuest, DomainSelectedDateRange, DomainSelectedRoomWithQuantity, DomainUserDetails,
 };
 use crate::log;
-use crate::utils::{
-    app_reference::{generate_app_reference, BookingId},
-    BackendIntegrationHelper,
-};
+use crate::utils::{app_reference::BookingId, BackendIntegrationHelper};
+use crate::view_state_layer::booking_id_state::BookingIdState;
 use crate::view_state_layer::email_verification_state::EmailVerificationState;
 use crate::view_state_layer::hotel_details_state::PricingBookNowState;
 use crate::view_state_layer::ui_block_room::{
@@ -41,6 +39,18 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
     // Initialize form data on mount - only once
     let (initialized, set_initialized) = create_signal(false);
+
+    // Create booking ID signal - uses centralized BookingIdState
+    let booking_id_signal = create_memo(move |_| {
+        // Get the primary adult email
+        let adults_list = block_room_state.adults.get();
+        if let Some(email) = adults_list.first().and_then(|adult| adult.email.clone()) {
+            // Use centralized booking ID management
+            BookingIdState::get_or_create_booking_id(email)
+        } else {
+            None
+        }
+    });
 
     create_effect(move |_| {
         let adults_count = ui_search_ctx.guests.adults.get() as usize;
@@ -435,7 +445,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     <TermsCheckbox />
 
                     // Mobile confirm button
-                    <ConfirmButton mobile=true />
+                    <ConfirmButton mobile=true booking_id_signal=booking_id_signal />
                 </div>
 
                 // Right side - Desktop pricing summary
@@ -443,7 +453,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     <EnhancedPricingDisplay mobile=false />
 
                     // Desktop confirm button
-                    <ConfirmButton mobile=false />
+                    <ConfirmButton mobile=false booking_id_signal=booking_id_signal />
                 </div>
                 </div>
 
@@ -850,7 +860,10 @@ pub fn TermsCheckbox() -> impl IntoView {
 }
 
 #[component]
-pub fn ConfirmButton(mobile: bool) -> impl IntoView {
+pub fn ConfirmButton(
+    mobile: bool,
+    #[prop(into)] booking_id_signal: Signal<Option<BookingId>>,
+) -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let is_form_valid = move || BlockRoomUIState::get_form_valid();
 
@@ -858,7 +871,7 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
     let email_state = EmailVerificationState::from_leptos_context();
 
     // Create action for integrated prebook + backend save API call
-    let prebook_action = create_action(|_: &()| async move {
+    let prebook_action = create_action(move |_: &()| async move {
         log!("Integrated prebook action triggered - calling integrated API");
         BlockRoomUIState::set_loading(true);
 
@@ -896,14 +909,13 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
             return None;
         };
 
-        // Generate booking ID
-        let app_reference_signal = generate_app_reference(email.clone());
-        let Some(booking_id) = app_reference_signal.get_untracked() else {
-            log!("Integrated prebook action failed - could not generate booking ID");
+        // Use the booking ID from the shared signal
+        let Some(booking_id) = booking_id_signal.get_untracked() else {
+            log!("Integrated prebook action failed - no booking ID available");
             BlockRoomUIState::batch_update_on_error(
                 Some("validation".to_string()),
-                Some("Unable to generate booking reference".to_string()),
-                Some("Failed to generate app reference".to_string()),
+                Some("Unable to get booking reference".to_string()),
+                Some("No booking ID available".to_string()),
             );
             return None;
         };
@@ -1377,12 +1389,10 @@ pub fn EmailVerificationStep(
         adults_list.first().and_then(|adult| adult.email.clone())
     };
 
-    // Get booking ID
+    // Get booking ID using centralized state management
     let get_booking_id = move || {
         if let Some(email) = get_email() {
-            let app_reference_signal = generate_app_reference(email.clone());
-            app_reference_signal
-                .get()
+            BookingIdState::get_or_create_booking_id(email)
                 .map(|booking_id| booking_id.to_order_id())
         } else {
             None

@@ -1548,6 +1548,7 @@ dependencies = [
  "icondata",
  "icondata_core",
  "k256",
+ "lazy_static",
  "leptos",
  "leptos-use",
  "leptos_axum",

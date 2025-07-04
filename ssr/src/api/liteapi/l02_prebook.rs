@@ -76,7 +76,7 @@ pub struct LiteApiPrebookCancelPolicyInfo {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiPrebookCancellationPolicies {
     #[serde(rename = "cancelPolicyInfos")]
-    pub cancel_policy_infos: Vec<LiteApiPrebookCancelPolicyInfo>,
+    pub cancel_policy_infos: Option<Vec<LiteApiPrebookCancelPolicyInfo>>,
     #[serde(rename = "hotelRemarks")]
     pub hotel_remarks: Vec<String>,
     #[serde(rename = "refundableTag")]

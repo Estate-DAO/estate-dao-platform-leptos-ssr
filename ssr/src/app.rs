@@ -24,6 +24,7 @@ use crate::{
     view_state_layer::{
         api_error_state::ApiErrorState,
         booking_context_state::BookingContextState,
+        booking_id_state::BookingIdState,
         confirmation_results_state::ConfirmationResultsState,
         email_verification_state::EmailVerificationState,
         hotel_details_state::PricingBookNowState,
@@ -183,6 +184,9 @@ pub fn App() -> impl IntoView {
     // provide_context(SSEBookingStatusUpdates::default());
 
     provide_context(ApiErrorState::default());
+
+    // Booking ID state
+    provide_context(BookingIdState::default());
 
     // Email verification state
     provide_context(EmailVerificationState::default());
