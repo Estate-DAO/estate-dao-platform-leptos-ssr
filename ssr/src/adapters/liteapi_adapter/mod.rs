@@ -57,7 +57,9 @@ impl LiteApiAdapter {
                 .as_ref()
                 .map_or(true, |t| t.trim().is_empty());
 
-        let is_empty = name_empty || (description_empty && address_empty && no_images);
+        // <!-- Commented out image-based filtering -->
+        // let is_empty = name_empty || (description_empty && address_empty && no_images);
+        let is_empty = name_empty || (description_empty && address_empty);
 
         // Add comprehensive logging to understand why hotels are considered empty
         if is_empty {
@@ -488,11 +490,15 @@ impl LiteApiAdapter {
 
         // Consider hotel details empty if:
         // 1. Name is empty (critical field)
+        // <!-- Commented out image-based filtering -->
         // 2. Description is empty AND no main photo (key visual content missing)
         // 3. All essential fields are empty (name, description, address, images)
-        name_empty
-            || (description_empty && no_main_photo)
-            || (description_empty && address_empty && no_images)
+        // name_empty
+        //     || (description_empty && no_main_photo)
+        //     || (description_empty && address_empty && no_images)
+        // name_empty || (description_empty && address_empty)
+        // todo - for now, remove the guardrails around missing hotel details
+        false
     }
 
     fn log_search_hotel_filter_results_simple(
