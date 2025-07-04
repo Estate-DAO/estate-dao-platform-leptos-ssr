@@ -220,6 +220,83 @@ Team Nofeebooking 🥳
         let current_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         Ok(current_time >= config.token_expiry)
     }
+
+    /// Send OTP verification email
+    pub async fn send_otp_email(
+        &self,
+        email: &str,
+        otp: &str,
+        booking_id: &str,
+    ) -> Result<(), String> {
+        // Check if the access token is expired
+        if self.is_token_expired().map_err(|f| f.to_string())? {
+            self.refresh_token().await.map_err(|e| e.to_string())?;
+        }
+
+        let mail_state = self.get_config().ok();
+
+        match mail_state {
+            Some(state) => {
+                let access_token = state.access_token;
+                let subject = "Email Verification - Nofeebooking";
+
+                let body = format!(
+                    r#"
+Hello,
+
+Your email verification code is: {otp}
+
+This code will expire in 10 minutes.
+Booking Reference: {booking_id}
+
+Please enter this code to continue with your booking.
+
+Best regards,
+Team Nofeebooking
+                    "#,
+                );
+
+                tracing::debug!("OTP Email body: {}", body);
+
+                let url = "https://www.googleapis.com/gmail/v1/users/me/messages/send";
+
+                // Create the email message (no CC for OTP emails)
+                let email_raw = format!("To: {}\r\nSubject: {}\r\n\r\n{}", email, subject, body);
+                let encoded_message = general_purpose::STANDARD.encode(email_raw);
+                let payload = serde_json::json!({
+                    "raw": encoded_message
+                });
+
+                let client = Client::new();
+                let mut headers = HeaderMap::new();
+                headers.insert(
+                    "Authorization",
+                    HeaderValue::from_str(&format!("Bearer {}", access_token.unwrap())).unwrap(),
+                );
+                headers.insert(
+                    "Content-Type",
+                    HeaderValue::from_str("application/json").unwrap(),
+                );
+
+                let response = client
+                    .post(url)
+                    .body(serde_json::to_vec(&payload).unwrap())
+                    .headers(headers)
+                    .send()
+                    .await;
+
+                if response.as_ref().is_ok() && response.as_ref().unwrap().status().is_success() {
+                    tracing::info!("OTP email sent successfully to: {}", email);
+                    Ok(())
+                } else {
+                    let error_text = response.unwrap().text().await.map_err(|f| f.to_string())?;
+                    error!("Failed to send OTP email: {:?}", error_text);
+                    Err(format!("Failed to send OTP email: {:?}", error_text))
+                }
+            }
+            None => Err("Failed to get mail config for OTP email".to_string()),
+        }
+    }
 }
 
 /// Send booking confirmation email if payment is finished, then update backend email_sent status.

@@ -1,8 +1,9 @@
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::use_navigate;
+use leptos_use::{use_interval_fn, utils::Pausable};
 
-use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::client_side_api::{ClientSideApiClient, SendOtpResponse, VerifyOtpResponse};
 use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
 use crate::api::payments::{create_domain_request, PaymentProvider};
 use crate::app::AppRoutes;
@@ -19,6 +20,7 @@ use crate::utils::{
     app_reference::{generate_app_reference, BookingId},
     BackendIntegrationHelper,
 };
+use crate::view_state_layer::email_verification_state::EmailVerificationState;
 use crate::view_state_layer::hotel_details_state::PricingBookNowState;
 use crate::view_state_layer::ui_block_room::{
     AdultDetail, BlockRoomUIState, ChildDetail, RoomSelectionSummary,
@@ -852,6 +854,9 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let is_form_valid = move || BlockRoomUIState::get_form_valid();
 
+    // Email verification state - use centralized state
+    let email_state = EmailVerificationState::from_leptos_context();
+
     // Create action for integrated prebook + backend save API call
     let prebook_action = create_action(|_: &()| async move {
         log!("Integrated prebook action triggered - calling integrated API");
@@ -955,9 +960,14 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
 
     let open_modal = move |_| {
         if is_form_valid() {
-            // Open modal and call prebook API when confirm button is pressed
-            BlockRoomUIState::set_show_payment_modal(true);
-            prebook_action.dispatch(());
+            if !EmailVerificationState::get_email_verified() {
+                // Show email verification step first
+                EmailVerificationState::start_verification_flow();
+            } else {
+                // Email already verified, proceed with booking
+                BlockRoomUIState::set_show_payment_modal(true);
+                prebook_action.dispatch(());
+            }
         }
     };
 
@@ -976,6 +986,21 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
         }
     };
 
+    // Create callbacks outside the view to avoid lifetime issues
+    let on_email_verified = {
+        let prebook_action = prebook_action.clone();
+        Callback::new(move |_: ()| {
+            // Email verification is already handled in EmailVerificationState::complete_verification
+            // Proceed with booking
+            BlockRoomUIState::set_show_payment_modal(true);
+            prebook_action.dispatch(());
+        })
+    };
+
+    let on_email_cancel = Callback::new(move |_: ()| {
+        // Cancellation is already handled in EmailVerificationState::cancel_verification
+    });
+
     view! {
         <button
             class=move || format!("{} {}", button_class, button_style())
@@ -985,12 +1010,24 @@ pub fn ConfirmButton(mobile: bool) -> impl IntoView {
             // <!-- Phase 4.3: Dynamic button text with validation feedback -->
             {move || {
                 if is_form_valid() {
-                    "Confirm & Book"
+                    if EmailVerificationState::get_email_verified() {
+                        "Confirm & Book"
+                    } else {
+                        "Verify Email & Book"
+                    }
                 } else {
                     "Complete Required Fields"
                 }
             }}
         </button>
+
+        // Show email verification component when needed
+        <Show when=move || EmailVerificationState::get_show_verification_modal()>
+            <EmailVerificationStep
+                on_verified=on_email_verified
+                on_cancel=on_email_cancel
+            />
+        </Show>
     }
 }
 
@@ -1325,6 +1362,235 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
 // Note: build_block_room_request and save_booking_to_backend functions removed
 // The integrated server function now handles both the block room API call and backend save
 // using BookingConversions::ui_to_block_room_request() on the server side
+
+#[component]
+pub fn EmailVerificationStep(
+    #[prop(into)] on_verified: Callback<()>,
+    #[prop(into)] on_cancel: Callback<()>,
+) -> impl IntoView {
+    let block_room_state: BlockRoomUIState = expect_context();
+    let email_state = EmailVerificationState::from_leptos_context();
+
+    // Get email from form
+    let get_email = move || {
+        let adults_list = block_room_state.adults.get();
+        adults_list.first().and_then(|adult| adult.email.clone())
+    };
+
+    // Get booking ID
+    let get_booking_id = move || {
+        if let Some(email) = get_email() {
+            let app_reference_signal = generate_app_reference(email.clone());
+            app_reference_signal
+                .get()
+                .map(|booking_id| booking_id.to_order_id())
+        } else {
+            None
+        }
+    };
+
+    // Timer for resend countdown
+    let timer = use_interval_fn(
+        move || {
+            EmailVerificationState::tick_timer();
+        },
+        1000, // 1 second
+    );
+
+    // Start timer when it becomes active
+    create_effect(move |_| {
+        if EmailVerificationState::get_timer_active() {
+            (timer.resume)();
+        } else {
+            (timer.pause)();
+        }
+    });
+
+    // Action to send OTP
+    let send_otp_action = create_action(move |_: &()| {
+        let get_email = get_email.clone();
+        let get_booking_id = get_booking_id.clone();
+        async move {
+            EmailVerificationState::start_send_otp();
+
+            let email = get_email();
+            let booking_id = get_booking_id();
+
+            if let (Some(email), Some(booking_id)) = (email, booking_id) {
+                let client = ClientSideApiClient::new();
+                match client.send_otp_email(email, booking_id).await {
+                    Ok(response) => {
+                        EmailVerificationState::handle_send_otp_success(response);
+                    }
+                    Err(e) => {
+                        EmailVerificationState::handle_send_otp_error(e);
+                    }
+                }
+            } else {
+                EmailVerificationState::handle_send_otp_error(
+                    "Missing email or booking ID".to_string(),
+                );
+            }
+        }
+    });
+
+    // Action to verify OTP
+    let verify_otp_action = create_action(move |otp: &String| {
+        let get_booking_id = get_booking_id.clone();
+        let otp = otp.clone();
+        async move {
+            EmailVerificationState::start_verify_otp();
+
+            if let Some(booking_id) = get_booking_id() {
+                let client = ClientSideApiClient::new();
+                match client.verify_otp(booking_id, otp).await {
+                    Ok(response) => {
+                        if EmailVerificationState::handle_verify_otp_success(response) {
+                            // Verification successful - trigger callback
+                            Callable::call(&on_verified, ());
+                        }
+                    }
+                    Err(e) => {
+                        EmailVerificationState::handle_verify_otp_error(e);
+                    }
+                }
+            } else {
+                EmailVerificationState::handle_verify_otp_error("Missing booking ID".to_string());
+            }
+        }
+    });
+
+    let send_otp = move |_| {
+        send_otp_action.dispatch(());
+    };
+
+    let verify_otp = move |_| {
+        if EmailVerificationState::can_verify_otp() {
+            verify_otp_action.dispatch(EmailVerificationState::get_otp_value());
+        }
+    };
+
+    let resend_otp = move |_| {
+        if EmailVerificationState::get_can_resend() {
+            EmailVerificationState::resend_otp();
+            send_otp_action.dispatch(());
+        }
+    };
+
+    let cancel_verification = move |_| {
+        EmailVerificationState::cancel_verification();
+        Callable::call(&on_cancel, ());
+    };
+
+    // Handle Enter key in OTP input
+    let handle_otp_keypress = move |ev: ev::KeyboardEvent| {
+        if ev.key() == "Enter" && EmailVerificationState::can_verify_otp() {
+            verify_otp(ev::MouseEvent::new("click").unwrap());
+        }
+    };
+
+    view! {
+        <div class="email-verification-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+                // Close button
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">"Verify Your Email"</h2>
+                    <button
+                        class="text-gray-400 hover:text-gray-600"
+                        on:click=cancel_verification
+                    >
+                        <Icon icon=icondata::AiCloseOutlined class="text-xl" />
+                    </button>
+                </div>
+
+                <Show
+                    when=move || !EmailVerificationState::get_otp_sent() || !EmailVerificationState::get_show_otp_input()
+                    fallback=move || view! {
+                        // OTP input form
+                        <div class="space-y-4">
+                            <p class="text-gray-600">
+                                "We've sent a 6-digit verification code to "
+                                <span class="font-semibold">{move || get_email().unwrap_or_default()}</span>
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                "The code will expire in 10 minutes."
+                            </p>
+                            <input
+                                type="text"
+                                placeholder="000000"
+                                maxlength="6"
+                                class="w-full text-center text-2xl tracking-widest border rounded-lg p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                value=move || EmailVerificationState::get_otp_value()
+                                on:input=move |ev| {
+                                    let value = event_target_value(&ev);
+                                    EmailVerificationState::update_otp_value(value);
+                                }
+                                on:keypress=handle_otp_keypress
+                                autofocus=true
+                            />
+                            <div class="flex space-x-3">
+                                <button
+                                    class="flex-1 bg-blue-600 text-white rounded-lg py-3 font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled=move || !EmailVerificationState::can_verify_otp()
+                                    on:click=verify_otp
+                                >
+                                    {move || if EmailVerificationState::get_verify_otp_loading() { "Verifying..." } else { "Verify Email" }}
+                                </button>
+                                <div class="flex flex-col items-center">
+                                    <button
+                                        class="px-4 py-3 text-blue-600 hover:text-blue-800 font-semibold disabled:text-gray-400 disabled:cursor-not-allowed"
+                                        disabled=move || !EmailVerificationState::get_can_resend() || EmailVerificationState::get_send_otp_loading()
+                                        on:click=resend_otp
+                                    >
+                                        {move || if EmailVerificationState::get_send_otp_loading() { "Sending..." } else { "Resend Code" }}
+                                    </button>
+
+                                    // Timer display
+                                    <Show when=move || EmailVerificationState::get_timer_active()>
+                                        <div class="flex items-center text-xs text-gray-500 mt-1">
+                                            <Icon icon=icondata::AiClockCircleOutlined class="mr-1" />
+                                            <span>"Resend in " {move || EmailVerificationState::format_timer()}</span>
+                                        </div>
+                                    </Show>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                >
+                    // Send OTP form
+                    <div class="space-y-4">
+                        <p class="text-gray-600">
+                            "We'll send a verification code to:"
+                        </p>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <span class="font-semibold">{move || get_email().unwrap_or("No email found".to_string())}</span>
+                        </div>
+                        <p class="text-sm text-gray-500">
+                            "Please make sure this email address is correct before proceeding."
+                        </p>
+                        <button
+                            class="w-full bg-blue-600 text-white rounded-lg py-3 font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled=move || EmailVerificationState::get_send_otp_loading() || get_email().is_none()
+                            on:click=send_otp
+                        >
+                            {move || if EmailVerificationState::get_send_otp_loading() { "Sending..." } else { "Send Verification Code" }}
+                        </button>
+                    </div>
+                </Show>
+
+                // Error display
+                <Show when=move || EmailVerificationState::get_verification_error().is_some()>
+                    <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="flex items-center">
+                            <Icon icon=icondata::AiExclamationCircleOutlined class="text-red-500 mr-2" />
+                            <p class="text-red-600 text-sm">{move || EmailVerificationState::get_verification_error().unwrap_or_default()}</p>
+                        </div>
+                    </div>
+                </Show>
+            </div>
+        </div>
+    }
+}
 
 #[component]
 pub fn PaymentProviderButtons() -> impl IntoView {

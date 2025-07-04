@@ -56,6 +56,31 @@ pub struct UpdatePaymentRequest {
     pub payment_details: PaymentDetails,
 }
 
+// Email Verification API Types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SendOtpRequest {
+    pub email: String,
+    pub booking_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SendOtpResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyOtpRequest {
+    pub booking_id: String,
+    pub otp: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyOtpResponse {
+    pub success: bool,
+    pub message: String,
+}
+
 #[derive(Clone)]
 pub struct ClientSideApiClient;
 
@@ -335,6 +360,30 @@ impl ClientSideApiClient {
             "update payment details",
         )
         .await
+    }
+
+    // Email Verification API Methods
+    pub async fn send_otp_email(
+        &self,
+        email: String,
+        booking_id: String,
+    ) -> Result<SendOtpResponse, String> {
+        let request = SendOtpRequest { email, booking_id };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/send_otp_email_api",
+            "send OTP email",
+        )
+        .await
+    }
+
+    pub async fn verify_otp(
+        &self,
+        booking_id: String,
+        otp: String,
+    ) -> Result<VerifyOtpResponse, String> {
+        let request = VerifyOtpRequest { booking_id, otp };
+        Self::api_call_with_error(request, "server_fn_api/verify_otp_api", "verify OTP").await
     }
 }
 

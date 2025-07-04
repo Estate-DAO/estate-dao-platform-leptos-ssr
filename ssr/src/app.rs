@@ -25,6 +25,7 @@ use crate::{
         api_error_state::ApiErrorState,
         booking_context_state::BookingContextState,
         confirmation_results_state::ConfirmationResultsState,
+        email_verification_state::EmailVerificationState,
         hotel_details_state::PricingBookNowState,
         input_group_state::InputGroupState,
         // search_state::{
@@ -182,6 +183,9 @@ pub fn App() -> impl IntoView {
     // provide_context(SSEBookingStatusUpdates::default());
 
     provide_context(ApiErrorState::default());
+
+    // Email verification state
+    provide_context(EmailVerificationState::default());
 
     provide_context(DataTableCtx::default());
     // provide_context(NotificationState::default());

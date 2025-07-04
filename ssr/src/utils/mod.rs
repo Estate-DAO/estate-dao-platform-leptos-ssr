@@ -25,6 +25,7 @@ cfg_if::cfg_if! {
         pub mod notifier_event;
         pub mod estate_tracing;
         pub mod event_stream;
+        pub mod otp_storage;
     }
 }
 

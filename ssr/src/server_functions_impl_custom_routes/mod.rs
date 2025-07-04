@@ -44,6 +44,7 @@ mod admin_payment;
 mod block_room;
 mod book_room;
 mod create_payment_invoice;
+mod email_verification;
 mod get_hotel_info;
 mod get_hotel_rates;
 mod integrated_block_room;
@@ -54,6 +55,7 @@ mod search_hotel;
 pub use block_room::block_room_api_server_fn_route;
 pub use book_room::book_room_api_server_fn_route;
 pub use create_payment_invoice::create_payment_invoice_api_server_fn_route;
+pub use email_verification::{send_otp_email_api_server_fn_route, verify_otp_api_server_fn_route};
 pub use get_hotel_info::get_hotel_info_api_server_fn_route;
 pub use get_hotel_rates::get_hotel_rates_api_server_fn_route;
 pub use integrated_block_room::integrated_block_room_api_server_fn_route;
@@ -206,5 +208,13 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/admin/update_payment",
             post(admin_payment::update_payment_details).options(handle_options),
+        )
+        .route(
+            "/send_otp_email_api",
+            post(send_otp_email_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/verify_otp_api",
+            post(verify_otp_api_server_fn_route).options(handle_options),
         )
 }
