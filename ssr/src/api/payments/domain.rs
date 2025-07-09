@@ -78,25 +78,25 @@ pub struct ProviderResponseData {
 /// Payment status enumeration (provider-agnostic)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PaymentStatus {
-    Pending,   // Payment initiated but not completed
-    Completed, // Payment successfully completed
-    Failed,    // Payment failed
-    Cancelled, // Payment cancelled by user
-    Expired,   // Payment session expired
-    Refunded,  // Payment was refunded
-    Unknown,   // Status cannot be determined
+    Pending,         // Payment initiated but not completed
+    Completed,       // Payment successfully completed
+    Failed,          // Payment failed
+    Cancelled,       // Payment cancelled by user
+    Expired,         // Payment session expired
+    Refunded,        // Payment was refunded
+    Unknown(String), // Status cannot be determined
 }
 
 impl PaymentStatus {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> String {
         match self {
-            PaymentStatus::Pending => "pending",
-            PaymentStatus::Completed => "completed",
-            PaymentStatus::Failed => "failed",
-            PaymentStatus::Cancelled => "cancelled",
-            PaymentStatus::Expired => "expired",
-            PaymentStatus::Refunded => "refunded",
-            PaymentStatus::Unknown => "unknown",
+            PaymentStatus::Pending => "pending".to_string(),
+            PaymentStatus::Completed => "completed".to_string(),
+            PaymentStatus::Failed => "failed".to_string(),
+            PaymentStatus::Cancelled => "cancelled".to_string(),
+            PaymentStatus::Expired => "expired".to_string(),
+            PaymentStatus::Refunded => "refunded".to_string(),
+            PaymentStatus::Unknown(status) => status.clone(),
         }
     }
 }
@@ -111,14 +111,15 @@ pub struct DomainGetPaymentStatusRequest {
 /// Domain struct for payment status response (provider-agnostic)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainGetPaymentStatusResponse {
-    pub payment_id: String,             // session_id or payment_id
-    pub status: PaymentStatus,          // Unified enum
-    pub amount_total: Option<u64>,      // Total amount in smallest currency unit
-    pub currency: Option<String>,       // Currency code (USD, etc.)
-    pub provider: PaymentProvider,      // Which provider handled this payment
-    pub raw_provider_data: String,      // Raw provider response for debugging
-    pub order_id: Option<String>,       // Associated order ID if available
+    pub payment_id: String,        // session_id or payment_id
+    pub status: PaymentStatus,     // Unified enum
+    pub amount_total: Option<u64>, // Total amount in smallest currency unit
+    pub currency: Option<String>,  // Currency code (USD, etc.)
+    pub provider: PaymentProvider, // Which provider handled this payment
+    pub raw_provider_data: String, // Raw provider response for debugging
+    pub order_id: Option<String>,  // Associated order ID if available
     pub customer_email: Option<String>, // Customer email if available
+                                   // pub invoice_id: Option<String>,     // Invoice ID if available
 }
 
 /// Trait for payment service abstraction

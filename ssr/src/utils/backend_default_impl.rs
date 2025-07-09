@@ -41,6 +41,7 @@ impl Default for BePaymentApiResponse {
             order_id: String::default(),
             price_currency: String::default(),
             payment_id: u64::default(),
+            payment_id_v2: String::default(),
         }
     }
 }

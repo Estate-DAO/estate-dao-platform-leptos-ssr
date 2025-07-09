@@ -147,7 +147,7 @@ impl PaymentGateway for GetPaymentStatusRequest {
     type PaymentGatewayResponse = GetPaymentStatusResponse;
 }
 
-#[server]
+// #[server]
 pub async fn nowpayments_get_payment_status(
     request: GetPaymentStatusRequest,
 ) -> Result<GetPaymentStatusResponse, ServerFnError> {

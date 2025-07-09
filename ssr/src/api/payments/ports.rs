@@ -134,6 +134,7 @@ impl SuccessGetPaymentStatusResponse {
         self.payment_status.clone()
     }
     pub fn is_finished(&self) -> bool {
+        // todo(stripe) this is nowpayments specific. we want to also handle stripe here.
         self.get_payment_status().as_str() == "finished"
     }
 }
@@ -165,6 +166,7 @@ impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
                 order_id: response.order_id,
                 price_currency: response.price_currency,
                 payment_id: response.payment_id,
+                payment_id_v2: response.payment_id.to_string(),
             },
             GetPaymentStatusResponse::Failure(failed_resp) => {
                 let mut default_response = Self::default();

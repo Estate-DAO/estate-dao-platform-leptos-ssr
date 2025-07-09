@@ -4,7 +4,7 @@ use crate::utils::admin::admin_canister;
 use crate::log;
 use leptos::*;
 
-#[server(GreetBackend)]
+// #[server(GreetBackend)]
 pub async fn get_user_booking_backend(
     email: String,
 ) -> Result<Option<Vec<Booking>>, ServerFnError> {
@@ -19,7 +19,7 @@ pub async fn get_user_booking_backend(
     Ok(result)
 }
 
-#[server(GetBookingById)]
+// #[server(GetBookingById)]
 pub async fn get_booking_by_id_backend(
     booking_id: backend::BookingId,
 ) -> Result<Option<Booking>, ServerFnError> {

@@ -34,9 +34,12 @@ pub fn ConfirmationPageV2() -> impl IntoView {
     create_effect(move |_| {
         ConfirmationPageState::initialize();
 
-        // Extract payment_id from query params
-        let payment_id =
+        // Extract payment_id from query params - support both NowPayments and Stripe
+        let np_payment_id =
             query_map.with(|params| params.get("NP_payment_id").map(|p| p.to_string()));
+        let checkout_session_id =
+            query_map.with(|params| params.get("session_id").map(|p| p.to_string()));
+        let payment_id = np_payment_id.or(checkout_session_id);
 
         // Read booking data from localStorage
         let booking_id = BookingId::extract_booking_id_from_local_storage();

@@ -1392,8 +1392,8 @@ pub fn EmailVerificationStep(
     // Get booking ID using centralized state management
     let get_booking_id = move || {
         if let Some(email) = get_email() {
-            BookingIdState::get_or_create_booking_id(email)
-                .map(|booking_id| booking_id.to_order_id())
+            // booking id is created during email verification itself!
+            BookingIdState::create_booking_id(email).map(|booking_id| booking_id.to_order_id())
         } else {
             None
         }
@@ -1446,12 +1446,13 @@ pub fn EmailVerificationStep(
 
     // Action to verify OTP
     let verify_otp_action = create_action(move |otp: &String| {
-        let get_booking_id = get_booking_id.clone();
+        let read_booking_id =
+            BookingId::read_from_local_storage().map(|booking_id| booking_id.to_order_id());
         let otp = otp.clone();
         async move {
             EmailVerificationState::start_verify_otp();
 
-            if let Some(booking_id) = get_booking_id() {
+            if let Some(booking_id) = read_booking_id {
                 let client = ClientSideApiClient::new();
                 match client.verify_otp(booking_id, otp).await {
                     Ok(response) => {

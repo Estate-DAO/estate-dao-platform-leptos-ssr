@@ -259,12 +259,14 @@ impl PaymentServiceImpl {
                         success_response,
                     ) => {
                         let status = match success_response.payment_status.as_str() {
-                            "waiting" | "confirming" => PaymentStatus::Pending,
-                            "confirmed" | "finished" => PaymentStatus::Completed,
+                            "waiting" | "confirming" | "confirmed" => PaymentStatus::Pending,
+
+                            // only 'finished' is considered the terminal success step in nowpayments
+                            "finished" => PaymentStatus::Completed,
                             "failed" => PaymentStatus::Failed,
                             "refunded" => PaymentStatus::Refunded,
                             "expired" => PaymentStatus::Expired,
-                            _ => PaymentStatus::Unknown,
+                            other_status => PaymentStatus::Unknown(String::from(other_status)),
                         };
 
                         let domain_response = DomainGetPaymentStatusResponse {
@@ -312,7 +314,7 @@ impl PaymentServiceImpl {
         }
     }
 
-    /// Get payment status from Stripe
+    // Get payment status from Stripe
     async fn get_stripe_status(
         &self,
         session_id: String,

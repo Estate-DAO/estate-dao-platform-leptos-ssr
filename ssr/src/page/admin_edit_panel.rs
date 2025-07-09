@@ -432,6 +432,7 @@ pub fn AdminEditPanel() -> impl IntoView {
                                 payment_api_response: BePaymentApiResponse {
                                     payment_status: form.payment_status.get(),
                                     payment_id: form.payment_id.get().parse().unwrap_or(0),
+                                    payment_id_v2: form.payment_id.get().to_string(),
                                     provider: form.provider.get(),
                                     created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                                     updated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),

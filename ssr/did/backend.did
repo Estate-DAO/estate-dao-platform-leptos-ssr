@@ -21,6 +21,7 @@ type BEPaymentApiResponse = record {
   payment_status : text;
   price_amount : nat64;
   purchase_id : nat64;
+  payment_id_v2 : text;
   order_id : text;
   price_currency : text;
   payment_id : nat64;
@@ -115,8 +116,9 @@ service : {
   add_controller : (principal) -> (Result_1);
   get_all_bookings : () -> (vec BookingSummary) query;
   get_booking_by_id : (BookingId) -> (opt Booking) query;
-  get_booking_id_by_payment_id : (nat64) -> (opt BookingId) query;
+  get_booking_id_by_payment_id_v2 : (text) -> (opt BookingId) query;
   get_controllers : () -> (vec principal) query;
+  get_current_migration_info : () -> (nat64, text) query;
   get_email_sent : (BookingId) -> (Result_2) query;
   get_user_bookings : (text) -> (opt vec Booking) query;
   greet : (text) -> (text) query;

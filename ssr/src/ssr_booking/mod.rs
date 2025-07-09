@@ -17,7 +17,7 @@ use crate::ssr_booking::pipeline::PipelineExecutor;
 use crate::ssr_booking::pipeline::PipelineValidator;
 use crate::utils::notifier::Notifier;
 use mock_handler::MockStep;
-use payment_handler::GetPaymentStatusFromPaymentProvider;
+use payment_handler::{GetPaymentStatusFromPaymentProvider, GetPaymentStatusFromPaymentProviderV2};
 use pipeline::PipelineDecision;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,6 +47,7 @@ pub struct ServerSideBookingEvent {
 #[derive(Debug, Clone)]
 pub enum SSRBookingPipelineStep {
     PaymentStatus(GetPaymentStatusFromPaymentProvider),
+    PaymentStatusV2(GetPaymentStatusFromPaymentProviderV2),
     BookRoom(MakeBookingFromBookingProvider),
     GetBookingFromBackend(GetBookingFromBackend),
     SendEmail(SendEmailAfterSuccessfullBooking),
@@ -63,6 +64,7 @@ impl SSRBookingPipelineStep {
     ) -> Result<PipelineDecision, String> {
         match self {
             SSRBookingPipelineStep::PaymentStatus(step) => step.validate(event).await,
+            SSRBookingPipelineStep::PaymentStatusV2(step) => step.validate(event).await,
             SSRBookingPipelineStep::BookRoom(step) => step.validate(event).await,
             SSRBookingPipelineStep::GetBookingFromBackend(step) => step.validate(event).await,
             SSRBookingPipelineStep::SendEmail(step) => step.validate(event).await,
@@ -81,6 +83,9 @@ impl SSRBookingPipelineStep {
         match self {
             SSRBookingPipelineStep::PaymentStatus(_) => {
                 GetPaymentStatusFromPaymentProvider::execute(event, notifier).await
+            }
+            SSRBookingPipelineStep::PaymentStatusV2(_) => {
+                GetPaymentStatusFromPaymentProviderV2::execute(event, notifier).await
             }
             SSRBookingPipelineStep::GetBookingFromBackend(_) => {
                 GetBookingFromBackend::execute(event, notifier).await
@@ -107,6 +112,9 @@ impl fmt::Display for &SSRBookingPipelineStep {
         match self {
             SSRBookingPipelineStep::PaymentStatus(_) => {
                 write!(f, "GetPaymentStatusFromPaymentProvider")
+            }
+            SSRBookingPipelineStep::PaymentStatusV2(_) => {
+                write!(f, "GetPaymentStatusFromPaymentProviderV2")
             }
             SSRBookingPipelineStep::BookRoom(_) => write!(f, "MakeBookingFromBookingProvider"),
             SSRBookingPipelineStep::GetBookingFromBackend(_) => write!(f, "GetBookingFromBackend"),

@@ -86,6 +86,25 @@ impl BookingIdState {
         log!("Set booking ID in state: {}", booking_id.to_order_id());
     }
 
+    /// Create a new booking ID (always generates fresh, ignores existing)
+    pub fn create_booking_id(email: String) -> Option<BookingId> {
+        let this = Self::from_leptos_context();
+
+        log!("Creating new booking ID for email: {}", email);
+
+        // Generate new booking ID (this will also store it in local storage)
+        let app_reference_signal = generate_app_reference(email.clone());
+        if let Some(new_booking_id) = app_reference_signal.get_untracked() {
+            log!("Created new booking ID: {}", new_booking_id.to_order_id());
+            // Store it in state for future use
+            this.current_booking_id.set(Some(new_booking_id.clone()));
+            Some(new_booking_id)
+        } else {
+            log::error!("Failed to create new booking ID for email: {}", email);
+            None
+        }
+    }
+
     /// Debug helper to log current state
     #[cfg(feature = "debug_log")]
     pub fn log_state() {

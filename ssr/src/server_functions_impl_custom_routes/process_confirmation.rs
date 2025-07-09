@@ -11,7 +11,10 @@ use estate_fe::{
         booking_handler::MakeBookingFromBookingProvider,
         email_handler::SendEmailAfterSuccessfullBooking,
         get_booking_from_backend::GetBookingFromBackend,
-        payment_handler::GetPaymentStatusFromPaymentProvider, pipeline::process_pipeline,
+        payment_handler::{
+            GetPaymentStatusFromPaymentProvider, GetPaymentStatusFromPaymentProviderV2,
+        },
+        pipeline::process_pipeline,
         SSRBookingPipelineStep, ServerSideBookingEvent,
     },
     utils::app_reference::BookingId,
@@ -175,9 +178,9 @@ pub async fn process_confirmation_api_server_fn_route(
         backend_booking_struct: None,
     };
 
-    // Create pipeline steps
+    // Create pipeline steps - using V2 for unified payment provider support
     let payment_status_step =
-        SSRBookingPipelineStep::PaymentStatus(GetPaymentStatusFromPaymentProvider);
+        SSRBookingPipelineStep::PaymentStatusV2(GetPaymentStatusFromPaymentProviderV2);
     let book_room_step = SSRBookingPipelineStep::BookRoom(MakeBookingFromBookingProvider);
     let get_booking_step = SSRBookingPipelineStep::GetBookingFromBackend(GetBookingFromBackend);
     let send_email_step = SSRBookingPipelineStep::SendEmail(SendEmailAfterSuccessfullBooking);
