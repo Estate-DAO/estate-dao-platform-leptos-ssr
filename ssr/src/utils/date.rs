@@ -97,3 +97,9 @@ pub fn date_tuple_to_yyyy_mm_dd(date: (u32, u32, u32)) -> String {
 pub fn date_tuple_to_dd_mm_yyyy(date: (u32, u32, u32)) -> String {
     format!("{:02}-{:02}-{:04}", date.2, date.1, date.0)
 }
+
+pub fn add_days(year: u32, month: u32, day: u32, days_to_add: u32) -> (u32, u32, u32) {
+    let date = NaiveDate::from_ymd_opt(year as i32, month, day).unwrap();
+    let new_date = date + chrono::Duration::days(days_to_add as i64);
+    (new_date.year() as u32, new_date.month(), new_date.day())
+}

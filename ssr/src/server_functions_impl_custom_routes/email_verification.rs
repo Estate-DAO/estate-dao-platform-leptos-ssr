@@ -253,7 +253,6 @@ pub async fn verify_otp_api_server_fn_route(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::app_reference::BookingId;
 
     fn create_test_booking_id() -> String {
         let booking = BookingId {

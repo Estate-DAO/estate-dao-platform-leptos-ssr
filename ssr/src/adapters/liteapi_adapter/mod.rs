@@ -1556,11 +1556,12 @@ impl LiteApiAdapter {
                     currency: policy.currency,
                 })
                 .collect(),
-            hotel_remarks: if data.cancellation_policies.hotel_remarks.is_empty() {
-                None
-            } else {
-                Some(data.cancellation_policies.hotel_remarks.join(". "))
-            },
+            hotel_remarks: data
+                .cancellation_policies
+                .hotel_remarks
+                .as_ref()
+                .filter(|remarks| !remarks.is_empty())
+                .map(|remarks| remarks.join(". ")),
             refundable_tag: data.cancellation_policies.refundable_tag,
         };
 

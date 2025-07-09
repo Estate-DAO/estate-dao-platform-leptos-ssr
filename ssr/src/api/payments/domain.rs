@@ -99,6 +99,23 @@ impl PaymentStatus {
             PaymentStatus::Unknown(status) => status.clone(),
         }
     }
+
+    /// Returns true if payment is successfully completed
+    pub fn is_completed(&self) -> bool {
+        matches!(self, PaymentStatus::Completed)
+    }
+
+    /// Returns true if payment is in final state (no further changes expected)
+    pub fn is_final(&self) -> bool {
+        matches!(
+            self,
+            PaymentStatus::Completed
+                | PaymentStatus::Failed
+                | PaymentStatus::Cancelled
+                | PaymentStatus::Expired
+                | PaymentStatus::Refunded
+        )
+    }
 }
 
 /// Domain struct for payment status request (provider-agnostic)
@@ -159,6 +176,99 @@ impl std::fmt::Display for PaymentServiceError {
 }
 
 impl std::error::Error for PaymentServiceError {}
+
+/// Maps provider-specific payment status strings to domain states
+///
+/// Each variant handles the status mapping logic for a specific payment provider.
+/// AllProviders serves as a fallback that checks against all known providers.
+#[derive(Debug, Clone)]
+pub enum PaymentStatusMapper {
+    /// Maps NowPayments statuses: "finished"→Completed, "waiting"→Pending, etc.
+    NowPayments,
+    /// Maps Stripe statuses: "completed"→Completed, "processing"→Pending, etc.
+    Stripe,
+    /// Fallback: checks status against ALL providers, returns Completed if any match
+    AllProviders,
+    // Future providers added here
+}
+
+impl PaymentStatusMapper {
+    /// Maps provider-specific status string to domain PaymentStatus
+    ///
+    /// For AllProviders: checks status against all known providers,
+    /// returns Completed if ANY provider would consider it completed.
+    pub fn map_to_domain_state(&self, provider_status: &str) -> PaymentStatus {
+        match self {
+            PaymentStatusMapper::NowPayments => match provider_status {
+                "finished" => PaymentStatus::Completed,
+                "waiting" => PaymentStatus::Pending,
+                "failed" => PaymentStatus::Failed,
+                "cancelled" => PaymentStatus::Cancelled,
+                _ => PaymentStatus::Unknown(provider_status.to_string()),
+            },
+            PaymentStatusMapper::Stripe => match provider_status {
+                "completed" => PaymentStatus::Completed,
+                "processing" => PaymentStatus::Pending,
+                "failed" => PaymentStatus::Failed,
+                "cancelled" => PaymentStatus::Cancelled,
+                _ => PaymentStatus::Unknown(provider_status.to_string()),
+            },
+            PaymentStatusMapper::AllProviders => {
+                // Check if ANY provider would consider this status as completed
+                let known_providers = [
+                    PaymentStatusMapper::NowPayments,
+                    PaymentStatusMapper::Stripe,
+                ];
+
+                for provider in known_providers {
+                    if let PaymentStatus::Completed = provider.map_to_domain_state(provider_status)
+                    {
+                        return PaymentStatus::Completed;
+                    }
+                }
+
+                // If no provider recognizes it as completed, return Unknown
+                PaymentStatus::Unknown(provider_status.to_string())
+            }
+        }
+    }
+}
+
+/// Convert PaymentProvider to PaymentStatusMapper
+pub fn get_payment_status_mapper(provider: &PaymentProvider) -> PaymentStatusMapper {
+    match provider {
+        PaymentProvider::NowPayments => PaymentStatusMapper::NowPayments,
+        PaymentProvider::Stripe => PaymentStatusMapper::Stripe,
+        // New providers added here
+    }
+}
+
+/// Get payment status mapper for unknown/fallback providers
+pub fn get_fallback_payment_status_mapper() -> PaymentStatusMapper {
+    PaymentStatusMapper::AllProviders
+}
+
+/// Universal function to check if payment is completed for any provider
+pub fn is_payment_completed_universal(status: &str, provider: &PaymentProvider) -> bool {
+    let mapper = get_payment_status_mapper(provider);
+    let payment_status = mapper.map_to_domain_state(status);
+    payment_status.is_completed()
+}
+
+/// Universal function to check if payment is completed for any provider (including unknown ones)
+///
+/// For unknown providers, uses AllProviders fallback which checks against all known providers.
+/// Returns true if ANY provider would consider the status as completed.
+pub fn is_payment_completed_universal_with_fallback(status: &str, provider_str: &str) -> bool {
+    let mapper = match provider_str {
+        "nowpayments" => PaymentStatusMapper::NowPayments,
+        "stripe" => PaymentStatusMapper::Stripe,
+        _ => PaymentStatusMapper::AllProviders, // Use AllProviders fallback for unknown providers
+    };
+
+    let payment_status = mapper.map_to_domain_state(status);
+    payment_status.is_completed()
+}
 
 /// Convert domain request to provider-specific request
 impl From<DomainCreateInvoiceRequest> for CreateInvoiceRequest {

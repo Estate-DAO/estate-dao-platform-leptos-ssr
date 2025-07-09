@@ -4,7 +4,10 @@
 use cfg_if::cfg_if;
 use estate_fe::{
     api::provab::Provab,
-    api::{consts::EnvVarConfig, payments::NowPayments},
+    api::{
+        consts::EnvVarConfig,
+        payments::{service::PaymentServiceImpl, NowPayments},
+    },
     init::{get_provab_client, initialize_provab_client, AppStateBuilder},
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -24,6 +27,18 @@ use estate_fe::{
                               // event_stream::{event_stream_handler, counter_events},
     },
 };
+
+/// Detect payment provider from payment ID (sync version for main.rs)
+fn detect_payment_provider_sync(payment_id: &Option<String>) -> String {
+    if let Some(ref pid) = payment_id {
+        if let Ok(provider) = PaymentServiceImpl::detect_provider_from_payment_id(pid) {
+            return provider.as_str().to_string();
+        }
+    }
+
+    // Fallback for unknown providers
+    "unknown".to_string()
+}
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -204,7 +219,7 @@ cfg_if! {
             let event = ServerSideBookingEvent {
                 payment_id: payment_id.clone(),
                 order_id: order_id.to_string(),
-                provider: "nowpayments".to_string(),
+                provider: detect_payment_provider_sync(&payment_id),
                 user_email,
                 payment_status: None,
                 backend_payment_status: Some(String::from("started_processing")),

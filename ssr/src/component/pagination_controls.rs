@@ -45,17 +45,17 @@ pub fn PaginationControls() -> impl IntoView {
                     </span>
                 </span>
 
-                {move || {
-                    pagination_state.pagination_meta.get()
-                        .map(|meta| {
-                            view! {
-                                <span class="text-gray-500 text-sm">
-                                    "(" {meta.page_size} " per page)"
-                                </span>
-                            }.into_view()
-                        })
-                        .unwrap_or_else(|| view! { <span></span> }.into_view())
-                }}
+                // {move || {
+                //     pagination_state.pagination_meta.get()
+                //         .map(|meta| {
+                //             view! {
+                //                 <span class="text-gray-500 text-sm">
+                //                     "(" {meta.page_size} " per page)"
+                //                 </span>
+                //             }.into_view()
+                //         })
+                //         .unwrap_or_else(|| view! { <span></span> }.into_view())
+                // }}
             </div>
 
             <button

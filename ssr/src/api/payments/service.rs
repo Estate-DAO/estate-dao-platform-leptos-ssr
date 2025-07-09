@@ -55,7 +55,7 @@ impl PaymentService for PaymentServiceImpl {
         // Auto-detect provider if not specified
         let provider = match request.provider {
             Some(p) => p,
-            None => self.detect_provider_from_payment_id(&request.payment_id)?,
+            None => self.detect_provider_from_payment_id_instance(&request.payment_id)?,
         };
 
         match provider {
@@ -205,8 +205,8 @@ impl PaymentServiceImpl {
     }
 
     /// Auto-detect payment provider from payment ID format
-    fn detect_provider_from_payment_id(
-        &self,
+    /// Public static method to detect payment provider from payment ID
+    pub fn detect_provider_from_payment_id(
         payment_id: &str,
     ) -> Result<PaymentProvider, PaymentServiceError> {
         if payment_id.starts_with("cs_") {
@@ -221,6 +221,13 @@ impl PaymentServiceImpl {
                 payment_id
             )))
         }
+    }
+
+    fn detect_provider_from_payment_id_instance(
+        &self,
+        payment_id: &str,
+    ) -> Result<PaymentProvider, PaymentServiceError> {
+        Self::detect_provider_from_payment_id(payment_id)
     }
 
     /// Get payment status from NowPayments

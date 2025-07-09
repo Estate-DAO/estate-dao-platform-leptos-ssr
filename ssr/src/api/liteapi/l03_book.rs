@@ -91,7 +91,7 @@ pub struct LiteApiBookResponse {
     pub data: LiteApiBookData,
     #[serde(rename = "guestLevel")]
     pub guest_level: u32,
-    pub sandbox: bool,
+    pub sandbox: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,7 +197,7 @@ pub struct LiteApiCancellationPolicies {
     #[serde(rename = "cancelPolicyInfos")]
     pub cancel_policy_infos: Vec<LiteApiCancelPolicyInfo>,
     #[serde(rename = "hotelRemarks")]
-    pub hotel_remarks: Vec<String>,
+    pub hotel_remarks: Option<Vec<String>>,
     #[serde(rename = "refundableTag")]
     pub refundable_tag: String,
 }

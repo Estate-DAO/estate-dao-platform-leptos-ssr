@@ -18,6 +18,7 @@ use tracing::{debug, error, info, instrument, warn};
 use crate::api::canister::book_room_details::call_update_book_room_details_backend;
 use crate::api::canister::get_user_booking::get_user_booking_backend;
 use crate::api::consts::{ConfigLoader, EmailConfig, EnvVarConfig};
+use crate::api::payments::domain::{is_payment_completed_universal_with_fallback, PaymentProvider};
 use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse};
 use crate::api::payments::NowPayments;
 // use crate::api::{
@@ -35,6 +36,7 @@ use crate::utils::booking_id::PaymentIdentifiers;
 use crate::utils::notifier::{self, Notifier};
 use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
 use crate::utils::uuidv7;
+
 use chrono::Utc;
 
 // --- Email Client Implementation ---
@@ -369,10 +371,11 @@ impl PipelineValidator for SendEmailAfterSuccessfullBooking {
         let payment_status = event.payment_status.as_ref().unwrap();
         // let backend_payment_status = event.backend_payment_status.as_ref().unwrap();
 
-        if payment_status != "finished" {
+        // Check if payment is completed using domain logic with AllProviders fallback
+        if !is_payment_completed_universal_with_fallback(payment_status, &event.provider) {
             return Err(format!(
-                "Payment status is not finished: {}",
-                payment_status
+                "Payment status is not completed: {} (provider: {})",
+                payment_status, event.provider
             ));
         }
         // check if email is already sent. if it is sent, then do not run the pipeline

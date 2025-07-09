@@ -12,7 +12,7 @@ use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComp
 use crate::{
     // api::search_hotel,
     component::SelectedDateRange,
-    utils::date::{get_year_month_day, next_day},
+    utils::date::{add_days, get_year_month_day, next_day},
     view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
 };
 
@@ -125,9 +125,18 @@ pub fn MostPopular() -> impl IntoView {
     });
 
     // Use a memo for date_range so it's reactive and tracked
-    let date_range = create_memo(move |_| SelectedDateRange {
-        start: next_date.get(),
-        end: next_2_next_date.get(),
+    // <!-- Modified: Changed to next week (7 days from today) instead of next day -->
+    let date_range = create_memo(move |_| {
+        let (current_year, current_month, current_day) = initial_date.get();
+
+        // Calculate next week (7 days from today)
+        let next_week_start = add_days(current_year, current_month, current_day, 7);
+        let next_week_end = add_days(next_week_start.0, next_week_start.1, next_week_start.2, 1);
+
+        SelectedDateRange {
+            start: next_week_start,
+            end: next_week_end,
+        }
     });
 
     // Use shared search action with default configuration

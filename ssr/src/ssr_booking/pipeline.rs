@@ -101,7 +101,10 @@ pub async fn process_pipeline(
                 return Err(format!("Pipeline aborted: {}", reason));
             }
             PipelineDecision::Skip => {
-                info!(status = "skipped", "Pipeline step skipped");
+                info!(
+                    status = "skipped",
+                    "Pipeline step skipped - extracting backend data"
+                );
                 // Publish OnStepSkipped
                 if let Some(n) = notifier {
                     let skipped_event = NotifierEvent {
@@ -116,7 +119,8 @@ pub async fn process_pipeline(
                     n.notify(skipped_event).await;
                 }
 
-                // Do not execute the step
+                // Even when skipped, extract backend data to update the event
+                current_event = step.extract_backend_data(current_event).await?;
                 continue;
             }
             PipelineDecision::Run => {

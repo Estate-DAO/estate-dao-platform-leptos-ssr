@@ -5,7 +5,10 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    api::canister::get_user_booking::get_booking_by_id_backend,
+    api::{
+        canister::get_user_booking::get_booking_by_id_backend,
+        payments::service::PaymentServiceImpl,
+    },
     canister::backend,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -22,6 +25,33 @@ use estate_fe::{
 use serde_json::json;
 
 use super::{parse_json_request, ConfirmationProcessRequest};
+
+/// Detect payment provider from available information
+async fn detect_payment_provider(payment_id: &Option<String>, booking_id: &BookingId) -> String {
+    // Method 1: Detect from payment_id if available
+    if let Some(ref pid) = payment_id {
+        if let Ok(provider) = PaymentServiceImpl::detect_provider_from_payment_id(pid) {
+            return provider.as_str().to_string();
+        }
+    }
+
+    // Method 2: Try to extract from backend booking data
+    let backend_booking_id = backend::BookingId {
+        app_reference: booking_id.app_reference.clone(),
+        email: booking_id.email.clone(),
+    };
+
+    if let Ok(Some(booking)) = get_booking_by_id_backend(backend_booking_id).await {
+        return booking
+            .payment_details
+            .payment_api_response
+            .provider
+            .clone();
+    }
+
+    // Method 3: Unknown provider - will use AllProviders fallback
+    "unknown".to_string()
+}
 
 /// Fetch booking from backend and return serializable booking data
 /// Returns None if booking not found, logs error if fetch fails
@@ -170,7 +200,7 @@ pub async fn process_confirmation_api_server_fn_route(
     let event = ServerSideBookingEvent {
         payment_id: payment_id.clone(), // Now optional
         order_id: order_id.clone(),
-        provider: "nowpayments".to_string(),
+        provider: detect_payment_provider(&payment_id, &booking_id).await,
         user_email: user_email.clone(),
         payment_status: None,
         backend_payment_status: Some("confirmation_page_initiated".to_string()),

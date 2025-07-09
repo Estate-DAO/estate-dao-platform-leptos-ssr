@@ -105,6 +105,39 @@ impl SSRBookingPipelineStep {
             }
         }
     }
+
+    /// Extract backend data to update event when step is skipped
+    pub async fn extract_backend_data(
+        &self,
+        event: ServerSideBookingEvent,
+    ) -> Result<ServerSideBookingEvent, String> {
+        match self {
+            SSRBookingPipelineStep::PaymentStatus(_) => {
+                // For V1, just return the event as-is
+                Ok(event)
+            }
+            SSRBookingPipelineStep::PaymentStatusV2(_) => {
+                // Extract payment status from backend booking
+                extract_payment_status_from_backend(event).await
+            }
+            SSRBookingPipelineStep::BookRoom(_) => {
+                // Extract booking status from backend booking
+                extract_booking_status_from_backend(event).await
+            }
+            SSRBookingPipelineStep::GetBookingFromBackend(_) => {
+                // This step never gets skipped, it loads the backend data
+                Ok(event)
+            }
+            SSRBookingPipelineStep::SendEmail(_) => {
+                // Email step doesn't extract backend data
+                Ok(event)
+            }
+            SSRBookingPipelineStep::Mock(_) => {
+                // Mock step doesn't extract backend data
+                Ok(event)
+            }
+        }
+    }
 }
 
 impl fmt::Display for &SSRBookingPipelineStep {
@@ -122,4 +155,82 @@ impl fmt::Display for &SSRBookingPipelineStep {
             SSRBookingPipelineStep::Mock(_) => write!(f, "MockStep"),
         }
     }
+}
+
+/// Extract payment status from backend booking data when payment step is skipped
+async fn extract_payment_status_from_backend(
+    event: ServerSideBookingEvent,
+) -> Result<ServerSideBookingEvent, String> {
+    use crate::api::payments::domain::PaymentProvider;
+    use crate::api::payments::service::PaymentServiceImpl;
+    use crate::canister::backend::BackendPaymentStatus;
+
+    let mut updated_event = event;
+
+    if let Some(ref backend_booking) = updated_event.backend_booking_struct {
+        // Extract payment status from backend booking
+        let payment_status = match &backend_booking.payment_details.payment_status {
+            BackendPaymentStatus::Paid(_) => {
+                // Get the actual provider from the backend booking
+                let provider_str = &backend_booking
+                    .payment_details
+                    .payment_api_response
+                    .provider;
+
+                // Convert provider string to PaymentProvider enum for proper status mapping
+                let provider = match provider_str.as_str() {
+                    "stripe" => PaymentProvider::Stripe,
+                    "nowpayments" => PaymentProvider::NowPayments,
+                    _ => PaymentProvider::NowPayments, // Default fallback
+                };
+
+                // Map to the correct completed status based on provider
+                match provider {
+                    PaymentProvider::Stripe => "completed".to_string(),
+                    PaymentProvider::NowPayments => "finished".to_string(),
+                }
+            }
+            BackendPaymentStatus::Unpaid(_) => "pending".to_string(),
+        };
+
+        // Update the event with the extracted payment status
+        updated_event.payment_status = Some(payment_status);
+
+        tracing::info!(
+            "Extracted payment status from backend booking: {}",
+            updated_event.payment_status.as_ref().unwrap()
+        );
+    } else {
+        return Err("No backend booking data available to extract payment status".to_string());
+    }
+
+    Ok(updated_event)
+}
+
+/// Extract booking status from backend booking data when booking step is skipped
+async fn extract_booking_status_from_backend(
+    event: ServerSideBookingEvent,
+) -> Result<ServerSideBookingEvent, String> {
+    let mut updated_event = event;
+
+    if let Some(ref backend_booking) = updated_event.backend_booking_struct {
+        // Extract booking status from backend booking
+        let booking_status = if backend_booking.book_room_status.is_some() {
+            "confirmed".to_string()
+        } else {
+            "pending".to_string()
+        };
+
+        // Update the event with the extracted booking status
+        updated_event.backend_booking_status = Some(booking_status);
+
+        tracing::info!(
+            "Extracted booking status from backend booking: {}",
+            updated_event.backend_booking_status.as_ref().unwrap()
+        );
+    } else {
+        return Err("No backend booking data available to extract booking status".to_string());
+    }
+
+    Ok(updated_event)
 }
