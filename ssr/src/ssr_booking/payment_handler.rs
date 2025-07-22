@@ -608,24 +608,30 @@ impl GetPaymentStatusFromPaymentProviderV2 {
         order_id: &str,
         user_email: &str,
     ) -> Result<crate::canister::backend::Booking, String> {
-        let app_reference =
-            PaymentIdentifiers::app_reference_from_order_id(order_id).ok_or_else(|| {
-                format!(
-                    "Failed to extract app_reference from order_id: {}",
-                    order_id
-                )
-            })?;
+        // let app_reference =
+        //     PaymentIdentifiers::app_reference_from_order_id(order_id).ok_or_else(|| {
+        //         format!(
+        //             "Failed to extract app_reference from order_id: {}",
+        //             order_id
+        //         )
+        //     })?;
 
-        let booking_id = BookingId {
-            app_reference,
-            email: user_email.to_string(),
-        };
+        // let booking_id = BookingId {
+        //     app_reference,
+        //     email: user_email.to_string(),
+        // };
 
+        let booking_id = PaymentIdentifiers::booking_id_from_order_id(order_id, user_email)?;
         // Fetch booking by ID directly from backend
-        get_booking_by_id_backend(booking_id.clone())
+        get_booking_by_id_backend(booking_id.clone().into())
             .await
             .map_err(|e| format!("Failed to fetch booking: ServerFnError = {}", e))?
-            .ok_or_else(|| "No booking found with the specified booking ID".to_string())
+            .ok_or_else(|| {
+                format!(
+                    "No booking found with the specified booking ID: {:?}",
+                    booking_id
+                )
+            })
     }
 
     #[instrument(
@@ -845,6 +851,10 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
             // Load booking from backend if not already loaded
             if updated_event.backend_booking_struct.is_none() {
+                info!(
+                    "updated_event.backend_booking_struct is none: updated_event: {:?}",
+                    updated_event
+                );
                 let booking = Self::load_booking_from_backend(
                     &updated_event.order_id,
                     &updated_event.user_email,
@@ -852,8 +862,8 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                 .await?;
 
                 info!(
-                    "Loaded booking from backend for order_id: {}",
-                    updated_event.order_id
+                    "Loaded booking from backend for order_id: {}, backend_booking_struct: {:?}",
+                    updated_event.order_id, booking
                 );
                 updated_event.backend_booking_struct = Some(booking);
             }

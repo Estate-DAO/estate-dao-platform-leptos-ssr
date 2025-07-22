@@ -190,7 +190,7 @@ pub async fn process_confirmation_api_server_fn_route(
         if let Some(explicit_email) = request.email {
             // Create order_id from email + app_reference combination
             let derived_order_id =
-                PaymentIdentifiers::order_id_from_app_reference(&app_reference, &explicit_email);
+                PaymentIdentifiers::ensure_order_id(&app_reference, &explicit_email);
 
             tracing::info!(
                 "Derived order_id from email + app_reference: {}",

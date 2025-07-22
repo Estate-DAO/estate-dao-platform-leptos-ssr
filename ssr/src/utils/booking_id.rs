@@ -2,6 +2,12 @@
 
 use crate::utils::app_reference::BookingId;
 
+#[derive(Debug, PartialEq)]
+pub enum IdentifierType {
+    OrderId,
+    AppReference,
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentIdentifiers {
     /// given to us by payment provider
@@ -123,6 +129,15 @@ impl PaymentIdentifiers {
         Self::from_order_id(order_id).map(|ids| ids.app_reference)
     }
 
+    /// Detect whether a string is an order_id or app_reference
+    pub fn detect_identifier_type(identifier: &str) -> IdentifierType {
+        if identifier.starts_with("NP$") && BookingId::from_order_id(identifier).is_some() {
+            IdentifierType::OrderId
+        } else {
+            IdentifierType::AppReference
+        }
+    }
+
     /// Get order_id from app_reference and email
     pub fn order_id_from_app_reference(app_reference: &str, email: &str) -> String {
         BookingId {
@@ -130,6 +145,38 @@ impl PaymentIdentifiers {
             email: email.to_string(),
         }
         .to_order_id()
+    }
+
+    /// Get order_id from either app_reference or order_id (flexible input)
+    pub fn order_id_from_identifier(identifier: &str, email: &str) -> String {
+        match Self::detect_identifier_type(identifier) {
+            IdentifierType::OrderId => identifier.to_string(),
+            IdentifierType::AppReference => Self::order_id_from_app_reference(identifier, email),
+        }
+    }
+
+    /// Create order_id from identifier (handles both app_reference and order_id)
+    /// If input is order_id, returns it as-is. If app_reference, creates order_id.
+    pub fn ensure_order_id(identifier: &str, email: &str) -> String {
+        match Self::detect_identifier_type(identifier) {
+            IdentifierType::OrderId => identifier.to_string(),
+            IdentifierType::AppReference => Self::order_id_from_app_reference(identifier, email),
+        }
+    }
+
+    /// Create BookingId from order_id and user_email
+    pub fn booking_id_from_order_id(order_id: &str, user_email: &str) -> Result<BookingId, String> {
+        let app_reference = Self::app_reference_from_order_id(order_id).ok_or_else(|| {
+            format!(
+                "Failed to extract app_reference from order_id: {}",
+                order_id
+            )
+        })?;
+
+        Ok(BookingId {
+            app_reference,
+            email: user_email.to_string(),
+        })
     }
 }
 
@@ -281,6 +328,90 @@ mod tests {
             );
             assert_eq!(decoded.email, email, "Email roundtrip failed for: {}", desc);
         }
+    }
+
+    #[test]
+    /// Tests the detect_identifier_type method
+    fn test_detect_identifier_type() {
+        // Test order_ids
+        let order_id = "NP$6:ABC123$16:user@example.com";
+        assert_eq!(
+            PaymentIdentifiers::detect_identifier_type(order_id),
+            IdentifierType::OrderId,
+            "Should detect valid order_id"
+        );
+
+        // Test app_references
+        let app_ref = "ABC123";
+        assert_eq!(
+            PaymentIdentifiers::detect_identifier_type(app_ref),
+            IdentifierType::AppReference,
+            "Should detect app_reference"
+        );
+
+        // Test string that starts with NP$ but is malformed
+        let malformed = "NP$invalid";
+        assert_eq!(
+            PaymentIdentifiers::detect_identifier_type(malformed),
+            IdentifierType::AppReference,
+            "Should detect malformed NP$ string as app_reference"
+        );
+
+        // Test empty string
+        let empty = "";
+        assert_eq!(
+            PaymentIdentifiers::detect_identifier_type(empty),
+            IdentifierType::AppReference,
+            "Should detect empty string as app_reference"
+        );
+
+        // Test various app_reference formats
+        let test_refs = vec![
+            "HB-14",
+            "special:chars::here",
+            "üñîçødé-123",
+            "very-long-reference-1234567890-abcdefghijklmnopqrstuvwxyz",
+        ];
+
+        for app_ref in test_refs {
+            assert_eq!(
+                PaymentIdentifiers::detect_identifier_type(app_ref),
+                IdentifierType::AppReference,
+                "Should detect '{}' as app_reference",
+                app_ref
+            );
+        }
+    }
+
+    #[test]
+    /// Tests the order_id_from_identifier method
+    fn test_order_id_from_identifier() {
+        let email = "user@example.com";
+        let app_ref = "ABC123";
+        let expected_order_id = "NP$6:ABC123$16:user@example.com";
+
+        // Test with app_reference - should create order_id
+        let result = PaymentIdentifiers::order_id_from_identifier(app_ref, email);
+        assert_eq!(
+            result, expected_order_id,
+            "Should create order_id from app_reference"
+        );
+
+        // Test with order_id - should return as-is
+        let result = PaymentIdentifiers::order_id_from_identifier(&expected_order_id, email);
+        assert_eq!(
+            result, expected_order_id,
+            "Should return order_id unchanged"
+        );
+
+        // Test with different email (should not affect order_id input)
+        let different_email = "different@example.com";
+        let result =
+            PaymentIdentifiers::order_id_from_identifier(&expected_order_id, different_email);
+        assert_eq!(
+            result, expected_order_id,
+            "Should return order_id unchanged regardless of email parameter"
+        );
     }
 
     #[test]
