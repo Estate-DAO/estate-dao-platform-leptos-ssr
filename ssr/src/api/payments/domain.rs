@@ -139,6 +139,12 @@ pub struct DomainGetPaymentStatusResponse {
                                    // pub invoice_id: Option<String>,     // Invoice ID if available
 }
 
+impl DomainGetPaymentStatusResponse {
+    pub fn is_completed(&self) -> bool {
+        self.status.is_completed()
+    }
+}
+
 /// Trait for payment service abstraction
 #[async_trait]
 pub trait PaymentService {

@@ -23,6 +23,8 @@ use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::{admin_canister, AdminCanisters};
 use crate::utils::booking_id::PaymentIdentifiers;
 
+use crate::utils::app_reference::BookingId as FrontendBookingId;
+
 // ---------------------
 // HELPER FUNCTIONS
 // ---------------------
@@ -625,6 +627,75 @@ impl GetPaymentStatusFromPaymentProviderV2 {
             .map_err(|e| format!("Failed to fetch booking: ServerFnError = {}", e))?
             .ok_or_else(|| "No booking found with the specified booking ID".to_string())
     }
+
+    #[instrument(
+        name = "check_payment_provider_if_unpaid",
+        skip(payment_id, backend_booking, order_id),
+        err(Debug)
+    )]
+    /// Helper function to check payment provider if backend status is unpaid
+    async fn check_payment_provider_if_unpaid(
+        payment_id: Option<&str>,
+        backend_booking: &crate::canister::backend::Booking,
+        order_id: &str,
+    ) -> Result<Option<crate::api::payments::domain::DomainGetPaymentStatusResponse>, String> {
+        use crate::api::payments::domain::{DomainGetPaymentStatusRequest, PaymentStatus};
+
+        // Only check payment provider if payment_id exists and backend shows unpaid
+        let payment_id_str = match payment_id {
+            Some(id) => id,
+            None => {
+                info!("No payment_id provided, skipping external payment provider check");
+                return Ok(None);
+            }
+        };
+
+        // Check if we should call external provider using existing decision logic
+        let decision =
+            Self::check_payment_status_decision(&backend_booking.payment_details.payment_status);
+
+        match decision {
+            crate::ssr_booking::PipelineDecision::Skip => {
+                info!("Backend payment status is Paid, skipping external payment provider check");
+                Ok(None)
+            }
+            crate::ssr_booking::PipelineDecision::Run => {
+                info!(
+                    "Backend payment status is Unpaid, checking external payment provider for payment_id: {}",
+                    payment_id_str
+                );
+
+                // Use the unified payment service with 10-minute retry logic
+                let payment_service = PaymentServiceImpl::new();
+                let domain_request: DomainGetPaymentStatusRequest = DomainGetPaymentStatusRequest {
+                    payment_id: payment_id_str.to_string(),
+                    provider: None, // Let the service auto-detect the provider
+                };
+
+                let domain_response = check_payment_status_with_retry_v2(
+                    payment_service,
+                    domain_request,
+                    order_id.to_string(),
+                    Duration::from_secs(600), // 10 minutes
+                )
+                .await?;
+
+                info!(
+                    "External payment provider response: status={:?}, provider={:?}",
+                    domain_response.status, domain_response.provider
+                );
+
+                Ok(Some(domain_response))
+            }
+            crate::ssr_booking::PipelineDecision::Abort(reason) => {
+                info!(
+                    "Pipeline decision is Abort: {}, skipping external payment provider check",
+                    reason
+                );
+                Ok(None)
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -632,22 +703,22 @@ impl PipelineValidator for GetPaymentStatusFromPaymentProviderV2 {
     #[instrument(name = "validate_get_payment_status_v2", skip(self, event), err(Debug))]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
         // Ensure that order_id exists in ServerSideBookingEvent and booking_id can be derived from order_id
-        if event.order_id.is_empty() {
-            error!("order_id is empty in ServerSideBookingEvent");
-            return Err("order_id is required but empty".to_string());
-        }
+        // if event.order_id.is_empty() {
+        //     error!("order_id is empty in ServerSideBookingEvent");
+        //     return Err("order_id is required but empty".to_string());
+        // }
 
-        // Verify that app_reference can be derived from order_id
-        if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
-            error!(
-                "Failed to extract app_reference from order_id: {}",
-                event.order_id
-            );
-            return Err(format!(
-                "Failed to extract app_reference from order_id: {}",
-                event.order_id
-            ));
-        }
+        // // Verify that app_reference can be derived from order_id
+        // if PaymentIdentifiers::app_reference_from_order_id(&event.order_id).is_none() {
+        //     error!(
+        //         "Failed to extract app_reference from order_id: {}",
+        //         event.order_id
+        //     );
+        //     return Err(format!(
+        //         "Failed to extract app_reference from order_id: {}",
+        //         event.order_id
+        //     ));
+        // }
 
         if event.payment_id.is_some() {
             // Payment ID provided - check external provider flow
@@ -658,12 +729,13 @@ impl PipelineValidator for GetPaymentStatusFromPaymentProviderV2 {
                 ))
             } else {
                 // Booking not loaded yet, but we need to check payment status
-                // Load booking to determine if we should skip or run
-                let booking =
-                    Self::load_booking_from_backend(&event.order_id, &event.user_email).await?;
-                Ok(Self::check_payment_status_decision(
-                    &booking.payment_details.payment_status,
-                ))
+                // // Load booking to determine if we should skip or run
+                // let booking =
+                //     Self::load_booking_from_backend(&event.order_id, &event.user_email).await?;
+                // Ok(Self::check_payment_status_decision(
+                //     &booking.payment_details.payment_status,
+                // ))
+                Ok(PipelineDecision::Run)
             }
         } else {
             // No payment ID - we'll extract status from backend_booking_struct
@@ -688,27 +760,18 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
         let mut updated_event = event;
 
-        // Ensure booking is loaded from backend if not already loaded
-        if updated_event.backend_booking_struct.is_none() {
-            let booking =
-                Self::load_booking_from_backend(&updated_event.order_id, &updated_event.user_email)
-                    .await?;
-            info!(
-                "Loaded booking from backend in executor for order_id: {}",
-                updated_event.order_id
-            );
-            updated_event.backend_booking_struct = Some(booking);
-        }
-        let (payment_status, is_finished, source, domain_response_opt) = if let Some(
-            ref payment_id_str,
-        ) =
-            updated_event.payment_id
+        // Determine the flow based on payment_id and order_id state
+        let (payment_status, is_finished, source, domain_response_opt) = if updated_event
+            .payment_id
+            .is_some()
+            && updated_event.order_id.is_empty()
         {
-            // Flow 1: External payment provider check using unified PaymentServiceImpl
+            // Flow 1a: payment_id exists but order_id is empty - get order_id from payment provider
+            let payment_id_str = updated_event.payment_id.as_ref().unwrap();
             info!(
-                "Checking payment status from external provider for payment_id: {} (V2 with unified service)",
-                payment_id_str
-            );
+                    "Flow 1a: order_id is empty, checking payment status from external provider for payment_id: {} to extract order_id",
+                    payment_id_str
+                );
 
             // Use the unified payment service with 10-minute retry logic
             let payment_service = PaymentServiceImpl::new();
@@ -725,12 +788,39 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
             )
             .await?;
 
+            // Extract order_id from domain response
+            let extracted_order_id = domain_response
+                .order_id
+                .as_ref()
+                .ok_or_else(|| "order_id is None in domain response, cannot proceed".to_string())?;
+
+            info!(
+                "Extracted order_id from domain response: {}",
+                extracted_order_id
+            );
+
+            let booking_id = FrontendBookingId::from_order_id(&extracted_order_id)
+                .ok_or_else(|| "Failed to extract booking_id from order_id".to_string())?;
+
+            // Update event with extracted order_id
+            updated_event.order_id = extracted_order_id.clone();
+
+            // Now load booking from backend using extracted order_id
+            let booking =
+                Self::load_booking_from_backend(&extracted_order_id, &booking_id.email).await?;
+
+            info!(
+                "Loaded booking from backend using extracted order_id: {}",
+                updated_event.order_id
+            );
+            updated_event.backend_booking_struct = Some(booking);
+
             let finished = matches!(domain_response.status, PaymentStatus::Completed);
 
             info!(
-                "Domain response received: status={:?}, provider={:?}, finished={}",
-                domain_response.status, domain_response.provider, finished
-            );
+                    "Domain response received (order_id was empty): status={:?}, provider={:?}, finished={}",
+                    domain_response.status, domain_response.provider, finished
+                );
 
             updated_event.payment_status = Some(domain_response.status.as_str().to_string());
             (
@@ -740,27 +830,82 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                 Some(domain_response),
             )
         } else {
-            // Flow 2: Extract from backend booking data (same as V1)
-            info!("No payment_id provided, extracting payment status from backend booking data");
+            // Flow 1b & 2: order_id exists OR no payment_id - load booking from backend and conditionally check payment provider
+            info!(
+                "Flow 1b/2: loading booking from backend for order_id: {} and payment_id: {:?}",
+                updated_event.order_id, updated_event.payment_id
+            );
 
-            if let Some(ref backend_booking) = updated_event.backend_booking_struct {
+            // Ensure order_id exists for backend loading
+            if updated_event.order_id.is_empty() {
+                return Err(
+                    "order_id is required but empty for backend booking loading".to_string()
+                );
+            }
+
+            // Load booking from backend if not already loaded
+            if updated_event.backend_booking_struct.is_none() {
+                let booking = Self::load_booking_from_backend(
+                    &updated_event.order_id,
+                    &updated_event.user_email,
+                )
+                .await?;
+
+                info!(
+                    "Loaded booking from backend for order_id: {}",
+                    updated_event.order_id
+                );
+                updated_event.backend_booking_struct = Some(booking);
+            }
+
+            // Get reference to backend booking
+            let backend_booking = updated_event
+                .backend_booking_struct
+                .as_ref()
+                .ok_or_else(|| "Backend booking not loaded after loading attempt".to_string())?;
+
+            // Check if we should call external payment provider based on backend status
+            let domain_response_opt = Self::check_payment_provider_if_unpaid(
+                updated_event.payment_id.as_deref(),
+                backend_booking,
+                &updated_event.order_id,
+            )
+            .await?;
+
+            // Determine final payment status based on domain response or backend booking
+            if let Some(domain_response) = domain_response_opt {
+                // External provider returned a response - use it
+                let finished = matches!(domain_response.status, PaymentStatus::Completed);
+
+                info!(
+                        "Using external payment provider response: status={:?}, provider={:?}, finished={}",
+                        domain_response.status, domain_response.provider, finished
+                    );
+
+                updated_event.payment_status = Some(domain_response.status.as_str().to_string());
+                (
+                    domain_response.status.as_str().to_string(),
+                    finished,
+                    domain_response.provider.as_str().to_string(),
+                    Some(domain_response),
+                )
+            } else {
+                // No external provider check - use backend booking status
                 let (status, finished) = match &backend_booking.payment_details.payment_status {
                     BackendPaymentStatus::Paid(_) => ("finished".to_string(), true),
                     BackendPaymentStatus::Unpaid(_) => ("waiting".to_string(), false),
                 };
-                info!("Extracted payment status from backend: {}", status);
+
+                info!("Using backend payment status: {}", status);
 
                 let source = backend_booking
                     .payment_details
                     .payment_api_response
                     .provider
                     .clone();
+
                 updated_event.payment_status = Some(status.clone());
                 (status, finished, source, None)
-            } else {
-                return Err(
-                    "No backend booking data available to extract payment status".to_string(),
-                );
             }
         };
 

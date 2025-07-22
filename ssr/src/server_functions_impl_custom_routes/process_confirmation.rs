@@ -20,14 +20,17 @@ use estate_fe::{
         pipeline::process_pipeline,
         SSRBookingPipelineStep, ServerSideBookingEvent,
     },
-    utils::app_reference::BookingId,
+    utils::{app_reference::BookingId, booking_id::PaymentIdentifiers},
 };
 use serde_json::json;
 
 use super::{parse_json_request, ConfirmationProcessRequest};
 
 /// Detect payment provider from available information
-async fn detect_payment_provider(payment_id: &Option<String>, booking_id: &BookingId) -> String {
+async fn detect_payment_provider(
+    payment_id: &Option<String>,
+    booking_id: &Option<BookingId>,
+) -> String {
     // Method 1: Detect from payment_id if available
     if let Some(ref pid) = payment_id {
         if let Ok(provider) = PaymentServiceImpl::detect_provider_from_payment_id(pid) {
@@ -36,17 +39,19 @@ async fn detect_payment_provider(payment_id: &Option<String>, booking_id: &Booki
     }
 
     // Method 2: Try to extract from backend booking data
-    let backend_booking_id = backend::BookingId {
-        app_reference: booking_id.app_reference.clone(),
-        email: booking_id.email.clone(),
-    };
+    if let Some(ref booking_id) = booking_id {
+        let backend_booking_id = backend::BookingId {
+            app_reference: booking_id.app_reference.clone(),
+            email: booking_id.email.clone(),
+        };
 
-    if let Ok(Some(booking)) = get_booking_by_id_backend(backend_booking_id).await {
-        return booking
-            .payment_details
-            .payment_api_response
-            .provider
-            .clone();
+        if let Ok(Some(booking)) = get_booking_by_id_backend(backend_booking_id).await {
+            return booking
+                .payment_details
+                .payment_api_response
+                .provider
+                .clone();
+        }
     }
 
     // Method 3: Unknown provider - will use AllProviders fallback
@@ -55,7 +60,12 @@ async fn detect_payment_provider(payment_id: &Option<String>, booking_id: &Booki
 
 /// Fetch booking from backend and return serializable booking data
 /// Returns None if booking not found, logs error if fetch fails
-async fn fetch_booking_data(booking_id: &BookingId) -> Option<serde_json::Value> {
+async fn fetch_booking_data(booking_id: &Option<BookingId>) -> Option<serde_json::Value> {
+    if booking_id.is_none() {
+        return None;
+    }
+
+    let booking_id = booking_id.as_ref().unwrap();
     let backend_booking_id = backend::BookingId {
         app_reference: booking_id.app_reference.clone(),
         email: booking_id.email.clone(),
@@ -87,6 +97,27 @@ async fn fetch_booking_data(booking_id: &BookingId) -> Option<serde_json::Value>
     }
 }
 
+fn create_error_response(msg: &str) -> Response {
+    tracing::error!("{}", msg);
+    let error_response = json!({
+        "success": false,
+        "message": msg,
+        "order_id": null,
+        "user_email": null
+    });
+    (StatusCode::BAD_REQUEST, error_response.to_string()).into_response()
+}
+
+/// Process confirmation API endpoint
+///
+/// Handles two scenarios:
+/// 1. app_reference unknown -> payment_id must be provided (pipeline extracts both)
+/// 2. app_reference known -> payment_id optional, derive order_id from email + app_reference
+///
+/// Key concepts:
+/// - app_reference: booking reference from external systems (known or unknown)
+/// - payment_id: payment identifier (required when app_reference unknown)
+/// - order_id: derived from email + app_reference combination
 #[axum::debug_handler]
 #[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
 pub async fn process_confirmation_api_server_fn_route(
@@ -95,7 +126,7 @@ pub async fn process_confirmation_api_server_fn_route(
 ) -> Response {
     tracing::info!(
         "Starting confirmation processing with body: {}",
-        &body[0..100.min(body.len())]
+        &body[0..200.min(body.len())]
     );
 
     // Parse the JSON request
@@ -117,10 +148,67 @@ pub async fn process_confirmation_api_server_fn_route(
     };
 
     // Validate required parameters - app_reference is required, payment_id is optional
-    let app_reference = match request.app_reference {
-        Some(app_ref) => app_ref,
+    let app_reference = match request.app_reference.as_deref() {
         None => {
-            let error_msg = "Missing required parameter: app_reference is required";
+            return create_error_response("Missing required parameter: app_reference is required");
+        }
+        Some("null") | Some("") => String::new(),
+        Some(app_ref) => app_ref.to_string(),
+    };
+    // payment_id is optional - extract if available
+    let payment_id = request.payment_id;
+
+    // Extract app_reference and order_id using existing utilities
+    // The order_id from payment provider needs to be converted to get the actual booking order_id
+    // payment_id is what we got from payment provider, but we need the order_id from app_reference
+
+    // Early validation: if app_reference is unknown, payment_id must be provided
+    if app_reference.is_empty() && payment_id.is_none() {
+        let error_msg =
+            "Missing required parameters: if app_reference is unknown, payment_id must be provided";
+        tracing::error!("{}", error_msg);
+        let error_response = json!({
+            "success": false,
+            "message": error_msg,
+            "order_id": null,
+            "user_email": null
+        });
+        return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
+    }
+
+    // Extract email and order_id based on app_reference availability
+    let (order_id, user_email, booking_id) = if app_reference.is_empty() {
+        // Case 1: app_reference unknown - payment_id must exist (validated above)
+        // Pipeline will extract both app_reference and order_id from payment_id
+        tracing::info!("app_reference unknown, payment_id exists - pipeline will extract both");
+
+        ("".to_string(), "".to_string(), None)
+    } else {
+        // Case 2: app_reference known - payment_id optional, derive order_id from email + app_reference
+        tracing::info!("app_reference known: {}", app_reference);
+
+        if let Some(explicit_email) = request.email {
+            // Create order_id from email + app_reference combination
+            let derived_order_id =
+                PaymentIdentifiers::order_id_from_app_reference(&app_reference, &explicit_email);
+
+            tracing::info!(
+                "Derived order_id from email + app_reference: {}",
+                derived_order_id
+            );
+
+            let booking_id = BookingId {
+                app_reference: app_reference.clone(),
+                email: explicit_email.clone(),
+            };
+
+            (derived_order_id, explicit_email, Some(booking_id))
+        } else {
+            // app_reference known but need email to derive order_id
+            let error_msg = format!(
+                "app_reference is known ({}) but email is required to derive order_id",
+                app_reference
+            );
             tracing::error!("{}", error_msg);
             let error_response = json!({
                 "success": false,
@@ -132,68 +220,9 @@ pub async fn process_confirmation_api_server_fn_route(
         }
     };
 
-    // payment_id is optional - extract if available
-    let payment_id = request.payment_id;
-
-    // Extract app_reference and order_id using existing utilities
-    // The order_id from payment provider needs to be converted to get the actual booking order_id
-    // payment_id is what we got from payment provider, but we need the order_id from app_reference
-
-    // Extract email and order_id - support both flows
-    let (order_id, user_email) = if let Some(explicit_email) = request.email {
-        // New flow: email provided explicitly, use app_reference as order_id
-        (app_reference.clone(), explicit_email)
-    } else if let Some(booking_id) = BookingId::from_order_id(&app_reference) {
-        // Existing flow: app_reference is actually the order_id in proper format
-        (app_reference.clone(), booking_id.email)
-    } else {
-        // Neither explicit email nor valid order_id format
-        let error_msg = format!(
-            "Failed to extract email: either provide 'email' field or ensure app_reference is a valid order_id format: {}",
-            app_reference
-        );
-        tracing::error!("{}", error_msg);
-        let error_response = json!({
-            "success": false,
-            "message": error_msg,
-            "order_id": null,
-            "user_email": null
-        });
-        return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-    };
-
-    if user_email.is_empty() {
-        let error_msg = "Failed to extract user email from app_reference/order_id";
-        tracing::error!("{}", error_msg);
-        let error_response = json!({
-            "success": false,
-            "message": error_msg,
-            "order_id": Some(order_id),
-            "user_email": null
-        });
-        return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-    }
-
-    // Validate that we can create BookingId from order_id (double-check)
-    let booking_id = match BookingId::from_order_id(&order_id) {
-        Some(bid) => bid,
-        None => {
-            let error_msg = format!("Failed to create BookingId from order_id: {}", order_id);
-            tracing::error!("{}", error_msg);
-            let error_response = json!({
-                "success": false,
-                "message": error_msg,
-                "order_id": Some(order_id),
-                "user_email": Some(user_email)
-            });
-            return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-        }
-    };
-
     tracing::info!(
-        "Extracted booking_id: app_reference = {}, email = {}",
-        booking_id.app_reference,
-        booking_id.email
+        "Processing confirmation: order_id='{}', user_email='{}', payment_id={:?}, app_reference='{}'",
+        order_id, user_email, payment_id, app_reference
     );
 
     // Create ServerSideBookingEvent
@@ -216,8 +245,8 @@ pub async fn process_confirmation_api_server_fn_route(
     let send_email_step = SSRBookingPipelineStep::SendEmail(SendEmailAfterSuccessfullBooking);
 
     let steps = vec![
-        get_booking_step,
         payment_status_step,
+        get_booking_step,
         book_room_step,
         send_email_step,
     ];

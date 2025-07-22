@@ -10,7 +10,6 @@ mod test {
         ssr_booking::{
             booking_handler::MakeBookingFromBookingProvider,
             mock_handler::MockStep,
-            payment_handler::GetPaymentStatusFromPaymentProvider,
             pipeline::{process_pipeline, PipelineDecision},
             SSRBookingPipelineStep, ServerSideBookingEvent,
         },
