@@ -208,6 +208,11 @@ pub struct EnvVarConfig {
     // todo(auth) - replace with yral auth when integrated
     pub basic_auth_username: String,
     pub basic_auth_password: String,
+
+    // YRAL OAuth2 configuration
+    pub yral_client_id: String,
+    pub yral_client_secret: String,
+    pub yral_redirect_uri: String,
 }
 
 impl EnvVarConfig {
@@ -259,6 +264,15 @@ impl EnvVarConfig {
             // ipn_secret: env_or_panic("NOWPAYMENTS_IPN_SECRET"), // payment_skip_local: env_w_default("PAYMENTS_SKIP_LOCAL", "false").unwrap()
             basic_auth_username: env_or_panic("BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE"),
             basic_auth_password: env_or_panic("BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE"),
+
+            // YRAL OAuth2 configuration
+            yral_client_id: env_w_default("YRAL_CLIENT_ID", "").unwrap(),
+            yral_client_secret: env_w_default("YRAL_CLIENT_SECRET", "").unwrap(),
+            yral_redirect_uri: env_w_default(
+                "YRAL_REDIRECT_URI",
+                &format!("{}/auth/callback", APP_URL.as_str()),
+            )
+            .unwrap(),
         };
 
         println!("Using PROVAB_BASE_URL: {}", value.provab_base_url);
@@ -267,6 +281,42 @@ impl EnvVarConfig {
 
     pub fn get_headers(&self) -> HeaderMap {
         transform_headers(&self.provab_headers)
+    }
+
+    /// Create a test configuration with default values for testing
+    #[cfg(test)]
+    pub fn for_testing() -> Self {
+        use std::collections::HashMap;
+
+        let mut provab_headers = HashMap::new();
+        provab_headers.insert("Content-Type".to_string(), "application/json".to_string());
+        provab_headers.insert("Authorization".to_string(), "Bearer test-token".to_string());
+
+        Self {
+            provab_base_url: "https://test-api.example.com".to_string(),
+            provab_headers,
+            liteapi_key: "test-liteapi-key".to_string(),
+            liteapi_prebook_base_url: "https://test-liteapi.example.com".to_string(),
+            nowpayments_api_key: "test-nowpayments-key".to_string(),
+            admin_private_key: "test-admin-key".to_string(),
+            email_client_config: EmailConfig {
+                client_id: Some("test-email-client-id".to_string()),
+                client_secret: Some("test-email-client-secret".to_string()),
+                access_token: Some("test-email-access-token".to_string()),
+                refresh_token: Some("test-email-refresh-token".to_string()),
+                token_expiry: 1234567890,
+            },
+            ipn_secret: "test-ipn-secret".to_string(),
+            stripe_secret_key: "sk_test_123456789".to_string(),
+            stripe_webhook_secret: "whsec_test_123456789".to_string(),
+            basic_auth_username: "test-admin".to_string(),
+            basic_auth_password: "test-password".to_string(),
+
+            // YRAL OAuth2 test configuration
+            yral_client_id: "test-yral-client-id".to_string(),
+            yral_client_secret: "test-yral-client-secret".to_string(),
+            yral_redirect_uri: "http://localhost:3002/auth/callback".to_string(),
+        }
     }
 }
 

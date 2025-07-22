@@ -41,6 +41,7 @@ use serde_json::json;
 
 // Import all route modules
 mod admin_payment;
+mod auth;
 mod block_room;
 mod book_room;
 mod create_payment_invoice;
@@ -52,6 +53,7 @@ mod process_confirmation;
 mod search_hotel;
 
 // Re-export route handlers to maintain public API compatibility
+pub use auth::auth_callback_handler;
 pub use block_room::block_room_api_server_fn_route;
 pub use book_room::book_room_api_server_fn_route;
 pub use create_payment_invoice::create_payment_invoice_api_server_fn_route;
