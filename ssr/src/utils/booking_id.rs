@@ -164,6 +164,15 @@ impl PaymentIdentifiers {
         }
     }
 
+    /// Create app_reference from identifier (handles both order_id and app_reference)
+    /// If input is app_reference, returns it as-is. If order_id, extracts app_reference.
+    pub fn ensure_app_reference(identifier: &str) -> Option<String> {
+        match Self::detect_identifier_type(identifier) {
+            IdentifierType::AppReference => Some(identifier.to_string()),
+            IdentifierType::OrderId => Self::app_reference_from_order_id(identifier),
+        }
+    }
+
     /// Create BookingId from order_id and user_email
     pub fn booking_id_from_order_id(order_id: &str, user_email: &str) -> Result<BookingId, String> {
         let app_reference = Self::app_reference_from_order_id(order_id).ok_or_else(|| {
@@ -411,6 +420,47 @@ mod tests {
         assert_eq!(
             result, expected_order_id,
             "Should return order_id unchanged regardless of email parameter"
+        );
+    }
+
+    #[test]
+    /// Tests the ensure_app_reference method
+    fn test_ensure_app_reference() {
+        let app_ref = "ABC123";
+        let email = "user@example.com";
+        let order_id = "NP$6:ABC123$16:user@example.com";
+
+        // Test with app_reference - should return as-is
+        let result = PaymentIdentifiers::ensure_app_reference(app_ref);
+        assert_eq!(
+            result,
+            Some(app_ref.to_string()),
+            "Should return app_reference unchanged"
+        );
+
+        // Test with order_id - should extract app_reference
+        let result = PaymentIdentifiers::ensure_app_reference(order_id);
+        assert_eq!(
+            result,
+            Some(app_ref.to_string()),
+            "Should extract app_reference from order_id"
+        );
+
+        // Test with malformed order_id - should return None
+        let malformed_order_id = "NP$invalid";
+        let result = PaymentIdentifiers::ensure_app_reference(malformed_order_id);
+        assert_eq!(
+            result,
+            Some(malformed_order_id.to_string()),
+            "Should treat malformed order_id as app_reference"
+        );
+
+        // Test with empty string - should return as app_reference
+        let result = PaymentIdentifiers::ensure_app_reference("");
+        assert_eq!(
+            result,
+            Some("".to_string()),
+            "Should treat empty string as app_reference"
         );
     }
 

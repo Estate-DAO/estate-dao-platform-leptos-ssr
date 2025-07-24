@@ -66,10 +66,7 @@ async fn fetch_booking_data(booking_id: &Option<BookingId>) -> Option<serde_json
     }
 
     let booking_id = booking_id.as_ref().unwrap();
-    let backend_booking_id = backend::BookingId {
-        app_reference: booking_id.app_reference.clone(),
-        email: booking_id.email.clone(),
-    };
+    let backend_booking_id = booking_id.clone().into();
 
     match get_booking_by_id_backend(backend_booking_id).await {
         Ok(Some(booking)) => {
@@ -196,6 +193,11 @@ pub async fn process_confirmation_api_server_fn_route(
                 "Derived order_id from email + app_reference: {}",
                 derived_order_id
             );
+
+            let app_reference = match PaymentIdentifiers::ensure_app_reference(&app_reference) {
+                Some(app_ref) => app_ref,
+                None => return create_error_response("Failed to ensure app_reference"),
+            };
 
             let booking_id = BookingId {
                 app_reference: app_reference.clone(),

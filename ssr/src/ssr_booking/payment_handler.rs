@@ -622,13 +622,17 @@ impl GetPaymentStatusFromPaymentProviderV2 {
         // };
 
         let booking_id = PaymentIdentifiers::booking_id_from_order_id(order_id, user_email)?;
+        info!(
+            "load_booking_from_backend - start - Booking ID: {:?}",
+            booking_id
+        );
         // Fetch booking by ID directly from backend
         get_booking_by_id_backend(booking_id.clone().into())
             .await
             .map_err(|e| format!("Failed to fetch booking: ServerFnError = {}", e))?
             .ok_or_else(|| {
                 format!(
-                    "No booking found with the specified booking ID: {:?}",
+                    "load_booking_from_backend - finished - No booking found with the specified booking ID: {:?}",
                     booking_id
                 )
             })
