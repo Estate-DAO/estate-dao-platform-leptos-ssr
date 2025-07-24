@@ -811,6 +811,11 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
             // Update event with extracted order_id
             updated_event.order_id = extracted_order_id.clone();
 
+            info!(
+                "updated_event: {:?}, extraced_booking_id: {:?}",
+                updated_event, booking_id
+            );
+
             // Now load booking from backend using extracted order_id
             let booking =
                 Self::load_booking_from_backend(&extracted_order_id, &booking_id.email).await?;

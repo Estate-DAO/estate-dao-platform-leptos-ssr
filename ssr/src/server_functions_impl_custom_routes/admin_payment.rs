@@ -96,13 +96,19 @@ pub async fn get_backend_booking(
     let admin_canister = AdminCanisters::from_env();
     let backend = admin_canister.backend_canister().await;
 
-    match backend.get_booking_by_id(booking_id).await {
+    match backend.get_booking_by_id(booking_id.clone()).await {
         Ok(booking_option) => {
-            info!("Backend booking retrieval successful");
+            info!(
+                "Backend booking retrieval successful with booking: {:#?}",
+                booking_option
+            );
             Json(booking_option).into_response()
         }
         Err(e) => {
-            error!("Failed to get backend booking: {}", e);
+            error!(
+                "Failed to get backend booking: for booking_id: {:#?}, error: {:#?}",
+                &booking_id, e
+            );
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({
