@@ -1,6 +1,6 @@
 
 # Use Debian Slim as the base image
-FROM debian:bookworm-slim as builder
+FROM debian:bookworm-slim AS builder
 
 # Prevent apt from asking for input and use minimal outputs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -69,7 +69,7 @@ RUN cargo leptos build --release --lib-features "release-lib" --bin-features "re
 # ------------------------
 # STAGE 2: Dockerfile
 # ------------------------
-FROM debian:bookworm-slim as runner
+FROM debian:bookworm-slim AS runner
 
 # RUN mkdir -p /app
 WORKDIR /app
