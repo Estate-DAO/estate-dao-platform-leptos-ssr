@@ -124,6 +124,7 @@ service : {
   greet : (text) -> (text) query;
   is_booking_paid : (BookingId) -> (bool) query;
   remove_controller : (principal) -> (Result_1);
+  run_migrations : () -> (Result);
   update_book_room_response : (BookingId, BEBookRoomResponse) -> (Result);
   update_email_sent : (BookingId, bool) -> (Result_1);
   update_payment_details : (BookingId, PaymentDetails) -> (Result_3);
