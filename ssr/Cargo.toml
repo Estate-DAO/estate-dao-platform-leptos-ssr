@@ -92,7 +92,7 @@ k256 = { version = "0.13.4", default-features = false, features = [
     "jwk",
 ] }
 stringreader = "0.1.1"
-ic-agent = { version = "0.39.1", features = ["wasm-bindgen", "pem"] }
+ic-agent = { version = "0.41.0", features = ["wasm-bindgen", "pem"] }
 ic-base-types = { git = "https://github.com/dfinity/ic", rev = "tags/release-2024-05-29_23-02-base" }
 # dotenvy = "0.15.7"
 # dotenvy_macro = "0.15.7"

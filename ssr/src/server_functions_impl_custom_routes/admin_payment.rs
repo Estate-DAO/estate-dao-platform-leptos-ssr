@@ -66,7 +66,7 @@ pub async fn check_payment_status(
     }
 }
 
-#[instrument(name = "get_backend_booking_handler", skip(state))]
+#[instrument(name = "get_backend_booking_handler", skip(state, headers))]
 pub async fn get_backend_booking(
     State(state): State<AppState>,
     headers: HeaderMap,

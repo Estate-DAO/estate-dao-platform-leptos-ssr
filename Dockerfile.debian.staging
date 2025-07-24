@@ -11,51 +11,44 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
+# Install Rust with specific nightly version and WASM target (minimal components)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
+    --default-toolchain nightly-2024-11-01-x86_64-unknown-linux-gnu \
+    --target wasm32-unknown-unknown \
+    --component rustc,cargo,rust-std \
+    -y && \
+    . "$HOME/.cargo/env"
 
-# Install Rust using rustup
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-# Set up the Rust environment
+    
+# Setup Node.js and cargo-binstall in optimized layers
+RUN curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz | \
+tar -xJ -C /usr/local && \
+mv /usr/local/node-v22.14.0-linux-x64 /usr/local/node
+
+# Install cargo-binstall
+RUN curl -fsSL https://github.com/cargo-bins/cargo-binstall/releases/download/v1.11.2/cargo-binstall-x86_64-unknown-linux-gnu.tgz | \
+tar -xz -C /root/.cargo/bin cargo-binstall
+
+
+RUN . "$HOME/.cargo/env"
+
+# Set Rust environment variables
 ENV PATH="/root/.cargo/bin:${PATH}"
+ENV CARGO_HOME="/root/.cargo"
+ENV RUSTUP_HOME="/root/.rustup"
 
-
-# Add the WASM target
-RUN rustup toolchain install nightly-2024-11-01-x86_64-unknown-linux-gnu
-RUN rustup default nightly-2024-11-01-x86_64-unknown-linux-gnu
-RUN rustup target add wasm32-unknown-unknown
-
-
-
-# setup nodejs
-RUN curl https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz -o node-v22.14.0-linux-x64.tar.xz
-RUN ls | grep node
-RUN tar -xf node-v22.14.0-linux-x64.tar.xz
-
-RUN mv node-v22.14.0-linux-x64 /usr/local/node
 
 # Add Node.js and npm to PATH
 ENV PATH="/usr/local/node/bin:${PATH}"
-
-# Optional: Show Node.js and npm versions for verification
-RUN node -v
-RUN npm -v
+ 
 
 
-# RUN rustup target add x86_64-unknown-linux-musl
-
-# Install cargo-binstall, which makes it easier to install other
-# cargo extensions like cargo-leptos
-# RUN curl https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-# Download cargo-binstall and save to a local file
-RUN curl -fsSL https://github.com/cargo-bins/cargo-binstall/releases/download/v1.11.2/cargo-binstall-x86_64-unknown-linux-gnu.tgz \
-    -o cargo-binstall-x86_64-unknown-linux-gnu.tgz
-
-RUN tar -xvf cargo-binstall-x86_64-unknown-linux-gnu.tgz
-RUN cp cargo-binstall /root/.cargo/bin
-
+# Verify installations
+RUN node -v && npm -v
 # Install cargo-leptos
 RUN cargo binstall cargo-leptos --version 0.2.21 
-# RUN cargo install cargo-leptos --version 0.2.21 
+
 
 # Make an /app dir, which everything will eventually live in
 RUN mkdir -p /app
@@ -84,7 +77,7 @@ WORKDIR /app
 RUN apt update && apt install tree vim curl dnsutils -y
 
 COPY --from=builder /app/target/release/estate-fe .
-COPY --from=builder /app/ssr/target/release/hash.txt .
+COPY --from=builder /app/target/release/hash.txt .
 COPY --from=builder /app/target/site ./site
 COPY --from=builder /app/city.json ./city.json
 
