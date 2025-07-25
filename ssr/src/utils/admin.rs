@@ -63,11 +63,11 @@ pub fn admin_canister() -> AdminCanisters {
     let admin_canisters = use_context::<AdminCanisters>();
     match admin_canisters {
         Some(admin_canisters_leptos) => {
-            info!("admin_canister: Using AdminCanisters from leptos context");
+            // info!("admin_canister: Using AdminCanisters from leptos context");
             admin_canisters_leptos
         }
         None => {
-            info!("admin_canister: Using AdminCanisters from env/axum SSR");
+            // info!("admin_canister: Using AdminCanisters from env/axum SSR");
             AdminCanisters::from_env()
         }
     }

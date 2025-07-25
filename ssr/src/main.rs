@@ -74,7 +74,7 @@ cfg_if! {
         use std::sync::Arc;
         use estate_fe::ssr_booking::ServerSideBookingEvent;
 
-        use tracing::instrument;
+        use tracing::{instrument, Instrument};
         use tracing::Level;
         mod sitemap;
 
@@ -230,8 +230,11 @@ cfg_if! {
             let lock_manager = state.pipeline_lock_manager.clone();
             let order_id = order_id.to_string();
 
+            let current_span = tracing::Span::current();
             tokio::spawn(async move {
-                let result = process_pipeline(event, &[payment_status_step, book_room_step, get_booking_step, send_email_step, mock_step], Some(notifier)).await;
+                let result = process_pipeline(event, &[payment_status_step, book_room_step, get_booking_step, send_email_step, mock_step], Some(notifier))
+                    .instrument(current_span)
+                    .await;
 
                 lock_manager.release_lock(payment_id.as_deref(), &order_id);
 

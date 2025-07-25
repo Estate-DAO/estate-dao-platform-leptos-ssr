@@ -23,43 +23,63 @@ use estate_fe::{
     utils::{app_reference::BookingId, booking_id::PaymentIdentifiers},
 };
 use serde_json::json;
+use tracing::Instrument;
 
 use super::{parse_json_request, ConfirmationProcessRequest};
 
 /// Detect payment provider from available information
+#[tracing::instrument(skip(payment_id, booking_id), fields(payment_id = ?payment_id, booking_id = ?booking_id))]
 async fn detect_payment_provider(
     payment_id: &Option<String>,
     booking_id: &Option<BookingId>,
 ) -> String {
     // Method 1: Detect from payment_id if available
     if let Some(ref pid) = payment_id {
+        tracing::info!("Attempting to detect provider from payment_id: {}", pid);
         if let Ok(provider) = PaymentServiceImpl::detect_provider_from_payment_id(pid) {
-            return provider.as_str().to_string();
+            let provider_str = provider.as_str().to_string();
+            tracing::info!(
+                "Successfully detected provider from payment_id: {}",
+                provider_str
+            );
+            return provider_str;
+        } else {
+            tracing::warn!("Failed to detect provider from payment_id: {}", pid);
         }
     }
 
     // Method 2: Try to extract from backend booking data
     if let Some(ref booking_id) = booking_id {
+        tracing::info!("Attempting to detect provider from backend booking data");
         let backend_booking_id = backend::BookingId {
             app_reference: booking_id.app_reference.clone(),
             email: booking_id.email.clone(),
         };
 
         if let Ok(Some(booking)) = get_booking_by_id_backend(backend_booking_id).await {
-            return booking
+            let provider = booking
                 .payment_details
                 .payment_api_response
                 .provider
                 .clone();
+            tracing::info!(
+                "Successfully detected provider from backend booking: {}",
+                provider
+            );
+            return provider;
+        } else {
+            tracing::warn!("Failed to get booking from backend or booking not found");
         }
     }
 
     // Method 3: Unknown provider - will use AllProviders fallback
+    tracing::warn!("Unable to detect provider, using 'unknown' fallback");
     "unknown".to_string()
 }
 
 /// Fetch booking from backend and return serializable booking data
 /// Returns None if booking not found, logs error if fetch fails
+#[tracing::instrument(skip(booking_id), fields(booking_id = ?booking_id))]
 async fn fetch_booking_data(booking_id: &Option<BookingId>) -> Option<serde_json::Value> {
     if booking_id.is_none() {
         return None;
@@ -116,7 +136,19 @@ fn create_error_response(msg: &str) -> Response {
 /// - payment_id: payment identifier (required when app_reference unknown)
 /// - order_id: derived from email + app_reference combination
 #[axum::debug_handler]
-#[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
+#[tracing::instrument(
+    name = "process_confirmation_api", 
+    skip(state, body),
+    fields(
+        endpoint = "/server_fn_api/process_confirmation_api",
+        body_length = body.len(),
+        app_reference,
+        payment_id,
+        order_id,
+        user_email,
+        processing_status
+    )
+)]
 pub async fn process_confirmation_api_server_fn_route(
     State(state): State<AppState>,
     body: String,
@@ -126,31 +158,53 @@ pub async fn process_confirmation_api_server_fn_route(
         &body[0..200.min(body.len())]
     );
 
+    tracing::Span::current().record("processing_status", "parsing_request");
+
     // Parse the JSON request
-    let request: ConfirmationProcessRequest = match parse_json_request(&body) {
-        Ok(req) => {
-            tracing::info!("Successfully parsed confirmation process request");
-            req
-        }
-        Err(_) => {
-            // Custom error for this endpoint with specific response format
-            let error_response = json!({
-                "success": false,
-                "message": "Invalid JSON request format",
-                "order_id": null,
-                "user_email": null
-            });
-            return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
-        }
-    };
+    let request: ConfirmationProcessRequest =
+        match parse_json_request::<ConfirmationProcessRequest>(&body) {
+            Ok(req) => {
+                tracing::info!("Successfully parsed confirmation process request");
+                // Record the parsed values in the span
+                tracing::Span::current().record(
+                    "app_reference",
+                    req.app_reference.as_deref().unwrap_or("none"),
+                );
+                tracing::Span::current()
+                    .record("payment_id", req.payment_id.as_deref().unwrap_or("none"));
+                req
+            }
+            Err(_) => {
+                tracing::error!("Failed to parse JSON request");
+                tracing::Span::current().record("processing_status", "parse_error");
+                // Custom error for this endpoint with specific response format
+                let error_response = json!({
+                    "success": false,
+                    "message": "Invalid JSON request format",
+                    "order_id": null,
+                    "user_email": null
+                });
+                return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
+            }
+        };
+
+    tracing::Span::current().record("processing_status", "validating_parameters");
 
     // Validate required parameters - app_reference is required, payment_id is optional
     let app_reference = match request.app_reference.as_deref() {
         None => {
+            tracing::error!("Missing required parameter: app_reference");
+            tracing::Span::current().record("processing_status", "validation_error");
             return create_error_response("Missing required parameter: app_reference is required");
         }
-        Some("null") | Some("") => String::new(),
-        Some(app_ref) => app_ref.to_string(),
+        Some("null") | Some("") => {
+            tracing::info!("app_reference is empty - unknown app_reference case");
+            String::new()
+        }
+        Some(app_ref) => {
+            tracing::info!("app_reference provided: {}", app_ref);
+            app_ref.to_string()
+        }
     };
     // payment_id is optional - extract if available
     let payment_id = request.payment_id;
@@ -164,6 +218,7 @@ pub async fn process_confirmation_api_server_fn_route(
         let error_msg =
             "Missing required parameters: if app_reference is unknown, payment_id must be provided";
         tracing::error!("{}", error_msg);
+        tracing::Span::current().record("processing_status", "validation_error");
         let error_response = json!({
             "success": false,
             "message": error_msg,
@@ -173,16 +228,20 @@ pub async fn process_confirmation_api_server_fn_route(
         return (StatusCode::BAD_REQUEST, error_response.to_string()).into_response();
     }
 
+    tracing::Span::current().record("processing_status", "extracting_identifiers");
+
     // Extract email and order_id based on app_reference availability
     let (order_id, user_email, booking_id) = if app_reference.is_empty() {
         // Case 1: app_reference unknown - payment_id must exist (validated above)
         // Pipeline will extract both app_reference and order_id from payment_id
         tracing::info!("app_reference unknown, payment_id exists - pipeline will extract both");
+        tracing::Span::current().record("processing_status", "unknown_app_reference_case");
 
         ("".to_string(), "".to_string(), None)
     } else {
         // Case 2: app_reference known - payment_id optional, derive order_id from email + app_reference
         tracing::info!("app_reference known: {}", app_reference);
+        tracing::Span::current().record("processing_status", "known_app_reference_case");
 
         if let Some(explicit_email) = request.email {
             // Create order_id from email + app_reference combination
@@ -195,8 +254,15 @@ pub async fn process_confirmation_api_server_fn_route(
             );
 
             let app_reference = match PaymentIdentifiers::ensure_app_reference(&app_reference) {
-                Some(app_ref) => app_ref,
-                None => return create_error_response("Failed to ensure app_reference"),
+                Some(app_ref) => {
+                    tracing::info!("Successfully ensured app_reference: {}", app_ref);
+                    app_ref
+                }
+                None => {
+                    tracing::error!("Failed to ensure app_reference");
+                    tracing::Span::current().record("processing_status", "app_reference_error");
+                    return create_error_response("Failed to ensure app_reference");
+                }
             };
 
             let booking_id = BookingId {
@@ -204,7 +270,11 @@ pub async fn process_confirmation_api_server_fn_route(
                 email: explicit_email.clone(),
             };
 
-            (derived_order_id, explicit_email, Some(booking_id))
+            (
+                derived_order_id,
+                explicit_email.to_string(),
+                Some(booking_id),
+            )
         } else {
             // app_reference known but need email to derive order_id
             let error_msg = format!(
@@ -212,6 +282,7 @@ pub async fn process_confirmation_api_server_fn_route(
                 app_reference
             );
             tracing::error!("{}", error_msg);
+            tracing::Span::current().record("processing_status", "missing_email_error");
             let error_response = json!({
                 "success": false,
                 "message": error_msg,
@@ -222,16 +293,25 @@ pub async fn process_confirmation_api_server_fn_route(
         }
     };
 
+    // Record the extracted values in the span
+    tracing::Span::current().record("order_id", order_id.as_str());
+    tracing::Span::current().record("user_email", user_email.as_str());
+
     tracing::info!(
         "Processing confirmation: order_id='{}', user_email='{}', payment_id={:?}, app_reference='{}'",
         order_id, user_email, payment_id, app_reference
     );
 
+    tracing::Span::current().record("processing_status", "creating_event");
+
     // Create ServerSideBookingEvent
+    let provider = detect_payment_provider(&payment_id, &booking_id).await;
+    tracing::info!("Detected payment provider: {}", provider);
+
     let event = ServerSideBookingEvent {
         payment_id: payment_id.clone(), // Now optional
         order_id: order_id.clone(),
-        provider: detect_payment_provider(&payment_id, &booking_id).await,
+        provider,
         user_email: user_email.clone(),
         payment_status: None,
         backend_payment_status: Some("confirmation_page_initiated".to_string()),
@@ -259,12 +339,39 @@ pub async fn process_confirmation_api_server_fn_route(
         payment_id
     );
 
+    tracing::Span::current().record("processing_status", "executing_pipeline");
+
     // Execute the pipeline - this will publish events to the eventbus
     let notifier = &state.notifier_for_pipeline;
-    let pipeline_result = process_pipeline(event, &steps, Some(notifier)).await;
+    let pipeline_span = tracing::span!(
+        tracing::Level::INFO,
+        "booking_pipeline_execution",
+        order_id = %order_id,
+        payment_id = ?payment_id,
+        provider = %event.provider,
+        user_email = %event.user_email,
+        steps_count = steps.len()
+    );
+
+    tracing::info!(
+        "Starting pipeline execution with {} steps for order_id: {}",
+        steps.len(),
+        order_id
+    );
+
+    let pipeline_result = process_pipeline(event, &steps, Some(notifier))
+        .instrument(pipeline_span)
+        .await;
 
     // Fetch booking data from backend regardless of pipeline success/failure
+    tracing::Span::current().record("processing_status", "fetching_booking_data");
     let booking_data = fetch_booking_data(&booking_id).await;
+
+    let has_booking_data = booking_data.is_some();
+    tracing::info!(
+        "Booking data fetch completed, has_data: {}",
+        has_booking_data
+    );
 
     match pipeline_result {
         Ok(final_event) => {
@@ -272,6 +379,7 @@ pub async fn process_confirmation_api_server_fn_route(
                 "Booking pipeline completed successfully for payment_id: {:?}",
                 payment_id
             );
+            tracing::Span::current().record("processing_status", "pipeline_success");
 
             let success_response = json!({
                 "success": true,
@@ -281,6 +389,10 @@ pub async fn process_confirmation_api_server_fn_route(
                 "booking_data": booking_data
             });
 
+            tracing::info!(
+                "Returning successful response with booking data: {}",
+                has_booking_data
+            );
             (StatusCode::OK, success_response.to_string()).into_response()
         }
         Err(e) => {
@@ -288,6 +400,7 @@ pub async fn process_confirmation_api_server_fn_route(
                 "Booking pipeline failed: {} - but still returning booking data if available",
                 e
             );
+            tracing::Span::current().record("processing_status", "pipeline_failed");
 
             let error_response = json!({
                 "success": false,
@@ -297,6 +410,10 @@ pub async fn process_confirmation_api_server_fn_route(
                 "booking_data": booking_data
             });
 
+            tracing::warn!(
+                "Returning error response with booking data: {}",
+                has_booking_data
+            );
             (StatusCode::OK, error_response.to_string()).into_response()
         }
     }

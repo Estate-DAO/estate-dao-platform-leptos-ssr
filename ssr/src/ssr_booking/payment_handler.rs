@@ -814,6 +814,9 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
             // Update event with extracted order_id
             updated_event.order_id = extracted_order_id.clone();
+            if updated_event.user_email.is_empty() {
+                updated_event.user_email = booking_id.email.clone();
+            }
 
             info!(
                 "updated_event: {:?}, extraced_booking_id: {:?}",
