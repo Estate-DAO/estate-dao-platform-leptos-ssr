@@ -195,7 +195,7 @@ pub struct LiteApiBookedPrice {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiCancellationPolicies {
     #[serde(rename = "cancelPolicyInfos")]
-    pub cancel_policy_infos: Vec<LiteApiCancelPolicyInfo>,
+    pub cancel_policy_infos: Option<Vec<LiteApiCancelPolicyInfo>>,
     #[serde(rename = "hotelRemarks")]
     pub hotel_remarks: Option<Vec<String>>,
     #[serde(rename = "refundableTag")]

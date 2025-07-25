@@ -1547,6 +1547,7 @@ impl LiteApiAdapter {
             cancel_policy_infos: data
                 .cancellation_policies
                 .cancel_policy_infos
+                .unwrap_or_default()
                 .into_iter()
                 .map(|policy| DomainCancelPolicyInfo {
                     cancel_time: policy.cancel_time,
