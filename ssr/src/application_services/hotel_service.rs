@@ -4,8 +4,8 @@ use crate::application_services::filter_types::{
 };
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
-    DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
-    DomainHotelSearchCriteria,
+    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelDetails, DomainHotelInfoCriteria,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria,
 };
 use crate::ports::hotel_provider_port::ProviderError;
 use crate::ports::traits::HotelProviderPort;
@@ -153,6 +153,15 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         // <!-- - Audit logging -->
         // <!-- For now, we just delegate to the provider -->
         self.provider.book_room(book_request).await
+    }
+
+    pub async fn get_booking_details(
+        &self,
+        request: DomainGetBookingRequest,
+    ) -> Result<DomainGetBookingResponse, ProviderError> {
+        // <!-- Core business logic for getting booking details can be added here -->
+        // <!-- For now, we just delegate to the provider -->
+        self.provider.get_booking_details(request).await
     }
 
     // <!-- Future methods -->

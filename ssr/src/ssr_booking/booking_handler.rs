@@ -23,8 +23,9 @@ use crate::adapters::liteapi_adapter::LiteApiAdapter;
 use crate::application_services::hotel_service::HotelService;
 use crate::domain::{
     BookingError, DomainBookRoomRequest, DomainBookRoomResponse, DomainBookingContext,
-    DomainBookingGuest, DomainBookingHolder, DomainBookingStatus, DomainOriginalSearchInfo,
-    DomainPaymentInfo, DomainPaymentMethod, DomainRoomOccupancyForBooking,
+    DomainBookingGuest, DomainBookingHolder, DomainBookingStatus, DomainGetBookingRequest,
+    DomainGetBookingResponse, DomainOriginalSearchInfo, DomainPaymentInfo, DomainPaymentMethod,
+    DomainRoomOccupancyForBooking,
 };
 
 // ---------------------
@@ -584,6 +585,61 @@ async fn book_room_and_update_backend_v1(
     Ok(event)
 }
 
+/// New version of get booking details with full hotel service integration
+/// Similar to book_room_and_update_backend_v1 but for retrieving booking details
+#[instrument(
+    name = "get_booking_from_provider_and_update_backend",
+    skip(client_reference, guest_id),
+    err(Debug)
+)]
+pub async fn get_booking_from_provider_and_update_backend(
+    client_reference: Option<String>,
+    guest_id: Option<String>,
+) -> Result<DomainGetBookingResponse, String> {
+    info!("Starting get_booking_from_provider_and_update_backend");
+
+    // Validate that at least one identifier is provided
+    if client_reference.is_none() && guest_id.is_none() {
+        return Err(
+            "Either client_reference or guest_id must be provided for booking lookup".to_string(),
+        );
+    }
+
+    // Step 1: Create domain request
+    let domain_request = DomainGetBookingRequest {
+        client_reference: client_reference.clone(),
+        guest_id: guest_id.clone(),
+    };
+
+    info!("Created domain request: {domain_request:?}");
+
+    // Step 2: Initialize hotel service and call get_booking_details
+    let hotel_service = create_hotel_service_with_liteapi();
+    let domain_response = match hotel_service.get_booking_details(domain_request).await {
+        Ok(response) => response,
+        Err(e) => {
+            let error_message = format!("Hotel service get_booking_details failed: {e:?}");
+            error!("Get booking details failed: {}", error_message);
+            return Err(error_message);
+        }
+    };
+
+    info!(
+        "Received domain response with {} bookings",
+        domain_response.bookings.len()
+    );
+
+    // Step 3: Log booking details for debugging
+    for (index, booking) in domain_response.bookings.iter().enumerate() {
+        info!(
+            "Booking {}: ID={}, Status={}, Client_Ref={:?}",
+            index, booking.booking_id, booking.status, booking.client_reference
+        );
+    }
+
+    Ok(domain_response)
+}
+
 // ---------------------
 // PIPELINE INTEGRATION for backend provider as a step in pipeline
 // ---------------------
@@ -675,13 +731,29 @@ impl MakeBookingFromBookingProvider {
                         info!("Booking is on hold, proceeding with booking provider call");
                         book_room_hotel_details_looped(event).await
                     }
-                    invalid_status @ (backend::ResolvedBookingStatus::BookingCancelled
-                    | backend::ResolvedBookingStatus::BookingFailed) => {
-                        info!("Cannot proceed - booking status is {:?}", invalid_status);
-                        Err(format!(
-                            "Cannot proceed with booking - current status is {:?}",
-                            invalid_status
-                        ))
+                    backend::ResolvedBookingStatus::BookingCancelled => {
+                        info!("Cannot proceed - booking status is BookingCancelled");
+                        Err(
+                            "Cannot proceed with booking - current status is BookingCancelled"
+                                .to_string(),
+                        )
+                    }
+                    backend::ResolvedBookingStatus::BookingFailed => {
+                        // Check if error contains JsonParse keyword - indicates booking might have succeeded
+                        if book_room_status
+                            .message
+                            .to_lowercase()
+                            .contains("jsonparse")
+                        {
+                            info!("BookingFailed with JsonParse error detected - attempting to recover booking");
+                            book_room_and_update_backend_v1(event, booking_clone).await
+                        } else {
+                            info!("BookingFailed with non-JsonParse error - cannot proceed");
+                            Err(
+                                "Cannot proceed with booking - current status is BookingFailed"
+                                    .to_string(),
+                            )
+                        }
                     }
                 }
             }

@@ -3,8 +3,9 @@ use std::sync::Arc;
 use crate::adapters::LiteApiAdapter;
 use crate::api::api_client::ApiClient;
 use crate::api::liteapi::{
-    liteapi_book_room, liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search,
-    liteapi_prebook, LiteApiBookRequest, LiteApiBookResponse, LiteApiHTTPClient,
+    liteapi_book_room, liteapi_get_booking_details, liteapi_hotel_details, liteapi_hotel_rates,
+    liteapi_hotel_search, liteapi_prebook, LiteApiBookRequest, LiteApiBookResponse,
+    LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiHTTPClient,
     LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiHotelResult,
     LiteApiHotelSearchRequest, LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest,
     LiteApiPrebookResponse, LiteApiSingleHotelDetailRequest, LiteApiSingleHotelDetailResponse,
@@ -17,9 +18,9 @@ use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
-    DomainDetailedPrice, DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails,
-    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice,
-    DomainRoomData,
+    DomainDetailedPrice, DomainFirstRoomDetails, DomainGetBookingRequest, DomainGetBookingResponse,
+    DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice, DomainRoomData,
 };
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
@@ -295,6 +296,44 @@ impl HotelProviderPort for LiteApiAdapter {
                 crate::log!("LiteAPI rates mapping error: {:?}", e);
                 e
             })
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn get_booking_details(
+        &self,
+        request: DomainGetBookingRequest,
+    ) -> Result<DomainGetBookingResponse, ProviderError> {
+        // Convert domain request to LiteAPI request
+        let liteapi_request = Self::map_domain_get_booking_to_liteapi(&request)?;
+
+        crate::log!(
+            "LiteAPI get_booking_details: calling API with request: {:#?}",
+            liteapi_request
+        );
+
+        // Call LiteAPI get booking details endpoint
+        let liteapi_response: LiteApiGetBookingResponse = self
+            .client
+            .send(liteapi_request)
+            .await
+            .map_err(|e: ApiError| {
+            ProviderError::from_api_error(
+                e,
+                ProviderNames::LiteApi,
+                ProviderSteps::GetBookingDetails,
+            )
+        })?;
+
+        crate::log!(
+            "LiteAPI get_booking_details: received response with {} bookings",
+            liteapi_response.data.len()
+        );
+
+        // Map LiteAPI response to domain response
+        Self::map_liteapi_get_booking_to_domain(liteapi_response).map_err(|e| {
+            crate::log!("LiteAPI get booking details mapping error: {:?}", e);
+            e
+        })
     }
 }
 

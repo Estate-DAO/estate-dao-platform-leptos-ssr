@@ -269,3 +269,159 @@ pub struct DomainOriginalSearchInfo {
     // Guest nationality (some providers require this)
     pub guest_nationality: Option<String>,
 }
+
+// <!-- GET BOOKING DETAILS DOMAIN TYPES -->
+// Domain types for retrieving booking details - provider-agnostic
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainGetBookingRequest {
+    // Client-defined reference for booking lookup
+    pub client_reference: Option<String>,
+
+    // Guest ID for booking lookup (alternative to client_reference)
+    pub guest_id: Option<String>,
+    // <!-- Timeout removed - provider-specific, should be handled in adapter layer -->
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainGetBookingResponse {
+    // List of bookings found (can be multiple for guest_id lookup)
+    pub bookings: Vec<DomainBookingDetails>,
+}
+
+impl DomainGetBookingResponse {
+    // <!-- Helper methods for booking lookup -->
+
+    pub fn find_booking_by_client_reference(
+        &self,
+        client_ref: &str,
+    ) -> Option<&DomainBookingDetails> {
+        self.bookings.iter().find(|booking| {
+            booking
+                .client_reference
+                .as_ref()
+                .map(|ref_val| ref_val == client_ref)
+                .unwrap_or(false)
+        })
+    }
+
+    pub fn find_booking_by_booking_id(&self, booking_id: &str) -> Option<&DomainBookingDetails> {
+        self.bookings
+            .iter()
+            .find(|booking| booking.booking_id == booking_id)
+    }
+
+    pub fn get_first_booking(&self) -> Option<&DomainBookingDetails> {
+        self.bookings.first()
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBookingDetails {
+    // <!-- Essential booking information only -->
+
+    // Unique booking identifier from provider
+    pub booking_id: String,
+
+    // Client-defined reference (if provided during booking)
+    pub client_reference: Option<String>,
+
+    // Booking status (CONFIRMED, PENDING, CANCELLED, etc.)
+    pub status: String,
+
+    // Hotel information
+    pub hotel: DomainBookingHotelInfo,
+
+    // Booking holder information
+    pub holder: DomainBookingHolder,
+
+    // Pricing information
+    pub price: f64,
+    pub currency: String,
+    // <!-- Commented out fields for simplicity -->
+
+    // // Provider-specific booking details
+    // pub supplier_booking_id: String,
+    // pub supplier_booking_name: String,
+    // pub supplier: String,
+    // pub supplier_id: u32,
+
+    // // Hotel confirmation code
+    // pub hotel_confirmation_code: String,
+
+    // // Booking dates
+    // pub checkin: String,
+    // pub checkout: String,
+
+    // // Room and guest details
+    // pub rooms: Vec<DomainBookingRoomInfo>,
+
+    // // Booking timestamps
+    // pub created_at: String,
+    // pub updated_at: String,
+
+    // // Cancellation policy information
+    // pub cancellation_policies: DomainCancellationPolicies,
+
+    // // Additional pricing
+    // pub commission: f64,
+
+    // // Payment and transaction details
+    // pub payment_status: String,
+    // pub payment_transaction_id: String,
+
+    // // Additional booking information
+    // pub special_remarks: Option<String>,
+    // pub guest_id: Option<String>,
+    // pub tracking_id: String,
+    // pub prebook_id: String,
+    // pub email: String,
+
+    // // Cancellation information (if applicable)
+    // pub cancelled_at: Option<String>,
+    // pub refunded_at: Option<String>,
+    // pub cancelled_by: Option<u32>,
+
+    // // Additional metadata
+    // pub sandbox: u32,
+    // pub nationality: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBookingHotelInfo {
+    pub hotel_id: String,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBookingRoomInfo {
+    // Room guest information
+    pub adults: u32,
+    pub children: String, // Some providers return this as string
+    pub first_name: String,
+    pub last_name: String,
+    pub children_ages: Option<String>,
+
+    // Room details
+    pub room_id: String,
+    pub occupancy_number: u32,
+
+    // Room pricing
+    pub amount: f64,
+    pub currency: String,
+    pub children_count: u32,
+
+    // Room-specific details
+    pub remarks: Option<String>,
+    pub guests: Vec<DomainBookingGuestInfo>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainBookingGuestInfo {
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: String,
+    pub remarks: Option<String>,
+    pub occupancy_number: u32,
+}

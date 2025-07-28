@@ -9,10 +9,10 @@ use std::sync::Arc;
 use crate::api::api_client::ApiClient;
 use crate::api::liteapi::{
     liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook,
-    LiteApiError, LiteApiHTTPClient, LiteApiHotelImage, LiteApiHotelRatesRequest,
-    LiteApiHotelRatesResponse, LiteApiHotelResult, LiteApiHotelSearchRequest,
-    LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest, LiteApiPrebookResponse,
-    LiteApiSingleHotelDetailData, LiteApiSingleHotelDetailRequest,
+    LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiHTTPClient,
+    LiteApiHotelImage, LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiHotelResult,
+    LiteApiHotelSearchRequest, LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest,
+    LiteApiPrebookResponse, LiteApiSingleHotelDetailData, LiteApiSingleHotelDetailRequest,
     LiteApiSingleHotelDetailResponse,
 };
 use crate::utils;
@@ -21,8 +21,9 @@ use futures::future::{BoxFuture, FutureExt};
 use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
-    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
-    DomainFirstRoomDetails, DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainBookingHolder,
+    DomainDetailedPrice, DomainFirstRoomDetails, DomainGetBookingRequest, DomainGetBookingResponse,
+    DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
     DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPaginationMeta,
     DomainPaginationParams, DomainPrice, DomainRoomData, DomainRoomOccupancy, DomainRoomOption,
 };
@@ -1592,5 +1593,154 @@ impl LiteApiAdapter {
             remarks: data.remarks,
             guest_id: data.guest_id,
         }
+    }
+
+    // <!-- GET BOOKING DETAILS MAPPING METHODS -->
+
+    /// Map domain get booking request to LiteAPI request
+    fn map_domain_get_booking_to_liteapi(
+        request: &DomainGetBookingRequest,
+    ) -> Result<LiteApiGetBookingRequest, ProviderError> {
+        // Validate that at least one identifier is provided
+        if request.client_reference.is_none() && request.guest_id.is_none() {
+            return Err(ProviderError::validation_error(
+                ProviderNames::LiteApi,
+                "Either client_reference or guest_id must be provided for booking lookup"
+                    .to_string(),
+            ));
+        }
+
+        Ok(LiteApiGetBookingRequest {
+            client_reference: request.client_reference.clone(),
+            guest_id: request.guest_id.clone(),
+            timeout: Some(4.0), // Default timeout for LiteAPI
+        })
+    }
+
+    /// Map LiteAPI get booking response to domain response
+    fn map_liteapi_get_booking_to_domain(
+        response: LiteApiGetBookingResponse,
+    ) -> Result<DomainGetBookingResponse, ProviderError> {
+        use crate::domain::{
+            DomainBookingDetails,
+            DomainBookingHotelInfo,
+            // <!-- Commented out unused imports for simplified struct -->
+            // DomainBookingGuestInfo, DomainBookingRoomInfo,
+            // DomainCancellationPolicies, DomainCancelPolicyInfo,
+        };
+
+        let bookings = response
+            .data
+            .into_iter()
+            .map(|liteapi_booking| {
+                // Map hotel info
+                let hotel = DomainBookingHotelInfo {
+                    hotel_id: liteapi_booking.hotel.hotel_id,
+                    name: liteapi_booking.hotel.name,
+                };
+
+                // Map holder (from API response)
+                let holder = DomainBookingHolder {
+                    first_name: liteapi_booking.holder.first_name,
+                    last_name: liteapi_booking.holder.last_name,
+                    email: liteapi_booking.holder.email,
+                    phone: liteapi_booking.holder.phone,
+                };
+
+                // <!-- Commented out unused mappings since fields are not in simplified struct -->
+
+                // // Map cancellation policies
+                // let cancellation_policies = DomainCancellationPolicies {
+                //     cancel_policy_infos: liteapi_booking
+                //         .cancellation_policies
+                //         .cancel_policy_infos
+                //         .unwrap_or_default()
+                //         .into_iter()
+                //         .map(|policy| DomainCancelPolicyInfo {
+                //             cancel_time: policy.cancel_time,
+                //             amount: policy.amount,
+                //             policy_type: policy.policy_type,
+                //             timezone: policy.timezone,
+                //             currency: policy.currency,
+                //         })
+                //         .collect(),
+                //     hotel_remarks: liteapi_booking.cancellation_policies.hotel_remarks,
+                //     refundable_tag: liteapi_booking.cancellation_policies.refundable_tag,
+                // };
+
+                // // Map rooms
+                // let rooms = liteapi_booking
+                //     .rooms
+                //     .into_iter()
+                //     .map(|liteapi_room| {
+                //         let guests = liteapi_room
+                //             .guests
+                //             .into_iter()
+                //             .map(|guest| DomainBookingGuestInfo {
+                //                 first_name: guest.first_name,
+                //                 last_name: guest.last_name,
+                //                 email: guest.email,
+                //                 phone: guest.phone,
+                //                 remarks: guest.remarks,
+                //                 occupancy_number: guest.occupancy_number,
+                //             })
+                //             .collect();
+
+                //         DomainBookingRoomInfo {
+                //             adults: liteapi_room.adults,
+                //             children: liteapi_room.children,
+                //             first_name: liteapi_room.first_name,
+                //             last_name: liteapi_room.last_name,
+                //             children_ages: liteapi_room.children_ages,
+                //             room_id: liteapi_room.room_id,
+                //             occupancy_number: liteapi_room.occupancy_number,
+                //             amount: liteapi_room.amount,
+                //             currency: liteapi_room.currency,
+                //             children_count: liteapi_room.children_count,
+                //             remarks: liteapi_room.remarks,
+                //             guests,
+                //         }
+                //     })
+                //     .collect();
+
+                DomainBookingDetails {
+                    // <!-- Essential fields only -->
+                    booking_id: liteapi_booking.booking_id,
+                    client_reference: Some(liteapi_booking.client_reference),
+                    status: liteapi_booking.status,
+                    hotel,
+                    holder,
+                    price: liteapi_booking.price,
+                    currency: liteapi_booking.currency,
+                    // <!-- All other fields are commented out in the domain struct -->
+                    // supplier_booking_id: liteapi_booking.supplier_booking_id,
+                    // supplier_booking_name: liteapi_booking.supplier_booking_name,
+                    // supplier: liteapi_booking.supplier,
+                    // supplier_id: liteapi_booking.supplier_id,
+                    // hotel_confirmation_code: liteapi_booking.hotel_confirmation_code,
+                    // checkin: liteapi_booking.checkin,
+                    // checkout: liteapi_booking.checkout,
+                    // rooms,
+                    // created_at: liteapi_booking.created_at,
+                    // updated_at: liteapi_booking.updated_at,
+                    // cancellation_policies,
+                    // commission: liteapi_booking.commission,
+                    // payment_status: liteapi_booking.payment_status,
+                    // payment_transaction_id: liteapi_booking.payment_transaction_id,
+                    // special_remarks: liteapi_booking.special_remarks,
+                    // guest_id: liteapi_booking.guest_id,
+                    // tracking_id: liteapi_booking.tracking_id,
+                    // prebook_id: liteapi_booking.prebook_id,
+                    // email: liteapi_booking.email,
+                    // cancelled_at: liteapi_booking.cancelled_at,
+                    // refunded_at: liteapi_booking.refunded_at,
+                    // cancelled_by: liteapi_booking.cancelled_by,
+                    // sandbox: liteapi_booking.sandbox,
+                    // nationality: liteapi_booking.nationality,
+                }
+            })
+            .collect();
+
+        Ok(DomainGetBookingResponse { bookings })
     }
 }

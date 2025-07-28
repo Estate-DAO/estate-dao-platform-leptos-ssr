@@ -4,8 +4,9 @@ use crate::{
     application_services::UISearchFilters,
     domain::{
         DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest,
-        DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
-        DomainHotelListAfterSearch, DomainHotelSearchCriteria,
+        DomainBookRoomResponse, DomainGetBookingRequest, DomainGetBookingResponse,
+        DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
+        DomainHotelSearchCriteria,
     },
     ports::hotel_provider_port::ProviderError,
 };
@@ -58,7 +59,12 @@ pub trait HotelProviderPort {
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError>;
 
+    // <!-- Get booking details - retrieve booking information -->
+    async fn get_booking_details(
+        &self,
+        request: DomainGetBookingRequest,
+    ) -> Result<DomainGetBookingResponse, ProviderError>;
+
     // <!-- Future operations to be implemented -->
     // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError>;
-    // async fn get_booking_details(&self, booking_id: String) -> Result<DomainBookingDetails, ProviderError>;
 }

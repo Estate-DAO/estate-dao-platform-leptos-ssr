@@ -131,6 +131,20 @@ impl HotelProviderPort for ProvabAdapter {
         // since Provab provides pricing information in their hotel info response
         self.get_single_hotel_details(criteria).await
     }
+
+    async fn get_booking_details(
+        &self,
+        _request: crate::domain::DomainGetBookingRequest,
+    ) -> Result<crate::domain::DomainGetBookingResponse, ProviderError> {
+        // Provab doesn't support get booking details API yet
+        // Return an empty response for now
+        use crate::domain::DomainGetBookingResponse;
+
+        Err(ProviderError::validation_error(
+            crate::ports::ProviderNames::Provab,
+            "Get booking details is not yet implemented for Provab provider".to_string(),
+        ))
+    }
 }
 
 // <!-- Future methods to be implemented -->

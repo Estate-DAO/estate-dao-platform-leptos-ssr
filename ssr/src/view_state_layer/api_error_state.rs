@@ -14,6 +14,7 @@ pub enum ApiErrorType {
     HotelInfo,
     HotelRoom,
     Payment,
+    GetBookingDetails,
     Generic,
 }
 
@@ -24,6 +25,7 @@ impl From<ProviderError> for ApiErrorType {
             ProviderSteps::HotelDetails => ApiErrorType::HotelInfo,
             ProviderSteps::HotelBlockRoom => ApiErrorType::BlockRoom,
             ProviderSteps::HotelBookRoom => ApiErrorType::BookRoom,
+            ProviderSteps::GetBookingDetails => ApiErrorType::GetBookingDetails,
         }
     }
 }
@@ -37,6 +39,7 @@ impl fmt::Display for ApiErrorType {
             ApiErrorType::HotelInfo => write!(f, "Hotel Information"),
             ApiErrorType::HotelRoom => write!(f, "Hotel Room"),
             ApiErrorType::Payment => write!(f, "Payment"),
+            ApiErrorType::GetBookingDetails => write!(f, "Get Booking Details"),
             ApiErrorType::Generic => write!(f, "API"),
         }
     }

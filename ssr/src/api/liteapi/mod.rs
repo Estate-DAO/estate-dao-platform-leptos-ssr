@@ -43,5 +43,11 @@ cfg_if::cfg_if! {
             LiteApiHotelImage, LiteApiLocation, LiteApiFacility, LiteApiCheckinCheckoutTimes,
         };
 
+        pub use l05_get_booking_details::liteapi_get_booking_details;
+        pub mod l05_get_booking_details;
+        pub use l05_get_booking_details::{
+            LiteApiGetBookingRequest, LiteApiGetBookingResponse,
+        };
+
     }
 }

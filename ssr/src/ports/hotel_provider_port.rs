@@ -24,6 +24,7 @@ pub enum ProviderSteps {
     HotelDetails,
     HotelBlockRoom,
     HotelBookRoom,
+    GetBookingDetails,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,6 +51,14 @@ impl ProviderError {
             provider_name,
             api_error,
             error_step,
+        }))
+    }
+
+    pub fn validation_error(provider_name: ProviderNames, message: String) -> Self {
+        ProviderError(Arc::new(ProviderErrorDetails {
+            provider_name,
+            api_error: ApiError::Other(message),
+            error_step: ProviderSteps::GetBookingDetails,
         }))
     }
 }
