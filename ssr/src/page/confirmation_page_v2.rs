@@ -427,7 +427,7 @@ fn ErrorView() -> impl IntoView {
                     "What happened?"
                 </h3>
                 <p class="text-sm sm:text-base text-gray-700 bg-red-50 p-3 rounded-lg border border-red-100">
-                    {move || ConfirmationPageState::get_error().get().unwrap_or_else(|| "An unknown error occurred".to_string())}
+                    {move || "An unknown error occurred".to_string()}
                 </p>
             </div>
 
@@ -622,6 +622,11 @@ fn BookingConfirmationDisplay() -> impl IntoView {
             // Footer message
             <div class="text-center text-[10px] sm:text-xs md:text-sm lg:text-base font-medium text-gray-600 pt-2 border-t border-gray-200">
                 "Please take a screenshot for your reference"
+            </div>
+
+            // Support email note
+            <div class="text-center text-[10px] sm:text-xs md:text-sm text-gray-500 pt-2">
+                "Please check the spam folder for support email"
             </div>
         </div>
     }

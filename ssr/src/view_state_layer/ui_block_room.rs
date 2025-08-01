@@ -215,9 +215,13 @@ impl BlockRoomUIState {
         let adult_list = this.adults.get_untracked();
         let child_list = this.children.get_untracked();
 
-        // Validate primary adult
+        // Validate primary adult (requires all fields)
         let primary_adult_valid = adult_list.first().map_or(false, |adult| {
             !adult.first_name.trim().is_empty()
+                && adult
+                    .last_name
+                    .as_ref()
+                    .map_or(false, |l| !l.trim().is_empty())
                 && adult
                     .email
                     .as_ref()
@@ -228,16 +232,24 @@ impl BlockRoomUIState {
                     .map_or(false, |p| !p.trim().is_empty() && Self::is_valid_phone(p))
         });
 
-        // Validate other adults
-        let other_adults_valid = adult_list
-            .iter()
-            .skip(1)
-            .all(|adult| !adult.first_name.trim().is_empty());
+        // Validate other adults (require all fields)
+        let other_adults_valid = adult_list.iter().skip(1).all(|adult| {
+            !adult.first_name.trim().is_empty()
+                && adult
+                    .last_name
+                    .as_ref()
+                    .map_or(false, |l| !l.trim().is_empty())
+        });
 
-        // Validate children
-        let children_valid = child_list
-            .iter()
-            .all(|child| !child.first_name.trim().is_empty() && child.age.is_some());
+        // Validate children (require all fields)
+        let children_valid = child_list.iter().all(|child| {
+            !child.first_name.trim().is_empty()
+                && child
+                    .last_name
+                    .as_ref()
+                    .map_or(false, |l| !l.trim().is_empty())
+                && child.age.is_some()
+        });
 
         // Check if terms are accepted
         let terms_valid = this.terms_accepted.get_untracked();
