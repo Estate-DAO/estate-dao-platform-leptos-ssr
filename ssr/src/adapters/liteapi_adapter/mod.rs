@@ -695,6 +695,8 @@ impl LiteApiAdapter {
 
         // Extract all rooms and rates from LiteAPI response
         let mut all_rooms = Vec::new();
+        let mut room_type_map: std::collections::HashMap<String, DomainRoomOption> =
+            std::collections::HashMap::new();
 
         // Iterate through all room types and their rates
         if let Some(data) = &liteapi_rates_response.data {
@@ -750,11 +752,50 @@ impl LiteApiAdapter {
                             occupancy_info,
                         };
 
-                        all_rooms.push(room_option);
+                        // Deduplicate by room_name, keeping the one with lowest price
+                        let room_name = rate.name.clone();
+                        match room_type_map.get(&room_name) {
+                            Some(existing_room) => {
+                                // Keep the room with the lower price
+                                if room_price < existing_room.price.room_price {
+                                    room_type_map.insert(room_name, room_option);
+                                }
+                            }
+                            None => {
+                                room_type_map.insert(room_name, room_option);
+                            }
+                        }
                     }
                 }
             }
         }
+
+        // Convert the deduplicated map back to a vector
+        all_rooms = room_type_map.into_values().collect();
+
+        // Sort rooms: unique names first, then repeated names at the end
+        let mut name_counts: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
+        for room in &all_rooms {
+            *name_counts
+                .entry(room.room_data.room_name.clone())
+                .or_insert(0) += 1;
+        }
+
+        all_rooms.sort_by(|a, b| {
+            let a_count = name_counts.get(&a.room_data.room_name).unwrap_or(&0);
+            let b_count = name_counts.get(&b.room_data.room_name).unwrap_or(&0);
+
+            // First sort by uniqueness (unique names first)
+            match (a_count == &1, b_count == &1) {
+                (true, false) => std::cmp::Ordering::Less, // a is unique, b is not
+                (false, true) => std::cmp::Ordering::Greater, // b is unique, a is not
+                _ => {
+                    // If both are unique or both are repeated, sort by name for consistency
+                    a.room_data.room_name.cmp(&b.room_data.room_name)
+                }
+            }
+        });
 
         // Filter rooms based on image availability if hotel details are available and have room data
         // if let Some(details) = &hotel_details {
