@@ -53,7 +53,7 @@ mod process_confirmation;
 mod search_hotel;
 
 // Re-export route handlers to maintain public API compatibility
-pub use auth::auth_callback_handler;
+pub use auth::{initiate_auth, initiate_auth_axum_handler};
 pub use block_room::block_room_api_server_fn_route;
 pub use book_room::book_room_api_server_fn_route;
 pub use create_payment_invoice::create_payment_invoice_api_server_fn_route;
@@ -218,5 +218,9 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/verify_otp_api",
             post(verify_otp_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/initiate_auth",
+            post(initiate_auth_axum_handler).options(handle_options),
         )
 }

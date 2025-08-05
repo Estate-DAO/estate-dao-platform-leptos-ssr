@@ -26,7 +26,8 @@ tokio = { version = "1", features = [
     "rt-multi-thread",
     "time",
 ], optional = true }
-
+openidconnect = { version = "3.5", optional = true}
+jsonwebtoken = "9.3.1"
 tower = { workspace = true, features = ["util"], optional = true }
 tower-http = { workspace = true, features = [
     "fs",
@@ -127,6 +128,7 @@ lazy_static = "1.5.0"
 broadcaster = { version = "1.0.0", optional = true }
 circular-buffer = "0.1.7"
 sitewriter = "1.0"
+yral-types = { git = "https://github.com/dolr-ai/yral-common.git", branch = "master" }
 
 # for uuidv7
 coarsetime = { version = "0.1", optional = true }
@@ -143,14 +145,13 @@ url = "2.5"
 oauth2 = { version = "4.4", optional = true }
 uuid = { version = "1.0", features = ["v4", "serde"], optional = true }
 tower-cookies = { version = "0.10", optional = true }
-jsonwebtoken = { version = "9.0", optional = true }
+# jsonwebtoken = { version = "9.0", optional = true }
 
 # for the futures spawned from leptos
 # send_wrapper = { version = "0.6.0", features = ["futures"] }
 
 ## workspace crates 
 telemetry_axum = { workspace = true, optional = true }
-
 
 [build-dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -179,9 +180,11 @@ hydrate = [
 ssr = [
     "dep:telemetry_axum",
     "dep:axum",
+    "dep:axum-extra",
     "dep:tokio",
     "dep:tower",
     "dep:tower-http",
+    "dep:openidconnect",
     # "dep:tower_governor",
     "dep:leptos_axum",
     "leptos/ssr",
@@ -208,7 +211,7 @@ ssr = [
     "dep:oauth2",
     "dep:uuid",
     "dep:tower-cookies",
-    "dep:jsonwebtoken",
+    # "dep:jsonwebtoken",
     # "dep:colored"
     # "dep:dotenvy"
     # "reqwest/gzip"

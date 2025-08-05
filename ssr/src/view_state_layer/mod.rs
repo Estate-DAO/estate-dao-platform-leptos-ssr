@@ -57,6 +57,7 @@ cfg_if! {
             utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent},
         };
         use tracing::instrument;
+        use crate::api::auth::types::YralOAuthClient;
 
         #[derive(FromRef, Clone, Debug)]
         pub struct AppState {
@@ -74,6 +75,7 @@ cfg_if! {
             pub provab_client: &'static Provab,
             pub liteapi_client: &'static LiteApiHTTPClient,
             pub notifier_for_pipeline: &'static Notifier,
+            pub yral_oauth_client: &'static YralOAuthClient,
             // pub cookie_key: Key,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,

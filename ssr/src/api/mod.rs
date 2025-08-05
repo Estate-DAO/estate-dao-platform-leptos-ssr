@@ -3,7 +3,6 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         pub mod api_client;
-        pub mod auth;
     }
 }
 
@@ -28,4 +27,5 @@ pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStat
 
 pub mod canister;
 
+pub mod auth;
 pub mod liteapi;

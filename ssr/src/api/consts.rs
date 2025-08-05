@@ -1,3 +1,22 @@
+pub mod yral_auth {
+    use jsonwebtoken::DecodingKey;
+    use std::sync::LazyLock;
+
+    pub const YRAL_AUTH_AUTHORIZATION_URL: &str = "https://auth.yral.com/oauth/auth";
+    pub const YRAL_AUTH_TOKEN_URL: &str = "https://auth.yral.com/oauth/token";
+    pub const YRAL_AUTH_ISSUER_URL: &str = "https://auth.yral.com";
+
+    pub static YRAL_AUTH_TRUSTED_KEY: LazyLock<DecodingKey> = LazyLock::new(|| {
+        let pem = "-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoqN3/0RNfrnrnYGxKBgy/qHnmITr
++6ucjxStx7tjA30QJZlWzo0atxmY8y9dUR+eKQI0SnbQds4xLEU8+JGm8Q==
+-----END PUBLIC KEY-----";
+        DecodingKey::from_ec_pem(pem.as_bytes()).unwrap()
+    });
+
+    pub const YRAL_AUTH_CLIENT_ID_ENV: &str = "YRAL_AUTH_CLIENT_ID";
+}
+
 // CONST FOR LOCAL STORAGE
 pub const PAYMENT_ID: &str = "estatedao_payment_id";
 pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
