@@ -1,3 +1,4 @@
+use crate::component::yral_auth_provider::YralAuthProvider;
 use leptos::*;
 
 #[component]
@@ -24,6 +25,7 @@ pub fn Navbar() -> impl IntoView {
 
                 // <button />
             // </div>
+            <YralAuthProvider />
         </nav>
     }
 }

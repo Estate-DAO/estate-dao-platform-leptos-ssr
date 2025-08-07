@@ -123,6 +123,7 @@ cfg_if! {
                 move || {
                     provide_context(app_state.env_var_config.clone());
                     provide_context(AdminCanisters::from_env());
+                    provide_context(app_state.cookie_key.clone());
 
                     // provide a single instance of provab client so that connection pooling can be used
                     // creating a new client for each reqwest causes new TCP connection each time
@@ -148,7 +149,7 @@ cfg_if! {
                     // #[cfg(feature = "cloudflare")]
                     // provide_context(app_state.cloudflare.clone());
                     // provide_context(app_state.kv.clone());
-                    // provide_context(app_state.cookie_key.clone());
+                    provide_context(app_state.cookie_key.clone());
                     // #[cfg(feature = "oauth-ssr")]
                     // provide_context(app_state.google_oauth_clients.clone());
 

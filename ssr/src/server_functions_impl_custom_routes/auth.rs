@@ -3,11 +3,12 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use estate_fe::api::auth::auth_url::yral_auth_url_impl;
 use estate_fe::api::auth::types::LoginProvider;
+use estate_fe::api::{
+    auth::auth_url::yral_auth_url_impl, client_side_api::YralAuthLoginUrlRequest,
+};
 use estate_fe::view_state_layer::AppState;
 use leptos::ServerFnError;
-use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
@@ -35,17 +36,10 @@ use super::parse_json_request;
 //     pub error_description: Option<String>,
 // }
 
-#[derive(Deserialize)]
-pub struct AuthQueryParams {
-    // pub login_hint: String,
-    pub provider: LoginProvider,
-    // pub client_redirect_uri: Option<String>,
-}
-
 pub async fn initiate_auth(
-    auth_query_params: AuthQueryParams,
+    auth_query_params: YralAuthLoginUrlRequest,
     state: &AppState,
-) -> Result<String, ServerFnError> {
+) -> Result<(String, axum_extra::extract::PrivateCookieJar), ServerFnError> {
     let oauth_client = state.yral_oauth_client.clone();
     let yral_auth_redirect_uri = state.env_var_config.yral_redirect_uri.clone();
     yral_auth_url_impl(
@@ -53,6 +47,8 @@ pub async fn initiate_auth(
         "".to_string(),
         auth_query_params.provider,
         Some(yral_auth_redirect_uri),
+        state.cookie_key.clone(),
+        None, // No Leptos ResponseOptions in raw Axum handler
     )
     .await
 }
@@ -63,10 +59,11 @@ pub async fn initiate_auth_axum_handler(
     body: String,
 ) -> Result<Response, Response> {
     // Parse JSON request body
-    let auth_query_params: AuthQueryParams = parse_json_request(&body)?;
+    let auth_query_params: YralAuthLoginUrlRequest = parse_json_request(&body)?;
+    tracing::info!("Received auth query params: {:?}", auth_query_params);
 
-    // Call the existing initiate_auth function
-    let auth_url = initiate_auth(auth_query_params, &state)
+    // Call the auth function and get both URL and cookies
+    let (auth_url, cookie_jar) = initiate_auth(auth_query_params, &state)
         .await
         .map_err(|e| {
             tracing::error!("Failed to generate auth URL: {:?}", e);
@@ -80,12 +77,13 @@ pub async fn initiate_auth_axum_handler(
                 .into_response()
         })?;
 
-    // Return the auth URL as JSON response
+    // Create JSON response
     let response = json!({
         "auth_url": auth_url
     });
 
-    Ok((StatusCode::OK, response.to_string()).into_response())
+    // Use the standard Axum pattern: (cookies, status, body)
+    Ok((cookie_jar, (StatusCode::OK, response.to_string())).into_response())
 }
 
 // /// Handle OAuth2 callback from YRAL

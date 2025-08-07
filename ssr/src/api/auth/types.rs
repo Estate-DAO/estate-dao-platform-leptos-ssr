@@ -1,16 +1,3 @@
-use openidconnect::{
-    core::{
-        CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreErrorResponseType,
-        CoreGenderClaim, CoreIdTokenVerifier, CoreJsonWebKey, CoreJsonWebKeyType,
-        CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm,
-        CoreRevocableToken, CoreRevocationErrorResponse, CoreTokenIntrospectionResponse,
-        CoreTokenType,
-    },
-    reqwest::async_http_client,
-    AdditionalClaims, AuthorizationCode, CsrfToken, EmptyExtraTokenFields, IdTokenFields,
-    LoginHint, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, Scope,
-    StandardErrorResponse, StandardTokenResponse,
-};
 use serde::{Deserialize, Serialize};
 use yral_types::delegated_identity::DelegatedIdentityWire;
 
@@ -20,35 +7,53 @@ pub struct YralAuthAdditionalTokenClaims {
     pub ext_delegated_identity: DelegatedIdentityWire,
 }
 
-pub type YralOAuthClient = openidconnect::Client<
-    YralAuthAdditionalTokenClaims,
-    CoreAuthDisplay,
-    CoreGenderClaim,
-    CoreJweContentEncryptionAlgorithm,
-    CoreJwsSigningAlgorithm,
-    CoreJsonWebKeyType,
-    CoreJsonWebKeyUse,
-    CoreJsonWebKey,
-    CoreAuthPrompt,
-    StandardErrorResponse<CoreErrorResponseType>,
-    StandardTokenResponse<
-        IdTokenFields<
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use openidconnect::{
+            core::{
+                CoreAuthDisplay, CoreAuthPrompt, CoreAuthenticationFlow, CoreErrorResponseType,
+                CoreGenderClaim, CoreIdTokenVerifier, CoreJsonWebKey, CoreJsonWebKeyType,
+                CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm, CoreJwsSigningAlgorithm,
+                CoreRevocableToken, CoreRevocationErrorResponse, CoreTokenIntrospectionResponse,
+                CoreTokenType,
+            },
+            reqwest::async_http_client,
+            AdditionalClaims, AuthorizationCode, CsrfToken, EmptyExtraTokenFields, IdTokenFields,
+            LoginHint, Nonce, OAuth2TokenResponse, PkceCodeChallenge, PkceCodeVerifier, Scope,
+            StandardErrorResponse, StandardTokenResponse,
+        };
+
+        pub type YralOAuthClient = openidconnect::Client<
             YralAuthAdditionalTokenClaims,
-            EmptyExtraTokenFields,
+            CoreAuthDisplay,
             CoreGenderClaim,
             CoreJweContentEncryptionAlgorithm,
             CoreJwsSigningAlgorithm,
             CoreJsonWebKeyType,
-        >,
-        CoreTokenType,
-    >,
-    CoreTokenType,
-    CoreTokenIntrospectionResponse,
-    CoreRevocableToken,
-    CoreRevocationErrorResponse,
->;
+            CoreJsonWebKeyUse,
+            CoreJsonWebKey,
+            CoreAuthPrompt,
+            StandardErrorResponse<CoreErrorResponseType>,
+            StandardTokenResponse<
+                IdTokenFields<
+                    YralAuthAdditionalTokenClaims,
+                    EmptyExtraTokenFields,
+                    CoreGenderClaim,
+                    CoreJweContentEncryptionAlgorithm,
+                    CoreJwsSigningAlgorithm,
+                    CoreJsonWebKeyType,
+                >,
+                CoreTokenType,
+            >,
+            CoreTokenType,
+            CoreTokenIntrospectionResponse,
+            CoreRevocableToken,
+            CoreRevocationErrorResponse,
+        >;
+    impl AdditionalClaims for YralAuthAdditionalTokenClaims {}
 
-impl AdditionalClaims for YralAuthAdditionalTokenClaims {}
+    }
+}
 
 // #[derive(Debug, Clone, Serialize, Deserialize)]
 // pub struct YralTokenResponse {
@@ -93,3 +98,23 @@ pub enum LoginProvider {
 }
 pub const PKCE_VERIFIER_COOKIE: &str = "google-pkce-verifier";
 pub const CSRF_TOKEN_COOKIE: &str = "google-csrf-token";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProviderKind {
+    YralAuth,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct NewIdentity {
+    pub id_wire: DelegatedIdentityWire,
+    pub fallback_username: Option<String>,
+}
+
+impl NewIdentity {
+    pub fn new_without_username(id: DelegatedIdentityWire) -> Self {
+        Self {
+            id_wire: id,
+            fallback_username: None,
+        }
+    }
+}

@@ -94,5 +94,8 @@ pub use gtag::*;
 pub mod data_table_3;
 pub use data_table_3::*;
 
+// pub mod auth;
+pub mod yral_auth_provider;
+
 // mod live_select_example;
 // pub use live_select_example::*;

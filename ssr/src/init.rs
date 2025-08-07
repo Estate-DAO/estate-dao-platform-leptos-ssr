@@ -123,6 +123,7 @@ impl AppStateBuilder {
             liteapi_client: self.liteapi_client,
             notifier_for_pipeline: self.notifier_for_pipeline,
             yral_oauth_client: self.yral_oauth_client,
+            cookie_key: axum_extra::extract::cookie::Key::generate(),
         };
 
         let app_state_clone = app_state.clone();

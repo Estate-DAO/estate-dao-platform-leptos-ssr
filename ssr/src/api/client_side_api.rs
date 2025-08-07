@@ -1,7 +1,9 @@
+use crate::api::auth::types::LoginProvider;
 use crate::api::consts::APP_URL;
 use crate::api::payments::domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse};
 use crate::api::payments::ports::GetPaymentStatusResponse;
 use crate::canister::backend::{Booking, PaymentDetails};
+
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
     DomainHotelListAfterSearch, DomainHotelSearchCriteria,
@@ -73,6 +75,11 @@ pub struct SendOtpResponse {
 pub struct VerifyOtpRequest {
     pub booking_id: String,
     pub otp: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YralAuthLoginUrlRequest {
+    pub provider: LoginProvider,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -384,6 +391,23 @@ impl ClientSideApiClient {
     ) -> Result<VerifyOtpResponse, String> {
         let request = VerifyOtpRequest { booking_id, otp };
         Self::api_call_with_error(request, "server_fn_api/verify_otp_api", "verify OTP").await
+    }
+
+    pub async fn yral_auth_login_url(&self, provider: LoginProvider) -> Result<String, String> {
+        let request = YralAuthLoginUrlRequest { provider };
+        let response: serde_json::Value = Self::api_call_with_error(
+            request,
+            "server_fn_api/yral_auth_login_url_api",
+            "yral auth login url",
+        )
+        .await?;
+
+        // Extract auth_url from the JSON response
+        response
+            .get("auth_url")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Missing or invalid auth_url in response".to_string())
     }
 }
 

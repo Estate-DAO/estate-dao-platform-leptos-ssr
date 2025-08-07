@@ -1,6 +1,6 @@
 use axum::response::IntoResponse;
 use http::header;
-use leptos_axum::{extract_with_state, ResponseOptions};
+use leptos_axum::ResponseOptions;
 use leptos_use::SameSite;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -9,7 +9,7 @@ use tower_cookies::Cookie;
 use crate::api::auth::types::LoginProvider;
 use crate::api::auth::types::{YralOAuthClient, CSRF_TOKEN_COOKIE, PKCE_VERIFIER_COOKIE};
 use axum_extra::extract::{cookie::Key, PrivateCookieJar};
-use leptos::{expect_context, ServerFnError};
+use leptos::ServerFnError;
 use openidconnect::LoginHint;
 use openidconnect::Nonce;
 use openidconnect::{
@@ -33,7 +33,9 @@ pub async fn yral_auth_url_impl(
     login_hint: String,
     provider: LoginProvider,
     client_redirect_uri: Option<String>,
-) -> Result<String, ServerFnError> {
+    cookie_key: Key,
+    response_options: Option<ResponseOptions>,
+) -> Result<(String, PrivateCookieJar), ServerFnError> {
     let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
     let oauth_state = OAuthState {
@@ -48,8 +50,8 @@ pub async fn yral_auth_url_impl(
             Nonce::new_random,
         )
         .add_scope(Scope::new("openid".into()))
-        .set_pkce_challenge(pkce_challenge)
-        .set_login_hint(LoginHint::new(login_hint));
+        .set_pkce_challenge(pkce_challenge);
+    // .set_login_hint(LoginHint::new(login_hint));
 
     let mut oauth2_request = oauth2_request;
     if provider != LoginProvider::Any {
@@ -63,8 +65,8 @@ pub async fn yral_auth_url_impl(
 
     let (auth_url, oauth_csrf_token, _) = oauth2_request.url();
 
-    let key: Key = expect_context();
-    let mut jar: PrivateCookieJar = extract_with_state(&key).await?;
+    // Create a new empty PrivateCookieJar with the provided key
+    let mut jar = PrivateCookieJar::new(cookie_key);
 
     let cookie_life = Duration::from_secs(60 * 10).try_into().unwrap(); // 10 minutes
     let pkce_cookie = Cookie::build((PKCE_VERIFIER_COOKIE, pkce_verifier.secret().clone()))
@@ -81,10 +83,13 @@ pub async fn yral_auth_url_impl(
         .build();
     jar = jar.add(csrf_cookie);
 
-    let resp: ResponseOptions = expect_context();
-    set_cookies(&resp, jar);
+    // If we have ResponseOptions (Leptos context), set cookies directly
+    if let Some(resp) = response_options {
+        set_cookies(&resp, jar.clone());
+    }
 
-    Ok(auth_url.to_string())
+    // Return both the URL and the cookie jar for the caller to handle
+    Ok((auth_url.to_string(), jar))
 }
 
 pub fn no_op_nonce_verifier(_: Option<&Nonce>) -> Result<(), String> {

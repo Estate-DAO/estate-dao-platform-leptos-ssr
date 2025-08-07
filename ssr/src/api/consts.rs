@@ -285,16 +285,16 @@ impl EnvVarConfig {
             basic_auth_password: env_or_panic("BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE"),
 
             // YRAL OAuth2 configuration
-            yral_client_id: env_w_default("YRAL_CLIENT_ID", "").unwrap(),
-            yral_client_secret: env_w_default("YRAL_CLIENT_SECRET", "").unwrap(),
+            yral_client_id: env_w_default("YRAL_AUTH_CLIENT_ID", "").unwrap(),
+            yral_client_secret: env_w_default("YRAL_AUTH_CLIENT_SECRET", "").unwrap(),
             yral_redirect_uri: env_w_default(
-                "YRAL_REDIRECT_URI",
+                "YRAL_AUTH_REDIRECT_URL",
                 &format!("{}/auth/callback", APP_URL.as_str()),
             )
             .unwrap(),
         };
 
-        println!("Using PROVAB_BASE_URL: {}", value.provab_base_url);
+        // println!("Using PROVAB_BASE_URL: {}", value.provab_base_url);
         value
     }
 

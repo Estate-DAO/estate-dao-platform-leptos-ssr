@@ -1,16 +1,9 @@
-// cfg_if::cfg_if! {
-//     if #[cfg(feature = "ssr")] {
-//         use crate::api::provab::Provab;
-//         use crate::adapters::ProvabAdapter;
-//     }
-// }
-
+use crate::component::yral_auth_provider::LoginProvCtx;
 use crate::{
     api::{
         consts::{EnvVarConfig, APP_URL},
         payments::ports::GetPaymentStatusResponse,
     },
-    // application_services::hotel_service::HotelService,
     component::{
         DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample,
         NotificationState,
@@ -154,7 +147,9 @@ pub fn App() -> impl IntoView {
 
     // fallible component in app startup
     // -> if environment variables are not defined, panic!
-    // provide_context(EnvVarConfig::try_from_env());
+    // provide_context(get_yral_oauth_client());
+
+    provide_context(LoginProvCtx::default());
 
     provide_context(InputGroupState::default());
 

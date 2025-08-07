@@ -220,7 +220,7 @@ pub fn api_routes() -> Router<AppState> {
             post(verify_otp_api_server_fn_route).options(handle_options),
         )
         .route(
-            "/initiate_auth",
+            "/yral_auth_login_url_api",
             post(initiate_auth_axum_handler).options(handle_options),
         )
 }
