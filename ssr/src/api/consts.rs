@@ -1,6 +1,6 @@
 pub mod yral_auth {
     use jsonwebtoken::DecodingKey;
-    use std::sync::LazyLock;
+    use std::{sync::LazyLock, time::Duration};
 
     pub const YRAL_AUTH_AUTHORIZATION_URL: &str = "https://auth.yral.com/oauth/auth";
     pub const YRAL_AUTH_TOKEN_URL: &str = "https://auth.yral.com/oauth/token";
@@ -15,6 +15,9 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoqN3/0RNfrnrnYGxKBgy/qHnmITr
     });
 
     pub const YRAL_AUTH_CLIENT_ID_ENV: &str = "YRAL_AUTH_CLIENT_ID";
+    pub const USERNAME_MAX_LEN: usize = 15;
+    pub const REFRESH_MAX_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 29);
+    pub const REFRESH_TOKEN_COOKIE: &str = "user-identity";
 }
 
 // CONST FOR LOCAL STORAGE
@@ -232,6 +235,9 @@ pub struct EnvVarConfig {
     pub yral_client_id: String,
     pub yral_client_secret: String,
     pub yral_redirect_uri: String,
+
+    // Cookie encryption key (base64 encoded)
+    pub cookie_key: String,
 }
 
 impl EnvVarConfig {
@@ -292,6 +298,9 @@ impl EnvVarConfig {
                 &format!("{}/auth/callback", APP_URL.as_str()),
             )
             .unwrap(),
+
+            // Cookie encryption key
+            cookie_key: env_or_panic("COOKIE_KEY"),
         };
 
         // println!("Using PROVAB_BASE_URL: {}", value.provab_base_url);
@@ -335,6 +344,9 @@ impl EnvVarConfig {
             yral_client_id: "test-yral-client-id".to_string(),
             yral_client_secret: "test-yral-client-secret".to_string(),
             yral_redirect_uri: "http://localhost:3002/auth/callback".to_string(),
+
+            // Test cookie key (base64 encoded dummy key)
+            cookie_key: "dGVzdC1jb29raWUta2V5LWR1bW15LWRhdGE=".to_string(),
         }
     }
 }

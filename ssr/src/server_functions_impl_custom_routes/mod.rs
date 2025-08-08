@@ -53,7 +53,7 @@ mod process_confirmation;
 mod search_hotel;
 
 // Re-export route handlers to maintain public API compatibility
-pub use auth::{initiate_auth, initiate_auth_axum_handler};
+pub use auth::{initiate_auth, initiate_auth_axum_handler, perform_yral_oauth_api_server_fn_route};
 pub use block_room::block_room_api_server_fn_route;
 pub use book_room::book_room_api_server_fn_route;
 pub use create_payment_invoice::create_payment_invoice_api_server_fn_route;
@@ -222,5 +222,9 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/yral_auth_login_url_api",
             post(initiate_auth_axum_handler).options(handle_options),
+        )
+        .route(
+            "/perform_yral_oauth_api",
+            post(perform_yral_oauth_api_server_fn_route).options(handle_options),
         )
 }

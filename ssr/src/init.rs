@@ -1,3 +1,8 @@
+use std::sync::{Arc, Mutex};
+
+use axum_extra::extract::cookie::Key;
+use axum_extra::extract::PrivateCookieJar;
+use base64::{engine::general_purpose, Engine as _};
 use leptos::LeptosOptions;
 use leptos_router::RouteListing;
 
@@ -114,16 +119,25 @@ impl AppStateBuilder {
     }
 
     pub async fn build(self) -> AppState {
+        let env_var_config = EnvVarConfig::try_from_env();
+
+        println!("env_var_config = {:#?}", env_var_config);
+        let cookie_key_bytes = general_purpose::STANDARD
+            .decode(&env_var_config.cookie_key)
+            .expect("COOKIE_KEY must be valid base64");
+        let cookie_key = Key::from(&cookie_key_bytes);
+
         let app_state = AppState {
             leptos_options: self.leptos_options,
             routes: self.routes,
-            env_var_config: EnvVarConfig::try_from_env(),
+            env_var_config,
             pipeline_lock_manager: PipelineLockManager::new(),
             provab_client: self.provab_client,
             liteapi_client: self.liteapi_client,
             notifier_for_pipeline: self.notifier_for_pipeline,
             yral_oauth_client: self.yral_oauth_client,
-            cookie_key: axum_extra::extract::cookie::Key::generate(),
+            cookie_key: cookie_key.clone(),
+            // private_cookie_jar: Arc::new(Mutex::new(PrivateCookieJar::new(cookie_key)))
         };
 
         let app_state_clone = app_state.clone();

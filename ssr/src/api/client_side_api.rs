@@ -1,4 +1,4 @@
-use crate::api::auth::types::LoginProvider;
+use crate::api::auth::types::{LoginProvider, NewIdentity};
 use crate::api::consts::APP_URL;
 use crate::api::payments::domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse};
 use crate::api::payments::ports::GetPaymentStatusResponse;
@@ -9,6 +9,7 @@ use crate::domain::{
     DomainHotelListAfterSearch, DomainHotelSearchCriteria,
 };
 use crate::log;
+use crate::page::OAuthQuery;
 use crate::utils::route::join_base_and_path_url;
 use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -16,6 +17,9 @@ use std::collections::HashMap;
 
 #[cfg(not(feature = "ssr"))]
 use web_sys;
+
+#[cfg(not(feature = "ssr"))]
+use wasm_bindgen::JsCast;
 
 // Import the integrated request/response types
 use crate::application_services::booking_service::{
@@ -157,12 +161,47 @@ impl ClientSideApiClient {
         }
     }
 
+    fn log_browser_environment() {
+        #[cfg(not(feature = "ssr"))]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Some(_document) = window.document() {
+                    tracing::debug!("[CLIENT_API_DEBUG] Browser environment detected: cookies will be handled automatically by reqwest/browser");
+                } else {
+                    tracing::error!(
+                        "[CLIENT_API_DEBUG] No document available in browser environment"
+                    );
+                }
+            } else {
+                tracing::error!(
+                    "[CLIENT_API_DEBUG] No window available - not in browser environment"
+                );
+            }
+        }
+
+        #[cfg(feature = "ssr")]
+        {
+            tracing::debug!(
+                "[CLIENT_API_DEBUG] Server-side environment - no browser cookies available"
+            );
+        }
+    }
+
     async fn make_post_request<T: DeserializeOwned>(
         endpoint: &str,
         body: String,
         context: &str,
     ) -> Result<T, String> {
+        tracing::debug!("[CLIENT_API_DEBUG] Making POST request to: {}", endpoint);
+        tracing::debug!("[CLIENT_API_DEBUG] Request context: {}", context);
+        tracing::debug!("[CLIENT_API_DEBUG] Request body: {}", body);
+
+        // Log browser environment and cookie handling approach
+        Self::log_browser_environment();
+
+        // Create client - in WASM, cookies are handled automatically by the browser
         let client = reqwest::Client::new();
+
         let mut request_builder = client
             .post(Self::build_api_url(endpoint))
             .header("Content-Type", "application/json")
@@ -171,17 +210,27 @@ impl ClientSideApiClient {
         // Add basic auth headers for admin endpoints
         if endpoint.contains("/admin/") {
             if let Some(auth_header) = Self::get_basic_auth_header() {
+                // tracing::debug!("[CLIENT_API_DEBUG] Adding basic auth header for admin endpoint");
                 request_builder = request_builder.header("Authorization", auth_header);
             }
         }
 
+        // Note: In WASM/browser environments, reqwest automatically handles cookies
+        // via the browser's cookie store for same-origin requests
+
+        // tracing::debug!("[CLIENT_API_DEBUG] Sending HTTP request...");
         let response = request_builder.send().await;
 
         match response {
             Ok(res) => {
                 let status = res.status();
-                match res.text().await {
+                // tracing::debug!("[CLIENT_API_DEBUG] Response status: {}", status);
+                // tracing::debug!("[CLIENT_API_DEBUG] Response headers: {:#?}", res.headers());
+
+                let text_result = res.text().await;
+                match text_result {
                     Ok(text) => {
+                        tracing::debug!("[CLIENT_API_DEBUG] Response body: {}", text);
                         if status.is_success() {
                             Self::parse_server_response(&text)
                         } else {
@@ -408,6 +457,26 @@ impl ClientSideApiClient {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .ok_or_else(|| "Missing or invalid auth_url in response".to_string())
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn perform_yral_oauth(&self, oauth: OAuthQuery) -> Result<NewIdentity, String> {
+        tracing::info!(
+            "[YRAL_OAUTH] Starting OAuth flow with code: {}, state: {}",
+            &oauth.code,
+            &oauth.state
+        );
+
+        let request = OAuthQuery {
+            code: oauth.code,
+            state: oauth.state,
+        };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/perform_yral_oauth_api",
+            "perform yral oauth",
+        )
+        .await
     }
 }
 

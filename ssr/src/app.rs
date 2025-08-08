@@ -13,6 +13,7 @@ use crate::{
         AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
         ConfirmationPageV1, ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
         HotelListPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
+        YralAuthRedirectHandlerPage,
     },
     view_state_layer::{
         api_error_state::ApiErrorState,
@@ -66,6 +67,7 @@ pub enum AppRoutes {
     // ConfirmationV2,
     AdminPanel,
     AdminEditPanel,
+    YralAuthRedirectHandler,
     // Notifications
 }
 
@@ -81,6 +83,7 @@ impl AppRoutes {
             // AppRoutes::ConfirmationV2 => "/confirmation-v2",
             AppRoutes::AdminPanel => "/admin-panel",
             AppRoutes::AdminEditPanel => "/admin-edit-panel",
+            AppRoutes::YralAuthRedirectHandler => "/auth/callback",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -96,6 +99,7 @@ impl AppRoutes {
             // Self::ConfirmationV2,
             Self::AdminPanel,
             Self::AdminEditPanel,
+            Self::YralAuthRedirectHandler,
             // Self::Notifications,
         ]
         .into_iter()
@@ -230,6 +234,7 @@ pub fn App() -> impl IntoView {
                     // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
                     <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                     <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
+                    <Route path=AppRoutes::YralAuthRedirectHandler.to_string() view=YralAuthRedirectHandlerPage />
                     // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                     // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>

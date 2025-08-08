@@ -5,8 +5,11 @@ use axum::{
 };
 use estate_fe::api::auth::types::LoginProvider;
 use estate_fe::api::{
-    auth::auth_url::yral_auth_url_impl, client_side_api::YralAuthLoginUrlRequest,
+    auth::auth_url::{perform_yral_auth_impl, yral_auth_url_impl},
+    auth::types::NewIdentity,
+    client_side_api::YralAuthLoginUrlRequest,
 };
+use estate_fe::page::OAuthQuery;
 use estate_fe::view_state_layer::AppState;
 use leptos::ServerFnError;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -47,13 +50,14 @@ pub async fn initiate_auth(
         "".to_string(),
         auth_query_params.provider,
         Some(yral_auth_redirect_uri),
-        state.cookie_key.clone(),
-        None, // No Leptos ResponseOptions in raw Axum handler
+        state,
+        None, // No ResponseOptions for raw Axum handler
     )
     .await
 }
 
 #[cfg_attr(feature = "debug_log", axum::debug_handler)]
+#[tracing::instrument(skip(state))]
 pub async fn initiate_auth_axum_handler(
     State(state): State<AppState>,
     body: String,
@@ -81,6 +85,10 @@ pub async fn initiate_auth_axum_handler(
     let response = json!({
         "auth_url": auth_url
     });
+
+    tracing::debug!("cookie_jar: {:#?}", cookie_jar);
+    tracing::debug!("auth_url: {:#?}", auth_url);
+    tracing::debug!("response: {:#?}", response);
 
     // Use the standard Axum pattern: (cookies, status, body)
     Ok((cookie_jar, (StatusCode::OK, response.to_string())).into_response())
@@ -283,3 +291,175 @@ pub async fn initiate_auth_axum_handler(
 //     log!("Token refreshed successfully");
 //     Ok(())
 // }
+
+use axum::body::{to_bytes, Body};
+use axum::extract::{FromRequestParts, Request};
+use axum::http::request::Parts;
+use axum_extra::extract::cookie::Key;
+use axum_extra::extract::{PrivateCookieJar, SignedCookieJar};
+
+// Helper function to extract cookie jars from request parts using the app's cookie key
+async fn extract_cookie_jars(
+    parts: &mut Parts,
+    cookie_key: &Key,
+) -> Result<(PrivateCookieJar<Key>, SignedCookieJar<Key>), (StatusCode, &'static str)> {
+    // tracing::debug!("[COOKIE_DEBUG] Starting cookie jar extraction");
+    // tracing::debug!("[COOKIE_DEBUG] Cookie key length: {}", cookie_key.signing().len());
+    // tracing::debug!("[COOKIE_DEBUG] Available request headers: {:#?}", parts.headers);
+
+    // Log raw cookie header if present
+    if let Some(cookie_header) = parts.headers.get("cookie") {
+        tracing::debug!("[COOKIE_DEBUG] Raw cookie header: {:?}", cookie_header);
+    } else {
+        tracing::warn!("[COOKIE_DEBUG] No cookie header found in request");
+    }
+
+    let private_jar = PrivateCookieJar::from_request_parts(parts, cookie_key)
+        .await
+        .map_err(|e| {
+            // tracing::error!("[COOKIE_DEBUG] Failed to extract private cookies: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to extract private cookies",
+            )
+        })?;
+
+    // tracing::debug!("[COOKIE_DEBUG] Private jar extracted successfully");
+    // tracing::debug!("[COOKIE_DEBUG] Private jar is empty: {}", private_jar.iter().count() == 0);
+
+    let signed_jar = SignedCookieJar::from_request_parts(parts, cookie_key)
+        .await
+        .map_err(|e| {
+            tracing::error!("[COOKIE_DEBUG] Failed to extract signed cookies: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to extract signed cookies",
+            )
+        })?;
+
+    // tracing::debug!("[COOKIE_DEBUG] Signed jar extracted successfully");
+    // tracing::debug!("[COOKIE_DEBUG] Signed jar is empty: {}", signed_jar.iter().count() == 0);
+
+    // // Log individual cookies in private jar
+    // for cookie in private_jar.iter() {
+    //     tracing::debug!("[COOKIE_DEBUG] Private cookie name: {}", cookie.name());
+    // }
+
+    // // Log individual cookies in signed jar
+    // for cookie in signed_jar.iter() {
+    //     tracing::debug!("[COOKIE_DEBUG] Signed cookie name: {}", cookie.name());
+    // }
+
+    Ok((private_jar, signed_jar))
+}
+
+#[cfg_attr(feature = "debug_log", axum::debug_handler)]
+#[tracing::instrument(skip(state))]
+pub async fn perform_yral_oauth_api_server_fn_route(
+    State(state): State<AppState>,
+    request: Request<Body>,
+) -> Result<Response, Response> {
+    // Split the request into parts and body
+    let (mut parts, body) = request.into_parts();
+
+    // Extract body as string
+    let body_bytes = to_bytes(body, usize::MAX).await.map_err(|e| {
+        tracing::error!("Failed to read request body: {:?}", e);
+        (StatusCode::BAD_REQUEST, "Failed to read request body").into_response()
+    })?;
+    let body = String::from_utf8(body_bytes.to_vec()).map_err(|e| {
+        tracing::error!("Invalid UTF-8 in request body: {:?}", e);
+        (StatusCode::BAD_REQUEST, "Invalid request body encoding").into_response()
+    })?;
+
+    // // Log request headers and cookies for debugging
+    // tracing::debug!("[OAUTH_DEBUG] Request method: {}", parts.method);
+    // tracing::debug!("[OAUTH_DEBUG] Request URI: {}", parts.uri);
+    // tracing::debug!("[OAUTH_DEBUG] Request headers: {:#?}", parts.headers);
+
+    // Parse JSON request body
+    let oauth_query: OAuthQuery = parse_json_request(&body)?;
+    tracing::info!(
+        "[OAUTH_DEBUG] Received OAuth callback: code={}, state={}",
+        oauth_query.code,
+        oauth_query.state
+    );
+
+    // Parse and log state parameter to extract CSRF token
+    if let Ok(state_json) = serde_json::from_str::<serde_json::Value>(&oauth_query.state) {
+        tracing::debug!("[OAUTH_DEBUG] Parsed state parameter: {:#?}", state_json);
+        if let Some(csrf_token) = state_json.get("csrf_token").and_then(|v| v.as_str()) {
+            tracing::info!(
+                "[OAUTH_DEBUG] CSRF token from state parameter: {}",
+                csrf_token
+            );
+        } else {
+            tracing::warn!("[OAUTH_DEBUG] No csrf_token found in state parameter");
+        }
+    } else {
+        tracing::warn!(
+            "[OAUTH_DEBUG] Failed to parse state parameter as JSON: {}",
+            oauth_query.state
+        );
+    }
+
+    // Extract cookie jars from the request using helper
+    let cookie_key = state.cookie_key.clone();
+    let (private_jar, signed_jar) =
+        extract_cookie_jars(&mut parts, &cookie_key)
+            .await
+            .map_err(|(status, msg)| {
+                tracing::error!("[OAUTH_DEBUG] Cookie extraction failed: {}", msg);
+                (status, msg).into_response()
+            })?;
+
+    // // Log cookies available in jars for debugging
+    // tracing::debug!("[OAUTH_DEBUG] Private jar cookies: {:#?}", private_jar);
+    // tracing::debug!("[OAUTH_DEBUG] Signed jar cookies: {:#?}", signed_jar);
+
+    // Call the OAuth implementation function
+    let oauth_client = state.yral_oauth_client.clone();
+
+    let (identity, username, updated_jar) = perform_yral_auth_impl(
+        oauth_query.state,
+        oauth_query.code,
+        oauth_client,
+        private_jar,
+        signed_jar,
+        None, // No ResponseOptions in raw Axum handler
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("[OAUTH_DEBUG] OAuth implementation failed: {:?}", e);
+        let error_response = json!({
+            "error": format!("OAuth authentication failed: {}", e)
+        });
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            error_response.to_string(),
+        )
+            .into_response()
+    })?;
+
+    // Create NewIdentity response
+    let new_identity = NewIdentity {
+        id_wire: identity,
+        fallback_username: username,
+    };
+
+    // Return JSON response
+    let response = serde_json::to_string(&new_identity).map_err(|e| {
+        tracing::error!("Failed to serialize NewIdentity: {:?}", e);
+        let error_response = json!({
+            "error": format!("Response serialization failed: {}", e)
+        });
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            error_response.to_string(),
+        )
+            .into_response()
+    })?;
+
+    // Return with updated cookie jar containing refresh token
+    Ok((updated_jar, (StatusCode::OK, response)).into_response())
+}

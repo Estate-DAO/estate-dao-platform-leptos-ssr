@@ -59,6 +59,7 @@ cfg_if! {
         use tracing::instrument;
         use crate::api::auth::types::YralOAuthClient;
         use axum_extra::extract::cookie::Key;
+        use axum_extra::extract::cookie::PrivateCookieJar;
 
         #[derive(FromRef, Clone, Debug)]
         pub struct AppState {

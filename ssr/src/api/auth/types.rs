@@ -7,6 +7,8 @@ pub struct YralAuthAdditionalTokenClaims {
     pub ext_delegated_identity: DelegatedIdentityWire,
 }
 
+pub type YralAuthMessage = Result<NewIdentity, String>;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         use openidconnect::{
@@ -104,7 +106,7 @@ pub enum ProviderKind {
     YralAuth,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct NewIdentity {
     pub id_wire: DelegatedIdentityWire,
     pub fallback_username: Option<String>,

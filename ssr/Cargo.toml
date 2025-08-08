@@ -35,7 +35,7 @@ tower-http = { workspace = true, features = [
     "trace",
 ], optional = true }
 tower-layer = { workspace = true, optional = true }
-
+regex = { version = "1.11.1" }
 # tower = { version = "0.4", features = ["util"], optional = true }
 # tower-http = { version = "0.5", features = ["fs","cors","trace"], optional = true }
 # tower-layer = {version =  "0.3.2", optional = true}
@@ -59,6 +59,7 @@ axum-extra = { version = "0.9.3", optional = true, features = [
     "cookie",
     "cookie-signed",
     "cookie-private",
+    "typed-header"
 ] }
 simple_logger = "5.0.0"
 web-sys = { version = "0.3.70", features = [

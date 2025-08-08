@@ -43,3 +43,6 @@ pub use admin_panel::*;
 
 mod admin_edit_panel;
 pub use admin_edit_panel::*;
+
+mod yral_auth_redirect_handler;
+pub use yral_auth_redirect_handler::*;
