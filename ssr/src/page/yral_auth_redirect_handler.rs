@@ -45,7 +45,9 @@ pub fn IdentitySender(identity_res: Option<YralAuthMessage>) -> impl IntoView {
                 go_to_root();
             }
             let opener = Window::from(opener);
+            log!("IdentitySender - opener: {:#?}", opener);
             let msg = serde_json::to_string(&_id).expect("serde_json::to_string failed to unwrap");
+            log!("IdentitySender - msg: {:#?}", msg);
             _ = opener.post_message(&msg.into(), &origin);
         }
     });

@@ -1,3 +1,4 @@
+use crate::component::base_route::BaseRoute;
 use crate::component::yral_auth_provider::LoginProvCtx;
 use crate::{
     api::{
@@ -225,18 +226,20 @@ pub fn App() -> impl IntoView {
         // content for this welcome page
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
                 <Routes>
-                    <Route path=AppRoutes::Root.to_string() view=RootPage />
-                    <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
-                    <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
-                    <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
-                    <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPageV2 />
-                    // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
-                    // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
-                    <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
-                    <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
-                    <Route path=AppRoutes::YralAuthRedirectHandler.to_string() view=YralAuthRedirectHandlerPage />
-                    // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
-                    // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
+                    <Route path="" view=BaseRoute>
+                        <Route path=AppRoutes::Root.to_string() view=RootPage />
+                        <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
+                        <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
+                        <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
+                        <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPageV2 />
+                        // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
+                        // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
+                        <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
+                        <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
+                        <Route path=AppRoutes::YralAuthRedirectHandler.to_string() view=YralAuthRedirectHandlerPage />
+                        // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
+                        // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
+                        </Route>
                 </Routes>
         </Router>
         </main>

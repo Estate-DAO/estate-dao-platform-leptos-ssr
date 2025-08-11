@@ -18,6 +18,9 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoqN3/0RNfrnrnYGxKBgy/qHnmITr
     pub const USERNAME_MAX_LEN: usize = 15;
     pub const REFRESH_MAX_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 29);
     pub const REFRESH_TOKEN_COOKIE: &str = "user-identity";
+    pub const ACCOUNT_CONNECTED_STORE: &str = "account-connected-1";
+    pub const USER_PRINCIPAL_STORE: &str = "user-principal";
+    pub const AUTH_UTIL_COOKIES_MAX_AGE_MS: i64 = 400 * 24 * 60 * 60 * 1000; // 400 days
 }
 
 // CONST FOR LOCAL STORAGE
@@ -25,6 +28,7 @@ pub const PAYMENT_ID: &str = "estatedao_payment_id";
 pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
 pub const BOOKING_ID: &str = "estatedao_booking_id";
 pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
+pub const USER_IDENTITY: &str = "estatedao_user_identity";
 
 // PROVAB_BASE_URL options
 pub const PROVAB_PROD_OLD_PROXY: &str =

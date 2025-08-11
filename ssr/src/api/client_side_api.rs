@@ -14,6 +14,7 @@ use crate::utils::route::join_base_and_path_url;
 use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
+use yral_types::delegated_identity::DelegatedIdentityWire;
 
 #[cfg(not(feature = "ssr"))]
 use web_sys;
@@ -459,7 +460,7 @@ impl ClientSideApiClient {
             .ok_or_else(|| "Missing or invalid auth_url in response".to_string())
     }
 
-    #[tracing::instrument(skip(self))]
+    // #[tracing::instrument(skip(self))]
     pub async fn perform_yral_oauth(&self, oauth: OAuthQuery) -> Result<NewIdentity, String> {
         tracing::info!(
             "[YRAL_OAUTH] Starting OAuth flow with code: {}, state: {}",
@@ -475,6 +476,15 @@ impl ClientSideApiClient {
             request,
             "server_fn_api/perform_yral_oauth_api",
             "perform yral oauth",
+        )
+        .await
+    }
+
+    pub async fn extract_identity(&self) -> Result<Option<DelegatedIdentityWire>, String> {
+        Self::api_call_with_error(
+            "extract_identity_api_from_client_call",
+            "server_fn_api/extract_identity_api",
+            "extract identity api",
         )
         .await
     }

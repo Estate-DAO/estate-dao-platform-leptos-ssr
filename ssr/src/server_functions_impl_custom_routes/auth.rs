@@ -299,7 +299,7 @@ use axum_extra::extract::cookie::Key;
 use axum_extra::extract::{PrivateCookieJar, SignedCookieJar};
 
 // Helper function to extract cookie jars from request parts using the app's cookie key
-async fn extract_cookie_jars(
+pub async fn extract_cookie_jars(
     parts: &mut Parts,
     cookie_key: &Key,
 ) -> Result<(PrivateCookieJar<Key>, SignedCookieJar<Key>), (StatusCode, &'static str)> {

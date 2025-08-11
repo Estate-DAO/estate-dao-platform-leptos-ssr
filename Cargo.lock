@@ -1682,6 +1682,7 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "reqwest 0.12.8",
+ "send_wrapper",
  "serde",
  "serde_json",
  "serde_path_to_error",

@@ -18,7 +18,9 @@ LEPTOS_SITE_ROOT := env_var_or_default("LEPTOS_SITE_ROOT", "target/site")
 PAYMENTS_SKIP_LOCAL := env_var_or_default("PAYMENTS_SKIP_LOCAL", "true")
 LEPTOS_SITE_ADDR := env_var_or_default("LEPTOS_SITE_ADDR", "0.0.0.0:3002")
 NOWPAYMENTS_API_HOST := env_var_or_default("NOWPAYMENTS_API_HOST", "http://localhost:3001")
-NGROK_LOCALHOST_URL := env_var_or_default("NGROK_LOCALHOST_URL", "https://louse-musical-hideously.ngrok-free.app")
+NGROK_LOCALHOST_URL := env_var_or_default("NGROK_LOCALHOST_URL", "http://localhost:3002")
+COOKIE_KEY := env_var_or_default("COOKIE_KEY", "iAEWE76Q2Jh9yfCsp8L5UvHajFWi1fNk2N9nz6RT2DfpV8FG490hMp0N9SYxHeY1m7bpoHl9nw8iSDAKQjh7A2CgrHFbY0Z2FY9yvTERJl47kZpk8gWOzARnnIwrSQZQBvvT8pFzvS1+fFOAFJXjpMkcKY/cL5VNthp5FNhQDac=")
+# NGROK_LOCALHOST_URL := env_var_or_default("NGROK_LOCALHOST_URL", "https://louse-musical-hideously.ngrok-free.app")
 
 # Build features
 LOCAL_LIB_FEATURES := "local-lib,debug_display"

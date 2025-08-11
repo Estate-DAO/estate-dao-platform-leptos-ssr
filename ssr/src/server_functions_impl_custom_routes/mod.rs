@@ -46,6 +46,7 @@ mod block_room;
 mod book_room;
 mod create_payment_invoice;
 mod email_verification;
+mod extract_identity_route;
 mod get_hotel_info;
 mod get_hotel_rates;
 mod integrated_block_room;
@@ -53,7 +54,10 @@ mod process_confirmation;
 mod search_hotel;
 
 // Re-export route handlers to maintain public API compatibility
-pub use auth::{initiate_auth, initiate_auth_axum_handler, perform_yral_oauth_api_server_fn_route};
+pub use auth::{
+    extract_cookie_jars, initiate_auth, initiate_auth_axum_handler,
+    perform_yral_oauth_api_server_fn_route,
+};
 pub use block_room::block_room_api_server_fn_route;
 pub use book_room::book_room_api_server_fn_route;
 pub use create_payment_invoice::create_payment_invoice_api_server_fn_route;
@@ -63,6 +67,8 @@ pub use get_hotel_rates::get_hotel_rates_api_server_fn_route;
 pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
+
+use crate::server_functions_impl_custom_routes::extract_identity_route::extract_identity_impl_server_fn_route;
 
 // Common helper functions and types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -227,4 +233,13 @@ pub fn api_routes() -> Router<AppState> {
             "/perform_yral_oauth_api",
             post(perform_yral_oauth_api_server_fn_route).options(handle_options),
         )
+        .route(
+            "/extract_identity_api",
+            post(extract_identity_impl_server_fn_route).options(handle_options),
+        )
+    // todo(2025-08-08): add my bookings api route with user_identity
+    // .route(
+    //     "/my_bookings_api",
+    //     post(my_bookings_api_server_fn_route).options(handle_options),
+    // )
 }

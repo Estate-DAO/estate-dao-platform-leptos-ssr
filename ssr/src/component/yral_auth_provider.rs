@@ -1,13 +1,17 @@
-use codee::string::FromToStringCodec;
+use codee::string::{FromToStringCodec, JsonSerdeCodec};
 use ic_agent::identity::DelegatedIdentity;
 use leptos::*;
 // use leptos::{ev, prelude::*, component, view, server, ServerFnError, expect_context, create_action, window, IntoView, Children, Oco};
-use leptos_use::{storage::use_local_storage, use_event_listener, use_interval_fn, use_window};
+use leptos_use::{
+    storage::{use_local_storage, use_local_storage_with_options, UseStorageOptions},
+    use_cookie_with_options, use_event_listener, use_interval_fn, use_window, UseCookieOptions,
+};
 use web_sys::Window;
 
 use crate::api::{
-    auth::types::{LoginProvider, NewIdentity, ProviderKind},
+    auth::types::{LoginProvider, NewIdentity, ProviderKind, YralAuthMessage},
     client_side_api::ClientSideApiClient,
+    consts::USER_IDENTITY,
 };
 
 // use super::auth::{NewIdentity, LoginProvider, ProviderKind, YralAuthMessage, YralOAuthClient, yral_auth_url_impl};
@@ -75,6 +79,12 @@ fn LoginProvButton<Cb: Fn(ev::MouseEvent) + 'static>(
 //     Ok(url)
 // }
 
+// todo(2025-08-08): LoginProvCtx = on page load (root) -> check cookie and set values in LoginProvCtx
+//  --> if login_complete is Some, then navbar -> user profile icon
+// ssr/src/component/base_route.rs from this reference file, we want to pick the following items
+// 1. extract user_principal and use that to make any api calls - to backend via client_side_api.rs
+// 2. routes to /logout
+
 #[component]
 pub fn YralAuthProvider() -> impl IntoView {
     let ctx: LoginProvCtx = expect_context();
@@ -88,6 +98,22 @@ pub fn YralAuthProvider() -> impl IntoView {
     //     use_local_storage::<bool, FromToStringCodec>(NOTIFICATIONS_ENABLED_STORE);
 
     // let auth = auth_state();
+
+    let (stored_identity, set_stored_identity) =
+        use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+            USER_IDENTITY,
+            UseCookieOptions::default()
+                .path("/")
+                .same_site(leptos_use::SameSite::Lax)
+                .http_only(false)
+                .secure(false),
+        );
+
+    Effect::new(move |_| {
+        if let Some(identity) = stored_identity.get() {
+            ctx.login_complete.set(Some(identity));
+        }
+    });
 
     // let open_yral_auth = Action::new_unsync_local(
     let open_yral_auth = create_action(
@@ -147,34 +173,35 @@ pub fn YralAuthProvider() -> impl IntoView {
             500,
         );
 
-        // todo can we remove this event_listener?
-        // _ = use_event_listener(use_window(), ev::message, move |msg| {
-        //     if msg.origin() != origin {
-        //         return;
-        //     }
+        _ = use_event_listener(use_window(), ev::message, move |msg| {
+            if msg.origin() != origin {
+                return;
+            }
 
-        //     let Some(data) = msg.data().as_string() else {
-        //         log::warn!("received invalid message: {:?}", msg.data());
-        //         return;
-        //     };
-        //     let res = match serde_json::from_str::<YralAuthMessage>(&data)
-        //         .map_err(|e| e.to_string())
-        //         .and_then(|r| r)
-        //     {
-        //         Ok(res) => res,
-        //         Err(e) => {
-        //             log::warn!("error processing {e:?}. msg {data}");
-        //             // close_popup();
-        //             return;
-        //         }
-        //     };
-        //     done_guard.set(true);
-        //     (pause.pause)();
-        //     _ = target.close();
-        //     ctx.set_processing.set(None);
-        //     // set_notifs_enabled.set(false);
-        //     ctx.login_complete.set(Some(res));
-        // });
+            let Some(data) = msg.data().as_string() else {
+                log::warn!("received invalid message: {:?}", msg.data());
+                return;
+            };
+            let res = match serde_json::from_str::<YralAuthMessage>(&data)
+                .map_err(|e| e.to_string())
+                .and_then(|r| r)
+            {
+                Ok(res) => res,
+                Err(e) => {
+                    log::warn!("error processing {e:?}. msg {data}");
+                    // close_popup();
+                    return;
+                }
+            };
+            done_guard.set(true);
+            (pause.pause)();
+            _ = target.close();
+            ctx.set_processing.set(None);
+            // set_notifs_enabled.set(false);
+
+            set_stored_identity.set(Some(res.clone()));
+            ctx.login_complete.set(Some(res));
+        });
     };
 
     view! {

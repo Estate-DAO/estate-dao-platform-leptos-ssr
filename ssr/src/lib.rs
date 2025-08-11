@@ -1,6 +1,8 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
+use std::future::Future;
+
 pub mod api;
 pub mod app;
 pub mod canister;
@@ -40,4 +42,21 @@ cfg_if::cfg_if! {
         }
 
     }
+}
+
+#[cfg(not(feature = "hydrate"))]
+pub fn send_wrap<Fut: Future + Send>(
+    t: Fut,
+) -> impl Future<Output = <Fut as Future>::Output> + Send {
+    t
+}
+
+/// Wraps a specific future that is not `Send` when `hydrate` feature is enabled
+/// the future must be `Send` when `ssr` is enabled
+/// use only when necessary (usually inside resources)
+/// if you get a Send related error inside an Action, it probably makes more
+/// sense to use `Action::new_local` or `Action::new_unsync`
+#[cfg(feature = "hydrate")]
+pub fn send_wrap<Fut: Future>(t: Fut) -> impl Future<Output = <Fut as Future>::Output> + Send {
+    send_wrapper::SendWrapper::new(t)
 }
