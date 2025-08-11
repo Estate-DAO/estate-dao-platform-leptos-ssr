@@ -2,6 +2,7 @@ use crate::api::{auth::types::NewIdentity, consts::USER_IDENTITY};
 use crate::component::{profile_component::ProfileComponent, yral_auth_provider::YralAuthProvider};
 use codee::string::JsonSerdeCodec;
 use leptos::*;
+use leptos::SignalGetUntracked;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
 #[component]
@@ -15,6 +16,10 @@ pub fn Navbar() -> impl IntoView {
             .http_only(false)
             .secure(false),
     );
+    
+    crate::log!("AUTH_FLOW: navbar - USER_IDENTITY cookie check - is_some: {}, data: {:?}", 
+        stored_identity.get_untracked().is_some(), 
+        stored_identity.get_untracked());
 
     view! {
         <nav class="flex justify-between items-center py-10 px-8">

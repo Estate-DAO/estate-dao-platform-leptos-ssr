@@ -1,3 +1,4 @@
+use crate::api::auth::auth_state::AuthStateSignal;
 use crate::component::base_route::BaseRoute;
 use crate::component::logout::LogoutPage;
 use crate::component::yral_auth_provider::LoginProvCtx;
@@ -14,7 +15,7 @@ use crate::{
     page::{
         AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
         ConfirmationPageV1, ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
-        HotelListPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
+        HotelListPage, MyBookingsPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
         YralAuthRedirectHandlerPage,
     },
     view_state_layer::{
@@ -25,6 +26,7 @@ use crate::{
         email_verification_state::EmailVerificationState,
         hotel_details_state::PricingBookNowState,
         input_group_state::InputGroupState,
+        my_bookings_state::MyBookingsState,
         // search_state::{
         //     BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
         // },
@@ -71,6 +73,7 @@ pub enum AppRoutes {
     AdminEditPanel,
     YralAuthRedirectHandler,
     Logout,
+    MyBookings,
     // Notifications
 }
 
@@ -88,6 +91,7 @@ impl AppRoutes {
             AppRoutes::AdminEditPanel => "/admin-edit-panel",
             AppRoutes::YralAuthRedirectHandler => "/auth/callback",
             AppRoutes::Logout => "/logout",
+            AppRoutes::MyBookings => "/my-bookings",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -105,6 +109,7 @@ impl AppRoutes {
             Self::AdminEditPanel,
             Self::YralAuthRedirectHandler,
             Self::Logout,
+            Self::MyBookings,
             // Self::Notifications,
         ]
         .into_iter()
@@ -158,6 +163,8 @@ pub fn App() -> impl IntoView {
     // -> if environment variables are not defined, panic!
     // provide_context(get_yral_oauth_client());
 
+    provide_context(AuthStateSignal::default());
+
     provide_context(LoginProvCtx::default());
 
     provide_context(InputGroupState::default());
@@ -194,6 +201,9 @@ pub fn App() -> impl IntoView {
 
     // Email verification state
     provide_context(EmailVerificationState::default());
+
+    // My Bookings state
+    provide_context(MyBookingsState::default());
 
     provide_context(DataTableCtx::default());
     // provide_context(NotificationState::default());
@@ -242,6 +252,7 @@ pub fn App() -> impl IntoView {
                         <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
                         <Route path=AppRoutes::YralAuthRedirectHandler.to_string() view=YralAuthRedirectHandlerPage />
                         <Route path=AppRoutes::Logout.to_string() view=LogoutPage />
+                        <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
                         // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                         // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                         </Route>

@@ -14,6 +14,7 @@ pub mod ui_confirmation_page_v2;
 pub mod ui_hotel_details;
 pub mod ui_search_state;
 pub mod user_auth_state;
+pub mod my_bookings_state;
 // pub mod ui_bookings_state;
 pub mod view_state;
 // pub mod pricing_book_now;

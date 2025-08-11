@@ -7,7 +7,7 @@ use crate::{
         auth::{auth_state::auth_state, types::NewIdentity},
         consts::USER_IDENTITY,
     },
-    component::user_profile_icon::UserProfileIcon,
+    component::{profile_dropdown::ProfileDropdown, user_profile_icon::UserProfileIcon},
 };
 
 #[component]
@@ -23,10 +23,10 @@ pub fn ProfileComponent() -> impl IntoView {
             .secure(false),
     );
 
-    // <!-- Display user principal -->
+    // <!-- Display user principal with dropdown -->
     view! {
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-md">
+        <ProfileDropdown>
+            <div class="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
                 // <!-- Dynamic profile icon based on first letter of principal -->
                 {move || {
                     let icon_letter = if let Some(identity) = stored_identity.get() {
@@ -61,14 +61,11 @@ pub fn ProfileComponent() -> impl IntoView {
                         }}
                     </div>
                 </div>
+                // <!-- Down arrow indicator -->
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
             </div>
-            // <!-- Logout button -->
-            <a
-                href="/logout"
-                class="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-            >
-                Logout
-            </a>
-        </div>
+        </ProfileDropdown>
     }
 }

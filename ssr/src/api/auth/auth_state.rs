@@ -25,6 +25,28 @@ pub fn auth_state() -> AuthState {
     expect_context()
 }
 
+#[derive(Copy, Clone)]
+pub struct AuthStateSignal(RwSignal<AuthState>);
+
+impl Default for AuthStateSignal {
+    fn default() -> Self {
+        Self(RwSignal::new(AuthState::default()))
+    }
+}
+
+use std::ops::Deref;
+
+impl Deref for AuthStateSignal {
+    type Target = RwSignal<AuthState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+
+
+
 #[derive(Clone)]
 pub struct AuthState {
     // _temp_identity_resource: OnceResource<Option<AnonymousIdentity>>,
@@ -45,6 +67,7 @@ pub struct AuthState {
 impl Default for AuthState {
     fn default() -> Self {
         // Super complex, don't mess with this.
+        crate::log!("AUTH_FLOW: AuthState::default() called - initializing auth state");
 
         // let temp_identity_resource = OnceResource::new(async move {
         //     generate_anonymous_identity_if_required()
@@ -88,6 +111,7 @@ impl Default for AuthState {
                 .path("/")
                 .max_age(REFRESH_MAX_AGE.as_millis() as i64),
         );
+        crate::log!("AUTH_FLOW: OAuth login state from cookie: {:?}", is_logged_in_with_oauth.0.get_untracked());
 
         let new_identity_setter = RwSignal::new(None::<NewIdentity>);
 
@@ -149,6 +173,7 @@ impl Default for AuthState {
                 .path("/")
                 .max_age(AUTH_UTIL_COOKIES_MAX_AGE_MS),
         );
+        crate::log!("AUTH_FLOW: User principal from cookie: {:?}", user_principal_cookie.0.get_untracked());
         // let user_principal = create_resource(
         //     move || {
         //         user_identity_resource.track();
@@ -213,7 +238,7 @@ impl Default for AuthState {
         //     })),
         // };
 
-        Self {
+        let auth_state = Self {
             // _temp_identity_resource: temp_identity_resource,
             // _temp_id_cookie_resource: temp_id_cookie_resource,
             // referrer_store: referrer_principal,
@@ -228,7 +253,13 @@ impl Default for AuthState {
             // event_ctx,
             user_identity: create_rw_signal(None::<NewIdentity>),
             new_cans_setter,
-        }
+        };
+        
+        crate::log!("AUTH_FLOW: AuthState initialized - canister_store: {:?}, user_identity: {:?}", 
+            auth_state.canister_store.get_untracked().is_some(), 
+            auth_state.user_identity.get_untracked().is_some());
+            
+        auth_state
     }
 }
 
