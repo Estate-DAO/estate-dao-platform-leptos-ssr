@@ -1,4 +1,5 @@
 use crate::api::auth::auth_state::AuthStateSignal;
+use crate::api::auth::canisters::Canisters;
 use crate::component::base_route::BaseRoute;
 use crate::component::logout::LogoutPage;
 use crate::component::yral_auth_provider::LoginProvCtx;
@@ -164,6 +165,9 @@ pub fn App() -> impl IntoView {
     // provide_context(get_yral_oauth_client());
 
     provide_context(AuthStateSignal::default());
+
+    // this is unauth canisters in the default state
+    provide_context(Canisters::default());
 
     provide_context(LoginProvCtx::default());
 

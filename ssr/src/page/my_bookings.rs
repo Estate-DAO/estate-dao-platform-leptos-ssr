@@ -1,38 +1,69 @@
+use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
+use crate::api::canister::user_my_bookings::user_get_my_bookings;
+use crate::log;
+use crate::view_state_layer::my_bookings_state::{
+    BookingStatus, BookingTab, MyBookingItem, MyBookingsState,
+};
+use chrono::{DateTime, Utc};
+use leptos::SignalGet;
 use leptos::*;
 use leptos_router::*;
-use crate::view_state_layer::my_bookings_state::{MyBookingsState, BookingTab, MyBookingItem, BookingStatus};
-use crate::api::canister::user_my_bookings::user_get_my_bookings;
-use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
-use crate::log;
-use chrono::{DateTime, Utc};
 use std::rc::Rc;
 
 async fn load_my_bookings(auth_state: AuthState) -> Result<Vec<MyBookingItem>, ServerFnError> {
     log!("[MyBookings] Loading bookings from API");
-    
+
     // Call actual canister API to get bookings
     let backend_bookings = user_get_my_bookings(auth_state).await?;
-    log!("[MyBookings] Retrieved {} bookings from backend", backend_bookings.len());
-    
+    log!(
+        "[MyBookings] Retrieved {} bookings from backend",
+        backend_bookings.len()
+    );
+
     // Convert backend Booking objects to MyBookingItem
-    let bookings: Vec<MyBookingItem> = backend_bookings.into_iter()
+    let bookings: Vec<MyBookingItem> = backend_bookings
+        .into_iter()
         .map(|booking| booking.into())
         .collect();
-    
-    log!("[MyBookings] Returning {} converted bookings", bookings.len());
+
+    log!(
+        "[MyBookings] Returning {} converted bookings",
+        bookings.len()
+    );
     Ok(bookings)
-    
 }
 
 #[component]
 pub fn MyBookingsPage() -> impl IntoView {
     log!("[MyBookings] MyBookingsPage component started");
-    
+
     let auth_state_signal: AuthStateSignal = expect_context();
-    // Create resource for loading bookings data
+    // Create resource for loading bookings data that waits for canister store to be ready
     let bookings_resource = create_resource(
-        || (),
-        move |()| async move {
+        move || {
+            let auth = auth_state_signal.get();
+            let canister_store_ready = auth.get_canisters().is_some();
+            let user_identity_ready = auth.user_identity.get().is_some();
+            log!(
+                "[MyBookings] Resource signal - canister_store_ready: {}, user_identity_ready: {}",
+                canister_store_ready,
+                user_identity_ready
+            );
+            (canister_store_ready, user_identity_ready)
+        },
+        move |(canister_ready, identity_ready)| async move {
+            log!(
+                "[MyBookings] Resource triggered - canister_ready: {}, identity_ready: {}",
+                canister_ready,
+                identity_ready
+            );
+
+            // Wait for both canister store and user identity to be ready
+            if !canister_ready || !identity_ready {
+                log!("[MyBookings] Resource waiting - auth not fully ready yet");
+                return Err(ServerFnError::new("Auth state not ready yet"));
+            }
+
             let auth_state = auth_state_signal.get();
             log!("[MyBookings] Resource loading bookings");
             load_my_bookings(auth_state).await
@@ -57,7 +88,7 @@ pub fn MyBookingsPage() -> impl IntoView {
 
                     // <!-- Content area -->
                     <div class="p-6">
-                        <Suspense fallback=move || view! { 
+                        <Suspense fallback=move || view! {
                             <div class="flex justify-center items-center py-12">
                                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                                 <span class="ml-3 text-gray-600">Loading bookings...</span>
@@ -131,20 +162,24 @@ fn TabButtonLocal(
 
 #[component]
 fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
-    log!("[MyBookings] BookingsContent component started with {} bookings", bookings.len());
-    
+    log!(
+        "[MyBookings] BookingsContent component started with {} bookings",
+        bookings.len()
+    );
+
     // Create state for managing current tab
     let current_tab = RwSignal::new(BookingTab::Upcoming);
-    
+
     // Wrap bookings in Rc to allow sharing between closures
     let bookings_rc = Rc::new(bookings);
     let bookings_for_filter = bookings_rc.clone();
     let bookings_for_count = bookings_rc.clone();
-    
+
     // Filter bookings by current tab
     let filtered_bookings = Signal::derive(move || {
         let active_tab = current_tab.get();
-        bookings_for_filter.iter()
+        bookings_for_filter
+            .iter()
             .filter(|booking| match active_tab {
                 BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
                 BookingTab::Completed => booking.status == BookingStatus::Completed,
@@ -153,10 +188,11 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
             .cloned()
             .collect::<Vec<_>>()
     });
-    
+
     // Get tab counts
     let get_tab_count = move |tab: BookingTab| {
-        bookings_for_count.iter()
+        bookings_for_count
+            .iter()
             .filter(|booking| match tab {
                 BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
                 BookingTab::Completed => booking.status == BookingStatus::Completed,
@@ -168,28 +204,28 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
     view! {
         // <!-- Tab navigation -->
         <div class="flex border-b border-gray-200 mb-6">
-            <TabButtonLocal 
-                tab=BookingTab::Upcoming 
+            <TabButtonLocal
+                tab=BookingTab::Upcoming
                 label="Upcoming"
                 count=get_tab_count(BookingTab::Upcoming)
                 current_tab=current_tab
             />
-            <TabButtonLocal 
-                tab=BookingTab::Completed 
+            <TabButtonLocal
+                tab=BookingTab::Completed
                 label="Completed"
                 count=get_tab_count(BookingTab::Completed)
                 current_tab=current_tab
             />
-            <TabButtonLocal 
-                tab=BookingTab::Cancelled 
+            <TabButtonLocal
+                tab=BookingTab::Cancelled
                 label="Cancelled"
                 count=get_tab_count(BookingTab::Cancelled)
                 current_tab=current_tab
             />
         </div>
-        
+
         // <!-- Bookings content -->
-        <Suspense fallback=move || view! { 
+        <Suspense fallback=move || view! {
             <div class="flex justify-center items-center py-12">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <span class="ml-3 text-gray-600">Loading bookings...</span>
@@ -217,13 +253,11 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
 
 #[component]
 fn BookingCard(booking: MyBookingItem) -> impl IntoView {
-    let format_date = |date: DateTime<Utc>| {
-        date.format("%d %b %Y").to_string()
-    };
+    let format_date = |date: DateTime<Utc>| date.format("%d %b %Y").to_string();
 
     let status_color = match booking.status {
         BookingStatus::Upcoming => "text-green-600 bg-green-50",
-        BookingStatus::Completed => "text-blue-600 bg-blue-50", 
+        BookingStatus::Completed => "text-blue-600 bg-blue-50",
         BookingStatus::Cancelled => "text-red-600 bg-red-50",
     };
 
@@ -248,7 +282,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                                 {&booking.hotel_name}
                             </h3>
                             <p class="text-gray-600 mb-3">{&booking.hotel_location}</p>
-                            
+
                             <div class="flex items-center gap-4 text-sm text-gray-600 mb-3">
                                 <div class="flex items-center gap-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +313,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                             <span class=format!("px-3 py-1 rounded-full text-sm font-medium {}", status_color)>
                                 {booking.status.to_string()}
                             </span>
-                            
+
                             <div class="flex items-center gap-4">
                                 <button class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -314,7 +348,7 @@ fn EmptyBookingsState() -> impl IntoView {
             </div>
             <h3 class="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
             <p class="text-gray-500 mb-6">When you book a hotel, it will appear here.</p>
-            <a 
+            <a
                 href="/"
                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
             >

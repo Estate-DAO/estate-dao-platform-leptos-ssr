@@ -1,9 +1,9 @@
+use crate::canister::backend;
+use crate::log;
+use crate::view_state_layer::GlobalStateForLeptos;
+use chrono::{DateTime, Utc};
 use leptos::*;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use crate::canister::backend;
-use crate::view_state_layer::GlobalStateForLeptos;
-use crate::log;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BookingStatus {
@@ -32,58 +32,79 @@ pub enum BookingTab {
 impl From<backend::Booking> for MyBookingItem {
     fn from(value: backend::Booking) -> Self {
         // Extract booking reference for ID
-        let booking_id = format!("{}-{}", value.booking_id.app_reference, value.booking_id.email);
-        
+        let booking_id = format!(
+            "{}-{}",
+            value.booking_id.app_reference, value.booking_id.email
+        );
+
         // Extract hotel details
         let hotel_details = &value.user_selected_hotel_room_details.hotel_details;
         let hotel_name = hotel_details.hotel_name.clone();
         let hotel_location = hotel_details.hotel_location.clone();
         let hotel_image_url = hotel_details.hotel_image.clone();
-        
+
         // Extract date range and convert to DateTime<Utc>
         let date_range = &value.user_selected_hotel_room_details.date_range;
         let check_in_date = DateTime::from_timestamp(
-            chrono::NaiveDate::from_ymd_opt(date_range.start.0 as i32, date_range.start.1, date_range.start.2)
-                .unwrap_or_default()
-                .and_hms_opt(0, 0, 0)
-                .unwrap_or_default()
-                .and_utc()
-                .timestamp(),
-            0
-        ).unwrap_or_default();
-        
+            chrono::NaiveDate::from_ymd_opt(
+                date_range.start.0 as i32,
+                date_range.start.1,
+                date_range.start.2,
+            )
+            .unwrap_or_default()
+            .and_hms_opt(0, 0, 0)
+            .unwrap_or_default()
+            .and_utc()
+            .timestamp(),
+            0,
+        )
+        .unwrap_or_default();
+
         let check_out_date = DateTime::from_timestamp(
-            chrono::NaiveDate::from_ymd_opt(date_range.end.0 as i32, date_range.end.1, date_range.end.2)
-                .unwrap_or_default()
-                .and_hms_opt(0, 0, 0)
-                .unwrap_or_default()
-                .and_utc()
-                .timestamp(),
-            0
-        ).unwrap_or_default();
-        
+            chrono::NaiveDate::from_ymd_opt(
+                date_range.end.0 as i32,
+                date_range.end.1,
+                date_range.end.2,
+            )
+            .unwrap_or_default()
+            .and_hms_opt(0, 0, 0)
+            .unwrap_or_default()
+            .and_utc()
+            .timestamp(),
+            0,
+        )
+        .unwrap_or_default();
+
         // Extract guest counts
         let adults = value.guests.adults.len() as u32;
         let rooms = value.user_selected_hotel_room_details.room_details.len() as u32;
-        
+
         // Determine booking status
         let status = match &value.book_room_status {
-            Some(response) => {
-                match response.commit_booking.resolved_booking_status {
-                    backend::ResolvedBookingStatus::BookingConfirmed => BookingStatus::Completed,
-                    backend::ResolvedBookingStatus::BookingOnHold => BookingStatus::Upcoming,
-                    backend::ResolvedBookingStatus::BookingFailed => BookingStatus::Cancelled,
-                    backend::ResolvedBookingStatus::BookingCancelled => BookingStatus::Cancelled,
-                    backend::ResolvedBookingStatus::Unknown => BookingStatus::Upcoming,
-                }
-            }
+            Some(response) => match response.commit_booking.resolved_booking_status {
+                backend::ResolvedBookingStatus::BookingConfirmed => BookingStatus::Completed,
+                backend::ResolvedBookingStatus::BookingOnHold => BookingStatus::Upcoming,
+                backend::ResolvedBookingStatus::BookingFailed => BookingStatus::Cancelled,
+                backend::ResolvedBookingStatus::BookingCancelled => BookingStatus::Cancelled,
+                backend::ResolvedBookingStatus::Unknown => BookingStatus::Upcoming,
+            },
             None => BookingStatus::Upcoming,
         };
-        
+
         // Extract payment details
-        let total_amount = Some(value.user_selected_hotel_room_details.requested_payment_amount);
-        let currency = Some(value.payment_details.payment_api_response.pay_currency.clone());
-        
+        let total_amount = Some(
+            value
+                .user_selected_hotel_room_details
+                .requested_payment_amount,
+        );
+        let currency = Some(
+            value
+                .payment_details
+                .payment_api_response
+                .pay_currency
+                .clone(),
+        );
+
         Self {
             booking_id,
             hotel_name,
@@ -136,8 +157,9 @@ impl MyBookingsState {
         let filtered_bookings = Signal::derive(move || {
             let all_bookings = bookings.get();
             let active_tab = current_tab.get();
-            
-            all_bookings.into_iter()
+
+            all_bookings
+                .into_iter()
                 .filter(|booking| match active_tab {
                     BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
                     BookingTab::Completed => booking.status == BookingStatus::Completed,
@@ -187,7 +209,8 @@ impl MyBookingsState {
 
     pub fn get_tab_count(&self, tab: BookingTab) -> usize {
         let all_bookings = self.bookings.get();
-        all_bookings.iter()
+        all_bookings
+            .iter()
             .filter(|booking| match tab {
                 BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
                 BookingTab::Completed => booking.status == BookingStatus::Completed,
@@ -200,9 +223,9 @@ impl MyBookingsState {
     // pub fn create_dummy_bookings() -> Vec<MyBookingItem> {
     //     log!("[MyBookingsState] Creating dummy bookings");
     //     use chrono::Duration;
-        
+
     //     let now = Utc::now();
-        
+
     //     let dummy_data = vec![
     //         MyBookingItem {
     //             booking_id: "FROWD3".to_string(),
@@ -244,7 +267,7 @@ impl MyBookingsState {
     //             currency: Some("USD".to_string()),
     //         },
     //     ];
-        
+
     //     log!("[MyBookingsState] Created {} dummy bookings", dummy_data.len());
     //     dummy_data
     // }

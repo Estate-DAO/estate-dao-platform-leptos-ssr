@@ -44,9 +44,6 @@ impl Deref for AuthStateSignal {
     }
 }
 
-
-
-
 #[derive(Clone)]
 pub struct AuthState {
     // _temp_identity_resource: OnceResource<Option<AnonymousIdentity>>,
@@ -58,7 +55,7 @@ pub struct AuthState {
     // // pub user_canister: Resource<Result<Principal, ServerFnError>>,
     // // user_canister_id_cookie: (Signal<Option<Principal>>, WriteSignal<Option<Principal>>),
     pub user_principal: RwSignal<Option<Principal>>,
-    pub canister_store: RwSignal<Option<Canisters<true>>>,
+    // pub canister_store: RwSignal<Option<Canisters<true>>>,
     user_principal_cookie: (Signal<Option<Principal>>, WriteSignal<Option<Principal>>),
     pub user_identity: RwSignal<Option<NewIdentity>>,
     pub new_cans_setter: RwSignal<Option<CanistersAuthWire>>,
@@ -111,7 +108,10 @@ impl Default for AuthState {
                 .path("/")
                 .max_age(REFRESH_MAX_AGE.as_millis() as i64),
         );
-        crate::log!("AUTH_FLOW: OAuth login state from cookie: {:?}", is_logged_in_with_oauth.0.get_untracked());
+        crate::log!(
+            "AUTH_FLOW: OAuth login state from cookie: {:?}",
+            is_logged_in_with_oauth.0.get_untracked()
+        );
 
         let new_identity_setter = RwSignal::new(None::<NewIdentity>);
 
@@ -173,7 +173,10 @@ impl Default for AuthState {
                 .path("/")
                 .max_age(AUTH_UTIL_COOKIES_MAX_AGE_MS),
         );
-        crate::log!("AUTH_FLOW: User principal from cookie: {:?}", user_principal_cookie.0.get_untracked());
+        crate::log!(
+            "AUTH_FLOW: User principal from cookie: {:?}",
+            user_principal_cookie.0.get_untracked()
+        );
         // let user_principal = create_resource(
         //     move || {
         //         user_identity_resource.track();
@@ -246,7 +249,7 @@ impl Default for AuthState {
             new_identity_setter,
             // canisters_resource,
             user_principal: create_rw_signal(None::<Principal>),
-            canister_store: create_rw_signal(None::<Canisters<true>>),
+            // canister_store: create_rw_signal(None::<Canisters<true>>),
             user_principal_cookie,
             // user_canister,
             // user_canister_id_cookie,
@@ -254,11 +257,13 @@ impl Default for AuthState {
             user_identity: create_rw_signal(None::<NewIdentity>),
             new_cans_setter,
         };
-        
-        crate::log!("AUTH_FLOW: AuthState initialized - canister_store: {:?}, user_identity: {:?}", 
-            auth_state.canister_store.get_untracked().is_some(), 
-            auth_state.user_identity.get_untracked().is_some());
-            
+
+        crate::log!(
+            "AUTH_FLOW: AuthState initialized - new_cans_setter: {:?}, user_identity: {:?}",
+            auth_state.new_cans_setter.get_untracked().is_some(),
+            auth_state.user_identity.get_untracked().is_some()
+        );
+
         auth_state
     }
 }
@@ -283,6 +288,7 @@ impl AuthState {
 
     pub fn set_user_identity_with_cookie(&self, user_identity: NewIdentity) {
         self.user_identity.set(Some(user_identity.clone()));
+        self.is_logged_in_with_oauth.1.set(Some(true));
         let princ = Principal::self_authenticating(&user_identity.id_wire.from_key);
         self.set_user_principal_cookie(princ);
     }
@@ -296,7 +302,19 @@ impl AuthState {
 
     pub fn reset_user_identity(&self) {
         self.user_identity.set(None);
+        self.is_logged_in_with_oauth.1.set(None);
         self.user_principal_cookie.1.set(None);
+    }
+
+    pub fn get_canisters(&self) -> Option<Canisters<true>> {
+        let cans_wire = self.new_cans_setter.get_untracked();
+        if let Some(cans_wire) = cans_wire {
+            let canisters = cans_wire.canisters().ok()?;
+            crate::log!("AUTH_FLOW: AuthState.get_canisters() - Canisters found");
+            return Some(canisters);
+        }
+        crate::log!("AUTH_FLOW: AuthState.get_canisters() - No canisters found - CanistersAuthWire not set in AuthState");
+        None
     }
 }
 // /// Prevents hydration bugs if the value in store is used to conditionally show views

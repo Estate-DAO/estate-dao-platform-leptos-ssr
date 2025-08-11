@@ -16,11 +16,13 @@ use crate::{
 };
 use candid::Principal;
 use codee::string::{FromToStringCodec, JsonSerdeCodec};
-use leptos::*;
 use leptos::SignalGetUntracked;
+use leptos::*;
 use leptos_router::{use_navigate, Outlet};
 use leptos_use::storage::use_local_storage;
-use leptos_use::{use_cookie_with_options, use_event_listener, use_window, UseCookieOptions, SameSite};
+use leptos_use::{
+    use_cookie_with_options, use_event_listener, use_window, SameSite, UseCookieOptions,
+};
 
 #[derive(Clone)]
 pub struct Notification(pub RwSignal<Option<serde_json::Value>>);
@@ -31,9 +33,10 @@ fn CtxProvider(children: Children) -> impl IntoView {
     let auth_state_signal: AuthStateSignal = expect_context();
 
     let auth = auth_state_signal.get();
-    log!("AUTH_FLOW: base_route - Retrieved auth state - logged_in: {:?}, canister_store: {:?}", 
-        auth.is_logged_in_with_oauth().get_untracked(), 
-        auth.canister_store.get_untracked().is_some());
+    log!(
+        "AUTH_FLOW: base_route - Retrieved auth state - logged_in: {:?}",
+        auth.is_logged_in_with_oauth().get_untracked()
+    );
 
     provide_context(auth.clone());
 
@@ -47,18 +50,24 @@ fn CtxProvider(children: Children) -> impl IntoView {
             let id_wire = new_identity.id_wire.clone();
             match do_canister_auth(id_wire).await {
                 Ok(cans_wire) => {
-                    log!("AUTH_FLOW: base_route - Successfully got canisters from do_canister_auth");
-                    
+                    log!(
+                        "AUTH_FLOW: base_route - Successfully got canisters from do_canister_auth"
+                    );
+
                     // IMPORTANT: Set the canisters in the store so other parts can use it
                     auth.set_cans_auth_wire(cans_wire.clone());
                     log!("AUTH_FLOW: base_route - Set cans_auth_wire in auth state");
-                    
-                    let canisters = cans_wire.clone().canisters().map_err(|e| {
-                        log!("AUTH_FLOW: base_route - Failed to convert cans_wire to canisters: {}", e);
-                        e
-                    })?;
-                    auth.canister_store.set(Some(canisters));
-                    log!("AUTH_FLOW: base_route - Set canisters in canister_store");
+
+                    // let canisters = cans_wire.clone().canisters().map_err(|e| {
+                    //     log!(
+                    //         "AUTH_FLOW: base_route - Failed to convert cans_wire to canisters: {}",
+                    //         e
+                    //     );
+                    //     e
+                    // })?;
+                    // auth.canister_store.set(Some(canisters));
+                    // log!("AUTH_FLOW: base_route - Set canisters in canister_store - success: {}",
+                    //     auth.canister_store.get_untracked().is_some());
                     Ok(cans_wire)
                 }
                 Err(e) => {
@@ -93,18 +102,19 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
                 // First try to get identity from frontend USER_IDENTITY cookie
                 log!("AUTH_FLOW: base_route - user_identity_resource - Checking frontend USER_IDENTITY cookie");
-                let (user_identity_cookie, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-                    USER_IDENTITY,
-                    UseCookieOptions::default()
-                        .path("/")
-                        .same_site(SameSite::Lax)
-                        .http_only(false)
-                        .secure(false),
-                );
-                
+                let (user_identity_cookie, _) =
+                    use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+                        USER_IDENTITY,
+                        UseCookieOptions::default()
+                            .path("/")
+                            .same_site(SameSite::Lax)
+                            .http_only(false)
+                            .secure(false),
+                    );
+
                 if let Some(stored_user_identity) = user_identity_cookie.get_untracked() {
                     log!("AUTH_FLOW: base_route - user_identity_resource - Found USER_IDENTITY cookie: {:?}", stored_user_identity);
-                    
+
                     // Set user_identity in state
                     let auth = auth_state_signal.get();
                     auth.set_user_identity_with_cookie(stored_user_identity.clone());
@@ -115,20 +125,20 @@ fn CtxProvider(children: Children) -> impl IntoView {
                     let _cans_auth_wire = canisters_action.dispatch(stored_user_identity.clone());
                     return Ok(stored_user_identity);
                 }
-                
+
                 log!("AUTH_FLOW: base_route - user_identity_resource - No USER_IDENTITY cookie, trying server-side extraction");
 
-                // Fallback: try to extract from server-side cookies  
+                // Fallback: try to extract from server-side cookies
                 log!("AUTH_FLOW: base_route - user_identity_resource - Attempting to extract identity from server cookies");
                 let id_wire = match extract_identity().await {
                     Ok(Some(id_wire)) => {
                         log!("AUTH_FLOW: base_route - user_identity_resource - Successfully extracted identity from server cookies");
                         id_wire
-                    },
+                    }
                     Ok(None) => {
                         log!("AUTH_FLOW: base_route - user_identity_resource - No refresh cookie found");
                         return Err(ServerFnError::new("No refresh cookie set?!"));
-                    },
+                    }
                     Err(e) => {
                         log!("AUTH_FLOW: base_route - user_identity_resource - Failed to extract identity: {}", e);
                         return Err(ServerFnError::new(e.to_string()));
@@ -143,13 +153,15 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
                 // set user_identity in state
                 log!("AUTH_FLOW: base_route - user_identity_resource - Setting user_identity to cookie: {user_identity:?}");
-                
+
                 let auth = auth_state_signal.get();
                 auth.set_user_identity_with_cookie(user_identity.clone());
                 log!("AUTH_FLOW: base_route - user_identity_resource - User identity set in auth state");
 
                 // call canisters action
-                log!("AUTH_FLOW: base_route - user_identity_resource - Dispatching canisters action");
+                log!(
+                    "AUTH_FLOW: base_route - user_identity_resource - Dispatching canisters action"
+                );
                 let cans_auth_wire = canisters_action.dispatch(user_identity.clone());
                 Ok(user_identity)
             }
@@ -250,14 +262,59 @@ fn CtxProvider(children: Children) -> impl IntoView {
     //     },
     // );
 
+    // Effect to check USER_IDENTITY cookie and populate auth state on page load
+    Effect::new(move |_| {
+        let auth = auth_state_signal.get();
+
+        // Check if auth state is already populated
+        if auth.user_identity.get_untracked().is_some() {
+            log!("AUTH_FLOW: base_route - Effect: Auth state already populated, skipping");
+            return;
+        }
+
+        log!("AUTH_FLOW: base_route - Effect: Checking for USER_IDENTITY cookie to populate auth state");
+
+        // Check USER_IDENTITY cookie
+        let (user_identity_cookie, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+            USER_IDENTITY,
+            UseCookieOptions::default()
+                .path("/")
+                .same_site(SameSite::Lax)
+                .http_only(false)
+                .secure(false),
+        );
+
+        if let Some(stored_user_identity) = user_identity_cookie.get_untracked() {
+            log!("AUTH_FLOW: base_route - Effect: Found USER_IDENTITY cookie, populating auth state: {:?}", stored_user_identity);
+
+            // Populate auth state
+            auth.user_identity.set(Some(stored_user_identity.clone()));
+            auth.set_user_identity_with_cookie(stored_user_identity.clone());
+
+            // // Also set the new_identity_setter to trigger the resource
+            // auth.new_identity_setter
+            //     .set(Some(stored_user_identity.clone()));
+            // log!("AUTH_FLOW: base_route - Effect: Set user identity in auth state and triggered resource");
+
+            // Dispatch canisters action to populate canister_store
+            log!("AUTH_FLOW: base_route - Effect: Dispatching canisters action from USER_IDENTITY cookie");
+            canisters_action.dispatch(stored_user_identity.clone());
+        } else {
+            log!("AUTH_FLOW: base_route - Effect: No USER_IDENTITY cookie found");
+        }
+    });
+
     Effect::new(move |_| {
         let auth = auth_state_signal.get();
         // let pathname = location.pathname.get();
         let is_logged_in = auth.is_logged_in_with_oauth();
         let principal_available = auth.user_principal_if_available();
-        log!("AUTH_FLOW: base_route - Effect running - logged_in: {:?}, principal_available: {}", 
-            is_logged_in.get_untracked(), principal_available.is_some());
-        
+        log!(
+            "AUTH_FLOW: base_route - Effect running - logged_in: {:?}, principal_available: {}",
+            is_logged_in.get_untracked(),
+            principal_available.is_some()
+        );
+
         let Some(principal) = principal_available else {
             log!("AUTH_FLOW: base_route - No principal available, effect returning early");
             return;
