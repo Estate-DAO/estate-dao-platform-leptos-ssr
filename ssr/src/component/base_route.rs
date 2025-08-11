@@ -18,7 +18,7 @@ use candid::Principal;
 use codee::string::{FromToStringCodec, JsonSerdeCodec};
 use leptos::SignalGetUntracked;
 use leptos::*;
-use leptos_router::{use_navigate, Outlet};
+use leptos_router::{use_location, use_navigate, Outlet};
 use leptos_use::storage::use_local_storage;
 use leptos_use::{
     use_cookie_with_options, use_event_listener, use_window, SameSite, UseCookieOptions,
@@ -41,6 +41,10 @@ fn CtxProvider(children: Children) -> impl IntoView {
     provide_context(auth.clone());
 
     let navigate = use_navigate();
+    let location = use_location();
+
+    // Define protected routes that require authentication
+    let protected_routes = vec!["/my-bookings"];
 
     let canisters_action = create_action(move |new_identity: &NewIdentity| {
         let auth = auth_state_signal.get();
@@ -262,47 +266,66 @@ fn CtxProvider(children: Children) -> impl IntoView {
     //     },
     // );
 
-    // Effect to check USER_IDENTITY cookie and populate auth state on page load
-    Effect::new(move |_| {
-        let auth = auth_state_signal.get();
+    // Create a blocking resource for auth state initialization
+    // This runs synchronously on SSR and reactively on client
+    let auth_init_resource = create_resource(
+        move || {
+            // Track location changes to handle route protection
+            (location.pathname.get(), ())
+        },
+        move |(current_path, _)| {
+            let navigate = navigate.clone();
+            let protected_routes = protected_routes.clone();
+            async move {
+                let auth = auth_state_signal.get();
+                log!("AUTH_FLOW: base_route - Blocking resource: Initializing auth state for path: {}", current_path);
 
-        // Check if auth state is already populated
-        if auth.user_identity.get_untracked().is_some() {
-            log!("AUTH_FLOW: base_route - Effect: Auth state already populated, skipping");
-            return;
-        }
+                // Check if auth state is already initialized
+                if auth.user_identity.get_untracked().is_some() {
+                    log!("AUTH_FLOW: base_route - Blocking resource: Auth state already populated");
+                    return Ok::<_, ServerFnError>(true);
+                }
 
-        log!("AUTH_FLOW: base_route - Effect: Checking for USER_IDENTITY cookie to populate auth state");
+                log!("AUTH_FLOW: base_route - Blocking resource: Checking USER_IDENTITY cookie");
 
-        // Check USER_IDENTITY cookie
-        let (user_identity_cookie, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-            USER_IDENTITY,
-            UseCookieOptions::default()
-                .path("/")
-                .same_site(SameSite::Lax)
-                .http_only(false)
-                .secure(false),
-        );
+                // Check USER_IDENTITY cookie
+                let (user_identity_cookie, _) =
+                    use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+                        USER_IDENTITY,
+                        UseCookieOptions::default()
+                            .path("/")
+                            .same_site(SameSite::Lax)
+                            .http_only(false)
+                            .secure(false),
+                    );
 
-        if let Some(stored_user_identity) = user_identity_cookie.get_untracked() {
-            log!("AUTH_FLOW: base_route - Effect: Found USER_IDENTITY cookie, populating auth state: {:?}", stored_user_identity);
+                if let Some(stored_user_identity) = user_identity_cookie.get_untracked() {
+                    log!("AUTH_FLOW: base_route - Blocking resource: Found USER_IDENTITY cookie, initializing auth state: {:?}", stored_user_identity);
 
-            // Populate auth state
-            auth.user_identity.set(Some(stored_user_identity.clone()));
-            auth.set_user_identity_with_cookie(stored_user_identity.clone());
+                    // Initialize auth state
+                    auth.set_user_identity_with_cookie(stored_user_identity.clone());
 
-            // // Also set the new_identity_setter to trigger the resource
-            // auth.new_identity_setter
-            //     .set(Some(stored_user_identity.clone()));
-            // log!("AUTH_FLOW: base_route - Effect: Set user identity in auth state and triggered resource");
+                    // Dispatch canisters action to populate canister_store
+                    log!("AUTH_FLOW: base_route - Blocking resource: Dispatching canisters action");
+                    canisters_action.dispatch(stored_user_identity.clone());
 
-            // Dispatch canisters action to populate canister_store
-            log!("AUTH_FLOW: base_route - Effect: Dispatching canisters action from USER_IDENTITY cookie");
-            canisters_action.dispatch(stored_user_identity.clone());
-        } else {
-            log!("AUTH_FLOW: base_route - Effect: No USER_IDENTITY cookie found");
-        }
-    });
+                    Ok(true)
+                } else {
+                    log!(
+                        "AUTH_FLOW: base_route - Blocking resource: No USER_IDENTITY cookie found"
+                    );
+
+                    // Check if current route requires authentication
+                    if protected_routes.contains(&current_path.as_str()) {
+                        log!("AUTH_FLOW: base_route - Blocking resource: Protected route accessed without authentication, redirecting");
+                        navigate("/", Default::default());
+                    }
+
+                    Ok(false)
+                }
+            }
+        },
+    );
 
     Effect::new(move |_| {
         let auth = auth_state_signal.get();
@@ -322,7 +345,48 @@ fn CtxProvider(children: Children) -> impl IntoView {
         log!("AUTH_FLOW: base_route - Principal available: {}", principal);
     });
 
-    children()
+    // Store children in StoredValue to make it accessible in the closure
+    // let child_view = store_value(children());
+
+    view! {
+        <div>
+        <Suspense fallback=move || view! {
+            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div class="text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Initializing authentication...</p>
+                </div>
+            </div>
+        }>
+            {move || {
+                match auth_init_resource.get() {
+                    Some(Ok(auth_initialized)) => {
+                        log!("AUTH_FLOW: base_route - Suspense: Auth resource loaded successfully, authenticated: {}", auth_initialized);
+                        // child_view.with_value(|child| child.clone()).into_view()
+                        view! { <></> }.into_view()
+                    }
+                    Some(Err(e)) => {
+                        log!("AUTH_FLOW: base_route - Suspense: Auth resource error: {}", e);
+                        view! {
+                            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+                                <div class="text-center">
+                                    <p class="text-red-600 mb-2">Authentication Error</p>
+                                    <p class="text-gray-500 text-sm">{e.to_string()}</p>
+                                </div>
+                            </div>
+                        }.into_view()
+                    }
+                    None => {
+                        log!("AUTH_FLOW: base_route - Suspense: Auth resource still loading");
+                        view! { <></> }.into_view()
+                    }
+                }
+            }}
+        </Suspense>
+
+        {children()}
+        </div>
+    }
 }
 
 #[component]

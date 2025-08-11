@@ -11,9 +11,11 @@ use leptos::*;
 use leptos_router::*;
 use std::rc::Rc;
 
-async fn load_my_bookings(auth_state: AuthState) -> Result<Vec<MyBookingItem>, ServerFnError> {
+async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     log!("[MyBookings] Loading bookings from API");
 
+    let auth_state_signal: AuthStateSignal = expect_context();
+    let auth_state = auth_state_signal.get();
     // Call actual canister API to get bookings
     let backend_bookings = user_get_my_bookings(auth_state).await?;
     log!(
@@ -43,7 +45,9 @@ pub fn MyBookingsPage() -> impl IntoView {
     let bookings_resource = create_resource(
         move || {
             let auth = auth_state_signal.get();
-            let canister_store_ready = auth.get_canisters().is_some();
+
+            // Check if canister store is ready
+            let canister_store_ready = auth.new_cans_setter.get().is_some();
             let user_identity_ready = auth.user_identity.get().is_some();
             log!(
                 "[MyBookings] Resource signal - canister_store_ready: {}, user_identity_ready: {}",
@@ -65,9 +69,9 @@ pub fn MyBookingsPage() -> impl IntoView {
                 return Err(ServerFnError::new("Auth state not ready yet"));
             }
 
-            let auth_state = auth_state_signal.get();
+            // let auth_state = auth_state_signal.get();
             log!("[MyBookings] Resource loading bookings");
-            load_my_bookings(auth_state).await
+            load_my_bookings().await
         },
     );
 
@@ -113,7 +117,7 @@ pub fn MyBookingsPage() -> impl IntoView {
                                             </div>
                                         }.into_view()
                                     }
-                                    None => view! { <></> }.into_view()
+                                    None => view! { <>"Load None"</> }.into_view()
                                 }
                             }}
                         </Suspense>
@@ -121,7 +125,7 @@ pub fn MyBookingsPage() -> impl IntoView {
                 </div>
             </div>
         </div>
-    }
+    }.into_view()
 }
 
 #[component]

@@ -307,8 +307,8 @@ impl AuthState {
     }
 
     pub fn get_canisters(&self) -> Option<Canisters<true>> {
-        let cans_wire = self.new_cans_setter.get_untracked();
-        if let Some(cans_wire) = cans_wire {
+        let new_cans_setter = self.new_cans_setter.get_untracked();
+        if let Some(cans_wire) = new_cans_setter {
             let canisters = cans_wire.canisters().ok()?;
             crate::log!("AUTH_FLOW: AuthState.get_canisters() - Canisters found");
             return Some(canisters);
