@@ -262,6 +262,11 @@ impl AuthState {
     pub fn user_principal_if_available(&self) -> Option<Principal> {
         self.user_principal_cookie.0.get_untracked()
     }
+
+    pub fn reset_user_identity(&self) {
+        self.user_identity.set(None);
+        self.user_principal_cookie.1.set(None);
+    }
 }
 // /// Prevents hydration bugs if the value in store is used to conditionally show views
 // /// this is because the server will always get a `false` value and do rendering based on that

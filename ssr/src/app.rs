@@ -1,4 +1,5 @@
 use crate::component::base_route::BaseRoute;
+use crate::component::logout::LogoutPage;
 use crate::component::yral_auth_provider::LoginProvCtx;
 use crate::{
     api::{
@@ -69,6 +70,7 @@ pub enum AppRoutes {
     AdminPanel,
     AdminEditPanel,
     YralAuthRedirectHandler,
+    Logout,
     // Notifications
 }
 
@@ -85,6 +87,7 @@ impl AppRoutes {
             AppRoutes::AdminPanel => "/admin-panel",
             AppRoutes::AdminEditPanel => "/admin-edit-panel",
             AppRoutes::YralAuthRedirectHandler => "/auth/callback",
+            AppRoutes::Logout => "/logout",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -101,6 +104,7 @@ impl AppRoutes {
             Self::AdminPanel,
             Self::AdminEditPanel,
             Self::YralAuthRedirectHandler,
+            Self::Logout,
             // Self::Notifications,
         ]
         .into_iter()
@@ -237,6 +241,7 @@ pub fn App() -> impl IntoView {
                         <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                         <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
                         <Route path=AppRoutes::YralAuthRedirectHandler.to_string() view=YralAuthRedirectHandlerPage />
+                        <Route path=AppRoutes::Logout.to_string() view=LogoutPage />
                         // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                         // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                         </Route>

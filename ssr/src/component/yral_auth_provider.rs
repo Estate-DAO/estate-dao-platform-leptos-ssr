@@ -207,7 +207,7 @@ pub fn YralAuthProvider() -> impl IntoView {
     view! {
         <LoginProvButton
             prov=ProviderKind::YralAuth
-            class="flex gap-3 justify-center items-center p-3 w-full font-bold text-black bg-white rounded-md hover:bg-white/95"
+            class="flex gap-3 justify-center items-center px-6 py-3 font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             on_click=move |ev| {
                 ev.stop_propagation();
                 signing_in_provider.set(LoginProvider::Google);
@@ -215,7 +215,7 @@ pub fn YralAuthProvider() -> impl IntoView {
                 on_click(signing_in_provider.get(), "google");
             }
         >
-            <img class="size-5" src="/img/common/google.svg" />
+            <img class="w-5 h-5" src="/img/google.svg" alt="Google logo" />
             <span>
                 {format!(
                     "{}Google",
