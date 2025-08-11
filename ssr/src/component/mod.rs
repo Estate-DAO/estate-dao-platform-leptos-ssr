@@ -96,6 +96,8 @@ pub use data_table_3::*;
 
 // pub mod auth;
 pub mod base_route;
+pub mod profile_component;
+pub mod user_profile_icon;
 pub mod yral_auth_provider;
 // mod live_select_example;
 // pub use live_select_example::*;

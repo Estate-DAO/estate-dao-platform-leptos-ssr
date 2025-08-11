@@ -227,27 +227,27 @@ pub fn YralAuthProvider() -> impl IntoView {
                 )}
             </span>
         </LoginProvButton>
-        <LoginProvButton
-            prov=ProviderKind::YralAuth
-            class="flex gap-3 justify-center items-center py-3 w-full font-bold text-black bg-white rounded-md hover:bg-white/95"
-            on_click=move |ev| {
-                ev.stop_propagation();
-                signing_in_provider.set(LoginProvider::Apple);
-                // MixpanelGlobalProps::set_auth_journey("apple".to_string());
-                on_click(signing_in_provider.get(), "apple");
-            }
-        >
-            <img class="size-5" src="/img/common/apple.svg" />
-            <span>
-                {format!(
-                    "{}Apple",
-                    if signing_in() && signing_in_provider.get() == LoginProvider::Apple {
-                        "Logging in with "
-                    } else {
-                        "Login with "
-                    },
-                )}
-            </span>
-        </LoginProvButton>
+        // <LoginProvButton
+        //     prov=ProviderKind::YralAuth
+        //     class="flex gap-3 justify-center items-center py-3 w-full font-bold text-black bg-white rounded-md hover:bg-white/95"
+        //     on_click=move |ev| {
+        //         ev.stop_propagation();
+        //         signing_in_provider.set(LoginProvider::Apple);
+        //         // MixpanelGlobalProps::set_auth_journey("apple".to_string());
+        //         on_click(signing_in_provider.get(), "apple");
+        //     }
+        // >
+        //     <img class="size-5" src="/img/common/apple.svg" />
+        //     <span>
+        //         {format!(
+        //             "{}Apple",
+        //             if signing_in() && signing_in_provider.get() == LoginProvider::Apple {
+        //                 "Logging in with "
+        //             } else {
+        //                 "Login with "
+        //             },
+        //         )}
+        //     </span>
+        // </LoginProvButton>
     }
 }

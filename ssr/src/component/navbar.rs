@@ -1,8 +1,21 @@
-use crate::component::yral_auth_provider::YralAuthProvider;
+use crate::api::{auth::types::NewIdentity, consts::USER_IDENTITY};
+use crate::component::{profile_component::ProfileComponent, yral_auth_provider::YralAuthProvider};
+use codee::string::JsonSerdeCodec;
 use leptos::*;
+use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
 #[component]
 pub fn Navbar() -> impl IntoView {
+    // <!-- Check if user is logged in by reading USER_IDENTITY cookie -->
+    let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+        USER_IDENTITY,
+        UseCookieOptions::default()
+            .path("/")
+            .same_site(leptos_use::SameSite::Lax)
+            .http_only(false)
+            .secure(false),
+    );
+
     view! {
         <nav class="flex justify-between items-center py-10 px-8">
             <div class="flex items-center text-xl">
@@ -25,7 +38,16 @@ pub fn Navbar() -> impl IntoView {
 
                 // <button />
             // </div>
-            <YralAuthProvider />
+            // <!-- Conditional rendering based on login state -->
+            {move || {
+                if stored_identity.get().is_some() {
+                    // <!-- User is logged in, show profile component -->
+                    view! { <ProfileComponent /> }.into_view()
+                } else {
+                    // <!-- User is not logged in, show auth provider -->
+                    view! { <YralAuthProvider /> }.into_view()
+                }
+            }}
         </nav>
     }
 }

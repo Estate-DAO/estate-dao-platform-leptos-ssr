@@ -83,6 +83,7 @@ fn CtxProvider(children: Children) -> impl IntoView {
                 };
 
                 // set user_identity in state
+                log!("set user_identity to cookie: {user_identity:?}");
                 auth_clone.set_user_identity_with_cookie(user_identity.clone());
 
                 // call canisters action
