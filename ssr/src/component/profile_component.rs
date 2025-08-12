@@ -27,13 +27,23 @@ pub fn ProfileComponent() -> impl IntoView {
     view! {
         <ProfileDropdown>
             <div class="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
-                // <!-- Dynamic profile icon based on first letter of principal -->
+                // <!-- Dynamic profile icon based on first letter of username, fallback to principal -->
                 {move || {
                     let icon_letter = if let Some(identity) = stored_identity.get() {
-                        let principal = candid::Principal::self_authenticating(&identity.id_wire.from_key);
-                        let principal_text = principal.to_text();
-                        // <!-- Extract first character of principal for icon -->
-                        principal_text.chars().next().unwrap_or('U').to_string()
+                        // <!-- Priority: first letter of username -> first letter of principal -->
+                        if let Some(username) = &identity.fallback_username {
+                            if !username.is_empty() {
+                                username.chars().next().unwrap_or('U').to_string()
+                            } else {
+                                let principal = candid::Principal::self_authenticating(&identity.id_wire.from_key);
+                                let principal_text = principal.to_text();
+                                principal_text.chars().next().unwrap_or('U').to_string()
+                            }
+                        } else {
+                            let principal = candid::Principal::self_authenticating(&identity.id_wire.from_key);
+                            let principal_text = principal.to_text();
+                            principal_text.chars().next().unwrap_or('U').to_string()
+                        }
                     } else {
                         "U".to_string()
                     };
