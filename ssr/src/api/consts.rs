@@ -29,6 +29,7 @@ pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
 pub const BOOKING_ID: &str = "estatedao_booking_id";
 pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 pub const USER_IDENTITY: &str = "estatedao_user_identity";
+pub const USER_EMAIL_MAPPING_SYNCED: &str = "estatedao_user_email_mapping_synced";
 
 // PROVAB_BASE_URL options
 pub const PROVAB_PROD_OLD_PROXY: &str =

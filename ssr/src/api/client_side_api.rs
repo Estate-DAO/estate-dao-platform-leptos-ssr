@@ -88,6 +88,11 @@ pub struct YralAuthLoginUrlRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateUserPrincipalEmailRequest {
+    pub user_email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifyOtpResponse {
     pub success: bool,
     pub message: String,
@@ -480,11 +485,35 @@ impl ClientSideApiClient {
         .await
     }
 
-    pub async fn extract_identity(&self) -> Result<Option<DelegatedIdentityWire>, String> {
+    // pub async fn extract_identity(&self) -> Result<Option<DelegatedIdentityWire>, String> {
+    //     Self::api_call_with_error(
+    //         "extract_identity_api_from_client_call",
+    //         "server_fn_api/extract_identity_api",
+    //         "extract identity api",
+    //     )
+    //     .await
+    // }
+
+    pub async fn extract_new_identity(
+        &self,
+    ) -> Result<Option<crate::api::auth::types::NewIdentity>, String> {
         Self::api_call_with_error(
-            "extract_identity_api_from_client_call",
-            "server_fn_api/extract_identity_api",
-            "extract identity api",
+            "extract_new_identity_api_from_client_call",
+            "server_fn_api/extract_new_identity_api",
+            "extract new identity api",
+        )
+        .await
+    }
+
+    pub async fn update_user_principal_email_mapping(
+        &self,
+        user_email: String,
+    ) -> Result<String, String> {
+        let request = UpdateUserPrincipalEmailRequest { user_email };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/update_user_principal_email_mapping_in_canister",
+            "update user principal email mapping",
         )
         .await
     }

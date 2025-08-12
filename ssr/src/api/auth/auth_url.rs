@@ -153,6 +153,12 @@ fn set_cookies(resp: &ResponseOptions, jar: impl IntoResponse) {
 
 // -----------------
 
+pub struct ClaimsFromYralAuth {
+    pub identity: DelegatedIdentityWire,
+    pub username: Option<String>,
+    pub email: Option<String>,
+}
+
 pub async fn perform_yral_auth_impl(
     provided_csrf: String,
     auth_code: String,
@@ -160,7 +166,7 @@ pub async fn perform_yral_auth_impl(
     private_jar: PrivateCookieJar<Key>,
     signed_jar: SignedCookieJar<Key>,
     response_options: Option<ResponseOptions>,
-) -> Result<(DelegatedIdentityWire, Option<String>, SignedCookieJar<Key>), ServerFnError> {
+) -> Result<(ClaimsFromYralAuth, SignedCookieJar<Key>), ServerFnError> {
     let mut jar = private_jar;
 
     // Debug logging for cookie availability
@@ -312,6 +318,8 @@ pub async fn perform_yral_auth_impl(
             .then(|| username.to_string())
     });
 
+    let email = claims.email().map(|f| f.deref().clone());
+
     let mut jar = signed_jar;
 
     let refresh_token = token_res
@@ -336,7 +344,14 @@ pub async fn perform_yral_auth_impl(
         set_cookies(resp, jar.clone());
     }
 
-    Ok((identity, username, jar))
+    Ok((
+        ClaimsFromYralAuth {
+            identity,
+            username,
+            email,
+        },
+        jar,
+    ))
 }
 
 pub fn update_user_identity(

@@ -9,7 +9,6 @@ use crate::{
     api::{
         auth::{
             canisters::{do_canister_auth, AuthCansResource, Canisters, CanistersAuthWire},
-            extract_identity_impl::extract_identity,
             types::NewIdentity,
         },
         consts::yral_auth::{

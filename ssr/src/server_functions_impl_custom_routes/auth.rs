@@ -420,7 +420,7 @@ pub async fn perform_yral_oauth_api_server_fn_route(
     // Call the OAuth implementation function
     let oauth_client = state.yral_oauth_client.clone();
 
-    let (identity, username, updated_jar) = perform_yral_auth_impl(
+    let (claims_from_yral_auth, updated_jar) = perform_yral_auth_impl(
         oauth_query.state,
         oauth_query.code,
         oauth_client,
@@ -441,10 +441,15 @@ pub async fn perform_yral_oauth_api_server_fn_route(
             .into_response()
     })?;
 
+    let identity = claims_from_yral_auth.identity;
+    let username = claims_from_yral_auth.username;
+    let email = claims_from_yral_auth.email;
+
     // Create NewIdentity response
     let new_identity = NewIdentity {
         id_wire: identity,
         fallback_username: username,
+        email: email,
     };
 
     // Return JSON response

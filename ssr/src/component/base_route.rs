@@ -5,11 +5,12 @@ use crate::{
         auth::{
             auth_state::AuthState,
             canisters::{do_canister_auth, AuthCansResource, Canisters, CanistersAuthWire},
-            extract_identity_impl::extract_identity,
+            extract_identity_impl::extract_new_identity,
             types::NewIdentity,
         },
+        client_side_api::ClientSideApiClient,
         consts::yral_auth::{AUTH_UTIL_COOKIES_MAX_AGE_MS, USER_PRINCIPAL_STORE},
-        consts::USER_IDENTITY,
+        consts::{USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY},
     },
     send_wrap,
     utils::parent_resource::{MockPartialEq, ParentResource},
@@ -132,12 +133,13 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
                 log!("AUTH_FLOW: base_route - user_identity_resource - No USER_IDENTITY cookie, trying server-side extraction");
 
-                // Fallback: try to extract from server-side cookies
+                // Fallback: try to extract full NewIdentity (with username/email) from server-side cookies
                 log!("AUTH_FLOW: base_route - user_identity_resource - Attempting to extract identity from server cookies");
-                let id_wire = match extract_identity().await {
-                    Ok(Some(id_wire)) => {
-                        log!("AUTH_FLOW: base_route - user_identity_resource - Successfully extracted identity from server cookies");
-                        id_wire
+                let user_identity: NewIdentity = match extract_new_identity().await {
+                    Ok(Some(new_identity)) => {
+                        log!("AUTH_FLOW: base_route - user_identity_resource - Successfully extracted NewIdentity from server cookies with username: {:?}, email: {:?}", 
+                            new_identity.fallback_username, new_identity.email);
+                        new_identity
                     }
                     Ok(None) => {
                         log!("AUTH_FLOW: base_route - user_identity_resource - No refresh cookie found");
@@ -147,12 +149,6 @@ fn CtxProvider(children: Children) -> impl IntoView {
                         log!("AUTH_FLOW: base_route - user_identity_resource - Failed to extract identity: {}", e);
                         return Err(ServerFnError::new(e.to_string()));
                     }
-                };
-
-                let user_identity = NewIdentity {
-                    id_wire,
-                    // todo(2025-08-10) set a default username later.
-                    fallback_username: None,
                 };
 
                 // set user_identity in state
@@ -322,6 +318,88 @@ fn CtxProvider(children: Children) -> impl IntoView {
                     }
 
                     Ok(false)
+                }
+            }
+        },
+    );
+
+    //
+    // USER EMAIL MAPPING SYNC RESOURCE
+    //
+
+    let user_email_sync_resource = create_resource(
+        move || {
+            // Track when auth_init_resource completes and user is authenticated
+            if let Some(Ok(true)) = auth_init_resource.get() {
+                // Get the current user identity to extract email
+                let (user_identity_cookie, _) =
+                    use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+                        USER_IDENTITY,
+                        UseCookieOptions::default()
+                            .path("/")
+                            .same_site(SameSite::Lax)
+                            .http_only(false)
+                            .secure(false),
+                    );
+
+                if let Some(identity) = user_identity_cookie.get_untracked() {
+                    if let Some(email) = identity.email.clone() {
+                        return Some(email);
+                    }
+                }
+            }
+            None
+        },
+        move |email| {
+            let email = email.clone();
+            async move {
+                let Some(email) = email else {
+                    return Ok::<_, String>("No email to sync".to_string());
+                };
+
+                log!(
+                    "USER_EMAIL_SYNC: Syncing user email with backend: {}",
+                    email
+                );
+
+                // Check if we already synced this email
+                let (email_sync_cookie, set_email_sync_cookie) =
+                    use_cookie_with_options::<String, FromToStringCodec>(
+                        USER_EMAIL_MAPPING_SYNCED,
+                        UseCookieOptions::default()
+                            .path("/")
+                            .same_site(SameSite::Lax)
+                            .http_only(false)
+                            .secure(false)
+                            .max_age(AUTH_UTIL_COOKIES_MAX_AGE_MS),
+                    );
+
+                if let Some(synced_email) = email_sync_cookie.get_untracked() {
+                    if synced_email == email {
+                        log!("USER_EMAIL_SYNC: Email already synced: {}", email);
+                        return Ok("Email already synced".to_string());
+                    }
+                }
+
+                // Call the backend to sync email mapping
+                let api_client = ClientSideApiClient::new();
+                match api_client
+                    .update_user_principal_email_mapping(email.clone())
+                    .await
+                {
+                    Ok(result) => {
+                        log!(
+                            "USER_EMAIL_SYNC: Successfully synced email with backend: {}",
+                            result
+                        );
+                        // Set cookie to remember we synced this email
+                        set_email_sync_cookie.set(Some(email));
+                        Ok(result)
+                    }
+                    Err(e) => {
+                        log!("USER_EMAIL_SYNC: Failed to sync email with backend: {}", e);
+                        Err(e)
+                    }
                 }
             }
         },

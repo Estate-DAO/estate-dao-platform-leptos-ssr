@@ -129,4 +129,5 @@ service : {
   update_book_room_response : (BookingId, BEBookRoomResponse) -> (Result);
   update_email_sent : (BookingId, bool) -> (Result_1);
   update_payment_details : (BookingId, PaymentDetails) -> (Result_3);
+  update_user_principal_email_index : (principal, text) -> (Result);
 }

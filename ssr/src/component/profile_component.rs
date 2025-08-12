@@ -43,7 +43,22 @@ pub fn ProfileComponent() -> impl IntoView {
                     }
                 }}
                 <div class="text-sm">
-                    <div class="font-medium text-gray-900">User</div>
+                    <div class="font-medium text-gray-900">
+                        {move || {
+                            if let Some(identity) = stored_identity.get() {
+                                // <!-- Priority: fallback_username -> email -> "User" -->
+                                if let Some(username) = identity.fallback_username {
+                                    username
+                                } else if let Some(email) = identity.email {
+                                    email
+                                } else {
+                                    "User".to_string()
+                                }
+                            } else {
+                                "User".to_string()
+                            }
+                        }}
+                    </div>
                     <div class="text-gray-500 text-xs font-mono">
                         {move || {
                             if let Some(identity) = stored_identity.get() {
