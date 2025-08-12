@@ -1,11 +1,8 @@
-use codee::string::JsonSerdeCodec;
+use codee::string::FromToStringCodec;
 use leptos::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
-use crate::api::{
-    auth::{auth_state::auth_state, types::NewIdentity},
-    consts::{yral_auth::ACCOUNT_CONNECTED_STORE, USER_IDENTITY},
-};
+use crate::api::{auth::auth_state::auth_state, consts::yral_auth::ACCOUNT_CONNECTED_STORE};
 
 pub fn go_to_home() {
     let path = "/";
@@ -28,25 +25,13 @@ pub fn LogoutHandler() -> impl IntoView {
         let auth = auth_state();
         auth.reset_user_identity();
 
-        // <!-- Clear USER_IDENTITY cookie -->
-        let (_, set_user_identity) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-            USER_IDENTITY,
+        // <!-- Clear ACCOUNT_CONNECTED_STORE cookie -->
+        let (_, set_account_connected) = use_cookie_with_options::<bool, FromToStringCodec>(
+            ACCOUNT_CONNECTED_STORE,
             UseCookieOptions::default()
                 .path("/")
-                .same_site(leptos_use::SameSite::Lax)
-                .http_only(false)
-                .secure(false),
+                .same_site(leptos_use::SameSite::Lax),
         );
-        set_user_identity.set(None);
-
-        // <!-- Clear ACCOUNT_CONNECTED_STORE cookie -->
-        let (_, set_account_connected) =
-            use_cookie_with_options::<bool, codee::string::FromToStringCodec>(
-                ACCOUNT_CONNECTED_STORE,
-                UseCookieOptions::default()
-                    .path("/")
-                    .same_site(leptos_use::SameSite::Lax),
-            );
         set_account_connected.set(None);
 
         // <!-- Redirect to home after a short delay -->

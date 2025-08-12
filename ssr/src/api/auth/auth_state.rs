@@ -1,8 +1,8 @@
 use candid::Principal;
-use codee::string::FromToStringCodec;
+use codee::string::{FromToStringCodec, JsonSerdeCodec};
 // use yral_canisters_common::{utils::time::current_epoch, Canisters, CanistersAuthWire};
 use leptos::*;
-use leptos_use::{use_cookie_with_options, UseCookieOptions};
+use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
 // use leptos_reactive::Resource;
 
 use crate::{
@@ -15,6 +15,7 @@ use crate::{
             ACCOUNT_CONNECTED_STORE, AUTH_UTIL_COOKIES_MAX_AGE_MS, REFRESH_MAX_AGE,
             USER_PRINCIPAL_STORE,
         },
+        consts::{USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY},
     },
     send_wrap,
     utils::parent_resource::{MockPartialEq, ParentResource},
@@ -56,6 +57,11 @@ pub struct AuthState {
     pub user_principal: RwSignal<Option<Principal>>,
     // pub canister_store: RwSignal<Option<Canisters<true>>>,
     user_principal_cookie: (Signal<Option<Principal>>, WriteSignal<Option<Principal>>),
+    user_email_mapping_synced_cookie: (Signal<Option<String>>, WriteSignal<Option<String>>),
+    user_identity_cookie: (
+        Signal<Option<NewIdentity>>,
+        WriteSignal<Option<NewIdentity>>,
+    ),
     pub user_identity: RwSignal<Option<NewIdentity>>,
     pub new_cans_setter: RwSignal<Option<CanistersAuthWire>>,
 }
@@ -176,6 +182,30 @@ impl Default for AuthState {
             "AUTH_FLOW: User principal from cookie: {:?}",
             user_principal_cookie.0.get_untracked()
         );
+
+        let user_email_mapping_synced_cookie = use_cookie_with_options::<String, FromToStringCodec>(
+            USER_EMAIL_MAPPING_SYNCED,
+            UseCookieOptions::default()
+                .path("/")
+                .max_age(AUTH_UTIL_COOKIES_MAX_AGE_MS),
+        );
+        crate::log!(
+            "AUTH_FLOW: User email mapping synced cookie: {:?}",
+            user_email_mapping_synced_cookie.0.get_untracked()
+        );
+
+        let user_identity_cookie = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+            USER_IDENTITY,
+            UseCookieOptions::default()
+                .path("/")
+                .same_site(SameSite::Lax)
+                .http_only(false)
+                .secure(false),
+        );
+        crate::log!(
+            "AUTH_FLOW: User identity cookie: {:?}",
+            user_identity_cookie.0.get_untracked().is_some()
+        );
         // let user_principal = create_resource(
         //     move || {
         //         user_identity_resource.track();
@@ -250,6 +280,8 @@ impl Default for AuthState {
             user_principal: create_rw_signal(None::<Principal>),
             // canister_store: create_rw_signal(None::<Canisters<true>>),
             user_principal_cookie,
+            user_email_mapping_synced_cookie,
+            user_identity_cookie,
             // user_canister,
             // user_canister_id_cookie,
             // event_ctx,
@@ -290,6 +322,7 @@ impl AuthState {
         self.is_logged_in_with_oauth.1.set(Some(true));
         let princ = Principal::self_authenticating(&user_identity.id_wire.from_key);
         self.set_user_principal_cookie(princ);
+        self.set_user_identity_cookie(user_identity);
     }
     pub fn set_cans_auth_wire(&self, canisters: CanistersAuthWire) {
         self.new_cans_setter.set(Some(canisters));
@@ -299,10 +332,67 @@ impl AuthState {
         self.user_principal_cookie.0.get_untracked()
     }
 
+    fn get_user_email_mapping_synced_cookie(&self) -> Option<String> {
+        self.user_email_mapping_synced_cookie.0.get_untracked()
+    }
+
+    fn set_user_email_mapping_synced_cookie(&self, email: String) {
+        self.user_email_mapping_synced_cookie.1.set(Some(email));
+    }
+
+    fn clear_user_email_mapping_synced_cookie(&self) {
+        self.user_email_mapping_synced_cookie.1.set(None);
+    }
+
+    pub fn is_email_mapping_synced(&self, email: &str) -> bool {
+        let synced_email = self.get_user_email_mapping_synced_cookie();
+        let is_synced = match synced_email {
+            Some(ref sync_email) => sync_email == email,
+            None => false,
+        };
+        crate::log!(
+            "AUTH_FLOW: is_email_mapping_synced - checking email: {}, synced_email: {:?}, is_synced: {}",
+            email, synced_email, is_synced
+        );
+        is_synced
+    }
+
+    pub fn mark_email_mapping_synced(&self, email: String) {
+        crate::log!(
+            "AUTH_FLOW: mark_email_mapping_synced - marking email as synced: {}",
+            email
+        );
+        self.set_user_email_mapping_synced_cookie(email);
+    }
+
+    pub fn get_user_identity_cookie(&self) -> Option<NewIdentity> {
+        let identity = self.user_identity_cookie.0.get_untracked();
+        crate::log!(
+            "AUTH_FLOW: get_user_identity_cookie - identity available: {}, email: {:?}",
+            identity.is_some(),
+            identity.as_ref().and_then(|i| i.email.as_ref())
+        );
+        identity
+    }
+
+    pub fn set_user_identity_cookie(&self, identity: NewIdentity) {
+        crate::log!(
+            "AUTH_FLOW: set_user_identity_cookie - setting identity with email: {:?}",
+            identity.email.as_ref()
+        );
+        self.user_identity_cookie.1.set(Some(identity));
+    }
+
+    fn clear_user_identity_cookie(&self) {
+        self.user_identity_cookie.1.set(None);
+    }
+
     pub fn reset_user_identity(&self) {
         self.user_identity.set(None);
         self.is_logged_in_with_oauth.1.set(None);
         self.user_principal_cookie.1.set(None);
+        self.clear_user_email_mapping_synced_cookie();
+        self.clear_user_identity_cookie();
     }
 
     pub fn get_canisters(&self) -> Option<Canisters<true>> {

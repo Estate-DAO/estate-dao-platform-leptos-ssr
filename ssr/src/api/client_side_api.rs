@@ -505,18 +505,18 @@ impl ClientSideApiClient {
         .await
     }
 
-    pub async fn update_user_principal_email_mapping(
-        &self,
-        user_email: String,
-    ) -> Result<String, String> {
-        let request = UpdateUserPrincipalEmailRequest { user_email };
-        Self::api_call_with_error(
-            request,
-            "server_fn_api/update_user_principal_email_mapping_in_canister",
-            "update user principal email mapping",
-        )
-        .await
-    }
+    // pub async fn update_user_principal_email_mapping(
+    //     &self,
+    //     user_email: String,
+    // ) -> Result<String, String> {
+    //     let request = UpdateUserPrincipalEmailRequest { user_email };
+    //     Self::api_call_with_error(
+    //         request,
+    //         "server_fn_api/update_user_principal_email_mapping_in_canister",
+    //         "update user principal email mapping",
+    //     )
+    //     .await
+    // }
 }
 
 impl Default for ClientSideApiClient {

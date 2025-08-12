@@ -1,4 +1,5 @@
 use crate::api::auth::auth_state::AuthStateSignal;
+use crate::api::canister::update_user_principal_email::update_user_principal_email_mapping_in_canister;
 use crate::log;
 use crate::{
     api::{
@@ -10,20 +11,17 @@ use crate::{
         },
         client_side_api::ClientSideApiClient,
         consts::yral_auth::{AUTH_UTIL_COOKIES_MAX_AGE_MS, USER_PRINCIPAL_STORE},
-        consts::{USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY},
+        consts::USER_EMAIL_MAPPING_SYNCED,
     },
     send_wrap,
     utils::parent_resource::{MockPartialEq, ParentResource},
 };
 use candid::Principal;
-use codee::string::{FromToStringCodec, JsonSerdeCodec};
 use leptos::SignalGetUntracked;
 use leptos::*;
 use leptos_router::{use_location, use_navigate, Outlet};
 use leptos_use::storage::use_local_storage;
-use leptos_use::{
-    use_cookie_with_options, use_event_listener, use_window, SameSite, UseCookieOptions,
-};
+use leptos_use::{use_event_listener, use_window};
 
 #[derive(Clone)]
 pub struct Notification(pub RwSignal<Option<serde_json::Value>>);
@@ -107,17 +105,9 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
                 // First try to get identity from frontend USER_IDENTITY cookie
                 log!("AUTH_FLOW: base_route - user_identity_resource - Checking frontend USER_IDENTITY cookie");
-                let (user_identity_cookie, _) =
-                    use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-                        USER_IDENTITY,
-                        UseCookieOptions::default()
-                            .path("/")
-                            .same_site(SameSite::Lax)
-                            .http_only(false)
-                            .secure(false),
-                    );
+                let auth = auth_state_signal.get();
 
-                if let Some(stored_user_identity) = user_identity_cookie.get_untracked() {
+                if let Some(stored_user_identity) = auth.get_user_identity_cookie() {
                     log!("AUTH_FLOW: base_route - user_identity_resource - Found USER_IDENTITY cookie: {:?}", stored_user_identity);
 
                     // Set user_identity in state
@@ -284,18 +274,8 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
                 log!("AUTH_FLOW: base_route - Blocking resource: Checking USER_IDENTITY cookie");
 
-                // Check USER_IDENTITY cookie
-                let (user_identity_cookie, _) =
-                    use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-                        USER_IDENTITY,
-                        UseCookieOptions::default()
-                            .path("/")
-                            .same_site(SameSite::Lax)
-                            .http_only(false)
-                            .secure(false),
-                    );
-
-                if let Some(stored_user_identity) = user_identity_cookie.get_untracked() {
+                // Check USER_IDENTITY cookie using AuthState
+                if let Some(stored_user_identity) = auth.get_user_identity_cookie() {
                     log!("AUTH_FLOW: base_route - Blocking resource: Found USER_IDENTITY cookie, initializing auth state: {:?}", stored_user_identity);
 
                     // Initialize auth state
@@ -329,76 +309,75 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
     let user_email_sync_resource = create_resource(
         move || {
-            // Track when auth_init_resource completes and user is authenticated
-            if let Some(Ok(true)) = auth_init_resource.get() {
-                // Get the current user identity to extract email
-                let (user_identity_cookie, _) =
-                    use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-                        USER_IDENTITY,
-                        UseCookieOptions::default()
-                            .path("/")
-                            .same_site(SameSite::Lax)
-                            .http_only(false)
-                            .secure(false),
-                    );
+            log!("USER_EMAIL_SYNC: Signal tracker called");
 
-                if let Some(identity) = user_identity_cookie.get_untracked() {
-                    if let Some(email) = identity.email.clone() {
-                        return Some(email);
-                    }
-                }
-            }
-            None
+            // Track multiple signals that could trigger email sync
+            let auth = auth_state_signal.get();
+            let auth_cans_setter = auth.new_cans_setter.get();
+            // let user_identity = auth.user_identity.get(); // Track user_identity signal
+            let auth_init_status = auth_init_resource.get(); // Track auth_init_resource
+
+            // log!(
+            //     "USER_EMAIL_SYNC: Tracking signals - user_identity.is_some: {}, auth_init_status.is_some: {}",
+            //     user_identity.is_some(),
+            //     auth_init_status.is_some()
+            // );
+
+            log!("USER_EMAIL_SYNC: Tracking signals - auth_cans_setter: {}, auth_init_resource: {:?}", auth_cans_setter.is_some(), auth_init_status.is_some());
+
+            // Return a tuple wrapped in MockPartialEq to track both signals
+            MockPartialEq((auth_cans_setter, auth_init_status))
         },
-        move |email| {
-            let email = email.clone();
+        move |data| {
+            let (_tracker_cans, auth_init_status) = data.0.clone();
+            let auth = auth_state_signal.get();
+            let user_identity = auth.user_identity.get();
             async move {
-                let Some(email) = email else {
-                    return Ok::<_, String>("No email to sync".to_string());
+                log!("USER_EMAIL_SYNC: Fetcher executing");
+
+                // Check if we have user identity and auth is initialized
+                let (Some(identity), Some(Ok(true))) = (user_identity, auth_init_status) else {
+                    log!("USER_EMAIL_SYNC: Conditions not met - returning early");
+                    return Ok::<_, String>("Auth not ready".to_string());
                 };
 
-                log!(
-                    "USER_EMAIL_SYNC: Syncing user email with backend: {}",
-                    email
-                );
+                let Some(email) = identity.email.clone() else {
+                    log!("USER_EMAIL_SYNC: User identity found but no email available");
+                    return Ok("No email in identity".to_string());
+                };
 
-                // Check if we already synced this email
-                let (email_sync_cookie, set_email_sync_cookie) =
-                    use_cookie_with_options::<String, FromToStringCodec>(
-                        USER_EMAIL_MAPPING_SYNCED,
-                        UseCookieOptions::default()
-                            .path("/")
-                            .same_site(SameSite::Lax)
-                            .http_only(false)
-                            .secure(false)
-                            .max_age(AUTH_UTIL_COOKIES_MAX_AGE_MS),
-                    );
+                log!("USER_EMAIL_SYNC: Found email to sync: {}", email);
 
-                if let Some(synced_email) = email_sync_cookie.get_untracked() {
-                    if synced_email == email {
-                        log!("USER_EMAIL_SYNC: Email already synced: {}", email);
-                        return Ok("Email already synced".to_string());
-                    }
+                // Check if we already synced this email using AuthState
+                let auth = auth_state_signal.get();
+                if auth.is_email_mapping_synced(&email) {
+                    log!("USER_EMAIL_SYNC: Email already synced, skipping: {}", email);
+                    return Ok("Email already synced".to_string());
                 }
 
-                // Call the backend to sync email mapping
-                let api_client = ClientSideApiClient::new();
-                match api_client
-                    .update_user_principal_email_mapping(email.clone())
-                    .await
-                {
+                log!("USER_EMAIL_SYNC: Email not yet synced, calling backend API");
+
+                // Call the canister to sync email mapping
+                match update_user_principal_email_mapping_in_canister(email.clone()).await {
                     Ok(result) => {
                         log!(
-                            "USER_EMAIL_SYNC: Successfully synced email with backend: {}",
+                            "USER_EMAIL_SYNC: Successfully synced email with backend - result: {}",
                             result
                         );
-                        // Set cookie to remember we synced this email
-                        set_email_sync_cookie.set(Some(email));
+                        // Mark email as synced in AuthState
+                        auth.mark_email_mapping_synced(email.clone());
+                        log!(
+                            "USER_EMAIL_SYNC: Marked email as synced in AuthState: {}",
+                            email
+                        );
                         Ok(result)
                     }
                     Err(e) => {
-                        log!("USER_EMAIL_SYNC: Failed to sync email with backend: {}", e);
-                        Err(e)
+                        log!(
+                            "USER_EMAIL_SYNC: Failed to sync email with backend - error: {}",
+                            e
+                        );
+                        Err(e.to_string())
                     }
                 }
             }
@@ -428,41 +407,82 @@ fn CtxProvider(children: Children) -> impl IntoView {
 
     view! {
         <div>
-        <Suspense fallback=move || view! {
-            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div class="text-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p class="text-gray-600">Initializing authentication...</p>
-                </div>
-            </div>
-        }>
-            {move || {
-                match auth_init_resource.get() {
-                    Some(Ok(auth_initialized)) => {
-                        log!("AUTH_FLOW: base_route - Suspense: Auth resource loaded successfully, authenticated: {}", auth_initialized);
-                        // child_view.with_value(|child| child.clone()).into_view()
-                        view! { <></> }.into_view()
-                    }
-                    Some(Err(e)) => {
-                        log!("AUTH_FLOW: base_route - Suspense: Auth resource error: {}", e);
-                        view! {
-                            <div class="min-h-screen bg-gray-50 flex items-center justify-center">
-                                <div class="text-center">
-                                    <p class="text-red-600 mb-2">Authentication Error</p>
-                                    <p class="text-gray-500 text-sm">{e.to_string()}</p>
-                                </div>
-                            </div>
-                        }.into_view()
-                    }
-                    None => {
-                        log!("AUTH_FLOW: base_route - Suspense: Auth resource still loading");
-                        view! { <></> }.into_view()
-                    }
-                }
-            }}
-        </Suspense>
+            <Suspense>
+                {move || {
+                    let email_sync_status = user_email_sync_resource.get();
+                    log!(
+                        "USER_EMAIL_SYNC: Suspense check - resource status: {:?}", email_sync_status.is_some()
+                    );
+                    match email_sync_status {
+                        Some(Ok(result)) => {
+                            log!(
+                                "USER_EMAIL_SYNC: Suspense - email sync completed successfully: {}", result
+                            );
 
-        {children()}
+                            // Ensure the cookie is set after successful sync
+                            let auth = auth_state_signal.get();
+                            if let Some(identity) = auth.user_identity.get() {
+                                if let Some(email) = identity.email {
+                                    if !auth.is_email_mapping_synced(&email) {
+                                        log!("USER_EMAIL_SYNC: Cookie not set, setting it now for email: {}", email);
+                                        auth.mark_email_mapping_synced(email);
+                                    } else {
+                                        log!("USER_EMAIL_SYNC: Cookie already set for email: {}", email);
+                                    }
+                                }
+                            }
+                        }
+                        Some(Err(e)) => {
+                            log!("USER_EMAIL_SYNC: Suspense - email sync failed: {}", e);
+                        }
+                        None => {
+                            log!("USER_EMAIL_SYNC: Suspense - email sync resource still loading");
+                        }
+                    }
+                    view! { <></> }
+                }}
+            </Suspense>
+            <Suspense fallback=move || {
+                view! {
+                    <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p class="text-gray-600">Initializing authentication...</p>
+                        </div>
+                    </div>
+                }
+            }>
+                {move || {
+                    match auth_init_resource.get() {
+                        Some(Ok(auth_initialized)) => {
+                            log!(
+                                "AUTH_FLOW: base_route - Suspense: Auth resource loaded successfully, authenticated: {}", auth_initialized
+                            );
+                            // child_view.with_value(|child| child.clone()).into_view()
+                            view! { <></> }
+                                .into_view()
+                        }
+                        Some(Err(e)) => {
+                            log!("AUTH_FLOW: base_route - Suspense: Auth resource error: {}", e);
+                            view! {
+                                <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+                                    <div class="text-center">
+                                        <p class="text-red-600 mb-2">Authentication Error</p>
+                                        <p class="text-gray-500 text-sm">{e.to_string()}</p>
+                                    </div>
+                                </div>
+                            }
+                                .into_view()
+                        }
+                        None => {
+                            log!("AUTH_FLOW: base_route - Suspense: Auth resource still loading");
+                            view! { <></> }.into_view()
+                        }
+                    }
+                }}
+            </Suspense>
+
+            {children()}
         </div>
     }
 }
