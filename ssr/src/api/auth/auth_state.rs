@@ -64,6 +64,7 @@ pub struct AuthState {
     ),
     pub user_identity: RwSignal<Option<NewIdentity>>,
     pub new_cans_setter: RwSignal<Option<CanistersAuthWire>>,
+    pub auth_initialized: RwSignal<bool>,
 }
 
 impl Default for AuthState {
@@ -287,6 +288,7 @@ impl Default for AuthState {
             // event_ctx,
             user_identity: create_rw_signal(None::<NewIdentity>),
             new_cans_setter,
+            auth_initialized: create_rw_signal(false),
         };
 
         crate::log!(
@@ -404,6 +406,11 @@ impl AuthState {
         }
         crate::log!("AUTH_FLOW: AuthState.get_canisters() - No canisters found - CanistersAuthWire not set in AuthState");
         None
+    }
+
+    pub fn mark_auth_initialized(&self) {
+        crate::log!("AUTH_FLOW: Marking auth as fully initialized");
+        self.auth_initialized.set(true);
     }
 }
 // /// Prevents hydration bugs if the value in store is used to conditionally show views

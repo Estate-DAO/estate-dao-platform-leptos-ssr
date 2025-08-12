@@ -2,6 +2,7 @@ use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
 use crate::component::Navbar;
 use crate::log;
+use crate::utils::parent_resource::MockPartialEq;
 use crate::view_state_layer::my_bookings_state::{
     BookingStatus, BookingTab, MyBookingItem, MyBookingsState,
 };
@@ -42,29 +43,37 @@ pub fn MyBookingsPage() -> impl IntoView {
 
     let auth_state_signal: AuthStateSignal = expect_context();
     // Create resource for loading bookings data that waits for canister store to be ready
-    let bookings_resource = create_resource(
+    let bookings_resource = create_local_resource(
         move || {
             let auth = auth_state_signal.get();
 
             // Check if canister store is ready
-            let canister_store_ready = auth.new_cans_setter.get().is_some();
-            let user_identity_ready = auth.user_identity.get().is_some();
+            let canister_store = auth.new_cans_setter.get();
+            let user_identity = auth.user_identity.get();
+            let auth_initialized = auth.auth_initialized.get();
             log!(
-                "[MyBookings] Resource signal - canister_store_ready: {}, user_identity_ready: {}",
-                canister_store_ready,
-                user_identity_ready
+                "[MyBookings] Resource signal - canister_store_ready: {}, user_identity_ready: {}, auth_initialized: {}",
+                canister_store.is_some(),
+                user_identity.is_some(),
+                auth_initialized
             );
-            (canister_store_ready, user_identity_ready)
+            MockPartialEq((canister_store, user_identity, auth_initialized))
         },
-        move |(canister_ready, identity_ready)| async move {
+        move |data| async move {
+            let (canister_store, identity_store, auth_initialized) = data.0;
+
             log!(
-                "[MyBookings] Resource triggered - canister_ready: {}, identity_ready: {}",
-                canister_ready,
-                identity_ready
+                "[MyBookings] Resource triggered - canister_ready: {}, identity_ready: {}, auth_initialized: {}",
+                canister_store.is_some(),
+                identity_store.is_some(),
+                auth_initialized
             );
 
+            let canister_ready = canister_store.is_some();
+            let identity_ready = identity_store.is_some();
+
             // Wait for both canister store and user identity to be ready
-            if !canister_ready || !identity_ready {
+            if !canister_ready || !identity_ready || !auth_initialized {
                 log!("[MyBookings] Resource waiting - auth not fully ready yet");
                 return Err(ServerFnError::new("Auth state not ready yet"));
             }

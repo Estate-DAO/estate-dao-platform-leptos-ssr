@@ -278,12 +278,12 @@ fn CtxProvider(children: Children) -> impl IntoView {
                 if let Some(stored_user_identity) = auth.get_user_identity_cookie() {
                     log!("AUTH_FLOW: base_route - Blocking resource: Found USER_IDENTITY cookie, initializing auth state: {:?}", stored_user_identity);
 
-                    // Initialize auth state
-                    auth.set_user_identity_with_cookie(stored_user_identity.clone());
-
                     // Dispatch canisters action to populate canister_store
                     log!("AUTH_FLOW: base_route - Blocking resource: Dispatching canisters action");
                     canisters_action.dispatch(stored_user_identity.clone());
+
+                    // Initialize auth state
+                    auth.set_user_identity_with_cookie(stored_user_identity.clone());
 
                     Ok(true)
                 } else {
@@ -458,6 +458,13 @@ fn CtxProvider(children: Children) -> impl IntoView {
                             log!(
                                 "AUTH_FLOW: base_route - Suspense: Auth resource loaded successfully, authenticated: {}", auth_initialized
                             );
+
+                            // Mark auth as fully initialized in AuthState
+                            if auth_initialized {
+                                let auth = auth_state_signal.get();
+                                auth.mark_auth_initialized();
+                            }
+
                             // child_view.with_value(|child| child.clone()).into_view()
                             view! { <></> }
                                 .into_view()
