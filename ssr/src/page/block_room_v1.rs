@@ -3,11 +3,14 @@ use leptos_icons::Icon;
 use leptos_router::use_navigate;
 use leptos_use::{use_interval_fn, utils::Pausable};
 
+use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
+use crate::api::auth::types::NewIdentity;
 use crate::api::client_side_api::{ClientSideApiClient, SendOtpResponse, VerifyOtpResponse};
 use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
 use crate::api::payments::{create_domain_request, PaymentProvider};
 use crate::app::AppRoutes;
 use crate::application_services::BookingService;
+use crate::component::yral_auth_provider::{LoginProvCtx, YralAuthProvider};
 use crate::component::ChildrenAgesSignalExt;
 use crate::component::{Divider, Navbar, SpinnerGray};
 use crate::domain::{
@@ -35,6 +38,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
+    let auth_state_signal: AuthStateSignal = expect_context();
     let navigate = use_navigate();
 
     // Initialize form data on mount - only once
@@ -438,8 +442,8 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     // Mobile pricing summary
                     <EnhancedPricingDisplay mobile=true />
 
-                    // Guest form will go here
-                    <GuestForm />
+                    // Login prompt for non-logged users or Guest form for logged users
+                    <AuthGatedGuestForm />
 
                     // Terms and conditions
                     <TermsCheckbox />
@@ -630,7 +634,70 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
 }
 
 #[component]
-pub fn GuestForm() -> impl IntoView {
+pub fn AuthGatedGuestForm() -> impl IntoView {
+    // Use AuthStateSignal pattern (same as base_route.rs and my_bookings.rs)
+    let auth_state_signal: AuthStateSignal = expect_context();
+
+    // Create reactive signals for the current state
+    let (current_view, set_current_view) = create_signal(view! { <LoginPrompt /> }.into_view());
+
+    // Get user email from identity for auto-fill
+    let user_email = Signal::derive(move || {
+        let auth = auth_state_signal.get();
+        auth.user_identity.get().and_then(|identity| identity.email)
+    });
+
+    // Create effect that watches for auth.user_identity changes and updates the view
+    create_effect(move |_| {
+        let auth = auth_state_signal.get();
+        let user_identity = auth.user_identity.get();
+        let is_logged_in = user_identity.is_some();
+
+        crate::log!(
+            "AUTH_FLOW: block_room - AuthStateSignal effect triggered - is_logged_in: {}, email: {:?}",
+            is_logged_in,
+            user_identity.as_ref().and_then(|i| i.email.as_ref())
+        );
+
+        // Update the view based on login state
+        if is_logged_in {
+            // User is logged in, show guest form
+            set_current_view.set(view! { <GuestForm user_email=user_email /> }.into_view());
+        } else {
+            // User is not logged in, show login prompt
+            set_current_view.set(view! { <LoginPrompt /> }.into_view());
+        }
+    });
+
+    // Return the reactive view
+    move || current_view.get()
+}
+
+#[component]
+pub fn LoginPrompt() -> impl IntoView {
+    // Provide login context for YralAuthProvider
+    provide_context(LoginProvCtx::default());
+
+    view! {
+        <div class="bg-white rounded-2xl shadow p-6 text-center">
+            <div class="mb-4">
+                <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-4xl mx-auto mb-3" />
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                    "Login Required"
+                </h3>
+                <p class="text-gray-600 text-sm mb-4">
+                    "Please login to continue with your booking"
+                </p>
+            </div>
+            <div class="w-full">
+                <YralAuthProvider />
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
@@ -644,7 +711,7 @@ pub fn GuestForm() -> impl IntoView {
             {(0..adult_count())
                 .map(|i| {
                     view! {
-                        <AdultFormSection index=i />
+                        <AdultFormSection index=i user_email=user_email />
                     }
                 })
                 .collect::<Vec<_>>()}
@@ -662,7 +729,28 @@ pub fn GuestForm() -> impl IntoView {
 }
 
 #[component]
-pub fn AdultFormSection(index: u32) -> impl IntoView {
+pub fn AdultFormSection(
+    index: u32,
+    #[prop(into)] user_email: Signal<Option<String>>,
+) -> impl IntoView {
+    // Auto-fill email for primary adult (index 0) when user email is available
+    create_effect(move |_| {
+        if index == 0 {
+            if let Some(email) = user_email.get() {
+                // Check if email field is empty before auto-filling
+                let adults_list = BlockRoomUIState::get_adults_untracked();
+                if let Some(adult) = adults_list.get(index as usize) {
+                    if adult.email.is_none() || adult.email.as_ref().map_or(true, |e| e.is_empty())
+                    {
+                        log!("Auto-filling primary adult email from identity: {}", email);
+                        BlockRoomUIState::update_adult(index as usize, "email", email);
+                        BlockRoomUIState::validate_form();
+                    }
+                }
+            }
+        }
+    });
+
     let update_adult = move |field: &str, value: String| {
         log!(
             "AdultFormSection update_adult called - index: {}, field: '{}', value: '{}'",
@@ -685,6 +773,15 @@ pub fn AdultFormSection(index: u32) -> impl IntoView {
             );
         }
     };
+
+    // Create reactive signal for current email value to show in input
+    let current_email = Signal::derive(move || {
+        let adults_list = BlockRoomUIState::get_adults();
+        adults_list
+            .get(index as usize)
+            .and_then(|adult| adult.email.clone())
+            .unwrap_or_default()
+    });
 
     view! {
         <div class="person-details mb-2">
@@ -735,20 +832,11 @@ pub fn AdultFormSection(index: u32) -> impl IntoView {
                             <input
                                 type="email"
                                 placeholder="Email *"
-                                class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+                                class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] bg-gray-50 cursor-not-allowed"
                                 required=true
-                                on:input=move |ev| {
-                                    let value = event_target_value(&ev);
-                                    update_adult("email", value.clone());
-
-                                    // Real-time email validation feedback
-                                    if !value.trim().is_empty() && !BlockRoomUIState::is_valid_email(&value) {
-                                        // Email format invalid - could show validation message
-                                    }
-                                }
-                                on:blur=move |_| {
-                                    BlockRoomUIState::validate_form();
-                                }
+                                value=move || current_email.get()
+                                readonly=true
+                                disabled=true
                             />
                             // <!-- Phase 4.3: Enhanced phone validation -->
                             <input
