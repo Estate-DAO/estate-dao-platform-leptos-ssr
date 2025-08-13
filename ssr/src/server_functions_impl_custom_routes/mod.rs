@@ -234,7 +234,7 @@ pub fn api_routes() -> Router<AppState> {
             post(perform_yral_oauth_api_server_fn_route).options(handle_options),
         )
         .route(
-            "/extract_identity_api",
+            "/extract_new_identity_api",
             post(extract_identity_impl_server_fn_route).options(handle_options),
         )
     // todo(2025-08-08): add my bookings api route with user_identity
