@@ -172,24 +172,18 @@ impl ClientSideApiClient {
         {
             if let Some(window) = web_sys::window() {
                 if let Some(_document) = window.document() {
-                    tracing::debug!("[CLIENT_API_DEBUG] Browser environment detected: cookies will be handled automatically by reqwest/browser");
+                    log!("[CLIENT_API_DEBUG] Browser environment detected: cookies will be handled automatically by reqwest/browser");
                 } else {
-                    tracing::error!(
-                        "[CLIENT_API_DEBUG] No document available in browser environment"
-                    );
+                    log!("[CLIENT_API_DEBUG] No document available in browser environment");
                 }
             } else {
-                tracing::error!(
-                    "[CLIENT_API_DEBUG] No window available - not in browser environment"
-                );
+                log!("[CLIENT_API_DEBUG] No window available - not in browser environment");
             }
         }
 
         #[cfg(feature = "ssr")]
         {
-            tracing::debug!(
-                "[CLIENT_API_DEBUG] Server-side environment - no browser cookies available"
-            );
+            log!("[CLIENT_API_DEBUG] Server-side environment - no browser cookies available");
         }
     }
 
@@ -198,9 +192,9 @@ impl ClientSideApiClient {
         body: String,
         context: &str,
     ) -> Result<T, String> {
-        tracing::debug!("[CLIENT_API_DEBUG] Making POST request to: {}", endpoint);
-        tracing::debug!("[CLIENT_API_DEBUG] Request context: {}", context);
-        tracing::debug!("[CLIENT_API_DEBUG] Request body: {}", body);
+        log!("[CLIENT_API_DEBUG] Making POST request to: {}", endpoint);
+        log!("[CLIENT_API_DEBUG] Request context: {}", context);
+        log!("[CLIENT_API_DEBUG] Request body: {}", body);
 
         // Log browser environment and cookie handling approach
         Self::log_browser_environment();
@@ -236,7 +230,7 @@ impl ClientSideApiClient {
                 let text_result = res.text().await;
                 match text_result {
                     Ok(text) => {
-                        tracing::debug!("[CLIENT_API_DEBUG] Response body: {}", text);
+                        log!("[CLIENT_API_DEBUG] Response body: {}", text);
                         if status.is_success() {
                             Self::parse_server_response(&text)
                         } else {
@@ -467,7 +461,7 @@ impl ClientSideApiClient {
 
     // #[tracing::instrument(skip(self))]
     pub async fn perform_yral_oauth(&self, oauth: OAuthQuery) -> Result<NewIdentity, String> {
-        tracing::info!(
+        log!(
             "[YRAL_OAUTH] Starting OAuth flow with code: {}, state: {}",
             &oauth.code,
             &oauth.state

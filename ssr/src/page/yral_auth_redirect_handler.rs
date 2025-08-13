@@ -84,7 +84,7 @@ pub fn YralAuthRedirectHandlerPage() -> impl IntoView {
 }
 
 async fn handle_oauth_query(oauth_query: OAuthQuery) -> YralAuthMessage {
-    tracing::info!(
+    log!(
         "Received OAuth callback: code={}, state={}",
         oauth_query.code,
         oauth_query.state
