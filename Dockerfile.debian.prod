@@ -2,6 +2,10 @@
 # Use Debian Slim as the base image
 FROM debian:bookworm-slim as builder
 
+# Add build date as a label
+ARG BUILD_DATE
+LABEL build_date=${BUILD_DATE}
+
 # Prevent apt from asking for input and use minimal outputs
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -9,6 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
+    clang \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -65,6 +70,10 @@ RUN LEPTOS_HASH_FILES=true cargo leptos build --release --lib-features "release-
 # STAGE 2: Dockerfile
 # ------------------------
 FROM debian:bookworm-slim as runner
+
+# Add build date as a label to final image
+ARG BUILD_DATE
+LABEL build_date=${BUILD_DATE}
 
 WORKDIR /app
 
