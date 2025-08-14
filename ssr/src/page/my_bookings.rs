@@ -1,5 +1,7 @@
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
+use crate::api::auth::types::NewIdentity;
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
+use crate::component::yral_auth_provider::{LoginProvCtx, YralAuthProvider};
 use crate::component::Navbar;
 use crate::log;
 use crate::utils::parent_resource::MockPartialEq;
@@ -7,9 +9,12 @@ use crate::view_state_layer::my_bookings_state::{
     BookingStatus, BookingTab, MyBookingItem, MyBookingsState,
 };
 use chrono::{DateTime, Utc};
+use codee::string::JsonSerdeCodec;
 use leptos::SignalGet;
 use leptos::*;
+use leptos_icons::Icon;
 use leptos_router::*;
+use leptos_use::{use_cookie_with_options, UseCookieOptions};
 use std::rc::Rc;
 
 async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
@@ -38,9 +43,76 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
 }
 
 #[component]
-pub fn MyBookingsPage() -> impl IntoView {
-    log!("[MyBookings] MyBookingsPage component started");
+pub fn AuthGatedBookings() -> impl IntoView {
+    use crate::api::consts::USER_IDENTITY;
 
+    // Use AuthStateSignal pattern (same as base_route.rs and block_room_v1.rs)
+    let auth_state_signal: AuthStateSignal = expect_context();
+
+    // Also monitor the USER_IDENTITY cookie directly (same as navbar pattern)
+    let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+        USER_IDENTITY,
+        UseCookieOptions::default()
+            .path("/")
+            .same_site(leptos_use::SameSite::Lax)
+            .http_only(false)
+            .secure(false),
+    );
+
+    crate::log!(
+        "AUTH_FLOW: my_bookings - AuthGatedBookings initialized - cookie_identity: {}, auth_signal_identity: {}",
+        stored_identity.get().is_some(),
+        auth_state_signal.get().user_identity.get().is_some()
+    );
+
+    // Return the reactive view - use move closure for reactivity
+    move || {
+        // Check auth state from both sources (cookie takes priority)
+        let is_logged_in = stored_identity.get().is_some()
+            || auth_state_signal.get().user_identity.get().is_some();
+
+        crate::log!(
+            "AUTH_FLOW: my_bookings - AuthGatedBookings render check - is_logged_in: {}",
+            is_logged_in
+        );
+
+        if is_logged_in {
+            // User is logged in, show bookings content
+            view! { <BookingsLoader /> }.into_view()
+        } else {
+            // User is not logged in, show login prompt
+            view! { <BookingsLoginPrompt /> }.into_view()
+        }
+    }
+}
+
+#[component]
+pub fn BookingsLoginPrompt() -> impl IntoView {
+    // Provide login context for YralAuthProvider
+    provide_context(LoginProvCtx::default());
+
+    view! {
+        <div class="max-w-md mx-auto mt-16">
+            <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
+                <div class="mb-6">
+                    <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-6xl mx-auto mb-4" />
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2">
+                        "Login Required"
+                    </h2>
+                    <p class="text-gray-600 mb-6">
+                        "Please login to view your booking history"
+                    </p>
+                </div>
+                <div class="w-full">
+                    <YralAuthProvider />
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn BookingsLoader() -> impl IntoView {
     let auth_state_signal: AuthStateSignal = expect_context();
 
     // Create resource for loading bookings data - following pattern from base_route.rs user_email_sync_resource
@@ -91,7 +163,40 @@ pub fn MyBookingsPage() -> impl IntoView {
         },
     );
 
-    log!("[MyBookings] Starting to render view");
+    view! {
+        <div class="p-6">
+            <Suspense fallback=move || view! {
+                <div class="flex justify-center items-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <span class="ml-3 text-gray-600">Loading bookings...</span>
+                </div>
+            }>
+                {move || {
+                    match bookings_resource.get() {
+                        Some(Ok(bookings)) => {
+                            log!("[MyBookings] Resource loaded {} bookings", bookings.len());
+                            view! { <BookingsContent bookings=bookings /> }.into_view()
+                        }
+                        Some(Err(error)) => {
+                            log!("[MyBookings] Resource error: {}", error);
+                            view! {
+                                <div class="text-center py-8">
+                                    <p class="text-red-600 mb-2">Failed to load bookings</p>
+                                    <p class="text-gray-500 text-sm">{error.to_string()}</p>
+                                </div>
+                            }.into_view()
+                        }
+                        None => view! { <>"Loading..."</> }.into_view()
+                    }
+                }}
+            </Suspense>
+        </div>
+    }
+}
+
+#[component]
+pub fn MyBookingsPage() -> impl IntoView {
+    log!("[MyBookings] MyBookingsPage component started");
 
     view! {
         <div class="min-h-screen bg-gray-50">
@@ -107,41 +212,15 @@ pub fn MyBookingsPage() -> impl IntoView {
             </div>
 
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                // <!-- Tab navigation -->
+                // <!-- Auth-gated content -->
                 <div class="bg-white rounded-lg shadow-lg mb-6">
-
-                    // <!-- Content area -->
-                    <div class="p-6">
-                        <Suspense fallback=move || view! {
-                            <div class="flex justify-center items-center py-12">
-                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                                <span class="ml-3 text-gray-600">Loading bookings...</span>
-                            </div>
-                        }>
-                            {move || {
-                                match bookings_resource.get() {
-                                    Some(Ok(bookings)) => {
-                                        log!("[MyBookings] Resource loaded {} bookings", bookings.len());
-                                        view! { <BookingsContent bookings=bookings /> }.into_view()
-                                    }
-                                    Some(Err(error)) => {
-                                        log!("[MyBookings] Resource error: {}", error);
-                                        view! {
-                                            <div class="text-center py-8">
-                                                <p class="text-red-600 mb-2">Failed to load bookings</p>
-                                                <p class="text-gray-500 text-sm">{error.to_string()}</p>
-                                            </div>
-                                        }.into_view()
-                                    }
-                                    None => view! { <>"Load None"</> }.into_view()
-                                }
-                            }}
-                        </Suspense>
-                    </div>
+                    // <!-- Use AuthGatedBookings component for reactive authentication -->
+                    <AuthGatedBookings />
                 </div>
             </div>
         </div>
-    }.into_view()
+    }
+    .into_view()
 }
 
 #[component]
