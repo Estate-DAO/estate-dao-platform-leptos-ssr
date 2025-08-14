@@ -52,8 +52,10 @@ mod get_hotel_rates;
 mod integrated_block_room;
 mod process_confirmation;
 mod search_hotel;
+mod update_email_principal_mapping;
 
 // Re-export route handlers to maintain public API compatibility
+use crate::server_functions_impl_custom_routes::extract_identity_route::extract_identity_impl_server_fn_route;
 pub use auth::{
     extract_cookie_jars, initiate_auth, initiate_auth_axum_handler,
     perform_yral_oauth_api_server_fn_route,
@@ -67,8 +69,7 @@ pub use get_hotel_rates::get_hotel_rates_api_server_fn_route;
 pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
-
-use crate::server_functions_impl_custom_routes::extract_identity_route::extract_identity_impl_server_fn_route;
+pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
 // Common helper functions and types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -171,6 +172,17 @@ async fn handle_options() -> Response {
     StatusCode::OK.into_response()
 }
 
+pub fn generate_error_response(error: &str) -> Response {
+    let error_response = json!({
+        "error": error
+    });
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        error_response.to_string(),
+    )
+        .into_response()
+}
+
 pub fn api_routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -236,6 +248,10 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/extract_new_identity_api",
             post(extract_identity_impl_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/update_user_principal_email_mapping_in_canister_server_fn",
+            post(update_user_principal_email_mapping_in_canister_fn_route).options(handle_options),
         )
     // todo(2025-08-08): add my bookings api route with user_identity
     // .route(

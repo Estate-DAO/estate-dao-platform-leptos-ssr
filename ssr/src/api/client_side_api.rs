@@ -11,6 +11,7 @@ use crate::domain::{
 use crate::log;
 use crate::page::OAuthQuery;
 use crate::utils::route::join_base_and_path_url;
+use candid::Principal;
 use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
@@ -90,6 +91,7 @@ pub struct YralAuthLoginUrlRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserPrincipalEmailRequest {
     pub user_email: String,
+    pub principal: Principal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -226,6 +228,13 @@ impl ClientSideApiClient {
                 let status = res.status();
                 // tracing::debug!("[CLIENT_API_DEBUG] Response status: {}", status);
                 // tracing::debug!("[CLIENT_API_DEBUG] Response headers: {:#?}", res.headers());
+
+                // Apply cookies from response headers for older browsers
+                #[cfg(not(feature = "ssr"))]
+                {
+                    use crate::utils::browser::apply_cookies_from_reqwest_response;
+                    apply_cookies_from_reqwest_response(&res);
+                }
 
                 let text_result = res.text().await;
                 match text_result {
@@ -511,6 +520,23 @@ impl ClientSideApiClient {
     //     )
     //     .await
     // }
+
+    pub async fn update_user_principal_email_mapping_in_canister_client_side_fn(
+        &self,
+        principal: Principal,
+        user_email: String,
+    ) -> Result<String, String> {
+        let request = UpdateUserPrincipalEmailRequest {
+            principal,
+            user_email,
+        };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/update_user_principal_email_mapping_in_canister_server_fn",
+            "update user principal email mapping",
+        )
+        .await
+    }
 }
 
 impl Default for ClientSideApiClient {

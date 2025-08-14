@@ -1,15 +1,15 @@
-use crate::{
-    api::auth::{extract_identity_impl::extract_new_identity, types::NewIdentity},
-    canister::backend::{self, Result_},
-    utils::admin::admin_canister,
+use crate::api::{
+    auth::{extract_identity_impl::extract_new_identity, types::NewIdentity},
+    client_side_api::{self, ClientSideApiClient, UpdateUserPrincipalEmailRequest},
 };
-use candid::Principal;
+use crate::log;
+use candid::{types::principal, Principal};
 use leptos::*;
 
-// #[server(UpdateUserPrincipalEmailMapping)]
 pub async fn update_user_principal_email_mapping_in_canister(
     user_email: String,
 ) -> Result<String, ServerFnError> {
+    log!("update_user_principal_email_mapping_in_canister - Updating user principal email mapping - user_email: {}", user_email);
     call_update_user_principal_email_mapping_in_canister(user_email)
         .await
         .map_err(ServerFnError::ServerError)
@@ -20,7 +20,13 @@ pub async fn call_update_user_principal_email_mapping_in_canister(
 ) -> Result<String, String> {
     // Extract the user identity from server-side cookies
     let id_wire = match extract_new_identity().await {
-        Ok(Some(identity)) => identity.id_wire,
+        Ok(Some(identity)) => {
+            log!(
+                "update_user_principal_email_mapping_in_canister - Extracted identity: {:#?}",
+                identity
+            );
+            identity.id_wire
+        }
         Ok(None) => return Err("User not authenticated - no identity found".to_string()),
         Err(e) => return Err(format!("Failed to extract identity: {}", e)),
     };
@@ -34,24 +40,20 @@ pub async fn call_update_user_principal_email_mapping_in_canister(
         user_email
     );
 
-    // Use admin canister to make the backend call
-    let adm_cans = admin_canister();
-    let backend_cans = adm_cans.backend_canister().await;
-
-    let result = backend_cans
-        .update_user_principal_email_index(principal, user_email.clone())
-        .await
-        .map_err(|e| e.to_string())?;
+    let client_side_api = ClientSideApiClient::new();
+    let result = client_side_api
+        .update_user_principal_email_mapping_in_canister_client_side_fn(principal, user_email)
+        .await;
 
     match result {
-        Result_::Ok(status) => {
+        Ok(status) => {
             crate::log!(
                 "Successfully updated user principal email mapping: {}",
                 status
             );
             Ok(status)
         }
-        Result_::Err(e) => {
+        Err(e) => {
             crate::log!("Failed to update user principal email mapping: {}", e);
             Err(e)
         }

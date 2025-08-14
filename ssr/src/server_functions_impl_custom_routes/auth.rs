@@ -1,6 +1,7 @@
 use axum::{
+    body::{to_bytes, Body},
     extract::State,
-    http::StatusCode,
+    http::{Request, StatusCode},
     response::{IntoResponse, Response},
 };
 use estate_fe::api::auth::types::LoginProvider;
@@ -60,11 +61,40 @@ pub async fn initiate_auth(
 #[tracing::instrument(skip(state))]
 pub async fn initiate_auth_axum_handler(
     State(state): State<AppState>,
-    body: String,
+    request: Request<Body>,
 ) -> Result<Response, Response> {
+    // Split the request into parts and body
+    let (parts, body) = request.into_parts();
+
+    // Extract body as string
+    let body_bytes = to_bytes(body, usize::MAX).await.map_err(|e| {
+        tracing::error!("Failed to read request body: {:?}", e);
+        (StatusCode::BAD_REQUEST, "Failed to read request body").into_response()
+    })?;
+    let body = String::from_utf8(body_bytes.to_vec()).map_err(|e| {
+        tracing::error!("Invalid UTF-8 in request body: {:?}", e);
+        (StatusCode::BAD_REQUEST, "Invalid request body encoding").into_response()
+    })?;
+
     // Parse JSON request body
     let auth_query_params: YralAuthLoginUrlRequest = parse_json_request(&body)?;
-    tracing::info!("Received auth query params: {:?}", auth_query_params);
+
+    // Log browser information for debugging cookie issues
+    if let Some(user_agent) = parts.headers.get("user-agent") {
+        crate::log!("[COOKIE_DEBUG] User-Agent: {:?}", user_agent);
+        let user_agent_str = user_agent.to_str().unwrap_or("unknown");
+        if user_agent_str.contains("Chrome") {
+            crate::log!(
+                "[COOKIE_DEBUG] Chrome browser detected - requires Secure=true for SameSite=None"
+            );
+        } else if user_agent_str.contains("Safari") {
+            crate::log!("[COOKIE_DEBUG] Safari browser detected");
+        } else if user_agent_str.contains("Firefox") {
+            crate::log!("[COOKIE_DEBUG] Firefox browser detected");
+        }
+    }
+
+    crate::log!("Received auth query params: {:?}", auth_query_params);
 
     // Call the auth function and get both URL and cookies
     let (auth_url, cookie_jar) = initiate_auth(auth_query_params, &state)
@@ -90,8 +120,27 @@ pub async fn initiate_auth_axum_handler(
     tracing::debug!("auth_url: {:#?}", auth_url);
     tracing::debug!("response: {:#?}", response);
 
-    // Use the standard Axum pattern: (cookies, status, body)
-    Ok((cookie_jar, (StatusCode::OK, response.to_string())).into_response())
+    // Create response and log Set-Cookie headers for debugging
+    let response_with_cookies =
+        (cookie_jar, (StatusCode::OK, response.to_string())).into_response();
+
+    // Log Set-Cookie headers being sent to browser
+    if let Some(set_cookie_headers) = response_with_cookies
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .next()
+    {
+        crate::log!(
+            "[COOKIE_DEBUG] Set-Cookie headers being sent: {:?}",
+            set_cookie_headers
+        );
+    }
+    for cookie_header in response_with_cookies.headers().get_all("set-cookie") {
+        crate::log!("[COOKIE_DEBUG] Set-Cookie: {:?}", cookie_header);
+    }
+
+    Ok(response_with_cookies)
 }
 
 // /// Handle OAuth2 callback from YRAL
@@ -292,15 +341,13 @@ pub async fn initiate_auth_axum_handler(
 //     Ok(())
 // }
 
-use axum::body::{to_bytes, Body};
-use axum::extract::{FromRequestParts, Request};
-use axum::http::request::Parts;
+use axum::extract::FromRequestParts;
 use axum_extra::extract::cookie::Key;
 use axum_extra::extract::{PrivateCookieJar, SignedCookieJar};
 
 // Helper function to extract cookie jars from request parts using the app's cookie key
 pub async fn extract_cookie_jars(
-    parts: &mut Parts,
+    parts: &mut axum::http::request::Parts,
     cookie_key: &Key,
 ) -> Result<(PrivateCookieJar<Key>, SignedCookieJar<Key>), (StatusCode, &'static str)> {
     // tracing::debug!("[COOKIE_DEBUG] Starting cookie jar extraction");
@@ -372,10 +419,19 @@ pub async fn perform_yral_oauth_api_server_fn_route(
         (StatusCode::BAD_REQUEST, "Invalid request body encoding").into_response()
     })?;
 
-    // // Log request headers and cookies for debugging
-    // tracing::debug!("[OAUTH_DEBUG] Request method: {}", parts.method);
-    // tracing::debug!("[OAUTH_DEBUG] Request URI: {}", parts.uri);
-    // tracing::debug!("[OAUTH_DEBUG] Request headers: {:#?}", parts.headers);
+    // Log request headers and cookies for debugging
+    crate::log!("[OAUTH_DEBUG] Request method: {}", parts.method);
+    crate::log!("[OAUTH_DEBUG] Request URI: {}", parts.uri);
+    crate::log!("[OAUTH_DEBUG] Request headers: {:#?}", parts.headers);
+
+    // Log browser information for cookie debugging
+    if let Some(user_agent) = parts.headers.get("user-agent") {
+        crate::log!("[OAUTH_DEBUG] User-Agent: {:?}", user_agent);
+        let user_agent_str = user_agent.to_str().unwrap_or("unknown");
+        if user_agent_str.contains("Chrome") {
+            crate::log!("[OAUTH_DEBUG] Chrome browser detected - checking strict cookie policies");
+        }
+    }
 
     // Parse JSON request body
     let oauth_query: OAuthQuery = parse_json_request(&body)?;

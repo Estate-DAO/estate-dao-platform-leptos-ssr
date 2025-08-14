@@ -1,4 +1,4 @@
-use crate::server_functions_impl_custom_routes::extract_cookie_jars;
+use crate::server_functions_impl_custom_routes::{extract_cookie_jars, generate_error_response};
 use axum::response::Response;
 use axum::{body::to_bytes, response::IntoResponse};
 use axum::{body::Body, extract::State, http::Request};
@@ -20,17 +20,6 @@ use regex::Regex;
 use serde_json::json;
 use std::{ops::Deref, sync::LazyLock};
 use yral_types::delegated_identity::DelegatedIdentityWire;
-
-fn generate_error_response(error: &str) -> Response {
-    let error_response = json!({
-        "error": error
-    });
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        error_response.to_string(),
-    )
-        .into_response()
-}
 
 pub async fn extract_identity_impl_server_fn_route(
     State(state): State<AppState>,

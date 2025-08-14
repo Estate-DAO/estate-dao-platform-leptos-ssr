@@ -95,25 +95,47 @@ pub async fn yral_auth_url_impl(
     let cookie_life = Duration::from_secs(60 * 10).try_into().unwrap(); // 10 minutes
 
     // Create and log PKCE cookie
-    // tracing::info!("[OAUTH_DEBUG] Creating PKCE cookie '{}' with value: {}", PKCE_VERIFIER_COOKIE, pkce_verifier.secret());
+    crate::log!(
+        "[OAUTH_DEBUG] Creating PKCE cookie '{}' with value: {}",
+        PKCE_VERIFIER_COOKIE,
+        pkce_verifier.secret()
+    );
+
+    // let is_production = {
+    //     cfg_if::cfg_if! {
+    //         if #[cfg(any(feature = "release-lib-prod", feature = "release-bin-prod"))] {
+    //             true
+    //         } else {
+    //             false
+    //         }
+    //     }
+    // };
+
     let pkce_cookie = Cookie::build((PKCE_VERIFIER_COOKIE, pkce_verifier.secret().clone()))
         .same_site(SameSite::None)
+        .secure(true)
         .path("/")
         .max_age(cookie_life)
-        // .secure(false)
-        // .http_only(true)
+        .http_only(true)
         .build();
     // tracing::debug!("[OAUTH_DEBUG] PKCE cookie details: {:#?}", pkce_cookie);
     jar = jar.add(pkce_cookie);
 
     // Create and log CSRF cookie - use the actual CSRF token, not the entire JSON state
-    // tracing::info!("[OAUTH_DEBUG] Creating CSRF cookie '{}' with value: {}", CSRF_TOKEN_COOKIE, oauth_state.csrf_token.secret());
-    // tracing::debug!("[OAUTH_DEBUG] Note: oauth_csrf_token contains full JSON state: {}", oauth_csrf_token.secret());
+    crate::log!(
+        "[OAUTH_DEBUG] Creating CSRF cookie '{}' with value: {}",
+        CSRF_TOKEN_COOKIE,
+        oauth_state.csrf_token.secret()
+    );
+    crate::log!(
+        "[OAUTH_DEBUG] Note: oauth_csrf_token contains full JSON state: {}",
+        oauth_csrf_token.secret()
+    );
     let csrf_cookie = Cookie::build((CSRF_TOKEN_COOKIE, oauth_state.csrf_token.secret().clone()))
         .same_site(SameSite::None)
         .path("/")
         .max_age(cookie_life)
-        // .secure(false)
+        .secure(true)
         // .http_only(true)
         .build();
     tracing::debug!("[OAUTH_DEBUG] CSRF cookie details: {:#?}", csrf_cookie);
@@ -125,9 +147,9 @@ pub async fn yral_auth_url_impl(
     //     set_cookies(resp, jar.clone());
     // }
 
-    tracing::debug!("[OAUTH_DEBUG] Cookies set for URL: {}", auth_url);
-    tracing::debug!("[OAUTH_DEBUG] Final cookie jar: {:#?}", jar);
-    tracing::info!("[OAUTH_DEBUG] Auth URL generation complete with cookies added to jar");
+    crate::log!("[OAUTH_DEBUG] Cookies set for URL: {}", auth_url);
+    crate::log!("[OAUTH_DEBUG] Final cookie jar: {:#?}", jar);
+    crate::log!("[OAUTH_DEBUG] Auth URL generation complete with cookies added to jar");
     // Note: For raw Axum handlers, cookies are set via the returned PrivateCookieJar
     // which gets applied through the (jar, response) tuple pattern
 
