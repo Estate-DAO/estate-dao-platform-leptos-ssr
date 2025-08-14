@@ -635,42 +635,60 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
 
 #[component]
 pub fn AuthGatedGuestForm() -> impl IntoView {
+    use crate::api::consts::USER_IDENTITY;
+    use codee::string::JsonSerdeCodec;
+    use leptos_use::{use_cookie_with_options, UseCookieOptions};
+
     // Use AuthStateSignal pattern (same as base_route.rs and my_bookings.rs)
     let auth_state_signal: AuthStateSignal = expect_context();
 
-    // Create reactive signals for the current state
-    let (current_view, set_current_view) = create_signal(view! { <LoginPrompt /> }.into_view());
+    // Also monitor the USER_IDENTITY cookie directly (same as navbar pattern)
+    let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+        USER_IDENTITY,
+        UseCookieOptions::default()
+            .path("/")
+            .same_site(leptos_use::SameSite::Lax)
+            .http_only(false)
+            .secure(false),
+    );
 
     // Get user email from identity for auto-fill
     let user_email = Signal::derive(move || {
-        let auth = auth_state_signal.get();
-        auth.user_identity.get().and_then(|identity| identity.email)
-    });
-
-    // Create effect that watches for auth.user_identity changes and updates the view
-    create_effect(move |_| {
-        let auth = auth_state_signal.get();
-        let user_identity = auth.user_identity.get();
-        let is_logged_in = user_identity.is_some();
-
-        crate::log!(
-            "AUTH_FLOW: block_room - AuthStateSignal effect triggered - is_logged_in: {}, email: {:?}",
-            is_logged_in,
-            user_identity.as_ref().and_then(|i| i.email.as_ref())
-        );
-
-        // Update the view based on login state
-        if is_logged_in {
-            // User is logged in, show guest form
-            set_current_view.set(view! { <GuestForm user_email=user_email /> }.into_view());
+        // Try stored_identity first (cookie), fallback to auth_state_signal
+        if let Some(identity) = stored_identity.get() {
+            identity.email
         } else {
-            // User is not logged in, show login prompt
-            set_current_view.set(view! { <LoginPrompt /> }.into_view());
+            let auth = auth_state_signal.get();
+            auth.user_identity.get().and_then(|identity| identity.email)
         }
     });
 
-    // Return the reactive view
-    move || current_view.get()
+    crate::log!(
+        "AUTH_FLOW: block_room - AuthGatedGuestForm initialized - cookie_identity: {}, auth_signal_identity: {}",
+        stored_identity.get().is_some(),
+        auth_state_signal.get().user_identity.get().is_some()
+    );
+
+    // Return the reactive view - use move closure for reactivity
+    move || {
+        // Check auth state from both sources (cookie takes priority)
+        let is_logged_in = stored_identity.get().is_some()
+            || auth_state_signal.get().user_identity.get().is_some();
+
+        crate::log!(
+            "AUTH_FLOW: block_room - AuthGatedGuestForm render check - is_logged_in: {}, email: {:?}",
+            is_logged_in,
+            user_email.get()
+        );
+
+        if is_logged_in {
+            // User is logged in, show guest form
+            view! { <GuestForm user_email=user_email /> }.into_view()
+        } else {
+            // User is not logged in, show login prompt
+            view! { <LoginPrompt /> }.into_view()
+        }
+    }
 }
 
 #[component]
@@ -742,7 +760,10 @@ pub fn AdultFormSection(
                 if let Some(adult) = adults_list.get(index as usize) {
                     if adult.email.is_none() || adult.email.as_ref().map_or(true, |e| e.is_empty())
                     {
-                        log!("Auto-filling primary adult email from identity: {}", email);
+                        log!(
+                            "Auto-filling primary adult email from logged-in user identity: {}",
+                            email
+                        );
                         BlockRoomUIState::update_adult(index as usize, "email", email);
                         BlockRoomUIState::validate_form();
                     }
@@ -832,11 +853,31 @@ pub fn AdultFormSection(
                             <input
                                 type="email"
                                 placeholder="Email *"
-                                class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] bg-gray-50 cursor-not-allowed"
+                                class=move || {
+                                    if user_email.get().is_some() {
+                                        // User is logged in, make field readonly
+                                        "w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] bg-gray-50 cursor-not-allowed"
+                                    } else {
+                                        // User is not logged in, make field editable
+                                        "w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+                                    }
+                                }
                                 required=true
                                 value=move || current_email.get()
-                                readonly=true
-                                disabled=true
+                                readonly=move || user_email.get().is_some()
+                                disabled=move || user_email.get().is_some()
+                                on:input=move |ev| {
+                                    // Only allow input if user is not logged in
+                                    if user_email.get().is_none() {
+                                        let value = event_target_value(&ev);
+                                        update_adult("email", value.clone());
+                                    }
+                                }
+                                on:blur=move |_| {
+                                    if user_email.get().is_none() {
+                                        BlockRoomUIState::validate_form();
+                                    }
+                                }
                             />
                             // <!-- Phase 4.3: Enhanced phone validation -->
                             <input
