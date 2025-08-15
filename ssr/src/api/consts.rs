@@ -105,6 +105,23 @@ use std::collections::HashMap;
 use std::env::VarError;
 use thiserror::Error;
 
+/// Get the domain with a dot prefix (e.g., ".nofeebooking.com")
+/// Extracts domain from APP_URL and adds dot prefix
+pub fn get_app_domain_with_dot() -> String {
+    let url = APP_URL.as_str();
+
+    // Remove protocol (http:// or https://)
+    let without_protocol = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .unwrap_or(url);
+
+    // Remove trailing slash if present
+    let domain = without_protocol.trim_end_matches('/');
+
+    format!(".{}", domain)
+}
+
 #[cfg(feature = "mock-provab")]
 pub fn get_payments_url(_status: &str) -> String {
     let base_url = APP_URL.as_str();

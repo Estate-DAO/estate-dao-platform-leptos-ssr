@@ -1,6 +1,7 @@
 use crate::api::auth::types::LoginProvider;
 use crate::api::auth::types::{YralOAuthClient, CSRF_TOKEN_COOKIE, PKCE_VERIFIER_COOKIE};
 use crate::api::consts::yral_auth::{REFRESH_MAX_AGE, REFRESH_TOKEN_COOKIE, USERNAME_MAX_LEN};
+use crate::api::consts::{get_app_domain_with_dot, APP_URL};
 use axum::response::IntoResponse;
 use axum_extra::extract::{cookie::Key, PrivateCookieJar, SignedCookieJar};
 use http::header;
@@ -111,8 +112,12 @@ pub async fn yral_auth_url_impl(
     //     }
     // };
 
+    let app_domain = get_app_domain_with_dot();
+
+    // .nofeebooking.com
     let pkce_cookie = Cookie::build((PKCE_VERIFIER_COOKIE, pkce_verifier.secret().clone()))
         .same_site(SameSite::None)
+        .domain(app_domain)
         .secure(true)
         .path("/")
         .max_age(cookie_life)
