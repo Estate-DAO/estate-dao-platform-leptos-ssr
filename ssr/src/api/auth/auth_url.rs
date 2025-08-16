@@ -138,6 +138,7 @@ pub async fn yral_auth_url_impl(
     );
     let csrf_cookie = Cookie::build((CSRF_TOKEN_COOKIE, oauth_state.csrf_token.secret().clone()))
         .same_site(SameSite::None)
+        .domain(get_app_domain_with_dot())
         .path("/")
         .max_age(cookie_life)
         .secure(true)
@@ -358,6 +359,7 @@ pub async fn perform_yral_auth_impl(
     let refresh_cookie = Cookie::build((REFRESH_TOKEN_COOKIE, refresh_token.secret().clone()))
         .http_only(true)
         .secure(true)
+        .domain(get_app_domain_with_dot())
         .path("/")
         .same_site(SameSite::None)
         .partitioned(true)
@@ -391,6 +393,7 @@ pub fn update_user_identity(
     let refresh_cookie = Cookie::build((REFRESH_TOKEN_COOKIE, refresh_jwt))
         .http_only(true)
         .secure(true)
+        .domain(get_app_domain_with_dot())
         .path("/")
         .same_site(SameSite::None)
         .partitioned(true)
