@@ -102,23 +102,28 @@ pub async fn yral_auth_url_impl(
         pkce_verifier.secret()
     );
 
-    // let is_production = {
-    //     cfg_if::cfg_if! {
-    //         if #[cfg(any(feature = "release-lib-prod", feature = "release-bin-prod"))] {
-    //             true
-    //         } else {
-    //             false
-    //         }
-    //     }
-    // };
+    let is_production = {
+        cfg_if::cfg_if! {
+            if #[cfg(any(feature = "release-lib-prod", feature = "release-bin-prod", feature = "release-lib", feature = "release-bin"))] {
+                true
+            } else {
+                false
+            }
+        }
+    };
+
+    let same_site_attribute = match is_production {
+        true => SameSite::None,
+        false => SameSite::Lax,
+    };
 
     let app_domain = get_app_domain_with_dot();
 
     // .nofeebooking.com
     let pkce_cookie = Cookie::build((PKCE_VERIFIER_COOKIE, pkce_verifier.secret().clone()))
-        .same_site(SameSite::None)
+        .same_site(same_site_attribute)
         .domain(app_domain)
-        .secure(true)
+        .secure(is_production)
         .path("/")
         .max_age(cookie_life)
         .http_only(true)
@@ -137,11 +142,11 @@ pub async fn yral_auth_url_impl(
         oauth_csrf_token.secret()
     );
     let csrf_cookie = Cookie::build((CSRF_TOKEN_COOKIE, oauth_state.csrf_token.secret().clone()))
-        .same_site(SameSite::None)
+        .same_site(same_site_attribute)
         .domain(get_app_domain_with_dot())
         .path("/")
         .max_age(cookie_life)
-        .secure(true)
+        .secure(is_production)
         // .http_only(true)
         .build();
     tracing::debug!("[OAUTH_DEBUG] CSRF cookie details: {:#?}", csrf_cookie);

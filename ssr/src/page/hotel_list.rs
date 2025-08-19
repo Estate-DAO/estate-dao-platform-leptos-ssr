@@ -351,7 +351,7 @@ pub fn HotelListPage() -> impl IntoView {
                         fallback=move || view! { <></> }
                     >
                         <div class="col-span-full">
-                            <PaginationInfo />
+                            // <PaginationInfo />
                             <PaginationControls />
                         </div>
                     </Show>

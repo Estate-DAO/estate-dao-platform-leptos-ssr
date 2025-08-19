@@ -38,6 +38,8 @@ pub fn IdentitySender(identity_res: Option<YralAuthMessage>) -> impl IntoView {
         {
             use web_sys::Window;
 
+            use crate::api::consts::APP_URL;
+
             let win = window();
             let origin = win.origin();
             let opener = win.opener().expect("window opener value ");
@@ -46,9 +48,22 @@ pub fn IdentitySender(identity_res: Option<YralAuthMessage>) -> impl IntoView {
             }
             let opener = Window::from(opener);
             log!("IdentitySender - opener: {:#?}", opener);
+
+            // Get the parent window's origin - location() returns Location directly
+            let opener_location = opener.location();
+            let parent_origin = opener_location
+                .origin()
+                .unwrap_or_else(|_| String::from(APP_URL.as_str()));
+
+            log!("Current window origin: {}", origin);
+            log!("Parent window origin: {}", parent_origin);
+
             let msg = serde_json::to_string(&_id).expect("serde_json::to_string failed to unwrap");
             log!("IdentitySender - msg: {:#?}", msg);
-            _ = opener.post_message(&msg.into(), &origin);
+            match opener.post_message(&msg.into(), &parent_origin) {
+                Ok(_) => log!("Message sent successfully"),
+                Err(e) => log!("Failed to send message: {:#?}", e),
+            }
         }
     });
 

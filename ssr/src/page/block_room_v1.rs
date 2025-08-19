@@ -707,8 +707,11 @@ pub fn LoginPrompt() -> impl IntoView {
                     "Please login to continue with your booking"
                 </p>
             </div>
-            <div class="w-full">
-                <YralAuthProvider />
+            // <!-- Centered login button with improved mobile styling -->
+            <div class="w-full flex justify-center">
+                <div class="w-full max-w-sm">
+                    <YralAuthProvider />
+                </div>
             </div>
         </div>
     }

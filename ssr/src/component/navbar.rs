@@ -24,14 +24,15 @@ pub fn Navbar() -> impl IntoView {
     );
 
     view! {
-        <nav class="flex justify-between items-center py-10 px-8">
+        // <!-- Improved mobile navbar with better padding and icon sizing -->
+        <nav class="flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8">
             <div class="flex items-center text-xl">
                 // <Icon icon=EstateDaoIcon />
-                <a href="/">
+                <a href="/" class="flex items-center">
                     <img
                         src="/img/nofeebooking.webp"
-                        alt="Icon"
-                        class="h-10 w-32 md:h-12 md:w-48 object-contain"
+                        alt="NoFeeBooking Logo"
+                        class="h-8 w-24 sm:h-10 sm:w-32 md:h-12 md:w-48 object-contain"
                     />
                 </a>
             </div>

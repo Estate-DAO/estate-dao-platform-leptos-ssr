@@ -119,7 +119,10 @@ pub fn get_app_domain_with_dot() -> String {
     // Remove trailing slash if present
     let domain = without_protocol.trim_end_matches('/');
 
-    format!(".{}", domain)
+    // Remove port if present (e.g., localhost:3002 -> localhost)
+    let domain_without_port = domain.split(':').next().unwrap_or(domain);
+
+    format!(".{}", domain_without_port)
 }
 
 #[cfg(feature = "mock-provab")]

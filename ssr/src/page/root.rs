@@ -62,11 +62,13 @@ pub fn HeroSection() -> impl IntoView {
     let allow_outside_click = create_rw_signal(false);
 
     view! {
-        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')]">
+        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] min-h-screen">
             <Navbar />
-            <div class="mt-20 md:mt-40 px-4 md:px-0">
+            // <!-- Improved mobile spacing and padding -->
+            <div class="mt-16 md:mt-40 px-4 md:px-0">
                 <div class="flex flex-col items-center justify-center h-full">
-                    <h1 class="text-3xl md:text-5xl font-semibold text-black mb-6 md:mb-8 text-center">
+                    // <!-- Enhanced mobile typography with better line height -->
+                    <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight">
                         Hey! Where are you off to?
                     </h1>
 
@@ -78,19 +80,22 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <br />
                     <br />
-                    <div class="flex flex-col md:flex-row items-center md:items-end px-4 md:px-6 py-3 bg-white rounded-xl max-w-fit w-full text-center md:text-left">
-                        "We're the first decentralized booking platform powered by ICP."
+                    // <!-- Improved mobile card layout with better responsive padding -->
+                    <div class="flex flex-col md:flex-row items-center md:items-end px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-xl max-w-fit w-full text-center md:text-left mx-2 sm:mx-0">
+                        <span class="text-sm sm:text-base">
+                            "We're the first decentralized booking platform powered by ICP."
+                        </span>
                         <div class="flex items-center mt-2 md:mt-0">
                             <a
                                 href="https://internetcomputer.org/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="font-semibold text-blue-500 md:ml-4 inline"
+                                class="font-semibold text-blue-500 md:ml-4 inline text-sm sm:text-base"
                             >
                                 "Learn more about ICP "
                             </a>
                             <Icon
-                                class="w-6 h-6 font-semibold inline ml-2 text-blue-500"
+                                class="w-5 h-5 sm:w-6 sm:h-6 font-semibold inline ml-2 text-blue-500"
                                 icon=icondata::CgArrowRight
                             />
                         </div>
