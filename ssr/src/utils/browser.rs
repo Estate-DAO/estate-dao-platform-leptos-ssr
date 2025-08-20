@@ -99,14 +99,21 @@ cfg_if! {
             let headers = response.headers();
             let mut cookie_headers = Vec::new();
 
+            log!("[CLIENT_COOKIE_AUTO] Scanning response headers for cookies...");
+
             // Extract set-cookie headers from reqwest response
             for (name, value) in headers.iter() {
                 if name.as_str().to_lowercase() == "set-cookie" {
                     if let Ok(value_str) = value.to_str() {
                         cookie_headers.push(value_str.to_string());
-                        log!("[COOKIE_UTIL] Found set-cookie header: {}", value_str);
+                        log!("[CLIENT_COOKIE_AUTO] Found Set-Cookie header: {}", value_str);
                     }
                 }
+            }
+
+            if cookie_headers.is_empty() {
+                log!("[CLIENT_COOKIE_AUTO] No Set-Cookie headers found in response");
+                return;
             }
 
             let Some(window) = web_sys::window() else {
@@ -125,12 +132,17 @@ cfg_if! {
             };
 
             // Apply each cookie
+            log!("[CLIENT_COOKIE_AUTO] Applying {} cookies to browser", cookie_headers.len());
             for cookie_header in cookie_headers {
                 if let Some(cookie_value) = parse_cookie_for_document(&cookie_header) {
-                    log!("[COOKIE_UTIL] Setting cookie from reqwest response: {}", cookie_value);
+                    log!("[CLIENT_COOKIE_AUTO] Setting cookie: {}", cookie_value);
                     if let Err(e) = html_document.set_cookie(&cookie_value) {
-                        log!("[COOKIE_UTIL] Failed to set cookie from reqwest: {:?}", e);
+                        log!("[CLIENT_COOKIE_AUTO] ❌ Failed to set cookie: {:?}", e);
+                    } else {
+                        log!("[CLIENT_COOKIE_AUTO] ✅ Successfully set cookie");
                     }
+                } else {
+                    log!("[CLIENT_COOKIE_AUTO] ❌ Failed to parse cookie header: {}", cookie_header);
                 }
             }
 

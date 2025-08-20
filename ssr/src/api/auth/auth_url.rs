@@ -113,6 +113,7 @@ pub async fn yral_auth_url_impl(
     };
 
     let same_site_attribute = match is_production {
+        //particularly Chrome, are now requiring that any cookie with SameSite=None must also include the Partitioned attribute.
         true => SameSite::None,
         false => SameSite::Lax,
     };
@@ -124,9 +125,10 @@ pub async fn yral_auth_url_impl(
         .same_site(same_site_attribute)
         .domain(app_domain)
         .secure(is_production)
+        .partitioned(is_production)
         .path("/")
         .max_age(cookie_life)
-        .http_only(true)
+        // .http_only(true)
         .build();
     // tracing::debug!("[OAUTH_DEBUG] PKCE cookie details: {:#?}", pkce_cookie);
     jar = jar.add(pkce_cookie);
@@ -147,6 +149,7 @@ pub async fn yral_auth_url_impl(
         .path("/")
         .max_age(cookie_life)
         .secure(is_production)
+        .partitioned(is_production)
         // .http_only(true)
         .build();
     tracing::debug!("[OAUTH_DEBUG] CSRF cookie details: {:#?}", csrf_cookie);
@@ -362,7 +365,7 @@ pub async fn perform_yral_auth_impl(
     // Create refresh token cookie and add to jar
     let refresh_max_age = REFRESH_MAX_AGE;
     let refresh_cookie = Cookie::build((REFRESH_TOKEN_COOKIE, refresh_token.secret().clone()))
-        .http_only(true)
+        // .http_only(true)
         .secure(true)
         .domain(get_app_domain_with_dot())
         .path("/")
@@ -396,7 +399,7 @@ pub fn update_user_identity(
     let refresh_max_age = REFRESH_MAX_AGE;
 
     let refresh_cookie = Cookie::build((REFRESH_TOKEN_COOKIE, refresh_jwt))
-        .http_only(true)
+        // .http_only(true)
         .secure(true)
         .domain(get_app_domain_with_dot())
         .path("/")

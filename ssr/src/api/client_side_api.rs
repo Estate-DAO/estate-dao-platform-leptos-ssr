@@ -198,6 +198,12 @@ impl ClientSideApiClient {
         log!("[CLIENT_API_DEBUG] Request context: {}", context);
         log!("[CLIENT_API_DEBUG] Request body: {}", body);
 
+        #[cfg(not(feature = "ssr"))]
+        log!("[CLIENT_COOKIE_AUTO] Running in client-side environment - cookies will be handled");
+
+        #[cfg(feature = "ssr")]
+        log!("[CLIENT_COOKIE_AUTO] Running in server-side environment - no cookie handling");
+
         // Log browser environment and cookie handling approach
         Self::log_browser_environment();
 
@@ -229,11 +235,40 @@ impl ClientSideApiClient {
                 // tracing::debug!("[CLIENT_API_DEBUG] Response status: {}", status);
                 // tracing::debug!("[CLIENT_API_DEBUG] Response headers: {:#?}", res.headers());
 
-                // Apply cookies from response headers for older browsers
+                // Note: In browser environments, Set-Cookie headers are handled automatically by the browser
+                // and are not accessible via reqwest/fetch API for security reasons
                 #[cfg(not(feature = "ssr"))]
                 {
-                    use crate::utils::browser::apply_cookies_from_reqwest_response;
-                    apply_cookies_from_reqwest_response(&res);
+                    log!("[CLIENT_COOKIE_AUTO] Cookies from Set-Cookie headers are handled automatically by browser");
+                    log!("[CLIENT_COOKIE_AUTO] Checking if cookies were set by reading document.cookie...");
+
+                    if let Some(window) = web_sys::window() {
+                        if let Some(document) = window.document() {
+                            if let Ok(html_document) = document.dyn_into::<web_sys::HtmlDocument>()
+                            {
+                                match html_document.cookie() {
+                                    Ok(cookie_string) => {
+                                        log!(
+                                            "[CLIENT_COOKIE_AUTO] Current browser cookies: {}",
+                                            cookie_string
+                                        );
+
+                                        // Check for specific auth cookies
+                                        if cookie_string.contains("google-csrf-token") {
+                                            log!("[CLIENT_COOKIE_AUTO] ✅ google-csrf-token cookie detected");
+                                        }
+                                        if cookie_string.contains("google-pkce-verifier") {
+                                            log!("[CLIENT_COOKIE_AUTO] ✅ google-pkce-verifier cookie detected");
+                                        }
+                                    }
+                                    Err(e) => {
+                                        log!("[CLIENT_COOKIE_AUTO] ❌ Failed to read document.cookie: {:?}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    log!("[CLIENT_COOKIE_AUTO] Cookie check completed");
                 }
 
                 let text_result = res.text().await;
