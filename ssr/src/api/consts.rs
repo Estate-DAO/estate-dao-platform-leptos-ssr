@@ -105,11 +105,8 @@ use std::collections::HashMap;
 use std::env::VarError;
 use thiserror::Error;
 
-/// Get the domain with a dot prefix (e.g., ".nofeebooking.com")
-/// Extracts domain from APP_URL and adds dot prefix
-pub fn get_app_domain_with_dot() -> String {
-    let url = APP_URL.as_str();
-
+/// Extract domain from URL and add dot prefix (e.g., ".nofeebooking.com")
+fn extract_domain_with_dot(url: &str) -> String {
     // Remove protocol (http:// or https://)
     let without_protocol = url
         .strip_prefix("https://")
@@ -123,6 +120,12 @@ pub fn get_app_domain_with_dot() -> String {
     let domain_without_port = domain.split(':').next().unwrap_or(domain);
 
     format!(".{}", domain_without_port)
+}
+
+/// Get the domain with a dot prefix (e.g., ".nofeebooking.com")
+/// Extracts domain from APP_URL and adds dot prefix
+pub fn get_app_domain_with_dot() -> String {
+    extract_domain_with_dot(APP_URL.as_str())
 }
 
 #[cfg(feature = "mock-provab")]
@@ -483,4 +486,44 @@ pub trait ConfigLoader: Sized {
     ///
     /// Returns an `Err` if any required parameter is missing or invalid.
     fn from_env() -> Result<Self, String>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_domain_with_dot;
+
+    #[test]
+    fn test_extract_domain_with_dot_nofeebooking() {
+        let url = "https://nofeebooking.com";
+        let result = extract_domain_with_dot(url);
+        assert_eq!(result, ".nofeebooking.com");
+    }
+
+    #[test]
+    fn test_extract_domain_with_dot_localhost() {
+        let url = "http://localhost:3002";
+        let result = extract_domain_with_dot(url);
+        assert_eq!(result, ".localhost");
+    }
+
+    #[test]
+    fn test_extract_domain_with_dot_with_trailing_slash() {
+        let url = "https://nofeebooking.com/";
+        let result = extract_domain_with_dot(url);
+        assert_eq!(result, ".nofeebooking.com");
+    }
+
+    #[test]
+    fn test_extract_domain_with_dot_localhost_with_trailing_slash() {
+        let url = "http://localhost:3002/";
+        let result = extract_domain_with_dot(url);
+        assert_eq!(result, ".localhost");
+    }
+
+    #[test]
+    fn test_extract_domain_with_dot_no_protocol() {
+        let url = "nofeebooking.com";
+        let result = extract_domain_with_dot(url);
+        assert_eq!(result, ".nofeebooking.com");
+    }
 }
