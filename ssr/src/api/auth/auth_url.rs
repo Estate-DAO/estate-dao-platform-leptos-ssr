@@ -112,11 +112,13 @@ pub async fn yral_auth_url_impl(
         }
     };
 
-    let same_site_attribute = match is_production {
-        //particularly Chrome, are now requiring that any cookie with SameSite=None must also include the Partitioned attribute.
-        true => SameSite::None,
-        false => SameSite::Lax,
-    };
+    // let same_site_attribute = match is_production {
+    //     //particularly Chrome, are now requiring that any cookie with SameSite=None must also include the Partitioned attribute.
+    //     true => SameSite::None,
+    //     false => SameSite::Lax,
+    // };
+
+    let same_site_attribute = SameSite::Lax;
 
     let app_domain = get_app_domain_with_dot();
 
@@ -125,7 +127,7 @@ pub async fn yral_auth_url_impl(
         .same_site(same_site_attribute)
         .domain(app_domain)
         .secure(is_production)
-        .partitioned(is_production)
+        // .partitioned(is_production)
         .path("/")
         .max_age(cookie_life)
         // .http_only(true)
@@ -149,7 +151,7 @@ pub async fn yral_auth_url_impl(
         .path("/")
         .max_age(cookie_life)
         .secure(is_production)
-        .partitioned(is_production)
+        // .partitioned(is_production)
         // .http_only(true)
         .build();
     tracing::debug!("[OAUTH_DEBUG] CSRF cookie details: {:#?}", csrf_cookie);
@@ -369,8 +371,8 @@ pub async fn perform_yral_auth_impl(
         .secure(true)
         .domain(get_app_domain_with_dot())
         .path("/")
-        .same_site(SameSite::None)
-        .partitioned(true)
+        .same_site(SameSite::Lax)
+        // .partitioned(true)
         .max_age(refresh_max_age.try_into().unwrap())
         .build();
 
@@ -403,8 +405,8 @@ pub fn update_user_identity(
         .secure(true)
         .domain(get_app_domain_with_dot())
         .path("/")
-        .same_site(SameSite::None)
-        .partitioned(true)
+        .same_site(SameSite::Lax)
+        // .partitioned(true)
         .max_age(refresh_max_age.try_into().unwrap());
 
     jar = jar.add(refresh_cookie);
