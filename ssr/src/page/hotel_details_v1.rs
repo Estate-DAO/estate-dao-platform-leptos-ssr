@@ -298,6 +298,8 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     destination_city_name: destination.city.clone(),
                     destination_country_code: destination.country_code.clone(),
                     destination_country_name: destination.country_name.clone(),
+                    destination_latitude: destination.latitude,
+                    destination_longitude: destination.longitude,
                     check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
                     check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
                     no_of_nights: date_range.no_of_nights(),

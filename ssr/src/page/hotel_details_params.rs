@@ -21,6 +21,8 @@ pub struct HotelDetailsParams {
     pub destination_city_name: String,
     pub destination_country_code: String,
     pub destination_country_name: String,
+    pub destination_latitude: Option<f64>,
+    pub destination_longitude: Option<f64>,
 
     // Date information
     pub checkin: String,  // YYYY-MM-DD format
@@ -58,11 +60,14 @@ impl HotelDetailsParams {
 
         Some(Self {
             // we don't need hotel code for serach query. only destination, date range and guests are needed
+            // latitude and longitude help with search query
             hotel_code: hotel_code.clone(),
             destination_city_id: destination.city_id.parse().unwrap_or(0),
             destination_city_name: destination.city.clone(),
             destination_country_code: destination.country_code.clone(),
             destination_country_name: destination.country_name.clone(),
+            destination_latitude: destination.latitude,
+            destination_longitude: destination.longitude,
             checkin: format!(
                 "{:04}-{:02}-{:02}",
                 date_range.start.0, date_range.start.1, date_range.start.2
@@ -109,6 +114,8 @@ impl HotelDetailsParams {
             destination_city_name: self.destination_city_name.clone(),
             destination_country_code: self.destination_country_code.clone(),
             destination_country_name: self.destination_country_name.clone(),
+            destination_latitude: self.destination_latitude,
+            destination_longitude: self.destination_longitude,
             check_in_date: checkin_date,
             check_out_date: checkout_date,
             no_of_nights: self.no_of_nights,
@@ -180,6 +187,8 @@ impl QueryParamsSync<HotelDetailsParams> for HotelDetailsParams {
             city: self.destination_city_name.clone(),
             country_name: self.destination_country_name.clone(),
             country_code: self.destination_country_code.clone(),
+            latitude: self.destination_latitude,
+            longitude: self.destination_longitude,
         };
         UISearchCtx::set_destination(destination);
 
@@ -229,6 +238,8 @@ mod tests {
             rooms: 1,
             children_ages: vec![8],
             guest_nationality: "US".to_string(),
+            destination_latitude: Some(12.34),
+            destination_longitude: Some(56.78),
         };
 
         // Test base64 encoding/decoding
@@ -255,6 +266,8 @@ mod tests {
             rooms: 1,
             children_ages: vec![],
             guest_nationality: "US".to_string(),
+            destination_latitude: Some(12.34),
+            destination_longitude: Some(56.78),
         };
 
         let query_params = params.to_url_params();
@@ -280,6 +293,8 @@ mod tests {
             rooms: 1,
             children_ages: vec![10],
             guest_nationality: "US".to_string(),
+            destination_latitude: Some(12.34),
+            destination_longitude: Some(56.78),
         };
 
         let domain_criteria = params.to_domain_search_criteria();

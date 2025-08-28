@@ -81,7 +81,7 @@ pub struct LiteApiHotelResult {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiHotelSearchResponse {
     pub data: Vec<LiteApiHotelResult>,
-    #[serde(rename = "hotelIds")]
+    #[serde(rename = "hotelIds", deserialize_with = "deserialize_hotel_ids")]
     pub hotel_ids: Vec<String>,
     pub total: i32,
 }
@@ -110,6 +110,13 @@ pub struct LiteApiHotelSearchRequest {
     pub city_name: String,
     pub offset: i32,
     pub limit: i32,
+    #[serde(skip_serializing, rename = "latitude")]
+    pub destination_latitude: Option<f64>,
+    #[serde(skip_serializing, rename = "longitude")]
+    pub destination_longitude: Option<f64>,
+    // radius in meters, min 1000
+    #[serde(skip_serializing, rename = "radius")]
+    pub radius: Option<u32>,
 }
 
 impl Default for LiteApiHotelSearchRequest {
@@ -119,6 +126,9 @@ impl Default for LiteApiHotelSearchRequest {
             city_name: "New York".into(),
             offset: 0,
             limit: 10,
+            destination_latitude: Some(40.7),
+            destination_longitude: Some(-74.0),
+            radius: Some(1000),
         }
     }
 }
@@ -130,6 +140,9 @@ impl LiteApiHotelSearchRequest {
             city_name: destination.city.clone(),
             offset: 0,
             limit: 50,
+            destination_latitude: destination.latitude,
+            destination_longitude: destination.longitude,
+            radius: Some(1000),
         }
     }
 }
@@ -185,4 +198,43 @@ where
     // First try to deserialize as f64 to handle both int and float cases
     let value = f64::deserialize(deserializer)?;
     Ok(value.floor() as i32)
+}
+
+// Custom deserializer for hotel_ids field to handle both Vec<String> and empty string
+fn deserialize_hotel_ids<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    use std::fmt;
+
+    struct HotelIdsVisitor;
+
+    impl<'de> Visitor<'de> for HotelIdsVisitor {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a vector of strings or an empty string")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Vec<String>, E>
+        where
+            E: de::Error,
+        {
+            if value.is_empty() {
+                Ok(vec![])
+            } else {
+                Ok(vec![value.to_string()])
+            }
+        }
+
+        fn visit_seq<A>(self, seq: A) -> Result<Vec<String>, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            Vec::deserialize(de::value::SeqAccessDeserializer::new(seq))
+        }
+    }
+
+    deserializer.deserialize_any(HotelIdsVisitor)
 }

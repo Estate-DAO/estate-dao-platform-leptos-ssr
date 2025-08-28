@@ -56,6 +56,8 @@ pub struct DomainHotelSearchCriteria {
     pub destination_city_name: String,
     pub destination_country_code: String,
     pub destination_country_name: String,
+    pub destination_latitude: Option<f64>,
+    pub destination_longitude: Option<f64>,
 
     // <!-- Date information -->
     pub check_in_date: (u32, u32, u32),  // YYYY-MM-DD
@@ -183,6 +185,8 @@ impl Default for DomainHotelSearchCriteria {
         Self {
             destination_city_id: 1254, // <!-- Default to Mumbai -->
             destination_country_code: "IN".into(),
+            destination_latitude: Some(19.07),
+            destination_longitude: Some(72.87),
             check_in_date: (2025, 11, 12),
             check_out_date: (2025, 11, 12),
             destination_city_name: "Mumbai".into(),

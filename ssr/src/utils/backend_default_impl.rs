@@ -80,6 +80,8 @@ impl From<backend::Destination> for FrontendDestination {
             country_name: backend_destination.country_name,
             country_code: backend_destination.country_code,
             city_id: backend_destination.city_id,
+            latitude: None,
+            longitude: None,
         }
     }
 }

@@ -17,6 +17,8 @@ use crate::api::liteapi::{
 };
 use crate::utils;
 use futures::future::{BoxFuture, FutureExt};
+#[cfg(feature = "debug_log")]
+use tracing::instrument;
 
 use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
@@ -146,7 +148,8 @@ impl LiteApiAdapter {
 
             // Log the specific hotel IDs that were filtered out
             crate::log!(
-                "🚫 Hotels without valid pricing (filtered out): [{}]",
+                "🚫 Hotels without valid pricing (filtered out): count: {},  [{}]",
+                hotels_without_pricing_count,
                 hotels_without_pricing_ids.join(", ")
             );
 
@@ -186,7 +189,7 @@ impl LiteApiAdapter {
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 500), // Default: first page, 500 results
+            None => (0, 5000), // Default: first page, 5000 results
         }
     }
 
@@ -244,6 +247,11 @@ impl LiteApiAdapter {
             city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
             offset,
             limit,
+            destination_latitude: domain_criteria.destination_latitude,
+            destination_longitude: domain_criteria.destination_longitude,
+            // todo(hotel_search): default search radius is 10km in liteapi for now.
+            // not sure if to put this in domain_search_criteria
+            radius: Some(10000),
         }
     }
 
@@ -300,6 +308,7 @@ impl LiteApiAdapter {
     }
 
     // Map search results with pricing from rates API
+    #[cfg_attr(feature = "debug_log", instrument(skip(self, liteapi_response)))]
     async fn map_liteapi_search_to_domain_with_pricing(
         &self,
         liteapi_response: LiteApiHotelSearchResponse,
@@ -310,11 +319,11 @@ impl LiteApiAdapter {
 
         let mut domain_results = Self::map_liteapi_search_to_domain(liteapi_response.clone());
 
-        // (todo): review hotel_search - Extract hotel IDs (max 100 as per plan)
+        // (todo): review hotel_search - Extract hotel IDs
         let hotel_ids: Vec<String> = liteapi_response
             .data
             .iter()
-            .take(100)
+            // .take(100)
             .map(|hotel| hotel.id.clone())
             .collect();
 
@@ -332,6 +341,8 @@ impl LiteApiAdapter {
 
         // Call get_hotel_rates to get pricing
         let rates_request = Self::map_domain_info_to_liteapi_rates(&hotel_info_criteria)?;
+
+        crate::log!("rates_request: {:#?}", rates_request);
 
         let rates_response: LiteApiHotelRatesResponse = self
             .client

@@ -34,7 +34,6 @@ pub async fn lookup_destination_by_id(
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HotelListParams {
     // Basic search parameters
-    pub destination: Option<String>,
     pub checkin: Option<String>,
     pub checkout: Option<String>,
     pub adults: Option<u32>,
@@ -51,6 +50,12 @@ pub struct HotelListParams {
     // Pagination
     pub page: Option<u32>,
     pub per_page: Option<u32>,
+
+    // Destination
+    // destination - city name
+    pub destination: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
 impl Default for HotelListParams {
@@ -67,6 +72,8 @@ impl Default for HotelListParams {
             sort: Vec::new(),
             page: Some(1),
             per_page: Some(20),
+            latitude: None,
+            longitude: None,
         }
     }
 }
@@ -78,6 +85,18 @@ impl HotelListParams {
             .destination
             .get_untracked()
             .map(|d| d.city_id.clone());
+
+        let latitude = search_ctx
+            .destination
+            .get_untracked()
+            .map(|d| d.latitude.clone())
+            .flatten();
+
+        let longitude = search_ctx
+            .destination
+            .get_untracked()
+            .map(|d| d.longitude.clone())
+            .flatten();
 
         let date_range = search_ctx.date_range.get_untracked();
         let (checkin, checkout) = if date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0) {
@@ -113,6 +132,8 @@ impl HotelListParams {
             sort: Vec::new(),
             page: Some(1),
             per_page: Some(20),
+            latitude,
+            longitude,
         }
     }
 
@@ -207,6 +228,8 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                         city: "Unknown".to_string(),
                         country_name: "Unknown".to_string(),
                         country_code: "XX".to_string(),
+                        latitude: None,
+                        longitude: None,
                     };
                     UISearchCtx::set_destination(destination);
                 }

@@ -60,15 +60,19 @@ pub struct Destination {
     pub country_code: String,
     #[serde(rename = "city_code")]
     pub city_id: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 }
 
 impl Default for Destination {
     fn default() -> Self {
         Self {
-            city: "Goa".into(),
+            city: "New Delhi".into(),
             country_name: "IN".into(),
-            city_id: "1254".into(),
+            city_id: "5100".into(),
             country_code: "IN".into(),
+            latitude: Some(28.6139391),
+            longitude: Some(77.2090212),
         }
     }
 }

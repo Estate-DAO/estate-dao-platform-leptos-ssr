@@ -35,6 +35,10 @@ pub struct City {
     country_code: String,
     #[serde(default)] // This will use a default value if image_url is not in JSON
     image_url: String,
+    #[serde(default)]
+    latitude: Option<f64>,
+    #[serde(default)]
+    longitude: Option<f64>,
 }
 
 impl From<City> for Destination {
@@ -44,6 +48,8 @@ impl From<City> for Destination {
             country_name: city.country_name,
             country_code: city.country_code,
             city_id: city.city_code,
+            latitude: city.latitude,
+            longitude: city.longitude,
         }
     }
 }

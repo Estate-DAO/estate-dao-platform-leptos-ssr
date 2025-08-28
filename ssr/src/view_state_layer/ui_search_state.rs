@@ -266,7 +266,7 @@ impl Default for UIPaginationState {
     fn default() -> Self {
         Self {
             current_page: create_rw_signal(1),
-            page_size: create_rw_signal(500), // Default page size
+            page_size: create_rw_signal(5000), // Default page size
             pagination_meta: create_rw_signal(None),
         }
     }
