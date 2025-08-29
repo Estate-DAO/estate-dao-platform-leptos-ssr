@@ -7,21 +7,22 @@ FROM debian:bookworm-slim as runner
 
 WORKDIR /app
 
-COPY ./target/x86_64-unknown-linux-musl/release/estate-fe .
-COPY ./city.json .
-COPY ./ssr/target/x86_64-unknown-linux-musl/release/hash.txt ./release/hash.txt
-COPY ./ssr/target/x86_64-unknown-linux-musl/release/hash.txt ./hash.txt
-COPY ./target/site ./site
+RUN apt update && apt install tree vim curl dnsutils -y
 
-ENV LEPTOS_SITE_ROOT=site
+RUN tree .
 
+COPY target/release/estate-fe .
+COPY target/release/hash.txt .
+COPY target/site ./site
+COPY city.json ./city.json
+
+# Set any required env variables
 ENV LEPTOS_ENV="production"
-ENV LEPTOS_HASH_FILES="true"
+ENV RUST_LOG="debug,hyper=info,tower=info"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
-ENV RUST_LOG="info"
-# these will be passed by fly vm
-# ENV PROVAB_HEADERS
-# ENV LOCAL
+ENV LEPTOS_SITE_ROOT="site"
+ENV LEPTOS_HASH_FILES="true"
+
 EXPOSE 3000
 
 CMD ["./estate-fe"]

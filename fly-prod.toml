@@ -2,6 +2,9 @@
 app = 'nofeebooking'
 primary_region = 'bom'
 
+# [build]
+#   dockerfile = 'Dockerfile.debian.prod'
+
 [processes]
 # The command below is used to launch a Rails server; be sure to
 # replace with the command you're using to launch your server.
