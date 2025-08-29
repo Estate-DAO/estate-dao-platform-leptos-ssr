@@ -32,6 +32,9 @@ jobs:
           targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
           
+      - name: Override Rust toolchain
+        run: rustup override set nightly-2024-11-07
+          
       - name: Verify Rust version
         run: rustc --version && cargo --version
 
