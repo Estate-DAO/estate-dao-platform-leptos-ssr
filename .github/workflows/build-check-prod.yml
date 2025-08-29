@@ -1,0 +1,97 @@
+name: Build and Check linting
+
+on:
+  workflow_call:
+    inputs:
+      publish-artifact:
+        default: false
+        required: false
+        type: boolean
+  workflow_dispatch:
+
+env:
+  ACTIONS_STEP_DEBUG: true
+
+jobs:
+  build_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Rust Setup
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "nightly-2024-11-01"
+          targets: "wasm32-unknown-unknown"
+          components: "clippy,rustfmt"
+
+      - uses: cargo-bins/cargo-binstall@main
+      - name: cargo-leptos setup
+        run: cargo binstall --no-confirm cargo-leptos --version 0.2.21
+
+      - name: Cache rust dependencies and build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install npm deps
+        run: pnpm install
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang
+
+      - name: lint check
+        run: |
+          cargo fmt --check
+
+      - name: Build the Leptos project
+        run: cargo leptos build --release --lib-features "release-lib-prod" --bin-features "release-bin-prod"
+        env:
+          LEPTOS_HASH_FILES: true
+          PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
+      
+      - name: List files and directory structure
+        run: |
+          echo "Current directory structure:"
+          tree -a || (apt-get update && apt-get install -y tree && tree -a)
+  
+      - run: touch .empty
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        if: ${{ inputs.publish-artifact }}
+        with:
+          name: build-debian
+          path: |
+            target/release/estate-fe
+            target/site
+            .empty
+            target/release/hash.txt
+            city.json

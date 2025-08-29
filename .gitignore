@@ -15,6 +15,28 @@ playwright/.cache/
 
 plan.md 
 
-.*
 bun.lockb
 !.gitignore
+
+*.log
+*.json
+
+
+!city.json
+!ssr/did/canister_ids.json
+!package.json 
+
+
+patches/*
+.env
+.env.fly
+hash.txt
+*.pem
+scratchpad_me.md
+search.txt
+*.diff
+.aider*
+
+
+logs/
+memories/

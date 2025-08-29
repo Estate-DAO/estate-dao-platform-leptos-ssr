@@ -1,37 +1,108 @@
+// use crate::component::outside_click_detector::OutsideClickDetector;
+// use leptos::logging::log;
+use crate::api::client_side_api::ClientSideApiClient;
+use crate::domain::{DomainHotelListAfterSearch, DomainHotelSearchCriteria};
+use crate::utils::search_action::create_search_action_with_ui_state;
+use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
+use crate::{log, utils};
 use leptos::*;
-// use leptos_router::*;
+use leptos_icons::*;
+use leptos_query::QueryResult;
 
-// use crate::component::FullScreenSpinner;
+use crate::component::{DestinationPickerV5, Footer, MostPopular, Navbar};
+use crate::{
+    api::canister::greet_call::greet_backend,
+    app::AppRoutes,
+    component::{
+        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy,
+        FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
+        SelectedDateRange,
+    },
+    page::HotelListParams,
+    utils::query_params::QueryParamsSync,
+    view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx},
+};
+// use chrono::{Datelike, NaiveDate};
+use crate::page::InputGroupContainer;
+use crate::utils::date::*;
+use leptos::ev::MouseEvent;
+use leptos_query::{query_persister, *};
+use leptos_use::{on_click_outside, use_timestamp_with_controls, UseTimestampReturn};
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
+
+// use leptos::ev;
+// use leptos::html::*;
+// use leptos::{event_target, window_event_listener};
+// use wasm_bindgen::JsCast;
 
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
-        <main class="  py-4 ">
-            <div class="">
-
-                <Navbar />
-
+        <main>
+            // <FullScreenBannerForMobileModeNotReady>
+            <div>
                 <HeroSection />
-
+                // <LiveSelectExample />
                 <MostPopular />
             </div>
+            // </FullScreenBannerForMobileModeNotReady>
+            // <Footer />
         </main>
     }
 }
 
 #[component]
 pub fn HeroSection() -> impl IntoView {
-    view! {
-        <section class="bg-cover bg-center h-screen  bg-[url('/img/home.webp')]">
-            <div class="flex flex-col items-center justify-center h-full text-center">
-                <h1 class="text-4xl font-bold text-black mb-8">Hey! Where are you off to?</h1>
-                <div class="flex space-x-4 mb-8">
+    // reset the search bar
+    InputGroupState::toggle_dialog(OpenDialogComponent::None);
 
-                    <InputGroup />
-                </div>
-                <div class="flex space-x-4">
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded">Filter</button>
-                    <button class="bg-gray-500 text-white px-4 py-2 rounded">Sort By</button>
+    // Define whether outside click collapse is allowed
+    // On root page we don't want it enabled
+    let allow_outside_click = create_rw_signal(false);
+
+    view! {
+        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] min-h-screen">
+            <Navbar />
+            // <!-- Improved mobile spacing and padding -->
+            <div class="mt-16 md:mt-40 px-4 md:px-0">
+                <div class="flex flex-col items-center justify-center h-full">
+                    // <!-- Enhanced mobile typography with better line height -->
+                    <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight">
+                        Hey! Where are you off to?
+                    </h1>
+
+                    <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click />
+                    <br />
+                    // todo: uncomment in v2 when implementing filtering and sorting
+                    // <FilterAndSortBy />
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    // <!-- Improved mobile card layout with better responsive padding -->
+                    <div class="flex flex-col md:flex-row items-center md:items-end px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-xl max-w-fit w-full text-center md:text-left mx-2 sm:mx-0">
+                        <span class="text-sm sm:text-base">
+                            "We're the first decentralized booking platform powered by ICP."
+                        </span>
+                        <div class="flex items-center mt-2 md:mt-0">
+                            <a
+                                href="https://internetcomputer.org/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="font-semibold text-blue-500 md:ml-4 inline text-sm sm:text-base"
+                            >
+                                "Learn more about ICP "
+                            </a>
+                            <Icon
+                                class="w-5 h-5 sm:w-6 sm:h-6 font-semibold inline ml-2 text-blue-500"
+                                icon=icondata::CgArrowRight
+                            />
+                        </div>
+                    </div>
+                    <br />
+                    <br />
+                    <br />
                 </div>
             </div>
         </section>
@@ -39,180 +110,196 @@ pub fn HeroSection() -> impl IntoView {
 }
 
 #[component]
-pub fn Navbar() -> impl IntoView {
-    view! {
-        <nav class="flex justify-between items-center py-4 px-8">
-            <div class="flex items-center">
-                <img src="/img/estate_dao_logo.webp" alt="Icon" class="h-8 w-full" />
-            </div>
-            <div class="flex space-x-4">
-                <a href="#" class="text-gray-700 hover:text-gray-900">
-                    Whitepaper
-                </a>
-                <a href="#" class="text-gray-700 hover:text-gray-900">
-                    About Us
-                </a>
-            </div>
-        </nav>
-    }
-}
+pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> impl IntoView {
+    // TODO (search-button): we want to disable the button for 5 seconds before user can click on it again.
+    // button with counter component
 
-#[component]
-pub fn InputGroup() -> impl IntoView {
+    let local_disabled = create_rw_signal(false);
+    let disabled = create_memo(move |_|
+        // let disabled = Signal::derive(move ||
+        {
+        let val = given_disabled.get() || local_disabled.get();
+        log!("search_bar_disabled - {}", val);
+        val
+        });
+    // -------------------------------------
+    // BACKGROUND CLASSES FOR DISABLED STATE
+    // -------------------------------------
+
+    let bg_class = move || {
+        if disabled.get() {
+            // <!-- Updated disabled state to be more subtle on mobile -->
+            "bg-gray-100 md:bg-gray-300 md:bg-opacity-[40%]"
+        } else {
+            // <!-- Removed opacity for mobile to match screenshot -->
+            "bg-white md:bg-white md:bg-opacity-[40%]"
+        }
+    };
+
+    let bg_search_class = move || {
+        if disabled.get() {
+            "bg-gray-300"
+        } else {
+            // <!-- Updated search button to be blue on mobile to match screenshot -->
+            "bg-blue-500 md:bg-white text-white hover:bg-blue-600 md:hover:bg-blue-200"
+        }
+    };
+
+    let bg_search_icon_class = move || {
+        if disabled.get() {
+            "text-gray-400"
+        } else {
+            // <!-- Updated icon color to white for mobile to match screenshot -->
+            "text-white md:text-blue-600"
+        }
+    };
+
+    let search_ctx: UISearchCtx = expect_context();
+
+    let destination_display = create_memo(move |_| {
+        search_ctx
+            .destination
+            .get()
+            .map(|d| format!("{}, {}", d.city, d.country_name))
+            .unwrap_or_else(|| "".to_string())
+    });
+
+    // Use shared search action with UI state management
+    let search_action = create_search_action_with_ui_state(local_disabled);
+
+    log!("[root.rs InputGroup] Search action created with UI state management");
+
+    // let close_closure = move |_: ()| {
+    //     log!("[root.rs] close panel");
+    //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
+    // };
+
+    let parent_div_ref: NodeRef<html::Div> = create_node_ref();
+
+    // let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
+
     view! {
-        <div class="bg-white bg-opacity-80 rounded-full flex items-center p-1 shadow-lg max-w-4xl w-full">
+        <div
+            node_ref=parent_div_ref
+            class=move || {
+                format!(
+                    // <!-- Changed mobile styling to use solid white background instead of transparent/backdrop-blur -->
+                    // <!-- Added more rounded corners for mobile and better spacing -->
+                    // <!-- Improved shadow for better card-like appearance on mobile -->
+                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white md:bg-transparent rounded-xl md:rounded-full border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
+                    bg_class(),
+                )
+            }
+        >
             // <!-- Destination input -->
-            <div class="relative flex-1">
-                <select class="w-full py-2 pl-10 pr-4 text-gray-700 bg-transparent border-none rounded-full focus:outline-none">
-                    <option value="" disabled selected>
-                        Destination
-                    </option>
-                    <option value="paris">Paris</option>
-                    <option value="london">London</option>
-                    <option value="new-york">New York</option>
-                </select>
-                <div class="absolute inset-y-0 left-3 flex items-center">
-                    <svg
-                        class="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                        ></path>
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                    </svg>
+            // <!-- Improved mobile styling with better rounded corners and spacing -->
+            // <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
+            <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none">
+                <div class="flex items-center h-[56px] px-6">
+                    <Show when=move || !disabled.get()>
+                        <div class="absolute inset-0">
+                            <DestinationPickerV5 />
+                        </div>
+                    </Show>
+
+                    <Show when=move || disabled.get()>
+                        <div class="text-xl flex items-center">
+                            <Icon icon=icondata::BsMap class="text-black" />
+                        </div>
+                        <button
+                            // <!-- Improved text styling and alignment -->
+                            class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal"
+                            disabled=disabled.get()
+                        >
+                            {move || destination_display.get()}
+                        </button>
+                    </Show>
                 </div>
             </div>
 
             // <!-- Date range picker -->
-            <div class="flex-1 border-l border-r border-gray-300">
-                <input
-                    type="text"
-                    placeholder="Check in — Check out"
-                    class="w-full py-2 px-4 text-gray-700 bg-transparent border-none focus:outline-none"
-                    onfocus="(this.type='date')"
-                    onblur="(this.type='text')"
-                />
+            // <!-- Improved mobile styling with better rounded corners and spacing -->
+            // <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
+            <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none">
+                <div class="flex items-center h-[56px] px-6">
+                    <DateTimeRangePickerCustom />
+                </div>
             </div>
 
             // <!-- Guests dropdown -->
-            <div class="relative flex-1">
-                <button
-                    id="guestsDropdown"
-                    class="w-full py-2 pl-4 pr-10 text-left text-gray-700 bg-transparent rounded-full focus:outline-none"
-                >
-                    "0 adult • 0 children"
-                </button>
-                <div class="absolute inset-y-0 right-3 flex items-center">
-                    <svg
-                        class="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                        ></path>
-                    </svg>
-                </div>
-                <div
-                    id="guestsDropdownContent"
-                    class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg"
-                >
-                    <div class="p-4">
-                        <div class="mb-4">
-                            <label for="adults" class="block text-sm font-medium text-gray-700">
-                                Adults
-                            </label>
-                            <input
-                                type="number"
-                                id="adults"
-                                min="0"
-                                value="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                        <div>
-                            <label for="children" class="block text-sm font-medium text-gray-700">
-                                Children
-                            </label>
-                            <input
-                                type="number"
-                                id="children"
-                                min="0"
-                                value="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                            />
-                        </div>
-                    </div>
+            // <!-- Improved mobile styling with better rounded corners and spacing -->
+            // <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
+            <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none">
+                <div class="relative flex h-[56px] px-6">
+                    <GuestQuantity />
                 </div>
             </div>
 
             // <!-- Search button -->
-            <button class="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <svg
-                    class="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
+            // <!-- Completely redesigned for mobile to match screenshot with full-width button at bottom -->
+            <div class="px-6 md:px-0">
+            <button
+                on:click=move |ev| {
+                    ev.prevent_default();
+                    log!("[root.rs InputGroup] Search button clicked, about to dispatch search action");
+
+                    // Reset pagination to first page when search is clicked
+                    UIPaginationState::reset_to_first_page();
+                    log!("[root.rs InputGroup] Pagination reset to first page");
+
+                    // Log current UISearchCtx state before dispatch
+                    let current_search_ctx: UISearchCtx = expect_context();
+                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - destination: {:?}", current_search_ctx.destination.get());
+                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - date_range: {:?}", current_search_ctx.date_range.get());
+                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - adults: {}", current_search_ctx.guests.adults.get());
+
+                    search_action.dispatch(());
+                    log!("[root.rs InputGroup] Search action dispatched");
+                }
+                class=move || {
+                    format!(" {} rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
+                }
+            >
+                <div class="flex justify-center text-2xl ">
+                    // done with tricks shared by generous Prakash!
+                    <div class="hidden md:block">
+                    <Show
+                        when=move || disabled.get()
+                        fallback=move || {
+                            view! {
+                                <Icon
+                                    icon=icondata::AiSearchOutlined
+                                    class=format!("{} p-1 text-2xl", bg_search_icon_class())
+                                />
+                            }
+                        }
+                    >
+                        <Icon
+                            icon=icondata::AiSearchOutlined
+                            class=format!("{} p-1 text-2xl", bg_search_icon_class())
+                        />
+
+                    </Show>
+                    </div>
+                    <div class="block md:hidden text-lg">
+
+                    <Show
+                    when=move || disabled.get()
+                    fallback=move || {
+                        view! {
+                            <div class="disabled">Search</div>
+                        }
+                    }
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    ></path>
-                </svg>
-            </button>
-        </div>
-    }
-}
-
-#[component]
-fn MostPopular() -> impl IntoView {
-    view! {
-        <div class="bg-white rounded-lg shadow-lg p-8">
-            <div class="flex flex-col justify-center">
-                <h1 class="text-2xl font-bold text-center mt-8">Most Popular Destinations</h1>
-                <div class="flex space-x-2 justify-center mt-8">
-                    <Card />
-                    <Card />
-                    <Card />
+                        Search
+                </Show>
                 </div>
-            </div>
-        </div>
-    }
-}
 
-#[component]
-fn Card() -> impl IntoView {
-    view! {
-        <div>
-            <img
-                src="/img/home.webp"
-                alt="Card Image"
-                class="w-full h-48 object-cover rounded-xl"
-            />
-            <div class="p-4">
-                <h3 class="text-lg font-semibold">Card Title</h3>
-                <p class="text-gray-600">This is a description of the card.</p>
+                </div>
+            </button>
             </div>
+            <div class="h-1 block md:hidden"></div>
+
         </div>
     }
 }

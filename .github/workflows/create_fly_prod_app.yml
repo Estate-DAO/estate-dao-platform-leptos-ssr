@@ -1,0 +1,46 @@
+name: Create fly prod app
+on:
+    workflow_dispatch:
+      inputs:
+        deploy_message:
+          description: 'Deployment message'
+          required: false
+          default: 'Create prod app'
+          type: string
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create:
+    name: Create fly app for prod
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+      contents: write
+    
+    
+    steps:
+      
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Create new app with fly
+        run: flyctl apps create --name "nofeebooking" --org estate-dao-769
+
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+
+      - name: Export secret with single quotes
+        run: |
+          flyctl secrets set  NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}  --app "nofeebooking" --stage
+          flyctl secrets set  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY"  --app "nofeebooking" --stage
+          flyctl secrets set  PROVAB_PROD_HEADERS="$PROVAB_PROD_HEADERS"  --app "nofeebooking" --stage
+        
+        env:
+          PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
+          ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}}
+    

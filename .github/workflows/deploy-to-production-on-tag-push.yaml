@@ -1,0 +1,47 @@
+name: Deploy to Fly prod on tag push
+on:  
+  push:
+    tags:
+      - 'v*'
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  build_check_prod:
+    uses: ./.github/workflows/build-check-prod.yml
+    with:
+      publish-artifact: true
+
+  deploy:
+    name: Deploy
+    needs: build_check_prod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-debian
+      - run: chmod +x target/release/estate-fe
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Export secret with single quotes
+        run: |
+          flyctl secrets set  NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}  --app "nofeebooking" --stage
+          flyctl secrets set  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY"  --app "nofeebooking" --stage
+          flyctl secrets set  PROVAB_HEADERS="$PROVAB_HEADERS"  --app "nofeebooking" --stage
+          
+        env:
+          PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
+          ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}}
+      
+      - name: Deploy a docker container to Fly.io
+        run: flyctl deploy --remote-only -c fly-prod.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}

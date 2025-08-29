@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+# Get all staged Rust files
+files=$(git diff --cached --name-only --diff-filter=d | grep "\.rs$" || true)
+
+if [ -n "$files" ]; then
+    # Run cargo fmt
+    cargo fmt -- --check || {
+        echo "❌ Rust files must be formatted using cargo fmt"
+        echo "Running cargo fmt..."
+        cargo fmt
+        echo "Please stage the formatted files and commit again"
+        exit 1
+    }
+fi

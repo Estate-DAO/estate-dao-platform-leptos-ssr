@@ -1,7 +1,6 @@
-<picture>
-    <source srcset="https://raw.githubusercontent.com/leptos-rs/leptos/main/docs/logos/Leptos_logo_Solid_White.svg" media="(prefers-color-scheme: dark)">
-    <img src="https://raw.githubusercontent.com/leptos-rs/leptos/main/docs/logos/Leptos_logo_RGB.svg" alt="Leptos Logo">
-</picture>
+
+## Install pre commit hooks 
+Run `bash scripts/install_pre_commit.sh` from the repo root.
 
 # Leptos Axum Starter Template
 
@@ -85,6 +84,65 @@ LEPTOS_RELOAD_PORT="3001"
 ```
 Finally, run the server binary.
 
-## Licensing
 
-This template itself is released under the Unlicense. You should replace the LICENSE for your own application with an appropriate license if you plan to release it publicly.
+
+--------------------------------------------
+
+
+
+[ ] payment page design
+[ ] booking confirmation page design
+[ ] Destination - City, Country - on_select - CityId
+[ ] 'See all photos' in center
+_______________________________________________________________________
+
+[x] room api call - de-duplication + take top 5
+
+[x] hotel list - "no hotel found in center"
+  git Branch - "block_room"
+
+[] use_query in the room + hotel_details 
+  https://github.com/Estate-DAO/estatedao_fe/blob/6175c04c0e7088d5414a8f2d9b69d07b1b216db2/ssr/src/component/destination_picker.rs#L80-L91
+
+[] Destination - In a separate Branch - destination_dynamic
+
+[] sort_by -- component -- in separate branch -- filters_sort_dynamic
+
+
+
+
+Toggle dialog - Current: None, Requested: CityListComponent
+ Dialog matches current - closing
+ Setting dialog to: None
+ is_open called
+ Checking if destination is open: false
+ is_open called
+ Checking if destination is open: false
+
+
+
+
+
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum OpenDialogComponent{
+    CityListComponent,   
+    DateComponent, 
+    GuestComponent,
+    #[default] 
+    None, 
+}
+
+impl OpenDialogComponent{
+    pub fn matches(&self, other: OpenDialogComponent) -> bool {
+    }
+
+    pub fn is_destination_open(&self) -> bool {
+    }
+
+    pub fn is_date_open(&self) -> bool {
+    }
+
+    pub fn is_guest_open(&self) -> bool {
+    }
+}

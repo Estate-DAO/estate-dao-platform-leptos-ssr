@@ -1,0 +1,52 @@
+name: Deploy to Fly staging on push to main
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_check:
+    uses: ./.github/workflows/build-check.yml
+    with:
+      publish-artifact: true
+
+  deploy:
+    name: Deploy
+    needs: build_check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-musl
+      - run: chmod +x target/x86_64-unknown-linux-musl/release/estate-fe
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Export secret with single quotes
+        run: |
+          
+          flyctl secrets set  NOW_PAYMENTS_USDC_ETHEREUM_API_KEY=${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}  --app "estatefe" --stage
+          flyctl secrets set  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY"  --app "estatefe" --stage
+          flyctl secrets set  PROVAB_HEADERS="$PROVAB_HEADERS"  --app "estatefe" --stage
+          
+        env:
+          PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
+          ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}}
+      
+      - name: Deploy a docker container to Fly.io
+        run: flyctl deploy --remote-only -c fly-staging.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+
+      # # post_deploy:
+      # # trigger automation test in another repo as post deploy action
+      # - name: Trigger automation testing workflow in 'estate-fe-e2e-test' repo
+      #   run: |
+      #     curl -X POST https://api.github.com/repos/yral-dapp/estate-fe-e2e-test/dispatches \
+      #     -H 'Accept: application/vnd.github+json' \
+      #     -H 'Authorization: token ${{ secrets.TOKEN_FINE_GRAINED_E2E_TESTS }}' \
+      #     -d '{"event_type": "call"}'

@@ -1,0 +1,1029 @@
+// #![allow(unused)]
+// #![allow(dead_code)]
+
+// use crate::api::_default_passenger_age;
+// use crate::api::block_room;
+// use crate::api::canister::add_booking::add_booking_backend;
+// use crate::api::consts::get_ipn_callback_url;
+// use crate::api::consts::get_payments_url_v2;
+// use crate::api::consts::PaymentProvider;
+// use crate::api::consts::{get_payments_url, get_price_amount_based_on_env};
+// use crate::api::get_room;
+// use crate::api::payments::create_stripe_checkout_session;
+// use crate::api::payments::nowpayments_create_invoice;
+// use crate::api::payments::nowpayments_get_payment_status;
+// use crate::api::payments::ports::CreateInvoiceRequest;
+// use crate::api::payments::ports::CreateInvoiceResponse;
+// use crate::api::payments::ports::GetPaymentStatusRequest;
+// use crate::api::payments::stripe_create_invoice;
+// use crate::api::payments::stripe_service;
+// use crate::api::payments::NowPayments;
+// use crate::canister::backend;
+// use crate::canister::backend::BePaymentApiResponse;
+// use crate::canister::backend::HotelDetails;
+// use crate::canister::backend::HotelRoomDetails;
+// use crate::canister::backend::RoomDetails;
+// use crate::canister::backend::UserDetails;
+// use crate::component::code_print::DebugDisplay;
+// use crate::component::NavigatingErrorPopup;
+// use crate::component::{Divider, FilterAndSortBy, PriceDisplay, StarRating};
+// use crate::component::{ErrorPopup, Navbar, SkeletonCards, SpinnerGray};
+// use crate::page::InputGroup;
+// use crate::state::api_error_state::{ApiErrorState, ApiErrorType};
+// use crate::state::hotel_details_state::PricingBookNowState;
+// use crate::state::search_state::{
+//     BlockRoomResults, ConfirmationResults, HotelInfoResults, SearchCtx, SearchListResults,
+// };
+// use crate::state::view_state::{AdultDetail, BlockRoomCtx, ChildDetail, HotelInfoCtx};
+// use crate::utils::app_reference::{generate_app_reference, BookingId};
+// use crate::utils::booking_id::PaymentIdentifiers;
+// use crate::utils::pluralize;
+// use leptos::*;
+// use leptos_icons::*;
+// use leptos_router::use_navigate;
+// // use web_sys::localStorage;
+// use serde::{Deserialize, Serialize};
+// use serde_json::Value;
+
+// use crate::api::payments::ports::PaymentGateway;
+// use crate::{
+//     api::{book_room, BookRoomRequest, BookingStatus, PassengerDetail, PaxType, RoomDetail},
+//     app::AppRoutes,
+// };
+// use chrono::NaiveDate;
+// // use leptos::logging::log;
+// use crate::{log, warn};
+
+// #[component]
+// pub fn BlockRoomPage() -> impl IntoView {
+//     // ================ SETUP context  ================
+//     let search_ctx: SearchCtx = expect_context();
+//     let search_list_results: SearchListResults = expect_context();
+//     let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
+
+//     let hotel_info_results: HotelInfoResults = expect_context();
+//     let hotel_info_ctx: HotelInfoCtx = expect_context();
+
+//     let confirmation_results: ConfirmationResults = expect_context();
+//     // let api_error_state = ApiErrorState::from_leptos_context();
+
+//     let navigate = use_navigate();
+
+//     let block_room_ctx = expect_context::<BlockRoomCtx>();
+//     let block_room_results_context: BlockRoomResults = expect_context();
+//     let block_room_results_context_cloned: BlockRoomResults = block_room_results_context.clone();
+
+//     // ================ Pricing component signals  ================
+//     let room_price = Signal::derive(move || BlockRoomResults::get_room_price());
+//     log!("[block_room_page] - room_price - {}", room_price.get());
+
+//     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
+
+//     // let total_price = create_memo(move |_| {
+//     let total_price = Signal::derive(move || {
+//         let room_price = room_price.get();
+//         let nights = num_nights.get();
+//         let total = room_price * nights as f64;
+//         log!("[block_room_page] - total_price - {}", total);
+//         total
+//     });
+
+//     // ================  Form Fields signals  ================
+
+//     let is_form_valid: RwSignal<bool> = create_rw_signal(false);
+
+//     let adult_count = create_memo(move |_| search_ctx.guests.get().adults.get());
+
+//     let child_count = create_memo(move |_| search_ctx.guests.get().children.get());
+
+//     let children_ages = search_ctx.guests.get().children_ages.clone();
+
+//     let num_rooms = Signal::derive(move || search_ctx.guests.get().rooms.get());
+
+//     BlockRoomCtx::create_adults(adult_count.get() as usize);
+//     BlockRoomCtx::create_children(child_count.get() as usize);
+//     BlockRoomCtx::set_terms_accepted(false);
+
+//     let (trigger_validation, set_trigger_validation) = create_signal(0);
+
+//     let update_adult = move |index: usize, field: &str, value: String| {
+//         BlockRoomCtx::update_adult(index, field, value);
+//     };
+
+//     let update_child = move |index: usize, field: &str, value: String| {
+//         BlockRoomCtx::update_child(index, field, value);
+//     };
+
+//     let update_terms = move |checked: bool| {
+//         BlockRoomCtx::set_terms_accepted(checked);
+//         // Trigger validation check
+//     };
+
+//     // ================  Form Validation signals  ================
+
+//     let adults = block_room_ctx.adults;
+//     let children = block_room_ctx.children;
+//     let terms_accepted = block_room_ctx.terms_accepted;
+
+//     // Validation logic function
+//     let validate_form = move || {
+//         let adult_list = adults.get();
+//         let child_list = children.get();
+
+//         // Helper function for email validation
+//         let is_valid_email = |email: &str| email.contains('@') && email.contains('.');
+
+//         // Helper function for phone validation
+//         let is_valid_phone = |phone: &str| phone.chars().all(|c| c.is_digit(10));
+//         // |phone: &str| phone.len() >= 10 && phone.chars().all(|c| c.is_digit(10));
+
+//         // Validate primary adult
+//         let primary_adult_valid = adult_list.first().map_or(false, |adult| {
+//             !adult.first_name.trim().is_empty()
+//                 && adult
+//                     .email
+//                     .as_ref()
+//                     .map_or(false, |e| !e.trim().is_empty() && is_valid_email(e))
+//                 && adult
+//                     .phone
+//                     .as_ref()
+//                     .map_or(false, |p| !p.trim().is_empty() && is_valid_phone(p))
+//         });
+
+//         // Validate other adults
+//         let other_adults_valid = adult_list
+//             .iter()
+//             .skip(1)
+//             .all(|adult| !adult.first_name.trim().is_empty());
+
+//         // Validate children
+//         let children_valid = child_list
+//             .iter()
+//             .all(|child| !child.first_name.trim().is_empty() && child.age.is_some());
+
+//         // Check if terms are accepted
+//         let terms_valid = terms_accepted.get();
+
+//         // Generate and store app_reference in local storage if we have an email
+//         if let Some(email) = adults.get().first().and_then(|adult| adult.email.clone()) {
+//             let booking_id_signal = generate_app_reference(email.clone());
+//             log!(
+//                 "form_validation - booking_id_signal - {:?}",
+//                 booking_id_signal.get()
+//             );
+//         }
+
+//         let booking_id_is_valid = BookingId::read_from_local_storage().is_some();
+//         // Set the value of is_form_valid based on validation results
+//         is_form_valid.set(
+//             primary_adult_valid
+//                 && other_adults_valid
+//                 && children_valid
+//                 && terms_valid
+//                 && booking_id_is_valid,
+//         );
+
+//         // log!(
+//         //     "form_validation - hotel_info_results.sorted_rooms - {:?}",
+//         //     hotel_info_results.sorted_rooms.get()
+//         // );
+//     };
+
+//     // Call the validation function whenever inputs change
+//     let _ = create_effect(move |_| {
+//         validate_form();
+//     });
+
+//     // ================  Page Nav and Redirect signals  ================
+
+//     let nav = navigate.clone();
+
+//     let go_back_to_details = move |ev: ev::MouseEvent| {
+//         ev.prevent_default();
+//         let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
+//     };
+
+//     let hotel_code = hotel_info_ctx.hotel_code.get();
+//     let search_list_results = search_list_results.get_value();
+
+//     let confirmation_action = create_action(move |()| {
+//         let nav = nav.clone(); // Use the cloned version here
+
+//         async move {
+//             nav(AppRoutes::Confirmation.to_string(), Default::default());
+//         }
+//     });
+
+//     // ================  Confirmation Modal signals  ================
+
+//     let show_modal = create_rw_signal(false);
+//     let block_room_called = create_rw_signal(false);
+//     let open_modal = move |_| {
+//         show_modal.set(true);
+//     };
+
+//     let payment_button_enabled = create_rw_signal(true);
+
+//     let should_not_have_loading_spinner: Signal<bool> = Signal::derive(move || {
+//         log!(
+//             "[block_room_page] - should_not_have_loading_spinner - block_room_called: {}",
+//             block_room_called.get()
+//         );
+//         log!(
+//             "[block_room_page] - should_not_have_loading_spinner - payment_button_enabled: {}",
+//             payment_button_enabled.get()
+//         );
+//         block_room_called.get() && payment_button_enabled.get()
+//     });
+
+//     let _block_room_call = create_resource(show_modal, move |modal_value| {
+//         let hotel_info_results = expect_context::<HotelInfoResults>();
+//         // let room_counters = hotel_info_results.block_room_counters.get_untracked();
+//         block_room_called.set(false);
+//         // log!("block_room.rs -- component room_coutners value - \n {room_counters:#?}");
+//         async move {
+//             if modal_value {
+//                 // log!("modal open. calling block API now");
+
+//                 // log!("{:?}", room_counters ); // Add this line
+//                 // Reset previous block room results
+//                 BlockRoomResults::reset();
+
+//                 let uniq_room_ids = PricingBookNowState::room_unique_ids();
+//                 log!("[block_room_page] - {uniq_room_ids:#?}");
+
+//                 let block_room_request = hotel_info_results.block_room_request(uniq_room_ids);
+
+//                 log!("[block_room_page] - block_room_request - {block_room_request:?}");
+//                 // Call server function inside action
+//                 spawn_local(async move {
+//                     // TODO(temporary-fix): temporarily disable second call to block room
+
+//                     let result = block_room(block_room_request).await.ok();
+//                     let res = result.clone();
+
+//                     // Get the API error state and handle any errors
+//                     let api_error_state = ApiErrorState::from_leptos_context();
+//                     if api_error_state.handle_block_room_response(result.clone(), None) {
+//                         BlockRoomResults::reset();
+//                         return;
+//                     }
+
+//                     let block_room_id = res.and_then(|resp| resp.get_block_room_id());
+//                     let res2 = result.clone();
+//                     BlockRoomResults::set_results(result);
+//                     BlockRoomResults::set_id(block_room_id);
+//                     if let Some(_) = res2.clone() {
+//                         // if the block_room call fails, we don't want to enable the payment button
+//                         block_room_called.set(true);
+//                     }
+
+//                     let res: BlockRoomResults = expect_context();
+//                     log!(
+//                         "[block_room_page] - block_room_results - {:?}",
+//                         res.block_room_results.get()
+//                     );
+//                 });
+//             } else {
+//                 block_room_called.set(false);
+//                 log!("[block_room_page] - modal closed. Nothing to do");
+//             }
+//         }
+//     });
+
+//     let handle_pay_signal = create_rw_signal(String::new());
+
+//     let images_signal = move || {
+//         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+//             hotel_info_api_response.get_images()
+//         } else {
+//             vec![]
+//         }
+//     };
+
+//     let hotel_name_signal = move || {
+//         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+//             hotel_info_api_response.get_hotel_name()
+//         } else {
+//             "".into()
+//         }
+//     };
+
+//     let hotel_address_signal = move || {
+//         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+//             hotel_info_api_response.get_address()
+//         } else {
+//             "".into()
+//         }
+//     };
+
+//     let call_add_booking_backend_action = create_action(
+//         move |invoice_response_ref: &Option<CreateInvoiceResponse>| {
+//             // Clone the input reference for use in the async block
+//             let invoice_response = invoice_response_ref.clone();
+
+//             // User's existing let bindings from Step 36 to define destination, date_range, etc.
+//             // Ensure `email_cloned` and `booking` (including `booking_id_cloned`) are correctly defined here.
+//             let destination = SearchCtx::get_backend_compatible_destination_untracked();
+//             let date_range = SearchCtx::get_backend_compatible_date_range_untracked();
+//             let num_adults = BlockRoomCtx::get_num_adults_untracked();
+//             let num_children = BlockRoomCtx::get_num_children_untracked();
+
+//             let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
+//             let hotel_token = SearchListResults::get_result_token(hotel_code.clone());
+//             let hotel_name = HotelInfoResults::get_hotel_name_untracked();
+//             let hotel_location = HotelInfoResults::get_hotel_location_untracked();
+
+//             let room_details: Vec<RoomDetails> = PricingBookNowState::get_room_counters().into();
+
+//             let block_room_id = block_room_results_context_cloned
+//                 .block_room_id
+//                 .get()
+//                 .unwrap_or_default();
+
+//             log!(
+//                 "[block_room_page] - handle_pay_click - block_room_id> {:?}",
+//                 block_room_id
+//             );
+
+//             let user_phone = BlockRoomCtx::get_user_phone_untracked();
+//             let user_name = BlockRoomCtx::get_user_name_untracked();
+//             let children_backend: Vec<backend::ChildDetail> =
+//                 BlockRoomCtx::get_children_untracked()
+//                     .into_iter()
+//                     .map(backend::ChildDetail::from)
+//                     .collect();
+//             let adults_backend: Vec<backend::AdultDetail> = BlockRoomCtx::get_adults_untracked()
+//                 .into_iter()
+//                 .map(backend::AdultDetail::from)
+//                 .collect();
+
+//             let user_selected_hotel_room_details = HotelRoomDetails {
+//                 destination,
+//                 requested_payment_amount: total_price.get(),
+//                 date_range,
+//                 room_details,
+//                 hotel_details: HotelDetails {
+//                     hotel_code: hotel_code.clone(),
+//                     hotel_name: hotel_name.clone(),
+//                     hotel_image: HotelInfoResults::get_at_least_one_hotel_image_untracked(),
+//                     hotel_location: hotel_location.clone(),
+//                     block_room_id,
+//                     hotel_token,
+//                 },
+//             };
+//             log!(
+//                 "[block_room_page] - handle_pay_click - user_selected_hotel_room_details> {:?}",
+//                 user_selected_hotel_room_details
+//             );
+
+//             let guests = UserDetails {
+//                 children: children_backend,
+//                 adults: adults_backend,
+//             };
+
+//             // Define email_string from primary adult's details
+//             let email_string = BlockRoomCtx::get_adults_untracked()
+//             .first()
+//             .and_then(|adult| adult.email.clone())
+//             .unwrap_or_else(|| {{
+//                 warn!("[block_room_page] - call_add_booking_backend_action - Could not retrieve email from primary adult. Using empty string.");
+//                 String::new()
+//             }});
+
+//             let email = BlockRoomCtx::get_email_untracked();
+//             let email_cloned = email.clone();
+
+//             let booking_id = BookingId::get_backend_compatible_booking_id_untracked(email.clone());
+//             let booking_id_clone = booking_id.clone();
+//             let order_id =
+//                 PaymentIdentifiers::order_id_from_app_reference(&booking_id.app_reference, &email);
+
+//             let app_reference = booking_id.app_reference;
+
+//             // todo you were here. do this
+//             let payment_details = crate::canister::backend::PaymentDetails {
+//                 booking_id: booking_id_clone.clone(),
+//                 ..Default::default()
+//             };
+
+//             let booking = crate::canister::backend::Booking {
+//                 user_selected_hotel_room_details,
+//                 guests,
+//                 booking_id: booking_id_clone.clone(),
+//                 book_room_status: None,
+//                 payment_details,
+//             };
+
+//             log!(
+//                 "[block_room_page] - handle_pay_click - booking - {:#?}",
+//                 booking
+//             );
+
+//             // spawn_local(
+//             async move {
+//                 match invoice_response {
+//                     None => {
+//                         warn!("[block_room_page] - handle_pay_click - invoice_response is None");
+//                     }
+
+//                     Some(resp) => {
+//                         log!("[block_room_page] - handle_pay_click - Processing CreateInvoiceResponse");
+//                         let value_for_serverfn: String = serde_json::to_string(&booking).unwrap();
+
+//                         match add_booking_backend(email_cloned, value_for_serverfn).await {
+//                             Ok(response) => {
+//                                 log!("\n\n\n ____________WORKING>>>>\n\n{:#}", response);
+//                                 #[cfg(feature = "mock-provab")]
+//                                 {
+//                                     let _ = window().location().assign(&get_payments_url(""));
+//                                 }
+//                                 #[cfg(not(feature = "mock-provab"))]
+//                                 {
+//                                     let _ = window().location().assign(&resp.invoice_url);
+//                                 }
+//                             }
+//                             Err(e) => {
+//                                 warn!("[block_room_page] - handle_pay_click - Error add_booking_backend serverFn {:?}", e);
+//                             }
+//                         }
+//                     }
+//                 }
+//                 // });
+//             }
+//         },
+//     );
+
+//     let handle_pay_click = create_action(move |payment_method: &String| {
+//         // let handle_pay_click = create_resource(handle_pay_signal, move |payment_method: String| {
+//         let hotel_code_cloned = hotel_code.clone();
+//         let search_list_results_cloned = search_list_results.clone();
+//         let payment_method = payment_method.clone();
+
+//         async move {
+//             match payment_method.as_str() {
+//                 "stripe" => {
+//                     let stripe_checkout_session =
+//                         create_stripe_checkout_session(total_price.get()).ok();
+
+//                     if stripe_checkout_session.is_none() {
+//                         warn!("[block_room_page] - handle_pay_click - stripe_checkout_session could not be created - None");
+//                         return;
+//                     }
+
+//                     let stripe_checkout_session = stripe_checkout_session.unwrap();
+
+//                     log!(
+//                         "[block_room_page] - handle_pay_click - stripe_checkout_session> {:#?}",
+//                         stripe_checkout_session
+//                     );
+
+//                     let stripe_checkout_session_json_str =
+//                         serde_json::to_string(&stripe_checkout_session);
+//                     if let Err(e) = stripe_checkout_session_json_str {
+//                         log!(
+//                             "[Stripe] Failed to serialize json data with serde_path_to_error: {:?}",
+//                             e
+//                         );
+//                         return;
+//                     }
+
+//                     let stripe_checkout_session_json_str =
+//                         stripe_checkout_session_json_str.unwrap();
+
+//                     spawn_local(async move {
+//                         let stripe_invoice_response =
+//                             stripe_create_invoice(stripe_checkout_session_json_str).await;
+//                         log!(
+//                             "[block_room_page] - handle_pay_click - stripe_invoice_response> {:?}",
+//                             stripe_invoice_response
+//                         );
+//                         match stripe_invoice_response {
+//                             Err(e) => {
+//                                 warn!("[block_room_page] - handle_pay_click - stripe_invoice_response is Err: {:?}", e);
+//                                 call_add_booking_backend_action.dispatch(None);
+//                             }
+//                             Ok(resp) => {
+//                                 log!("[block_room_page] - handle_pay_click - Processing CreateInvoiceResponse");
+//                                 let create_invoice_response: CreateInvoiceResponse = resp.into();
+//                                 call_add_booking_backend_action
+//                                     .dispatch(Some(create_invoice_response));
+//                             }
+//                         }
+//                     })
+//                 }
+//                 "NOWPayments" => {
+//                     let email = adults
+//                         .get()
+//                         .first()
+//                         .and_then(|adult| adult.email.clone())
+//                         .unwrap_or_default();
+
+//                     // Get stored booking id or generate new one
+//                     let booking_id = BookingId::read_from_local_storage().unwrap_or_else(|| {
+//                         generate_app_reference(email.clone())
+//                             .get()
+//                             .expect("[block_room_page] - Failed to generate booking id")
+//                     });
+
+//                     let backend_booking_id = backend::BookingId {
+//                         app_reference: booking_id.app_reference,
+//                         email: email.clone(),
+//                     };
+//                     let booking_id_cloned = backend_booking_id.clone();
+
+//                     // Create invoice request with order_id
+//                     let invoice_request = CreateInvoiceRequest {
+//                         price_amount: get_price_amount_based_on_env(total_price.get() as u32),
+//                         price_currency: "USD".to_string(),
+//                         order_id: PaymentIdentifiers::order_id_from_app_reference(
+//                             &booking_id_cloned.app_reference,
+//                             &email,
+//                         ),
+//                         order_description: "Hotel Room Booking".to_string(),
+//                         ipn_callback_url: get_ipn_callback_url(PaymentProvider::NowPayments),
+//                         success_url: get_payments_url_v2("success", PaymentProvider::NowPayments),
+//                         cancel_url: get_payments_url_v2("cancel", PaymentProvider::NowPayments),
+//                         partially_paid_url: get_payments_url_v2(
+//                             "partial",
+//                             PaymentProvider::NowPayments,
+//                         ),
+//                         is_fixed_rate: false,
+//                         is_fee_paid_by_user: false,
+//                     };
+
+//                     spawn_local(async move {
+//                         let create_invoice_response =
+//                             nowpayments_create_invoice(invoice_request).await.ok();
+//                         log!("initating add_booking_backend action");
+//                         call_add_booking_backend_action.dispatch(create_invoice_response);
+//                         log!("add_booking_backend action finished");
+//                     });
+//                 }
+//                 _ => { /* Handle other payment methods */ }
+//             }
+//             // show_modal.set(false);
+//             payment_button_enabled.set(false);
+//         }
+//     });
+
+//     // let is_form_valid = create_memo(move |_| {
+//     //     trigger_validation.get();
+
+//     //     let adult_list = adults.get();
+//     //     let child_list = children.get();
+
+//     //     // Validate primary adult (needs all fields)
+//     //     let primary_adult_valid = adult_list.first().map_or(false, |adult| {
+//     //         !adult.first_name.is_empty()
+//     //             && adult.email.as_ref().map_or(false, |e| !e.is_empty())
+//     //             && adult.phone.as_ref().map_or(false, |p| !p.is_empty())
+//     //     });
+
+//     //     // Validate other adults (only first name required)
+//     //     let other_adults_valid = adult_list
+//     //         .iter()
+//     //         .skip(1)
+//     //         .all(|adult| !adult.first_name.is_empty());
+
+//     //     // Validate children (first name and age required)
+//     //     let children_valid = child_list
+//     //         .iter()
+//     //         .all(|child| !child.first_name.is_empty() && child.age.is_some());
+
+//     //     // Terms must be accepted
+//     //     let terms_valid = terms_accepted.get();
+
+//     //     // All conditions must be true
+//     //     primary_adult_valid && other_adults_valid && children_valid && terms_valid
+//     // });
+
+//     let destination = create_memo(move |_| search_ctx.destination.get().unwrap_or_default());
+
+//     let insert_real_image_or_default = {
+//         move || {
+//             if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
+//                 hotel_info_api_response
+//                     .get_images()
+//                     .first()
+//                     .cloned()
+//                     .unwrap_or_else(|| "/img/home.webp".to_string())
+//             } else {
+//                 "/img/home.webp".to_string()
+//             }
+//         }
+//     };
+
+//     let show_payment_pricing_details =
+//         Signal::derive(move || BlockRoomResults::has_valid_room_price());
+
+//     view! {
+//     <section class="relative min-h-screen bg-gray-50">
+//         <Navbar />
+//         // <ErrorPopup />
+//        <NavigatingErrorPopup
+//           route="/"
+//           label="Go to Home"
+//           error_type=ApiErrorType::BlockRoom
+//         />
+
+//         <div class="max-w-5xl mx-auto px-2 sm:px-6">
+//             <div class="flex items-center py-8">
+//                 <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
+//                     <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
+//                 </span>
+//                 <h1 class="ml-2 sm:ml-4 text-2xl sm:text-3xl font-bold">"You're just one step away!"</h1>
+//             </div>
+//         </div>
+//         <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-6">
+//             <div class="w-full lg:w-3/5 flex flex-col gap-8 order-1">
+//                 <div class="p-2 sm:p-6 bg-white rounded-2xl shadow w-full">
+//                     <div class="flex items-center gap-3 mb-2">
+//                         <img
+//                             src={move || {
+//                                 let imgs = images_signal();
+//                                 if !imgs.is_empty() {
+//                                     imgs[0].clone()
+//                                 } else {
+//                                     "/img/home.webp".to_string()
+//                                 }
+//                             }}
+//                             alt={move || hotel_info_results.search_result.get().as_ref().map(|r| r.get_hotel_name()).unwrap_or_default()}
+//                             class="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
+//                         />
+//                         <div class="flex flex-col justify-center min-h-[2.5rem]">
+//                             <div class="font-bold text-base sm:text-lg min-h-[1.25rem]">
+//                                 {move || hotel_info_results.search_result.get().as_ref().map(|r| r.get_hotel_name()).unwrap_or_default()}
+//                             </div>
+//                             <div class="text-gray-500 text-sm min-h-[1rem]">
+//                                 {move || hotel_info_results.search_result.get().as_ref().map(|r| r.get_address()).unwrap_or_default()}
+//                             </div>
+//                         </div>
+//                     </div>
+//                     <hr class="my-3 border-gray-200" />
+//                     <div class="flex items-center justify-between mb-3">
+//                         <div class="flex flex-col items-start">
+//                             <span class="text-xs text-gray-400">Check-in</span>
+//                             <span class="font-semibold text-base">{move || search_ctx.date_range.get().dd_month_yyyy_start()}</span>
+//                         </div>
+//                         <div class="flex flex-col items-center">
+//                             <span class="bg-gray-100 rounded-full px-3 py-1 text-xs font-semibold text-gray-700 mb-1">{move || search_ctx.date_range.get().formatted_nights()}</span>
+//                         </div>
+//                         <div class="flex flex-col items-end">
+//                             <span class="text-xs text-gray-400">Check-out</span>
+//                             <span class="font-semibold text-base">{move || search_ctx.date_range.get().dd_month_yyyy_end()}</span>
+//                         </div>
+//                     </div>
+//                     <hr class="my-3 border-gray-200" />
+//                     <div class="flex items-center gap-2 mt-2">
+//                         <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-lg" />
+//                         <span class="text-xs text-gray-400 font-semibold">Guests & Rooms</span>
+//                         <span class="font-bold text-sm ml-2 text-right">{move || format!("{} Room{}{} {} Adult{}{} {} child{}", num_rooms.get(), if num_rooms.get() == 1 { "" } else { "s" }, if num_rooms.get() > 0 { "," } else { "" }, adult_count.get(), if adult_count.get() == 1 { "" } else { "s" }, if child_count.get() > 0 { "," } else { "" }, child_count.get(), if child_count.get() == 1 { "" } else { "ren" })}</span>
+//                     </div>
+//                 </div>
+//                 // <!-- Payment summary card for mobile -->
+//                 <div class=" lg:hidden mb-6 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex flex-col items-stretch">
+//                     <h2 class="mb-4 text-2xl font-bold flex items-end">
+//                         <span class="text-3xl font-bold">{move || format!("${:.3}", room_price.get())}</span>
+//                         <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+//                     </h2>
+//                     <Divider class="my-4".into() />
+//                     <div class="price-breakdown space-y-4 mt-4">
+//                         <div class="flex justify-between items-center text-base">
+//                             <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
+//                             <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
+//                         </div>
+//                         <div class="flex justify-between items-center text-base">
+//                             <span class="text-gray-700">Taxes and fees</span>
+//                             <span class="font-semibold">$0.00</span>
+//                         </div>
+//                     </div>
+//                     <Divider class="my-4".into() />
+//                     <div class="flex justify-between items-center font-bold text-lg mb-2">
+//                         <span>Total</span>
+//                         <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
+//                     </div>
+//                 </div>
+//                 // <!-- End payment summary card for mobile -->
+//                 <div class="guest-form mt-4 space-y-6">
+//                     {(0..adult_count.get())
+//                         .map(|i| {
+//                             let i_usize = i as usize;
+//                             view! {
+//                                 <div class="person-details mb-2">
+//                                     <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
+//                                         {if i == 0 {
+//                                             String::from("Primary Adult")
+//                                         } else {
+//                                             format!("Adult {}", i + 1)
+//                                         }}
+//                                     </h3>
+//                                     <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+//                                         <input
+//                                             type="text"
+//                                             placeholder="First Name *"
+//                                             class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+//                                             required=true
+//                                             on:input=move |ev| {
+//                                                 update_adult(
+//                                                     i_usize,
+//                                                     "first_name",
+//                                                     event_target_value(&ev),
+//                                                 );
+//                                                 validate_form();
+//                                             }
+//                                         />
+//                                         <input
+//                                             type="text"
+//                                             placeholder="Last Name"
+//                                             class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+//                                             required=true
+//                                             on:input=move |ev| {
+//                                                 update_adult(i_usize, "last_name", event_target_value(&ev));
+//                                                 validate_form();
+//                                             }
+//                                         />
+//                                     </div>
+//                                     {move || {
+//                                         if i == 0 {
+//                                             view! {
+//                                                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2">
+//                                                     <input
+//                                                         type="email"
+//                                                         placeholder="Email *"
+//                                                         class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+//                                                         required=true
+//                                                         on:input=move |ev| update_adult(
+//                                                             0,
+//                                                             "email",
+//                                                             event_target_value(&ev),
+//                                                         )
+//                                                     />
+//                                                     <input
+//                                                         type="tel"
+//                                                         placeholder="Phone *"
+//                                                         class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3"
+//                                                         required=true
+//                                                         on:input=move |ev| update_adult(
+//                                                             0,
+//                                                             "phone",
+//                                                             event_target_value(&ev),
+//                                                         )
+//                                                     />
+//                                                 </div>
+//                                             }
+//                                                 .into_view()
+//                                         } else {
+//                                             view! { <div></div> }.into_view()
+//                                         }
+//                                     }}
+//                                 </div>
+//                             }
+//                         })
+//                         .collect::<Vec<_>>()}
+//                         // Loop for children
+//                     {(0..child_count.get())
+//                         .map(|i| {
+//                             let i_usize = i as usize;
+//                             let age_value = children_ages.get_value_at(i as u32);
+//                                 // Get the age for the current child
+
+//                             view! {
+//                                 <div class="person-details mb-2">
+//                                     <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
+//                                         {format!("Child {}", i + 1)}
+//                                     </h3>
+//                                     <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+//                                         <input
+//                                             type="text"
+//                                             placeholder="First Name *"
+//                                             class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
+//                                             required=true
+//                                             on:input=move |ev| {
+//                                                 update_child(
+//                                                     i_usize,
+//                                                     "first_name",
+//                                                     event_target_value(&ev),
+//                                                 );
+//                                                 validate_form();
+//                                             }
+//                                         />
+//                                         <input
+//                                             type="text"
+//                                             placeholder="Last Name"
+//                                             class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
+//                                         />
+//                                         <select
+//                                             class="w-full sm:w-1/5 rounded-md border border-gray-300 bg-white p-3"
+//                                             required=true
+//                                             on:input=move |ev| {
+//                                                 update_child(i_usize, "age", event_target_value(&ev));
+//                                                 validate_form();
+//                                             }
+//                                         >
+//                                             <option disabled selected>{age_value}</option>
+//                                             {(1..18)
+//                                                 .map(|age| {
+//                                                     let selected = if age == age_value {
+//                                                         "selected"
+//                                                     } else {
+//                                                         ""
+//                                                     };
+//                                                     view! {
+//                                                         <option value=age.to_string() {selected}>{age}</option>
+//                                                     }
+//                                                 })
+//                                                 .collect::<Vec<_>>()}
+//                                         </select>
+//                                     </div>
+//                                 </div>
+//                             }
+//                         })
+//                         .collect::<Vec<_>>()}
+//                 </div>
+//                 <div class="mt-2 flex items-start">
+//                     <input
+//                         type="checkbox"
+//                         id="agree"
+//                         class="mr-2 mt-1"
+//                         on:change=move |ev| update_terms(event_target_checked(&ev))
+//                     />
+//                     <label for="agree" class="text-xs sm:text-sm text-gray-600">
+//                         "Property once booked cannot be cancelled. Confirm the details before making payment."
+//                     </label>
+//                 </div>
+//                 <button
+//                     class="mt-6 w-full rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300 text-base sm:text-lg font-bold shadow-lg block lg:hidden"
+//                     disabled=move || !is_form_valid.get()
+//                     on:click=open_modal
+//                 >
+//                     Confirm & Book
+//                 </button>
+//             </div>
+//             <div class="hidden lg:flex w-full lg:w-2/5 mb-8 lg:mb-0 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex-col items-stretch order-2 lg:sticky lg:top-28">
+//                 <h2 class="mb-4 text-2xl font-bold flex items-end">
+//                     <span class="text-3xl font-bold">{move || format!("${:.3}", room_price.get())}</span>
+//                     <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+//                 </h2>
+//                 <Divider class="my-4".into() />
+//                 <div class="price-breakdown space-y-4 mt-4">
+//                     <div class="flex justify-between items-center text-base">
+//                         <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
+//                         <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
+//                     </div>
+//                     <div class="flex justify-between items-center text-base">
+//                         <span class="text-gray-700">Taxes and fees</span>
+//                         <span class="font-semibold">$0.00</span>
+//                     </div>
+//                 </div>
+//                 <Divider class="my-4".into() />
+//                 <div class="flex justify-between items-center font-bold text-lg mb-2">
+//                     <span>Total</span>
+//                     <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
+//                 </div>
+//                 <button
+//                     class="mt-6 w-full rounded-full bg-blue-600 py-3 text-white hover:bg-blue-700 disabled:bg-gray-300 text-base sm:text-lg font-bold shadow-lg hidden lg:block"
+//                     disabled=move || !is_form_valid.get()
+//                     on:click=open_modal
+//                 >
+//                     Confirm & Book
+//                 </button>
+//             </div>
+//         </div>
+//         </section>
+//         <Show when=show_modal>
+//             <div class="fixed inset-0 flex items-center justify-center z-50">
+//                 <div
+//                     class="fixed inset-0 bg-black opacity-50"
+//                     on:click=move |_| show_modal.set(false)
+//                 />
+//                 <div class="w-full max-w-lg bg-white rounded-lg p-4 sm:p-8 z-50 shadow-xl relative mx-2">
+//                     <button
+//                         class="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 hover:text-gray-700"
+//                         on:click=move |_| show_modal.set(false)
+//                     >
+//                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+//                         </svg>
+//                     </button>
+//                     <Show when=show_payment_pricing_details>
+//                     <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
+//                     <div class="flex flex-col gap-2 mb-6">
+//                         <div class="flex justify-between items-end">
+//                             <span class="text-lg font-bold">{move || format!("${:.3}", room_price.get())}</span>
+//                             <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+//                         </div>
+//                         <div class="flex justify-between items-center text-base">
+//                             <span class="text-gray-700">{move || format!("${:.3} x {} nights", room_price.get(), num_nights.get())}</span>
+//                             <span class="font-semibold">{move || format!("${:.3}", room_price.get() * num_nights.get() as f64)}</span>
+//                         </div>
+//                         // <div class="flex justify-between items-center text-base">
+//                         //     <span class="text-gray-700">Taxes and fees</span>
+//                         //     <span class="font-semibold">$0.00</span>
+//                         // </div>
+//                         <Divider class="my-2".into() />
+//                         <div class="flex justify-between items-center font-bold text-lg mb-2">
+//                             <span>Total</span>
+//                             <span class="text-2xl">{move || format!("${:.3}", total_price.get())}</span>
+//                         </div>
+//                     </div>
+//                     </Show>
+//                     <Show when=move || { should_not_have_loading_spinner.get() } fallback={move || view!{
+//                         <div class="flex justify-center items-center h-full"> <SpinnerGray /> </div>
+//                     }}>
+//                         <div class="font-bold">
+//                             <label>"Pay with"</label>
+//                             <div class="flex flex-col w-full mt-4 space-y-2">
+//                                 <button
+//                                     class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
+//                                     // on:click=move |_| {
+//                                     //     handle_pay_click.dispatch("NOWPayments".to_owned());
+//                                     // }
+//                                 >
+//                                     // <span class="px-2 py-2"> Pay With Crypto </span>
+//                                     <span class="px-2 py-2"> {"We'll enable payments soon.".to_owned()} </span>
+//                                 </button>
+//                                 // <button
+//                                 //     class="payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative border-gray-500"
+//                                 //     on:click=move |_| {
+//                                 //         handle_pay_click.dispatch("stripe".to_owned());
+//                                 //     }
+//                                 // >
+//                                 //     <span class="px-2 py-2"> Pay With Stripe </span>
+//                                 // </button>
+
+//                                 // <p class="text-sm mt-4 mb-6 text-red-500">
+//                                 //     Note: Full payment required. Partial payments are not supported and will not secure your reservation.
+//                                 // </p>
+//                                 // <div class="text-center text-red-500 text-xs sm:text-sm mt-4 border-t pt-2 sm:pt-4">
+//                                 //     <p>Do not close this tab until your payment is fully processed</p>
+//                                 //     <p>to avoid issues with your booking.</p>
+//                                 // </div>
+//                             </div>
+//                         </div>
+//                     </Show>
+//                 </div>
+//             </div>
+//         </Show>
+//     }
+// }
+
+// // Helper function to create passenger details
+// pub fn create_passenger_details(
+//     adults: &[AdultDetail],
+//     children: &[ChildDetail],
+// ) -> Vec<PassengerDetail> {
+//     let mut passengers = Vec::new();
+
+//     // Add adults
+//     for (i, adult) in adults.iter().enumerate() {
+//         passengers.push(PassengerDetail {
+//             title: "Mr".to_string(), // todo Add logic for title selection
+//             first_name: adult.first_name.clone(),
+//             last_name: adult
+//                 .last_name
+//                 .clone()
+//                 .unwrap_or_else(|| "Not found".to_string()),
+//             email: if i == 0 {
+//                 adult.email.clone().unwrap_or_default()
+//             } else {
+//                 String::new()
+//             },
+//             pax_type: PaxType::Adult,
+//             lead_passenger: i == 0,
+//             age: _default_passenger_age(),
+//             ..Default::default()
+//         });
+//     }
+
+//     // Add children
+//     for child in children {
+//         passengers.push(PassengerDetail {
+//             title: "".to_string(),
+//             first_name: child.first_name.clone(),
+//             last_name: child
+//                 .last_name
+//                 .clone()
+//                 .unwrap_or_else(|| "Not found".to_string()),
+//             email: String::new(),
+//             pax_type: PaxType::Child,
+//             lead_passenger: false,
+//             age: child
+//                 .age
+//                 .map(|age| age as u32)
+//                 .expect("child age not defined"), // Convert u8 to u32
+//             ..Default::default()
+//         });
+//     }
+
+//     passengers
+// }
+
+use leptos::*;
+
+#[component]
+pub fn BlockRoomPage() -> impl IntoView {
+    view! {
+        <p>BlockRoomPage</p>
+    }
+}
