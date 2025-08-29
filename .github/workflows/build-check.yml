@@ -31,10 +31,12 @@ jobs:
           toolchain: "nightly-2024-11-07"
           targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
+          
+      - name: Verify Rust version
+        run: rustc --version && cargo --version
 
-      - uses: cargo-bins/cargo-binstall@main
       - name: cargo-leptos setup
-        run: cargo install cargo-leptos --version 0.2.30
+        run: cargo +nightly-2024-11-10 install cargo-leptos --version 0.2.30
 
       - name: Cache rust dependencies and build output
         uses: Swatinem/rust-cache@v2
