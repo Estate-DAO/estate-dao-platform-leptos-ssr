@@ -28,7 +28,7 @@ jobs:
       - name: Rust Setup
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "nightly"
+          toolchain: "nightly-2024-11-10"
           targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
           
@@ -38,7 +38,7 @@ jobs:
       - uses: cargo-bins/cargo-binstall@main
 
       - name: cargo-leptos setup
-        run: cargo binstall cargo-leptos --version 0.2.30
+        run: cargo binstall --no-confirm cargo-leptos --version 0.2.30
 
       - name: Cache rust dependencies and build output
         uses: Swatinem/rust-cache@v2
