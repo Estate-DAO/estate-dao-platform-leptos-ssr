@@ -26,6 +26,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-debian
+      - name: Show directory structure
+        run: tree -a || (apt-get update && apt-get install -y tree && tree -a)
+      
       - run: chmod +x target/release/estate-fe
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
