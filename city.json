@@ -4,1609 +4,2069 @@
     "city_name": "Aachen",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.776351,
+    "longitude": 6.083862
   },
   {
     "city_code": "248",
     "city_name": "Aberdeen",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 57.1482429,
+    "longitude": -2.0928095
   },
   {
     "city_code": "10368",
     "city_name": "Aguascalientes",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 21.880487,
+    "longitude": -102.2967195
   },
   {
     "city_code": "14060",
     "city_name": "Ahmedabad",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 23.0215374,
+    "longitude": 72.5800568
   },
   {
     "city_code": "4305",
     "city_name": "Aix-en-Provence",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.5298424,
+    "longitude": 5.4474738
   },
   {
     "city_code": "6868",
     "city_name": "Alicante",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.3436365,
+    "longitude": -0.4881708
   },
   {
     "city_code": "10320",
     "city_name": "Amiens",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.8941708,
+    "longitude": 2.2956951
   },
   {
     "city_code": "2180",
     "city_name": "Amsterdam",
     "country_name": "Netherlands",
     "country_code": "NL",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.3730796,
+    "longitude": 4.8924534
   },
   {
     "city_code": "7761",
     "city_name": "Angers",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 47.4739884,
+    "longitude": -0.5515588
   },
   {
     "city_code": "10255",
     "city_name": "Annecy",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.938586,
+    "longitude": 6.122228
   },
   {
     "city_code": "5479",
     "city_name": "Augsburg",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.3690341,
+    "longitude": 10.8979522
   },
   {
     "city_code": "3336",
     "city_name": "Austin",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 30.2711286,
+    "longitude": -97.7436995
   },
   {
     "city_code": "31845",
     "city_name": "Badalona",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.4493539,
+    "longitude": 2.248254
   },
   {
     "city_code": "53301",
     "city_name": "Bali",
     "country_name": "Indonesia",
     "country_code": "ID",
-    "image_url": ""
+    "image_url": "",
+    "latitude": -8.2271303,
+    "longitude": 115.1919203
   },
   {
     "city_code": "906",
     "city_name": "Baltimore",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.2908816,
+    "longitude": -76.610759
   },
   {
     "city_code": "6743",
     "city_name": "Bangalore",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 12.9767936,
+    "longitude": 77.590082
   },
   {
     "city_code": "715",
     "city_name": "Bangkok",
     "country_name": "Thailand",
     "country_code": "TH",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 13.7524938,
+    "longitude": 100.4935089
   },
   {
     "city_code": "484",
     "city_name": "Barcelona",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Blick_vom_Palau_Nacional_Barcelona_2013.jpg/640px-Blick_vom_Palau_Nacional_Barcelona_2013.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Blick_vom_Palau_Nacional_Barcelona_2013.jpg/640px-Blick_vom_Palau_Nacional_Barcelona_2013.jpg",
+    "latitude": 41.3825802,
+    "longitude": 2.177073
   },
   {
     "city_code": "5396",
     "city_name": "Bari",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.1257843,
+    "longitude": 16.8620293
   },
   {
     "city_code": "6394",
     "city_name": "Belfast",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 54.596391,
+    "longitude": -5.9301829
   },
   {
     "city_code": "2163",
     "city_name": "Berlin",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.510885,
+    "longitude": 13.3989367
   },
   {
     "city_code": "11280",
     "city_name": "Bielefeld",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.0191005,
+    "longitude": 8.531007
   },
   {
     "city_code": "4102",
     "city_name": "Bilbao",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.2630018,
+    "longitude": -2.9350039
   },
   {
     "city_code": "249",
     "city_name": "Birmingham",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.4796992,
+    "longitude": -1.9026911
   },
   {
     "city_code": "40",
     "city_name": "Bochum",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.4818111,
+    "longitude": 7.2196635
   },
   {
     "city_code": "3450",
     "city_name": "Bologna",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.4938203,
+    "longitude": 11.3426327
   },
   {
     "city_code": "5200",
     "city_name": "Mumbai",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Mumbai_Skyline_at_Night.jpg/1920px-Mumbai_Skyline_at_Night.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Mumbai_Skyline_at_Night.jpg/1920px-Mumbai_Skyline_at_Night.jpg",
+    "latitude": 19.054999,
+    "longitude": 72.8692035
   },
   {
     "city_code": "3087",
     "city_name": "Bonn",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.7352621,
+    "longitude": 7.1024635
   },
   {
     "city_code": "2172",
     "city_name": "Bordeaux",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.841225,
+    "longitude": -0.5800364
   },
   {
     "city_code": "907",
     "city_name": "Boston",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 42.3554334,
+    "longitude": -71.060511
   },
   {
     "city_code": "12603",
     "city_name": "Bradford",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.7944229,
+    "longitude": -1.7519186
   },
   {
     "city_code": "2168",
     "city_name": "Bremen",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.0758196,
+    "longitude": 8.8071646
   },
   {
     "city_code": "5279",
     "city_name": "Brescia",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.5398022,
+    "longitude": 10.2200214
   },
   {
     "city_code": "8165",
     "city_name": "Brest",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.3905283,
+    "longitude": -4.4860088
   },
   {
     "city_code": "6321",
     "city_name": "Bristol",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.4538022,
+    "longitude": -2.5972985
   },
   {
     "city_code": "11523",
     "city_name": "Cagliari",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.2171994,
+    "longitude": 9.113311
   },
   {
     "city_code": "250",
     "city_name": "Cardiff",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.4816546,
+    "longitude": -3.1791934
   },
   {
     "city_code": "1086",
     "city_name": "Cartagena",
     "country_name": "Colombia",
     "country_code": "CO",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 10.4265566,
+    "longitude": -75.5441671
   },
   {
     "city_code": "2585",
     "city_name": "Catania",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 37.5023612,
+    "longitude": 15.0873718
   },
   {
     "city_code": "14544",
     "city_name": "Celaya",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 20.521788,
+    "longitude": -100.8140458
   },
   {
     "city_code": "909",
     "city_name": "Charlotte",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.2272086,
+    "longitude": -80.8430827
   },
   {
     "city_code": "42",
     "city_name": "Chemnitz",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.8323531,
+    "longitude": 12.918914
   },
   {
     "city_code": "13607",
     "city_name": "Chiba",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.6070629,
+    "longitude": 140.1062653
   },
   {
     "city_code": "910",
     "city_name": "Chicago",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.8755616,
+    "longitude": -87.6244212
   },
   {
     "city_code": "2828",
     "city_name": "Chihuahua",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 28.6368669,
+    "longitude": -106.076745
   },
   {
     "city_code": "66668",
     "city_name": "Clermont-Ferrand",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.7774551,
+    "longitude": 3.0819427
   },
   {
     "city_code": "2169",
     "city_name": "Cologne",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.938361,
+    "longitude": 6.959974
   },
   {
     "city_code": "12876",
     "city_name": "Columbus",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.4610708,
+    "longitude": -84.9880449
   },
   {
     "city_code": "10336",
     "city_name": "Coventry",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.4081812,
+    "longitude": -1.510477
   },
   {
     "city_code": "60852",
     "city_name": "Dallas",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.7762719,
+    "longitude": -96.7968559
   },
   {
     "city_code": "5100",
     "city_name": "New Delhi",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Tomb_of_Humayun%2C_Delhi.jpg/640px-Tomb_of_Humayun%2C_Delhi.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Tomb_of_Humayun%2C_Delhi.jpg/640px-Tomb_of_Humayun%2C_Delhi.jpg",
+    "latitude": 28.6138954,
+    "longitude": 77.2090057
   },
   {
     "city_code": "913",
     "city_name": "Denver",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.7392364,
+    "longitude": -104.984862
   },
   {
     "city_code": "5509",
     "city_name": "Derby",
     "country_name": "Australia",
     "country_code": "AU",
-    "image_url": ""
+    "image_url": "",
+    "latitude": -36.6581115,
+    "longitude": 144.0143231
   },
   {
     "city_code": "6301",
     "city_name": "Detroit",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 42.3315509,
+    "longitude": -83.0466403
   },
   {
     "city_code": "7863",
     "city_name": "Dijon",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 47.3215806,
+    "longitude": 5.0414701
   },
   {
     "city_code": "44",
     "city_name": "Dortmund",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.5142273,
+    "longitude": 7.4652789
   },
   {
     "city_code": "2166",
     "city_name": "Dresden",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.0493286,
+    "longitude": 13.7381437
   },
   {
     "city_code": "53331",
     "city_name": "Dubai",
     "country_name": "United Arab Emirates",
     "country_code": "AE",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg/640px-Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg/640px-Dubai_Skylines_at_night_%28Pexels_3787839%29.jpg",
+    "latitude": 25.2647227,
+    "longitude": 55.2924146
   },
   {
     "city_code": "6150",
     "city_name": "Duisburg",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.434999,
+    "longitude": 6.759562
   },
   {
     "city_code": "7463",
     "city_name": "Dundee",
     "country_name": "Canada",
     "country_code": "CA",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.0333964,
+    "longitude": -74.468497
   },
   {
     "city_code": "3297",
     "city_name": "Durango",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 37.2769484,
+    "longitude": -107.8766
   },
   {
     "city_code": "1218",
     "city_name": "El Paso",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.8973282,
+    "longitude": -0.7220307
   },
   {
     "city_code": "4947",
     "city_name": "Elche",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.2653307,
+    "longitude": -0.6988391
   },
   {
     "city_code": "14870",
     "city_name": "Ensenada",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 31.8658887,
+    "longitude": -116.602983
   },
   {
     "city_code": "2170",
     "city_name": "Essen",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.4582235,
+    "longitude": 7.0158171
   },
   {
     "city_code": "3447",
     "city_name": "Ferrara",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.8372737,
+    "longitude": 11.6186451
   },
   {
     "city_code": "4576",
     "city_name": "Florence",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.1984435,
+    "longitude": -79.7671658
   },
   {
     "city_code": "5450",
     "city_name": "Foggia",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.4620482,
+    "longitude": 15.5432595
   },
   {
     "city_code": "5121",
     "city_name": "Fort Worth",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.753177,
+    "longitude": -97.3327459
   },
   {
     "city_code": "67841",
     "city_name": "Frankfurt",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.1106444,
+    "longitude": 8.6820917
   },
   {
     "city_code": "5249",
     "city_name": "Fukuoka",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 33.5898988,
+    "longitude": 130.4017509
   },
   {
     "city_code": "23328",
     "city_name": "Funabashi",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.6945993,
+    "longitude": 139.9825365
   },
   {
     "city_code": "5504",
     "city_name": "Gelsenkirchen",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.5110321,
+    "longitude": 7.0960124
   },
   {
     "city_code": "461",
     "city_name": "Geneva",
     "country_name": "Switzerland",
     "country_code": "CH",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Geneva_From_Cathedral.JPG/640px-Geneva_From_Cathedral.JPG"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Geneva_From_Cathedral.JPG/640px-Geneva_From_Cathedral.JPG",
+    "latitude": 46.2017559,
+    "longitude": 6.1466014
   },
   {
     "city_code": "3455",
     "city_name": "Genoa",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.40726,
+    "longitude": 8.9338624
   },
   {
     "city_code": "15058",
     "city_name": "Gifu",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.4230949,
+    "longitude": 136.7627526
   },
   {
     "city_code": "256",
     "city_name": "Glasgow",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 55.861155,
+    "longitude": -4.2501687
   },
   {
     "city_code": "1254",
     "city_name": "Goa",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg/640px-Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg/640px-Vagator_Beach%2C_Anjuna%2C_Goa%2C_India.jpg",
+    "latitude": 15.3004543,
+    "longitude": 74.0855134
   },
   {
     "city_code": "501",
     "city_name": "Granada",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/The_whole_Alhambra_Granada_Spain.jpg/640px-The_whole_Alhambra_Granada_Spain.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/The_whole_Alhambra_Granada_Spain.jpg/640px-The_whole_Alhambra_Granada_Spain.jpg",
+    "latitude": 37.1734995,
+    "longitude": -3.5995337
   },
   {
     "city_code": "11142",
     "city_name": "Grenoble",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.1875602,
+    "longitude": 5.7357819
   },
   {
     "city_code": "2825",
     "city_name": "Guadalajara",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 20.6720375,
+    "longitude": -103.338396
   },
   {
     "city_code": "24884",
     "city_name": "Hachioji",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.6663595,
+    "longitude": 139.3163653
   },
   {
     "city_code": "23330",
     "city_name": "Hamamatsu",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.7109786,
+    "longitude": 137.7259431
   },
   {
     "city_code": "2167",
     "city_name": "Hamburg",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.550341,
+    "longitude": 10.000654
   },
   {
     "city_code": "13381",
     "city_name": "Hanover",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.8005316,
+    "longitude": -76.9832568
   },
   {
     "city_code": "16685",
     "city_name": "Hermosillo",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 29.0948207,
+    "longitude": -110.9692202
   },
   {
     "city_code": "5248",
     "city_name": "Hiroshima",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.3917241,
+    "longitude": 132.4517589
   },
   {
     "city_code": "18374",
     "city_name": "Hongkong",
     "country_name": "Hong Kong",
     "country_code": "HK",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 22.2445518,
+    "longitude": 114.2053888
   },
   {
     "city_code": "920",
     "city_name": "Houston",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 29.7589382,
+    "longitude": -95.3676974
   },
   {
     "city_code": "0000",
     "city_name": "Kolkata",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 22.5726459,
+    "longitude": 88.3638953
   },
   {
     "city_code": "13567",
     "city_name": "Hyderabad",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 17.360589,
+    "longitude": 78.4740613
   },
   {
     "city_code": "3299",
     "city_name": "Indianapolis",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.7683331,
+    "longitude": -86.1583502
   },
   {
     "city_code": "21647",
     "city_name": "Irapuato",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 20.6758761,
+    "longitude": -101.3521052
   },
   {
     "city_code": "12547",
     "city_name": "Jacksonville",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 30.3321838,
+    "longitude": -81.655651
   },
   {
     "city_code": "45837",
     "city_name": "Jerez",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 22.6494432,
+    "longitude": -102.9900276
   },
   {
     "city_code": "20486",
     "city_name": "Kagoshima",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 31.596793,
+    "longitude": 130.5571949
   },
   {
     "city_code": "8279",
     "city_name": "Karlsruhe",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.0068705,
+    "longitude": 8.4034195
   },
   {
     "city_code": "21597",
     "city_name": "Kawasaki",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.5306639,
+    "longitude": 139.7037668
   },
   {
     "city_code": "5481",
     "city_name": "Kiel",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 54.3227085,
+    "longitude": 10.135555
   },
   {
     "city_code": "21599",
     "city_name": "Kitakyushu",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 33.8829996,
+    "longitude": 130.8749015
   },
   {
     "city_code": "9214",
     "city_name": "Kobe",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.6932379,
+    "longitude": 135.1943764
   },
   {
     "city_code": "14102",
     "city_name": "Kumamoto",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.8033909,
+    "longitude": 130.7082737
   },
   {
     "city_code": "1389",
     "city_name": "Kyoto",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.0115754,
+    "longitude": 135.7681441
   },
   {
     "city_code": "564",
     "city_name": "Las Palmas",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 27.9580004,
+    "longitude": -15.6062305
   },
   {
     "city_code": "923",
     "city_name": "Las Vegas",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 36.1674263,
+    "longitude": -115.1484131
   },
   {
     "city_code": "10633",
     "city_name": "Le Havre",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.4938975,
+    "longitude": 0.1079732
   },
   {
     "city_code": "10321",
     "city_name": "Le Mans",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.0073849,
+    "longitude": 0.1967849
   },
   {
     "city_code": "10207",
     "city_name": "Leeds",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.7974185,
+    "longitude": -1.5437941
   },
   {
     "city_code": "11180",
     "city_name": "Leicester",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.6362,
+    "longitude": -1.1331969
   },
   {
     "city_code": "48",
     "city_name": "Leipzig",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.3406321,
+    "longitude": 12.3747329
   },
   {
     "city_code": "10322",
     "city_name": "Lille",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.6365654,
+    "longitude": 3.0635282
   },
   {
     "city_code": "4264",
     "city_name": "Limoges",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.8354243,
+    "longitude": 1.2644847
   },
   {
     "city_code": "4591",
     "city_name": "Liverpool",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.4071991,
+    "longitude": -2.99168
   },
   {
     "city_code": "5277",
     "city_name": "Livorno",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.5507317,
+    "longitude": 10.3091256
   },
   {
     "city_code": "251",
     "city_name": "London",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.5074456,
+    "longitude": -0.1277653
   },
   {
     "city_code": "797",
     "city_name": "Los Angeles",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.0536909,
+    "longitude": -118.242766
   },
   {
     "city_code": "13487",
     "city_name": "Louisville",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.2542376,
+    "longitude": -85.759407
   },
   {
     "city_code": "11219",
     "city_name": "Luton",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.891073,
+    "longitude": -0.4230304
   },
   {
     "city_code": "2171",
     "city_name": "Lyon",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.7578137,
+    "longitude": 4.8320114
   },
   {
     "city_code": "510",
     "city_name": "Madrid",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 40.4167047,
+    "longitude": -3.7035825
   },
   {
     "city_code": "53342",
     "city_name": "Maldives",
     "country_name": "Maldives",
     "country_code": "MV",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Maldives_Resort%2C_Indian_Ocean.jpg/640px-Maldives_Resort%2C_Indian_Ocean.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Maldives_Resort%2C_Indian_Ocean.jpg/640px-Maldives_Resort%2C_Indian_Ocean.jpg",
+    "latitude": 3.7203503,
+    "longitude": 73.2244152
   },
   {
     "city_code": "252",
     "city_name": "Manchester",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.4794892,
+    "longitude": -2.2451148
   },
   {
     "city_code": "5486",
     "city_name": "Mannheim",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.4892913,
+    "longitude": 8.4673098
   },
   {
     "city_code": "5587",
     "city_name": "Marseille",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.2961743,
+    "longitude": 5.3699525
   },
   {
     "city_code": "949",
     "city_name": "Memphis",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.1460249,
+    "longitude": -90.0517638
   },
   {
     "city_code": "4889",
     "city_name": "Messina",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.1937571,
+    "longitude": 15.5542082
   },
   {
     "city_code": "6983",
     "city_name": "Metz",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.1196964,
+    "longitude": 6.1763552
   },
   {
     "city_code": "1069",
     "city_name": "Mexico City",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 19.4326296,
+    "longitude": -99.1331785
   },
   {
     "city_code": "1032",
     "city_name": "Milan",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.4641943,
+    "longitude": 9.1896346
   },
   {
     "city_code": "10961",
     "city_name": "Milton Keynes",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.0406502,
+    "longitude": -0.7594092
   },
   {
     "city_code": "5356",
     "city_name": "Modena",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.6458885,
+    "longitude": 10.9255707
   },
   {
     "city_code": "10371",
     "city_name": "Monterrey",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 25.6802019,
+    "longitude": -100.315258
   },
   {
     "city_code": "4304",
     "city_name": "Montpellier",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.6112422,
+    "longitude": 3.8767337
   },
   {
     "city_code": "5815",
     "city_name": "Morelia",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 19.7027116,
+    "longitude": -101.1923818
   },
   {
     "city_code": "50",
     "city_name": "Munich",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.1371079,
+    "longitude": 11.5753822
   },
   {
     "city_code": "515",
     "city_name": "Murcia",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 37.9923795,
+    "longitude": -1.1305431
   },
   {
     "city_code": "6931",
     "city_name": "Nagasaki",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.7501611,
+    "longitude": 129.8781002
   },
   {
     "city_code": "5247",
     "city_name": "Nagoya",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.1851045,
+    "longitude": 136.8998438
   },
   {
     "city_code": "3743",
     "city_name": "Nantes",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 47.2186371,
+    "longitude": -1.5541362
   },
   {
     "city_code": "968",
     "city_name": "Naples",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 26.1421976,
+    "longitude": -81.7942944
   },
   {
     "city_code": "21614",
     "city_name": "Nara",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.6845445,
+    "longitude": 135.8048359
   },
   {
     "city_code": "925",
     "city_name": "Nashville",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 36.1622767,
+    "longitude": -86.7742984
   },
   {
     "city_code": "798",
     "city_name": "New York",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 40.7127281,
+    "longitude": -74.0060152
   },
   {
     "city_code": "18979",
     "city_name": "Newcastle",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 54.2118323,
+    "longitude": -5.8897216
   },
   {
     "city_code": "28762",
     "city_name": "Nice",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.1232253,
+    "longitude": -122.848327
   },
   {
     "city_code": "20494",
     "city_name": "Niigata",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 37.9163757,
+    "longitude": 139.0365062
   },
   {
     "city_code": "10349",
     "city_name": "Norwich",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.6285576,
+    "longitude": 1.2923954
   },
   {
     "city_code": "7497",
     "city_name": "Nottingham",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.9534193,
+    "longitude": -1.1496461
   },
   {
     "city_code": "68047",
     "city_name": "Nuremberg",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.453872,
+    "longitude": 11.077298
   },
   {
     "city_code": "1070",
     "city_name": "Oaxaca",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 17.0,
+    "longitude": -96.5
   },
   {
     "city_code": "21618",
     "city_name": "Oita",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 33.2393864,
+    "longitude": 131.6096524
   },
   {
     "city_code": "21619",
     "city_name": "Okayama",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.6553944,
+    "longitude": 133.9194595
   },
   {
     "city_code": "4633",
     "city_name": "Oklahoma City",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.4729886,
+    "longitude": -97.5170536
   },
   {
     "city_code": "1390",
     "city_name": "Osaka",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.6937569,
+    "longitude": 135.5014539
   },
   {
     "city_code": "7990",
     "city_name": "Oviedo",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.3618625,
+    "longitude": -5.8483581
   },
   {
     "city_code": "5334",
     "city_name": "Padua",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.4077172,
+    "longitude": 11.8734455
   },
   {
     "city_code": "872",
     "city_name": "Palermo",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.1112268,
+    "longitude": 13.3524434
   },
   {
     "city_code": "82",
     "city_name": "Paris",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/640px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/640px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg",
+    "latitude": 48.8534951,
+    "longitude": 2.3483915
   },
   {
     "city_code": "3448",
     "city_name": "Parma",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.80153,
+    "longitude": 10.3279843
   },
   {
     "city_code": "5941",
     "city_name": "Perpignan",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 42.6985304,
+    "longitude": 2.8953121
   },
   {
     "city_code": "1404",
     "city_name": "Perugia",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.1119613,
+    "longitude": 12.3890104
   },
   {
     "city_code": "931",
     "city_name": "Philadelphia",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 39.9527237,
+    "longitude": -75.1635262
   },
   {
     "city_code": "932",
     "city_name": "Phoenix",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 33.4484367,
+    "longitude": -112.074141
   },
   {
     "city_code": "737",
     "city_name": "Phuket",
     "country_name": "Thailand",
     "country_code": "TH",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Phuket_Aerial.jpg/640px-Phuket_Aerial.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Phuket_Aerial.jpg/640px-Phuket_Aerial.jpg",
+    "latitude": 7.8847901,
+    "longitude": 98.3891503
   },
   {
     "city_code": "253",
     "city_name": "Plymouth",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.3714122,
+    "longitude": -4.1424451
   },
   {
     "city_code": "3302",
     "city_name": "Portland",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.6573605,
+    "longitude": -70.2586618
   },
   {
     "city_code": "10352",
     "city_name": "Portsmouth",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.800031,
+    "longitude": -1.0906023
   },
   {
     "city_code": "10364",
     "city_name": "Prato",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.880598,
+    "longitude": 11.0969262
   },
   {
     "city_code": "2831",
     "city_name": "Puebla",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 19.0437196,
+    "longitude": -98.1981486
   },
   {
     "city_code": "16914",
     "city_name": "Pune",
     "country_name": "India",
     "country_code": "IN",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 18.5213738,
+    "longitude": 73.8545071
   },
   {
     "city_code": "5285",
     "city_name": "Ravenna",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.4161414,
+    "longitude": 12.2017617
   },
   {
     "city_code": "10353",
     "city_name": "Reading",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.4564242,
+    "longitude": -0.9700664
   },
   {
     "city_code": "18634",
     "city_name": "Reggio Emilia",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.6978389,
+    "longitude": 10.6304971
   },
   {
     "city_code": "4266",
     "city_name": "Reims",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 49.2577886,
+    "longitude": 4.031926
   },
   {
     "city_code": "11841",
     "city_name": "Rennes",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.1113387,
+    "longitude": -1.6800198
   },
   {
     "city_code": "17060",
     "city_name": "Reynosa",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 26.0907673,
+    "longitude": -98.2788191
   },
   {
     "city_code": "308",
     "city_name": "Rimini",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 44.0593886,
+    "longitude": 12.5684371
   },
   {
     "city_code": "970",
     "city_name": "Rome",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg/640px-Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg/640px-Harbour_of_Tropea_-_Calabria_-_Italy_-_July_17th_2013_-_04.jpg",
+    "latitude": 41.8933203,
+    "longitude": 12.4829321
   },
   {
     "city_code": "10689",
     "city_name": "Sabadell",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.5421013,
+    "longitude": 2.1138977
   },
   {
     "city_code": "23352",
     "city_name": "Sakai",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 36.1677146,
+    "longitude": 136.2262832
   },
   {
     "city_code": "10365",
     "city_name": "Salerno",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 40.6803601,
+    "longitude": 14.7594542
   },
   {
     "city_code": "15653",
     "city_name": "Saltillo",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 25.4230425,
+    "longitude": -100.9927509
   },
   {
     "city_code": "587",
     "city_name": "San Antonio",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.1688322,
+    "longitude": -5.6967754
   },
   {
     "city_code": "939",
     "city_name": "San Diego",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.7174202,
+    "longitude": -117.162772
   },
   {
     "city_code": "940",
     "city_name": "San Francisco",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 37.7792588,
+    "longitude": -122.4193286
   },
   {
     "city_code": "39",
     "city_name": "San Jose",
     "country_name": "Costa Rica",
     "country_code": "CR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 9.9357556,
+    "longitude": -84.0920196
   },
   {
     "city_code": "455",
     "city_name": "Santa Cruz",
     "country_name": "Portugal",
     "country_code": "PT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.6983418,
+    "longitude": -16.801782
   },
   {
     "city_code": "15921",
     "city_name": "Sapporo",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.061936,
+    "longitude": 141.3542924
   },
   {
     "city_code": "946",
     "city_name": "Seattle",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 47.6038321,
+    "longitude": -122.330062
   },
   {
     "city_code": "20498",
     "city_name": "Sendai",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.2677554,
+    "longitude": 140.8691498
   },
   {
     "city_code": "527",
     "city_name": "Seville",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg/640px-Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg/640px-Plaza_Virgen_de_los_Reyes%2C_Seville%2C_Spain_-_Sep_2009.jpg",
+    "latitude": 37.3886303,
+    "longitude": -5.9953403
   },
   {
     "city_code": "10354",
     "city_name": "Sheffield",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.3806626,
+    "longitude": -1.4702278
   },
   {
     "city_code": "16272",
     "city_name": "Shizuoka",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 34.9751974,
+    "longitude": 138.3831697
   },
   {
     "city_code": "996",
     "city_name": "Southampton",
     "country_name": "Bermuda",
     "country_code": "BM",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.2517959,
+    "longitude": -64.8496989
   },
   {
     "city_code": "10357",
     "city_name": "Stoke-on-Trent",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.0162014,
+    "longitude": -2.1812607
   },
   {
     "city_code": "2173",
     "city_name": "Strasbourg",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.584614,
+    "longitude": 7.7507127
   },
   {
     "city_code": "52",
     "city_name": "Stuttgart",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 48.7784485,
+    "longitude": 9.1800132
   },
   {
     "city_code": "5567",
     "city_name": "Swansea",
     "country_name": "Australia",
     "country_code": "AU",
-    "image_url": ""
+    "image_url": "",
+    "latitude": -33.0866519,
+    "longitude": 151.6346059
   },
   {
     "city_code": "14",
     "city_name": "Sydney",
     "country_name": "Australia",
     "country_code": "AU",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Sydneyoperahouse_at_night.jpg/640px-Sydneyoperahouse_at_night.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Sydneyoperahouse_at_night.jpg/640px-Sydneyoperahouse_at_night.jpg",
+    "latitude": -33.8698439,
+    "longitude": 151.2082848
   },
   {
     "city_code": "15672",
     "city_name": "Tampico",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 22.2157619,
+    "longitude": -97.8577713
   },
   {
     "city_code": "68032",
     "city_name": "Taranto",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 40.4712427,
+    "longitude": 17.2432278
   },
   {
     "city_code": "10508",
     "city_name": "Terrassa",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.5629623,
+    "longitude": 2.0100492
   },
   {
     "city_code": "8485",
     "city_name": "Tijuana",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 32.5317397,
+    "longitude": -117.019529
   },
   {
     "city_code": "1388",
     "city_name": "Tokyo",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.6768601,
+    "longitude": 139.7638947
   },
   {
     "city_code": "2431",
     "city_name": "Toronto",
     "country_name": "Canada",
     "country_code": "CA",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.6534817,
+    "longitude": -79.3839347
   },
   {
     "city_code": "11165",
     "city_name": "Toulon",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.1257311,
+    "longitude": 5.9304919
   },
   {
     "city_code": "10324",
     "city_name": "Toulouse",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 43.6044622,
+    "longitude": 1.4442469
   },
   {
     "city_code": "8447",
     "city_name": "Tours",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 47.3900474,
+    "longitude": 0.6889268
   },
   {
     "city_code": "21630",
     "city_name": "Toyama",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 36.6957569,
+    "longitude": 137.2136215
   },
   {
     "city_code": "5282",
     "city_name": "Trieste",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.6496485,
+    "longitude": 13.7772781
   },
   {
     "city_code": "5258",
     "city_name": "Turin",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.0677551,
+    "longitude": 7.6824892
   },
   {
     "city_code": "21635",
     "city_name": "Utsunomiya",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 36.5549677,
+    "longitude": 139.8828776
   },
   {
     "city_code": "534",
     "city_name": "Valencia",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg/640px-Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg/640px-Ciutat_de_les_Arts_i_les_Ci%C3%A8ncies%2C_Val%C3%A8ncia%2C_Valencia%2C_Spain_-_panoramio_%281%29.jpg",
+    "latitude": 39.4697065,
+    "longitude": -0.3763353
   },
   {
     "city_code": "535",
     "city_name": "Valladolid",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.6521807,
+    "longitude": -4.728605
   },
   {
     "city_code": "1033",
     "city_name": "Venice",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.4371908,
+    "longitude": 12.3345898
   },
   {
     "city_code": "1075",
     "city_name": "Veracruz",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 19.2003429,
+    "longitude": -96.1383572
   },
   {
     "city_code": "2179",
     "city_name": "Verona",
     "country_name": "Italy",
     "country_code": "IT",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.4384958,
+    "longitude": 10.9924122
   },
   {
     "city_code": "8225",
     "city_name": "Vigo",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 42.2376602,
+    "longitude": -8.7247205
   },
   {
     "city_code": "1076",
     "city_name": "Villahermosa",
     "country_name": "Mexico",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 17.9884657,
+    "longitude": -92.9366326
   },
   {
     "city_code": "30010",
     "city_name": "Villeurbanne",
     "country_name": "France",
     "country_code": "FR",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 45.7733573,
+    "longitude": 4.8868454
   },
   {
     "city_code": "12721",
     "city_name": "Washington",
     "country_name": "United States",
     "country_code": "US",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 38.8950368,
+    "longitude": -77.0365427
   },
   {
     "city_code": "3088",
     "city_name": "Wiesbaden",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 50.0820384,
+    "longitude": 8.2416556
   },
   {
     "city_code": "10360",
     "city_name": "Wolverhampton",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 52.5847651,
+    "longitude": -2.127567
   },
   {
     "city_code": "5483",
     "city_name": "Wuppertal",
     "country_name": "Germany",
     "country_code": "DE",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 51.264018,
+    "longitude": 7.1780374
   },
   {
     "city_code": "67265",
     "city_name": "Xalapa",
     "country_name": "MEXICO",
     "country_code": "MX",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 19.5408338,
+    "longitude": -96.9146374
   },
   {
     "city_code": "10234",
     "city_name": "Yokohama",
     "country_name": "Japan",
     "country_code": "JP",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 35.4503381,
+    "longitude": 139.6343802
   },
   {
     "city_code": "6346",
     "city_name": "York",
     "country_name": "United Kingdom",
     "country_code": "GB",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 53.9590555,
+    "longitude": -1.0815361
   },
   {
     "city_code": "66585",
     "city_name": "Zaragoza",
     "country_name": "Spain",
     "country_code": "ES",
-    "image_url": ""
+    "image_url": "",
+    "latitude": 41.6521342,
+    "longitude": -0.8809428
   },
   {
     "city_code": "2320",
     "city_name": "Zermatt",
     "country_name": "Switzerland",
     "country_code": "CH",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/1_zermatt_night_2012.jpg/640px-1_zermatt_night_2012.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/1_zermatt_night_2012.jpg/640px-1_zermatt_night_2012.jpg",
+    "latitude": 46.0212076,
+    "longitude": 7.749254
   },
   {
     "city_code": "2178",
     "city_name": "Zurich",
     "country_name": "Switzerland",
     "country_code": "CH",
-    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg/640px-Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg"
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg/640px-Z%C3%BCrich_view_Quaibr%C3%BCcke_20200702.jpg",
+    "latitude": 47.3744489,
+    "longitude": 8.5410422
   }
 ]
