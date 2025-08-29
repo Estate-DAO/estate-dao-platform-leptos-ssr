@@ -9,6 +9,8 @@ WORKDIR /app
 
 RUN apt update && apt install tree vim curl dnsutils -y
 
+RUN tree .
+
 COPY target/release/estate-fe .
 COPY target/release/hash.txt .
 COPY target/site ./site
