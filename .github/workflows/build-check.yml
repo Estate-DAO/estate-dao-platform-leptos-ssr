@@ -28,8 +28,8 @@ jobs:
       - name: Rust Setup
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "nightly-2024-09-23"
-          targets: "x86_64-unknown-linux-musl,wasm32-unknown-unknown"
+          toolchain: "nightly-2024-11-01"
+          targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
 
       - uses: cargo-bins/cargo-binstall@main
@@ -66,37 +66,31 @@ jobs:
       - name: Install npm deps
         run: pnpm install
 
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: musl-tools # provides musl-gcc
-          version: 1.0
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang
 
       - name: lint check
         run: |
           cargo fmt --check
 
-      - name: Build the Leptos project to `musl` output
+      - name: Build the Leptos project
         run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
-          LEPTOS_BIN_TARGET_TRIPLE: x86_64-unknown-linux-musl
           LEPTOS_HASH_FILES: true
           PROVAB_HEADERS: ${{ secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
       
-      - name: List files and directory structure
-        run: |
-          echo "Current directory structure:"
-          tree -a || (apt-get update && apt-get install -y tree && tree -a)
-  
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         if: ${{ inputs.publish-artifact }}
         with:
-          name: build-musl
+          name: build-debian
           path: |
-            target/x86_64-unknown-linux-musl/release/estate-fe
+            target/release/estate-fe
             target/site
             .empty
-            ssr/target/x86_64-unknown-linux-musl/release/hash.txt
+            target/release/hash.txt
             city.json
