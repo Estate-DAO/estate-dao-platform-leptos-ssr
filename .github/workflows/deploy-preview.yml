@@ -15,38 +15,31 @@ jobs:
     uses: ./.github/workflows/build-check.yml
     with:
       publish-artifact: true
-    #   erase_components: ${{ contains(github.event.pull_request.labels.*.name, 'type erasured') }}
     secrets: inherit
 
   destroy_preview:
-    if: ${{github.event.pull_request.state == 'closed'}}
+    if: ${{ github.event.pull_request.state == 'closed' }}
     runs-on: ubuntu-latest
     environment:
       name: pr-${{ github.event.number }}
       url: ${{ steps.deploy.outputs.url }}
-
     steps:
       - name: Deploy
         id: destroy
         uses: superfly/fly-pr-review-apps@1.2.1
 
   preview:
-    if: ${{ github.event.pull_request.state == 'open'}}
+    if: ${{ github.event.pull_request.state == 'open' }}
     needs: build_check
     runs-on: ubuntu-latest
-
-    # Only run one deployment at a time per PR.
     concurrency:
       group: pr-${{ github.event.number }}
-
-    # Create a GitHub deployment environment per staging app so it shows up
-    # in the pull request UI.
     environment:
       name: pr-${{ github.event.number }}
       url: ${{ steps.deploy.outputs.url }}
-
     steps:
       - uses: actions/checkout@v3
+
       - name: Download build
         uses: actions/download-artifact@v4
         with:
@@ -62,11 +55,34 @@ jobs:
         uses: superfly/fly-pr-review-apps@1.5.0
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
+
       - name: Set secret tokens
         run: |
-          APP_NAME="pr-${{github.event.number}}-estate-dao"
-          flyctl secrets set  ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY"  --app "$APP_NAME" --stage
-          flyctl secrets set  PROVAB_HEADERS="$PROVAB_HEADERS" FLY_API_TOKEN="$FLY_API_TOKEN" NOW_PAYMENTS_USDC_ETHEREUM_API_KEY="$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY" ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE="$BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE" BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE="$BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE" COOKIE_KEY="$COOKIE_KEY" EMAIL_ACCESS_TOKEN="$EMAIL_ACCESS_TOKEN" EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" EMAIL_TOKEN_EXPIRY="$EMAIL_TOKEN_EXPIRY" LITEAPI_KEY="$LITEAPI_KEY" LITEAPI_PREBOOK_BASE_URL="$LITEAPI_PREBOOK_BASE_URL" NOWPAYMENTS_IPN_SECRET="$NOWPAYMENTS_IPN_SECRET" STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" YRAL_AUTH_CLIENT_ID="$YRAL_AUTH_CLIENT_ID" YRAL_AUTH_CLIENT_SECRET="$YRAL_AUTH_CLIENT_SECRET" YRAL_AUTH_REDIRECT_URL="$APP_NAME.fly.dev/auth/callback" --app "$APP_NAME" --stage
+          # Lowercase app name to satisfy Fly.io restrictions
+          APP_NAME="pr-${{github.event.number}}-estate-dao-platform-leptos-ssr"
+          APP_NAME=${APP_NAME,,}  # convert to lowercase
+          
+          flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
+          flyctl secrets set PROVAB_HEADERS="$PROVAB_HEADERS" \
+                              FLY_API_TOKEN="$FLY_API_TOKEN" \
+                              NOW_PAYMENTS_USDC_ETHEREUM_API_KEY="$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY" \
+                              ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" \
+                              BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE="$BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE" \
+                              BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE="$BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE" \
+                              COOKIE_KEY="$COOKIE_KEY" \
+                              EMAIL_ACCESS_TOKEN="$EMAIL_ACCESS_TOKEN" \
+                              EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" \
+                              EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" \
+                              EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" \
+                              EMAIL_TOKEN_EXPIRY="$EMAIL_TOKEN_EXPIRY" \
+                              LITEAPI_KEY="$LITEAPI_KEY" \
+                              LITEAPI_PREBOOK_BASE_URL="$LITEAPI_PREBOOK_BASE_URL" \
+                              NOWPAYMENTS_IPN_SECRET="$NOWPAYMENTS_IPN_SECRET" \
+                              STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" \
+                              YRAL_AUTH_CLIENT_ID="$YRAL_AUTH_CLIENT_ID" \
+                              YRAL_AUTH_CLIENT_SECRET="$YRAL_AUTH_CLIENT_SECRET" \
+                              YRAL_AUTH_REDIRECT_URL="$APP_NAME.fly.dev/auth/callback" \
+                              --app "$APP_NAME" --stage
         env:
           PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
