@@ -103,6 +103,7 @@ gloo-net = { version = "0.6" }
 gloo-utils = { version = "0.2.0", features = ["serde"] }
 base64 = "0.22"
 
+
 flate2 = "1.0.34"
 serde_path_to_error = "0.1.16"
 leptos_query = { version = "0.5.3", features = ["local_storage", "indexed_db"] }
@@ -137,6 +138,8 @@ sitewriter = "1.0"
 coarsetime = { version = "0.1", optional = true }
 getrandom = { version = "0.3.3", optional = true, features = ["wasm_js"] }
 
+# bg jobs - now handled by bg-ractor crate
+# ractor = { workspace = true , optional = true }
 # testing
 test-log = { version = "0.2.17", features = ["trace"], optional = true }
 dashmap = { version = "6.1.0", optional = true }
@@ -155,6 +158,12 @@ send_wrapper = { version = "0.6.0", features = ["futures"] }
 
 ## workspace crates 
 telemetry_axum = { workspace = true, optional = true }
+
+
+# bg-ractor as optional dependency (only for SSR builds)
+bg-ractor = { path = "../bg-ractor", optional = true }
+
+
 
 [build-dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -176,6 +185,7 @@ hydrate = [
     "leptos_query_devtools/csr",
     "reqwest/native-tls",
     "leptos-use/use_timestamp",
+    # "dep:wasm-bindgen",
     # "dep:reqwest"
     # "dep:dotenv"
     # , "reqwest/gzip"
@@ -213,6 +223,8 @@ ssr = [
     "dep:oauth2",
     "dep:uuid",
     "dep:tower-cookies",
+    "dep:bg-ractor", # cities polling background jobs
+    # "dep:ractor", # moved to bg-ractor crate
     # "dep:jsonwebtoken",
     # "dep:colored"
     # "dep:dotenvy"
@@ -256,6 +268,7 @@ release-bin = ["stage-consts", "ssr", "debug_log", "ga4"]
 prod-consts = []
 release-lib-prod = ["prod-consts", "hydrate", "ga4"]
 release-bin-prod = ["prod-consts", "ssr", "ga4"]
+
 
 
 [package.metadata.leptos]

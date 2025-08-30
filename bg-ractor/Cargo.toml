@@ -1,0 +1,13 @@
+[package]
+name = "bg-ractor"
+version = "0.1.0"
+publish.workspace = true
+edition.workspace = true
+
+[dependencies]
+ractor = { version = "0.15.8", features = ["async-trait"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "fs"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+async-trait = "0.1"
