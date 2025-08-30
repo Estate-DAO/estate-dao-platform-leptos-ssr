@@ -45,25 +45,30 @@ jobs:
           name: build-debian
           path: .  # root directory for Docker context
 
-      - name: Verify downloaded files
+      - name: Reshape artifacts into expected target structure
         run: |
-          echo "Downloaded files structure:"
+          echo "Moving files into target/ structure for Docker build..."
+          mkdir -p target/release
+          mkdir -p target/site
+
+          # Move binaries + hash
+          if [ -f estate-fe ]; then mv estate-fe target/release/; fi
+          if [ -f hash.txt ]; then mv hash.txt target/release/; fi
+
+          # Move site folder
+          if [ -d site ]; then mv site/* target/site/; fi
+
+          # Keep city.json at root
+          ls -la target/release
+          ls -la target/site || true
           ls -la
-          echo "Target directory contents:"
-          ls -la target/ || echo "No target directory found"
-          echo "Release files:"
-          ls -la target/release/ || echo "No release directory found"
-          echo "Site directory:"
-          ls -la target/site/ || echo "No site directory found"
 
-      - name: Prepare files for Docker build
+      - name: Verify files for Docker build
         run: |
-          echo "Preparing files for Docker build..."
-
-          test -f "target/release/estate-fe" && echo "✓ estate-fe found" || { echo "❌ estate-fe missing"; exit 1; }
-          test -f "target/release/hash.txt" && echo "✓ hash.txt found" || { echo "❌ hash.txt missing"; exit 1; }
-          test -d "target/site" && echo "✓ site directory found" || { echo "❌ site directory missing"; exit 1; }
-          test -f "city.json" && echo "✓ city.json found" || { echo "❌ city.json missing"; exit 1; }
+          test -f "target/release/estate-fe" || { echo "❌ estate-fe missing"; exit 1; }
+          test -f "target/release/hash.txt" || { echo "❌ hash.txt missing"; exit 1; }
+          test -d "target/site" || { echo "❌ site directory missing"; exit 1; }
+          test -f "city.json" || { echo "❌ city.json missing"; exit 1; }
 
       - run: chmod +x target/release/estate-fe
 
@@ -80,7 +85,6 @@ jobs:
       - name: Set Fly.io secret tokens
         run: |
           APP_NAME="${{ steps.deploy.outputs.app-name }}"
-
           echo "Setting required secrets for $APP_NAME..."
 
           flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
