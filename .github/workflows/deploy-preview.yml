@@ -1,4 +1,5 @@
-name: deploy preview
+name: Deploy Preview
+
 on:
   pull_request:
     types: [opened, reopened, synchronize, closed, labeled, unlabeled]
@@ -19,7 +20,7 @@ jobs:
     secrets: inherit
 
   destroy_preview:
-    if: ${{ github.event.pull_request.state == 'closed' }}
+    if: github.event.pull_request.state == 'closed'
     runs-on: ubuntu-latest
     environment:
       name: pr-${{ github.event.number }}
@@ -28,7 +29,7 @@ jobs:
         uses: superfly/fly-pr-review-apps@1.2.1
 
   preview:
-    if: ${{ github.event.pull_request.state == 'open' }}
+    if: github.event.pull_request.state == 'open'
     needs: build_check
     runs-on: ubuntu-latest
     concurrency:
@@ -42,7 +43,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-debian
-          path: .  # Download to root directory
+          path: .  # root directory for Docker context
 
       - name: Verify downloaded files
         run: |
@@ -57,38 +58,12 @@ jobs:
 
       - name: Prepare files for Docker build
         run: |
-          # Ensure all required files are in the root build context
-          # The Dockerfile expects these files to be available during build
           echo "Preparing files for Docker build..."
-          
-          # Check if files exist in their expected locations
-          if [ -f "target/release/estate-fe" ]; then
-            echo "✓ estate-fe found"
-          else
-            echo "❌ estate-fe not found in target/release/"
-            exit 1
-          fi
-          
-          if [ -f "target/release/hash.txt" ]; then
-            echo "✓ hash.txt found"
-          else
-            echo "❌ hash.txt not found in target/release/"
-            exit 1
-          fi
-          
-          if [ -d "target/site" ]; then
-            echo "✓ site directory found"
-          else
-            echo "❌ site directory not found in target/"
-            exit 1
-          fi
-          
-          if [ -f "city.json" ]; then
-            echo "✓ city.json found"
-          else
-            echo "❌ city.json not found"
-            exit 1
-          fi
+
+          test -f "target/release/estate-fe" && echo "✓ estate-fe found" || { echo "❌ estate-fe missing"; exit 1; }
+          test -f "target/release/hash.txt" && echo "✓ hash.txt found" || { echo "❌ hash.txt missing"; exit 1; }
+          test -d "target/site" && echo "✓ site directory found" || { echo "❌ site directory missing"; exit 1; }
+          test -f "city.json" && echo "✓ city.json found" || { echo "❌ city.json missing"; exit 1; }
 
       - run: chmod +x target/release/estate-fe
 
@@ -98,7 +73,6 @@ jobs:
         with:
           name: pr-${{ github.event.number }}-estate
           region: bom
-          # Ensure it uses the current directory with all files
           path: .
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
@@ -107,10 +81,10 @@ jobs:
         run: |
           APP_NAME="${{ steps.deploy.outputs.app-name }}"
 
-          # Required secret
+          echo "Setting required secrets for $APP_NAME..."
+
           flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
 
-          # Bulk secrets
           flyctl secrets set \
             PROVAB_HEADERS="$PROVAB_HEADERS" \
             FLY_API_TOKEN="$FLY_API_TOKEN" \
