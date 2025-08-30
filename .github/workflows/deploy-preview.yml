@@ -38,17 +38,59 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download build
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-debian
-          path: .
+          path: .  # Download to root directory
+
+      - name: Verify downloaded files
+        run: |
+          echo "Downloaded files structure:"
+          ls -la
+          echo "Target directory contents:"
+          ls -la target/ || echo "No target directory found"
+          echo "Release files:"
+          ls -la target/release/ || echo "No release directory found"
+          echo "Site directory:"
+          ls -la target/site/ || echo "No site directory found"
+
+      - name: Prepare files for Docker build
+        run: |
+          # Ensure all required files are in the root build context
+          # The Dockerfile expects these files to be available during build
+          echo "Preparing files for Docker build..."
+          
+          # Check if files exist in their expected locations
+          if [ -f "target/release/estate-fe" ]; then
+            echo "✓ estate-fe found"
+          else
+            echo "❌ estate-fe not found in target/release/"
+            exit 1
+          fi
+          
+          if [ -f "target/release/hash.txt" ]; then
+            echo "✓ hash.txt found"
+          else
+            echo "❌ hash.txt not found in target/release/"
+            exit 1
+          fi
+          
+          if [ -d "target/site" ]; then
+            echo "✓ site directory found"
+          else
+            echo "❌ site directory not found in target/"
+            exit 1
+          fi
+          
+          if [ -f "city.json" ]; then
+            echo "✓ city.json found"
+          else
+            echo "❌ city.json not found"
+            exit 1
+          fi
 
       - run: chmod +x target/release/estate-fe
-
-      - name: Get branch name
-        id: branch-names
-        uses: tj-actions/branch-names@v8
 
       - name: Deploy preview app
         id: deploy
@@ -56,12 +98,13 @@ jobs:
         with:
           name: pr-${{ github.event.number }}-estate
           region: bom
+          # Ensure it uses the current directory with all files
+          path: .
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Set Fly.io secret tokens
         run: |
-          # Generate a lowercase app name to satisfy Fly.io
           APP_NAME="${{ steps.deploy.outputs.app-name }}"
 
           # Required secret
