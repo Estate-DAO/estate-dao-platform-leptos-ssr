@@ -52,14 +52,16 @@ jobs:
       - name: Deploy preview app
         id: deploy
         uses: superfly/fly-pr-review-apps@1.5.0
+        with:
+          name: pr-${{ github.event.number }}-estate
+          region: bom
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Set Fly.io secret tokens
         run: |
           # Generate a lowercase app name to satisfy Fly.io
-          APP_NAME="pr-${{ github.event.number }}"
-          APP_NAME=${APP_NAME,,}  # convert to lowercase
+          APP_NAME="${{ steps.deploy.outputs.app-name }}"
 
           # Required secret
           flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
