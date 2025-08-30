@@ -148,34 +148,55 @@ jobs:
           region: bom
           path: .
 
+      - name: Check if deploy succeeded and get app name
+        run: |
+          # Check if the deploy step succeeded and set app name
+          if [ -n "${{ steps.deploy.outputs.app-name }}" ]; then
+            echo "APP_NAME=${{ steps.deploy.outputs.app-name }}" >> $GITHUB_ENV
+            echo "Deploy succeeded, app name: ${{ steps.deploy.outputs.app-name }}"
+          else
+            # Fallback: construct app name manually
+            APP_NAME="pr-${{ github.event.number }}-estate"
+            echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+            echo "Using fallback app name: $APP_NAME"
+          fi
+
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Set Fly.io secret tokens
         run: |
-          APP_NAME="${{ steps.deploy.outputs.app-name }}"
           echo "Setting required secrets for $APP_NAME..."
-          flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
-          flyctl secrets set \
-            PROVAB_HEADERS="$PROVAB_HEADERS" \
-            FLY_API_TOKEN="$FLY_API_TOKEN" \
-            NOW_PAYMENTS_USDC_ETHEREUM_API_KEY="$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY" \
-            BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE="$BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE" \
-            BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE="$BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE" \
-            COOKIE_KEY="$COOKIE_KEY" \
-            EMAIL_ACCESS_TOKEN="$EMAIL_ACCESS_TOKEN" \
-            EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" \
-            EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" \
-            EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" \
-            EMAIL_TOKEN_EXPIRY="$EMAIL_TOKEN_EXPIRY" \
-            LITEAPI_KEY="$LITEAPI_KEY" \
-            LITEAPI_PREBOOK_BASE_URL="$LITEAPI_PREBOOK_BASE_URL" \
-            NOWPAYMENTS_IPN_SECRET="$NOWPAYMENTS_IPN_SECRET" \
-            STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" \
-            YRAL_AUTH_CLIENT_ID="$YRAL_AUTH_CLIENT_ID" \
-            YRAL_AUTH_CLIENT_SECRET="$YRAL_AUTH_CLIENT_SECRET" \
-            YRAL_AUTH_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/callback" \
-            --app "$APP_NAME" --stage
+          
+          # First check if the app exists, create it if not
+          flyctl status --app "$APP_NAME" || flyctl apps create "$APP_NAME" --org "$FLY_ORG" || true
+          
+          # Set secrets one by one to avoid command line length issues
+          flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set first secret"
+          
+          flyctl secrets set PROVAB_HEADERS="$PROVAB_HEADERS" --app "$APP_NAME" --stage || echo "Warning: Failed to set PROVAB_HEADERS"
+          flyctl secrets set FLY_API_TOKEN="$FLY_API_TOKEN" --app "$APP_NAME" --stage || echo "Warning: Failed to set FLY_API_TOKEN"
+          flyctl secrets set NOW_PAYMENTS_USDC_ETHEREUM_API_KEY="$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"
+          flyctl secrets set BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE="$BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE" --app "$APP_NAME" --stage || echo "Warning: Failed to set BASIC_AUTH_PASSWORD"
+          flyctl secrets set BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE="$BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE" --app "$APP_NAME" --stage || echo "Warning: Failed to set BASIC_AUTH_USERNAME"
+          flyctl secrets set COOKIE_KEY="$COOKIE_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set COOKIE_KEY"
+          flyctl secrets set EMAIL_ACCESS_TOKEN="$EMAIL_ACCESS_TOKEN" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_ACCESS_TOKEN"
+          flyctl secrets set EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_CLIENT_ID"
+          flyctl secrets set EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_CLIENT_SECRET"
+          flyctl secrets set EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_REFRESH_TOKEN"
+          flyctl secrets set EMAIL_TOKEN_EXPIRY="$EMAIL_TOKEN_EXPIRY" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_TOKEN_EXPIRY"
+          flyctl secrets set LITEAPI_KEY="$LITEAPI_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set LITEAPI_KEY"
+          flyctl secrets set LITEAPI_PREBOOK_BASE_URL="$LITEAPI_PREBOOK_BASE_URL" --app "$APP_NAME" --stage || echo "Warning: Failed to set LITEAPI_PREBOOK_BASE_URL"
+          flyctl secrets set NOWPAYMENTS_IPN_SECRET="$NOWPAYMENTS_IPN_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set NOWPAYMENTS_IPN_SECRET"
+          flyctl secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set STRIPE_SECRET_KEY"
+          flyctl secrets set YRAL_AUTH_CLIENT_ID="$YRAL_AUTH_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_CLIENT_ID"
+          flyctl secrets set YRAL_AUTH_CLIENT_SECRET="$YRAL_AUTH_CLIENT_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_CLIENT_SECRET"
+          
+          # Set redirect URL with the actual app name
+          flyctl secrets set YRAL_AUTH_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/callback" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_REDIRECT_URL"
+          
+          echo "✅ Secrets setup completed for $APP_NAME"
         env:
+          APP_NAME: ${{ env.APP_NAME }}
           PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
           NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{ secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY }}
