@@ -42,6 +42,8 @@ fn detect_payment_provider_sync(payment_id: &Option<String>) -> String {
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
+        use estate_fe::api::SsrCityApiProvider;
+
         use axum::{
             body::Body as AxumBody,
             extract::{Path, State,ConnectInfo},
@@ -330,6 +332,20 @@ cfg_if! {
             .build()
             .await;
 
+            // Initialize city updater with custom intervals
+            #[cfg(not(target_arch = "wasm32"))]
+            let _city_updater = {
+                let api_provider = SsrCityApiProvider::new();
+                let updater = bg_ractor::PeriodicCityUpdater::with_intervals_secs(
+                    60,  // 60 seconds for city updates
+                    3,   // 3 seconds for heartbeat
+                    "city.json".to_string(),
+                    api_provider
+                );
+                info!("City updater initialized with custom intervals");
+                updater
+            };
+
             let trace_layer = tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|request: &axum::extract::Request<_>| {
                     let method = request.method();
@@ -395,6 +411,9 @@ cfg_if! {
                 axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
                     .await
                     .unwrap();
+
+                // TODO: Cleanup city updater resources if needed
+                info!("Application shutting down");
 
                 //   cleanup tracing config.
 

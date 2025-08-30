@@ -29,3 +29,10 @@ pub mod canister;
 
 pub mod auth;
 pub mod liteapi;
+
+cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        pub mod cities_api_provider;
+        pub use cities_api_provider::SsrCityApiProvider;
+    }
+}
