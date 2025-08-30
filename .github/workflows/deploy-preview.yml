@@ -26,8 +26,6 @@ jobs:
     steps:
       - name: Destroy preview app
         uses: superfly/fly-pr-review-apps@1.2.1
-        with:
-          name: ${{ github.event.number }}-estate-dao-platform-leptos-ssr  # still lowercase manually if needed
 
   preview:
     if: ${{ github.event.pull_request.state == 'open' }}
@@ -54,22 +52,19 @@ jobs:
       - name: Deploy preview app
         id: deploy
         uses: superfly/fly-pr-review-apps@1.5.0
-        with:
-          # Temporarily use placeholder; we'll override with a lowercase name in the next step
-          name: temp-name
-          region: iad
-          org: estate-dao-769
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Set Fly.io secret tokens
         run: |
-          # Lowercase app name properly in bash
-          APP_NAME="pr-${{ github.event.number }}-estate-dao-platform-leptos-ssr"
+          # Generate a lowercase app name to satisfy Fly.io
+          APP_NAME="pr-${{ github.event.number }}"
           APP_NAME=${APP_NAME,,}  # convert to lowercase
 
+          # Required secret
           flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
 
+          # Bulk secrets
           flyctl secrets set \
             PROVAB_HEADERS="$PROVAB_HEADERS" \
             FLY_API_TOKEN="$FLY_API_TOKEN" \
