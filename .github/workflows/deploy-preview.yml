@@ -39,26 +39,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # ⬇️ Grab artifacts from build_check job
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-debian
-          path: .  # root directory for Docker context
+          path: .
 
+      # ⬇️ Reshape into target/ structure that Docker expects
       - name: Reshape artifacts into expected target structure
         run: |
           echo "Moving files into target/ structure for Docker build..."
           mkdir -p target/release
           mkdir -p target/site
 
-          # Move binaries + hash
           if [ -f estate-fe ]; then mv estate-fe target/release/; fi
           if [ -f hash.txt ]; then mv hash.txt target/release/; fi
 
-          # Move site folder
           if [ -d site ]; then mv site/* target/site/; fi
 
-          # Keep city.json at root
           ls -la target/release
           ls -la target/site || true
           ls -la
@@ -72,6 +71,7 @@ jobs:
 
       - run: chmod +x target/release/estate-fe
 
+      # ⬇️ Deploy with Fly.io PR Review Apps (uses Dockerfile in repo)
       - name: Deploy preview app
         id: deploy
         uses: superfly/fly-pr-review-apps@1.5.0
@@ -80,6 +80,7 @@ jobs:
           region: bom
           path: .
 
+      # ⬇️ Setup flyctl so we can set secrets
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Set Fly.io secret tokens
