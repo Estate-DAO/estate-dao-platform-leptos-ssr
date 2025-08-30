@@ -39,39 +39,37 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # ⬇️ Grab artifacts from build_check job
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-debian
           path: .
 
-      # ⬇️ Reshape into target/ structure that Docker expects
-      - name: Reshape artifacts into expected target structure
+      # Instead of reshaping into target/, just keep them here
+      - name: Verify required artifacts
         run: |
-          echo "Moving files into target/ structure for Docker build..."
-          mkdir -p target/release
-          mkdir -p target/site
-
-          if [ -f estate-fe ]; then mv estate-fe target/release/; fi
-          if [ -f hash.txt ]; then mv hash.txt target/release/; fi
-
-          if [ -d site ]; then mv site/* target/site/; fi
-
-          ls -la target/release
-          ls -la target/site || true
           ls -la
-
-      - name: Verify files for Docker build
-        run: |
-          test -f "target/release/estate-fe" || { echo "❌ estate-fe missing"; exit 1; }
-          test -f "target/release/hash.txt" || { echo "❌ hash.txt missing"; exit 1; }
-          test -d "target/site" || { echo "❌ site directory missing"; exit 1; }
+          test -f "estate-fe" || { echo "❌ estate-fe missing"; exit 1; }
+          test -f "hash.txt" || { echo "❌ hash.txt missing"; exit 1; }
+          test -d "site" || { echo "❌ site directory missing"; exit 1; }
           test -f "city.json" || { echo "❌ city.json missing"; exit 1; }
 
-      - run: chmod +x target/release/estate-fe
+      # Generate a lightweight Dockerfile from inside the Action
+      - name: Generate Dockerfile for preview
+        run: |
+          cat > Dockerfile <<'EOF'
+          FROM debian:bookworm-slim
+          WORKDIR /app
+          COPY estate-fe /app/estate-fe
+          COPY hash.txt /app/hash.txt
+          COPY site /app/site
+          COPY city.json /app/city.json
+          RUN chmod +x /app/estate-fe
+          CMD ["/app/estate-fe"]
+          EOF
+          echo "✅ Dockerfile generated:"
+          cat Dockerfile
 
-      # ⬇️ Deploy with Fly.io PR Review Apps (uses Dockerfile in repo)
       - name: Deploy preview app
         id: deploy
         uses: superfly/fly-pr-review-apps@1.5.0
@@ -80,16 +78,13 @@ jobs:
           region: bom
           path: .
 
-      # ⬇️ Setup flyctl so we can set secrets
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Set Fly.io secret tokens
         run: |
           APP_NAME="${{ steps.deploy.outputs.app-name }}"
           echo "Setting required secrets for $APP_NAME..."
-
           flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage
-
           flyctl secrets set \
             PROVAB_HEADERS="$PROVAB_HEADERS" \
             FLY_API_TOKEN="$FLY_API_TOKEN" \
