@@ -42,6 +42,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-debian
+          path: .
 
       - run: chmod +x target/release/estate-fe
 
