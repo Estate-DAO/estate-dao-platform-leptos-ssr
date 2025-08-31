@@ -101,12 +101,14 @@ pub struct PeriodicCityUpdaterState {
     pub next_update_time: std::time::Instant,
     pub update_count: u64,
     pub heartbeat_count: u64,
+    pub last_update_span_context: Option<tracing::span::Id>,
 }
 
 #[derive(Debug)]
 pub enum CityUpdaterMessage {
     UpdateCities,
     Heartbeat,
+    PrintCityJson,
 }
 
 #[ractor::async_trait]
@@ -127,19 +129,23 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
 
         let now = std::time::Instant::now();
 
-        // Schedule the first heartbeat and update
+        // Schedule the first heartbeat, update, and city.json print
         myself
             .cast(CityUpdaterMessage::Heartbeat)
             .expect("Failed to send initial heartbeat");
         myself
             .cast(CityUpdaterMessage::UpdateCities)
             .expect("Failed to send initial update");
+        myself
+            .cast(CityUpdaterMessage::PrintCityJson)
+            .expect("Failed to send initial print city.json");
 
         Ok(PeriodicCityUpdaterState {
             last_update_time: now,
             next_update_time: now + self.update_interval,
             update_count: 0,
             heartbeat_count: 0,
+            last_update_span_context: None,
         })
     }
 
@@ -162,6 +168,29 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                     Duration::from_secs(0)
                 };
 
+                // Create a comprehensive heartbeat span with health and correlation metrics
+                let heartbeat_span = tracing::debug_span!(
+                    "city_updater_heartbeat",
+                    heartbeat_count = state.heartbeat_count,
+                    update_count = state.update_count,
+                    next_update_in_secs = remaining_time.as_secs(),
+                    last_update_ago_secs = (now - state.last_update_time).as_secs(),
+                    last_update_referenced = state.last_update_span_context.is_some(),
+                    health.status = "healthy",
+                    health.service_uptime_heartbeats = state.heartbeat_count,
+                    otel.name = format!("heartbeat_{}", state.heartbeat_count),
+                    otel.kind = "internal"
+                );
+
+                // Add span link to the last update operation if available
+                if let Some(last_update_span_id) = &state.last_update_span_context {
+                    debug!(
+                        linked_span_id = ?last_update_span_id,
+                        "Heartbeat linked to previous update span"
+                    );
+                }
+                let _enter = heartbeat_span.enter();
+
                 info!(
                     heartbeat_count = state.heartbeat_count,
                     update_count = state.update_count,
@@ -172,44 +201,129 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                     remaining_time.as_secs() % 60
                 );
 
-                // Schedule next heartbeat
-                ractor::concurrency::sleep(self.heartbeat_interval).await;
-                myself
-                    .cast(CityUpdaterMessage::Heartbeat)
-                    .expect("Failed to schedule next heartbeat");
+                // Schedule next heartbeat without blocking
+                let myself_clone = myself.clone();
+                let heartbeat_interval = self.heartbeat_interval;
+                tokio::spawn(async move {
+                    ractor::concurrency::sleep(heartbeat_interval).await;
+                    myself_clone
+                        .cast(CityUpdaterMessage::Heartbeat)
+                        .expect("Failed to schedule next heartbeat");
+                });
             }
             CityUpdaterMessage::UpdateCities => {
                 tracing::Span::current().record("message_type", "update_cities");
                 state.update_count += 1;
                 let now = std::time::Instant::now();
 
+                // Create a child span for this specific update cycle
+                let update_cycle_span = tracing::info_span!(
+                    "city_update_cycle",
+                    update_cycle = state.update_count,
+                    otel.name = format!("city_update_cycle_{}", state.update_count),
+                    otel.kind = "internal",
+                    cities.processed = tracing::field::Empty,
+                    cities.added = tracing::field::Empty,
+                    countries.processed = tracing::field::Empty,
+                    countries.failed = tracing::field::Empty,
+                    update.status = tracing::field::Empty,
+                    update.duration_ms = tracing::field::Empty
+                );
+                let _enter = update_cycle_span.enter();
+
                 info!(
                     update_count = state.update_count,
                     "Starting city.json update"
                 );
 
+                let start_time = std::time::Instant::now();
                 match self.update_cities_file().await {
                     Ok(stats) => {
+                        let duration = start_time.elapsed();
                         state.last_update_time = now;
                         state.next_update_time = now + self.update_interval;
+                        
+                        // Record metrics in the span
+                        update_cycle_span.record("cities.processed", stats.cities_processed);
+                        update_cycle_span.record("cities.added", stats.new_cities_added);
+                        update_cycle_span.record("countries.processed", stats.countries_processed);
+                        update_cycle_span.record("countries.failed", stats.countries_failed);
+                        update_cycle_span.record("update.status", "success");
+                        update_cycle_span.record("update.duration_ms", duration.as_millis() as u64);
+                        
+                        // Store the span context for future correlation
+                        state.last_update_span_context = Some(update_cycle_span.id().unwrap());
+                        
                         info!(
                             cities_processed = stats.cities_processed,
                             new_cities_added = stats.new_cities_added,
                             countries_processed = stats.countries_processed,
                             countries_failed = stats.countries_failed,
+                            duration_ms = duration.as_millis(),
                             "City.json update completed successfully"
                         );
                     }
                     Err(e) => {
-                        error!(error = %e, "Failed to update cities.json");
+                        let duration = start_time.elapsed();
+                        
+                        // Record error metrics in the span
+                        update_cycle_span.record("update.status", "failed");
+                        update_cycle_span.record("update.duration_ms", duration.as_millis() as u64);
+                        
+                        // Store the span context even for failed updates for correlation
+                        state.last_update_span_context = Some(update_cycle_span.id().unwrap());
+                        
+                        error!(
+                            error = %e, 
+                            duration_ms = duration.as_millis(),
+                            "Failed to update cities.json"
+                        );
                     }
                 }
 
-                // Schedule next update
-                ractor::concurrency::sleep(self.update_interval).await;
-                myself
-                    .cast(CityUpdaterMessage::UpdateCities)
-                    .expect("Failed to schedule next update");
+                // Schedule next update without blocking
+                let myself_clone = myself.clone();
+                let update_interval = self.update_interval;
+                tokio::spawn(async move {
+                    ractor::concurrency::sleep(update_interval).await;
+                    myself_clone
+                        .cast(CityUpdaterMessage::UpdateCities)
+                        .expect("Failed to schedule next update");
+                });
+            }
+            CityUpdaterMessage::PrintCityJson => {
+                tracing::Span::current().record("message_type", "print_city_json");
+
+                // Read and print city.json contents
+                match self.load_existing_cities().await {
+                    Ok(cities) => {
+                        info!(total_cities = cities.len(), "Printing city.json contents");
+
+                        // Print first 5 cities as sample
+                        let sample_cities: Vec<_> = cities.values().take(5).collect();
+                        for (idx, city) in sample_cities.iter().enumerate() {
+                            info!(
+                                index = idx + 1,
+                                city_name = %city.city_name,
+                                country_name = %city.country_name,
+                                city_code = %city.city_code,
+                                "Sample city entry"
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        warn!(error = %e, "Failed to read city.json for printing");
+                    }
+                }
+
+                // Schedule next print (every 20 seconds)
+                let myself_clone = myself.clone();
+                tokio::spawn(async move {
+                    ractor::concurrency::sleep(Duration::from_secs(20)).await;
+                    myself_clone
+                        .cast(CityUpdaterMessage::PrintCityJson)
+                        .expect("Failed to schedule next print city.json");
+                });
             }
         }
         Ok(())
@@ -225,10 +339,21 @@ pub struct UpdateStats {
 }
 
 impl<T: CityApiProvider> PeriodicCityUpdater<T> {
-    #[instrument(skip(self))]
+    #[instrument(
+        skip(self),
+        fields(
+            cities_file = %self.cities_file_path,
+            operation.status = tracing::field::Empty,
+            cities.initial_count = tracing::field::Empty,
+            cities.final_count = tracing::field::Empty,
+            api.countries_fetched = tracing::field::Empty,
+            processing.duration_ms = tracing::field::Empty
+        )
+    )]
     async fn update_cities_file(
         &self,
     ) -> Result<UpdateStats, Box<dyn std::error::Error + Send + Sync>> {
+        let operation_start = std::time::Instant::now();
         debug!("Loading existing cities from {}", self.cities_file_path);
 
         // Load existing cities
@@ -316,7 +441,34 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
         }
 
         // Save updated cities
+        let final_count = existing_cities.len();
         self.save_cities(existing_cities).await?;
+
+        let processing_duration = operation_start.elapsed();
+        
+        // Record metrics in the span for observability
+        let current_span = tracing::Span::current();
+        current_span.record("operation.status", "success");
+        current_span.record("cities.initial_count", initial_count);
+        current_span.record("cities.final_count", final_count);
+        current_span.record("api.countries_fetched", stats.countries_processed);
+        current_span.record("processing.duration_ms", processing_duration.as_millis() as u64);
+        
+        // Set OpenTelemetry span status to OK (when available)
+        // Note: This requires tracing_opentelemetry feature to be enabled
+        #[cfg(all(feature = "tracing-opentelemetry", feature = "debug_log"))]
+        {
+            use tracing_opentelemetry::OpenTelemetrySpanExt;
+            current_span.set_status(opentelemetry::trace::Status::Ok);
+        }
+
+        debug!(
+            initial_count = initial_count,
+            final_count = final_count,
+            new_cities_added = stats.new_cities_added,
+            processing_duration_ms = processing_duration.as_millis(),
+            "City update operation completed successfully"
+        );
 
         Ok(stats)
     }

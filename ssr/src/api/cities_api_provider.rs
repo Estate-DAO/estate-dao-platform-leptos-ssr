@@ -1,8 +1,8 @@
-use std::future::Future;
-use std::pin::Pin;
-use bg_ractor::{CityApiProvider, CityIterator, Country, City, CountryCitiesResult};
 use crate::api::liteapi::{get_all_cities, AllCitiesIterator};
 use crate::api::ApiError;
+use bg_ractor::{City, CityApiProvider, CityIterator, Country, CountryCitiesResult};
+use std::future::Future;
+use std::pin::Pin;
 
 /// Adapter that wraps the SSR AllCitiesIterator to work with bg-ractor's CityIterator trait
 pub struct SsrCityIteratorAdapter {
@@ -13,7 +13,7 @@ impl CityIterator for SsrCityIteratorAdapter {
     fn next(&mut self) -> Pin<Box<dyn Future<Output = Option<CountryCitiesResult>> + Send + '_>> {
         Box::pin(async move {
             let result = self.inner.next().await?;
-            
+
             match result {
                 Ok((country, cities)) => {
                     // Convert from SSR types to bg-ractor types
@@ -25,7 +25,7 @@ impl CityIterator for SsrCityIteratorAdapter {
                         .into_iter()
                         .map(|city| City { city: city.city })
                         .collect();
-                    
+
                     Some(Ok((bg_country, bg_cities)))
                 }
                 Err((country, error)) => {
@@ -33,7 +33,10 @@ impl CityIterator for SsrCityIteratorAdapter {
                         code: country.code,
                         name: country.name,
                     };
-                    Some(Err((bg_country, Box::new(error) as Box<dyn std::error::Error + Send + Sync>)))
+                    Some(Err((
+                        bg_country,
+                        Box::new(error) as Box<dyn std::error::Error + Send + Sync>,
+                    )))
                 }
             }
         })

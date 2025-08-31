@@ -506,12 +506,15 @@ dependencies = [
 name = "bg-ractor"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "ractor",
  "serde",
  "serde_json",
+ "telemetry_axum",
  "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
