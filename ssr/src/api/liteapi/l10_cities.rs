@@ -1,6 +1,7 @@
 use leptos::*;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::api::api_client::{ApiClient, ApiRequest, ApiRequestMeta};
 use crate::api::liteapi::client::LiteApiHTTPClient;
@@ -70,6 +71,14 @@ impl ApiRequest for LiteApiGetCitiesRequest {
     }
 }
 
+#[instrument(skip(request), fields(
+    country_code = %request.country_code,
+    timeout = request.timeout,
+    api_provider = "liteapi",
+    operation = "get_cities",
+    service.name = "estate_fe_ssr",
+    component = "liteapi_client"
+))]
 pub async fn liteapi_get_cities(
     request: LiteApiGetCitiesRequest,
 ) -> Result<LiteApiGetCitiesResponse, crate::api::ApiError> {
@@ -77,6 +86,13 @@ pub async fn liteapi_get_cities(
     client.send(request).await
 }
 
+#[instrument(fields(
+    country_code = %country_code,
+    api_provider = "liteapi",
+    operation = "get_cities_list",
+    service.name = "estate_fe_ssr",
+    component = "liteapi_client"
+))]
 pub async fn get_cities_list(
     country_code: String,
 ) -> Result<LiteApiGetCitiesResponse, crate::api::ApiError> {
@@ -96,6 +112,14 @@ pub type CountryCitiesResult = Result<
 >;
 
 impl AllCitiesIterator {
+    #[instrument(skip(self), fields(
+        current_index = self.current_index,
+        total_countries = self.countries.len(),
+        api_provider = "liteapi",
+        operation = "iterate_next_country",
+        service.name = "estate_fe_ssr",
+        component = "all_cities_iterator"
+    ))]
     pub async fn next(&mut self) -> Option<CountryCitiesResult> {
         if self.current_index >= self.countries.len() {
             return None;
@@ -116,8 +140,18 @@ impl AllCitiesIterator {
 }
 
 // Simple function to get all cities - returns async iterator
+#[instrument(fields(
+    api_provider = "liteapi",
+    operation = "get_all_cities",
+    service.name = "estate_fe_ssr",
+    component = "all_cities_iterator",
+    countries.count = tracing::field::Empty
+))]
 pub async fn get_all_cities() -> Result<AllCitiesIterator, crate::api::ApiError> {
     let countries_response = crate::api::liteapi::get_countries_list().await?;
+
+    // Record the number of countries for observability
+    tracing::Span::current().record("countries.count", countries_response.data.len());
 
     Ok(AllCitiesIterator {
         countries: countries_response.data,

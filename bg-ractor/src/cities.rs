@@ -149,7 +149,6 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
         })
     }
 
-    #[instrument(skip(self, myself, state), fields(message_type))]
     async fn handle(
         &self,
         myself: ActorRef<Self::Msg>,
@@ -158,7 +157,6 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
     ) -> Result<(), ActorProcessingErr> {
         match message {
             CityUpdaterMessage::Heartbeat => {
-                tracing::Span::current().record("message_type", "heartbeat");
                 state.heartbeat_count += 1;
 
                 let now = std::time::Instant::now();
@@ -168,9 +166,11 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                     Duration::from_secs(0)
                 };
 
-                // Create a comprehensive heartbeat span with health and correlation metrics
+                // Create a comprehensive heartbeat span with proper bg-ractor context
                 let heartbeat_span = tracing::debug_span!(
-                    "city_updater_heartbeat",
+                    "bg_ractor_cities_heartbeat",
+                    service.name = "bg_ractor",
+                    component = "cities_updater",
                     heartbeat_count = state.heartbeat_count,
                     update_count = state.update_count,
                     next_update_in_secs = remaining_time.as_secs(),
@@ -178,8 +178,10 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                     last_update_referenced = state.last_update_span_context.is_some(),
                     health.status = "healthy",
                     health.service_uptime_heartbeats = state.heartbeat_count,
-                    otel.name = format!("heartbeat_{}", state.heartbeat_count),
-                    otel.kind = "internal"
+                    otel.name = format!("bg_ractor_cities_heartbeat_{}", state.heartbeat_count),
+                    otel.kind = "internal",
+                    otel.scope.name = "bg-ractor",
+                    otel.scope.version = env!("CARGO_PKG_VERSION")
                 );
 
                 // Add span link to the last update operation if available
@@ -196,7 +198,7 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                     update_count = state.update_count,
                     remaining_minutes = remaining_time.as_secs() / 60,
                     remaining_seconds = remaining_time.as_secs() % 60,
-                    "City updater heartbeat - Next update in {}m {}s",
+                    "bg-ractor cities heartbeat - Next update in {}m {}s",
                     remaining_time.as_secs() / 60,
                     remaining_time.as_secs() % 60
                 );
@@ -212,16 +214,19 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                 });
             }
             CityUpdaterMessage::UpdateCities => {
-                tracing::Span::current().record("message_type", "update_cities");
                 state.update_count += 1;
                 let now = std::time::Instant::now();
 
-                // Create a child span for this specific update cycle
+                // Create a child span for this specific update cycle with proper bg-ractor context
                 let update_cycle_span = tracing::info_span!(
-                    "city_update_cycle",
+                    "bg_ractor_cities_update",
+                    service.name = "bg_ractor",
+                    component = "cities_updater",
                     update_cycle = state.update_count,
-                    otel.name = format!("city_update_cycle_{}", state.update_count),
+                    otel.name = format!("bg_ractor_cities_update_{}", state.update_count),
                     otel.kind = "internal",
+                    otel.scope.name = "bg-ractor",
+                    otel.scope.version = env!("CARGO_PKG_VERSION"),
                     cities.processed = tracing::field::Empty,
                     cities.added = tracing::field::Empty,
                     countries.processed = tracing::field::Empty,
@@ -233,7 +238,7 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
 
                 info!(
                     update_count = state.update_count,
-                    "Starting city.json update"
+                    "Starting bg-ractor cities update"
                 );
 
                 let start_time = std::time::Instant::now();
@@ -242,7 +247,7 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                         let duration = start_time.elapsed();
                         state.last_update_time = now;
                         state.next_update_time = now + self.update_interval;
-                        
+
                         // Record metrics in the span
                         update_cycle_span.record("cities.processed", stats.cities_processed);
                         update_cycle_span.record("cities.added", stats.new_cities_added);
@@ -250,33 +255,33 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                         update_cycle_span.record("countries.failed", stats.countries_failed);
                         update_cycle_span.record("update.status", "success");
                         update_cycle_span.record("update.duration_ms", duration.as_millis() as u64);
-                        
+
                         // Store the span context for future correlation
                         state.last_update_span_context = Some(update_cycle_span.id().unwrap());
-                        
+
                         info!(
                             cities_processed = stats.cities_processed,
                             new_cities_added = stats.new_cities_added,
                             countries_processed = stats.countries_processed,
                             countries_failed = stats.countries_failed,
                             duration_ms = duration.as_millis(),
-                            "City.json update completed successfully"
+                            "bg-ractor cities update completed successfully"
                         );
                     }
                     Err(e) => {
                         let duration = start_time.elapsed();
-                        
+
                         // Record error metrics in the span
                         update_cycle_span.record("update.status", "failed");
                         update_cycle_span.record("update.duration_ms", duration.as_millis() as u64);
-                        
+
                         // Store the span context even for failed updates for correlation
                         state.last_update_span_context = Some(update_cycle_span.id().unwrap());
-                        
+
                         error!(
-                            error = %e, 
+                            error = %e,
                             duration_ms = duration.as_millis(),
-                            "Failed to update cities.json"
+                            "Failed to update cities.json in bg-ractor"
                         );
                     }
                 }
@@ -292,7 +297,17 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
                 });
             }
             CityUpdaterMessage::PrintCityJson => {
-                tracing::Span::current().record("message_type", "print_city_json");
+                // Create a proper span for city json printing
+                let print_span = tracing::debug_span!(
+                    "bg_ractor_cities_print",
+                    service.name = "bg_ractor",
+                    component = "cities_updater",
+                    otel.name = "bg_ractor_cities_print",
+                    otel.kind = "internal",
+                    otel.scope.name = "bg-ractor",
+                    otel.scope.version = env!("CARGO_PKG_VERSION")
+                );
+                let _enter = print_span.enter();
 
                 // Read and print city.json contents
                 match self.load_existing_cities().await {
@@ -409,23 +424,39 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
                     for city in cities {
                         stats.cities_processed += 1;
 
-                        // Generate a city_code if not present (using city name + country code)
-                        let city_code = format!("{}_{}", city.city.replace(" ", "_"), country.code);
-
-                        if !existing_cities.contains_key(&city_code) {
-                            let city_entry = CityEntry {
-                                city_code: city_code.clone(),
-                                city_name: city.city,
+                        let city_entry = existing_cities
+                            .get(&city.city)
+                            .map(|existing| CityEntry {
+                                city_code: existing.city_code.clone(),
+                                city_name: city.city.clone(),
                                 country_name: country.name.clone(),
                                 country_code: country.code.clone(),
-                                image_url: String::new(),
-                                latitude: 0.0,
-                                longitude: 0.0,
-                            };
+                                image_url: existing.image_url.clone(),
+                                latitude: if existing.latitude != 0.0 {
+                                    existing.latitude
+                                } else {
+                                    0.0
+                                },
+                                longitude: if existing.longitude != 0.0 {
+                                    existing.longitude
+                                } else {
+                                    0.0
+                                },
+                            })
+                            .unwrap_or_else(|| {
+                                stats.new_cities_added += 1;
+                                CityEntry {
+                                    city_code: String::new(),
+                                    city_name: city.city.clone(),
+                                    country_name: country.name.clone(),
+                                    country_code: country.code.clone(),
+                                    image_url: String::new(),
+                                    latitude: 0.0,
+                                    longitude: 0.0,
+                                }
+                            });
 
-                            existing_cities.insert(city_code, city_entry);
-                            stats.new_cities_added += 1;
-                        }
+                        existing_cities.insert(city.city, city_entry);
                     }
                 }
                 Err((country, error)) => {
@@ -445,15 +476,18 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
         self.save_cities(existing_cities).await?;
 
         let processing_duration = operation_start.elapsed();
-        
+
         // Record metrics in the span for observability
         let current_span = tracing::Span::current();
         current_span.record("operation.status", "success");
         current_span.record("cities.initial_count", initial_count);
         current_span.record("cities.final_count", final_count);
         current_span.record("api.countries_fetched", stats.countries_processed);
-        current_span.record("processing.duration_ms", processing_duration.as_millis() as u64);
-        
+        current_span.record(
+            "processing.duration_ms",
+            processing_duration.as_millis() as u64,
+        );
+
         // Set OpenTelemetry span status to OK (when available)
         // Note: This requires tracing_opentelemetry feature to be enabled
         #[cfg(all(feature = "tracing-opentelemetry", feature = "debug_log"))]
@@ -487,7 +521,7 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
 
         let mut city_map = HashMap::new();
         for city in cities {
-            city_map.insert(city.city_code.clone(), city);
+            city_map.insert(city.city_name.clone(), city);
         }
 
         Ok(city_map)

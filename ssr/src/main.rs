@@ -337,19 +337,34 @@ cfg_if! {
             #[cfg(not(target_arch = "wasm32"))]
             let city_actor_ref = {
                 let api_provider = SsrCityApiProvider::new();
-                let current_span = tracing::Span::current();
-                
+
+                // Create a dedicated root span for the background city updater service with full tracing context
+                let city_updater_span = tracing::info_span!(
+                    "city_updater_service",
+                    service.name = "city_updater",
+                    service.version = env!("CARGO_PKG_VERSION"),
+                    background_task = true,
+                    update_interval_secs = 600,
+                    heartbeat_interval_secs = 3,
+                    component = "background_task",
+                    task.type = "periodic_updater",
+                    otel.name = "city_updater_service",
+                    otel.kind = "internal",
+                    otel.scope.name = "bg-ractor",
+                    otel.scope.version = env!("CARGO_PKG_VERSION")
+                );
+
                 let actor_ref = bg_ractor::start_cities_polling_with_secs(
                     api_provider,
-                    60,  // Update cities every 60 seconds
-                    3,   // Heartbeat every 3 seconds
+                    24*60*60,  // Update cities every 24 hrs
+                    30,   // Heartbeat every 30 seconds
                     "city.json".to_string(),
                 )
-                .instrument(current_span)
+                .instrument(city_updater_span)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to start cities polling: {}", e))?;
-                
-                info!("Cities polling background actor started with 60s update and 3s heartbeat intervals");
+
+                info!("Cities polling background actor started with 600s update and 3s heartbeat intervals");
                 actor_ref
             };
 
@@ -430,7 +445,7 @@ cfg_if! {
                     info!("Stopping city updater actor");
                     city_actor_ref.stop(None);
                 }
-                
+
                 info!("Application shutting down");
 
                 //   cleanup tracing config.
