@@ -332,18 +332,24 @@ cfg_if! {
             .build()
             .await;
 
-            // Initialize city updater with custom intervals
+            // Start cities polling as an actor with custom intervals
             #[cfg(not(target_arch = "wasm32"))]
-            let _city_updater = {
+            let city_actor_ref = {
                 let api_provider = SsrCityApiProvider::new();
-                let updater = bg_ractor::PeriodicCityUpdater::with_intervals_secs(
-                    60,  // 60 seconds for city updates
-                    3,   // 3 seconds for heartbeat
+                let current_span = tracing::Span::current();
+                
+                let actor_ref = bg_ractor::start_cities_polling_with_secs(
+                    api_provider,
+                    60,  // Update cities every 60 seconds
+                    3,   // Heartbeat every 3 seconds
                     "city.json".to_string(),
-                    api_provider
-                );
-                info!("City updater initialized with custom intervals");
-                updater
+                )
+                .instrument(current_span)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to start cities polling: {}", e))?;
+                
+                info!("Cities polling background actor started with 60s update and 3s heartbeat intervals");
+                actor_ref
             };
 
             let trace_layer = tower_http::trace::TraceLayer::new_for_http()
@@ -412,7 +418,13 @@ cfg_if! {
                     .await
                     .unwrap();
 
-                // TODO: Cleanup city updater resources if needed
+                // Stop the city updater actor
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    info!("Stopping city updater actor");
+                    city_actor_ref.stop(None);
+                }
+                
                 info!("Application shutting down");
 
                 //   cleanup tracing config.

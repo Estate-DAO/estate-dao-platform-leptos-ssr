@@ -36,9 +36,7 @@ pub struct LiteApiGetCountriesRequest {
 
 impl LiteApiGetCountriesRequest {
     pub fn new() -> Self {
-        Self {
-            timeout: Some(2),
-        }
+        Self { timeout: Some(2) }
     }
 }
 

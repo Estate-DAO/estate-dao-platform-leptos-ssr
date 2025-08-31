@@ -77,7 +77,9 @@ pub async fn liteapi_get_cities(
     client.send(request).await
 }
 
-pub async fn get_cities_list(country_code: String) -> Result<LiteApiGetCitiesResponse, crate::api::ApiError> {
+pub async fn get_cities_list(
+    country_code: String,
+) -> Result<LiteApiGetCitiesResponse, crate::api::ApiError> {
     let request = LiteApiGetCitiesRequest::new(country_code);
     liteapi_get_cities(request).await
 }
@@ -88,7 +90,10 @@ pub struct AllCitiesIterator {
     current_index: usize,
 }
 
-pub type CountryCitiesResult = Result<(crate::api::liteapi::Country, Vec<City>), (crate::api::liteapi::Country, crate::api::ApiError)>;
+pub type CountryCitiesResult = Result<
+    (crate::api::liteapi::Country, Vec<City>),
+    (crate::api::liteapi::Country, crate::api::ApiError),
+>;
 
 impl AllCitiesIterator {
     pub async fn next(&mut self) -> Option<CountryCitiesResult> {
@@ -113,7 +118,7 @@ impl AllCitiesIterator {
 // Simple function to get all cities - returns async iterator
 pub async fn get_all_cities() -> Result<AllCitiesIterator, crate::api::ApiError> {
     let countries_response = crate::api::liteapi::get_countries_list().await?;
-    
+
     Ok(AllCitiesIterator {
         countries: countries_response.data,
         current_index: 0,
