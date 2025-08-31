@@ -3,6 +3,7 @@ use crate::api::ApiError;
 use bg_ractor::{City, CityApiProvider, CityIterator, Country, CountryCitiesResult};
 use std::future::Future;
 use std::pin::Pin;
+use tracing::instrument;
 
 /// Adapter that wraps the SSR AllCitiesIterator to work with bg-ractor's CityIterator trait
 pub struct SsrCityIteratorAdapter {
@@ -12,7 +13,16 @@ pub struct SsrCityIteratorAdapter {
 impl CityIterator for SsrCityIteratorAdapter {
     fn next(&mut self) -> Pin<Box<dyn Future<Output = Option<CountryCitiesResult>> + Send + '_>> {
         Box::pin(async move {
+            let span = tracing::debug_span!(
+                "ssr_city_iterator_next",
+                api_provider = "ssr_city_iterator",
+                operation = "next_country_cities",
+                service.name = "estate_fe_ssr",
+                component = "cities_api_provider"
+            );
+            let _guard = span.enter();
             let result = self.inner.next().await?;
+            drop(_guard);
 
             match result {
                 Ok((country, cities)) => {
@@ -56,6 +66,12 @@ impl CityApiProvider for SsrCityApiProvider {
     type Iterator = SsrCityIteratorAdapter;
     type Error = ApiError;
 
+    #[instrument(skip(self), fields(
+        api_provider = "ssr_city_api_provider",
+        operation = "get_all_cities",
+        service.name = "estate_fe_ssr",
+        component = "cities_api_provider"
+    ))]
     async fn get_all_cities(&self) -> Result<Self::Iterator, Self::Error> {
         let iterator = get_all_cities().await?;
         Ok(SsrCityIteratorAdapter { inner: iterator })
