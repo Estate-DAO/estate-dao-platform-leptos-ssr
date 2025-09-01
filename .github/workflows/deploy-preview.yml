@@ -37,6 +37,7 @@ jobs:
       group: pr-${{ github.event.number }}
     environment:
       name: pr-${{ github.event.number }}
+      url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v3
 
