@@ -13,6 +13,7 @@ env:
 
 jobs:
   build_check:
+    if: ${{ github.event.pull_request.state == 'open'}}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo and submodules
