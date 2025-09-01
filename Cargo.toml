@@ -1,5 +1,5 @@
 [workspace]
-members = ["ssr", "telemetry_axum","bg-ractor"]
+members = ["ssr", "telemetry_axum","bg-ractor", "duck-searcher"]
 resolver = "2"
 
 [workspace.package]
