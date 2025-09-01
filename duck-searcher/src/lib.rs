@@ -1,53 +1,102 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use duckdb::{
-    arrow::{record_batch::RecordBatch, util::pretty::print_batches},
-    r2d2::{Pool, PooledConnection},
-    DuckdbConnectionManager, Result,
-};
+use anyhow::Result;
+use arrow::{json::ArrayWriter, record_batch::RecordBatch, util::pretty::print_batches};
+use duckdb::DuckdbConnectionManager;
+use r2d2::{Pool, PooledConnection};
 
-type ConnectionPool = Pool<DuckdbConnectionManager>;
 type PooledConn = PooledConnection<DuckdbConnectionManager>;
 
 static POOL: OnceLock<ConnectionPool> = OnceLock::new();
+
+pub struct ConnectionPool {
+    pool: Pool<DuckdbConnectionManager>,
+}
+
+impl ConnectionPool {
+    pub fn new_memory(pool_size: u32) -> Result<Self> {
+        let manager = DuckdbConnectionManager::memory()?;
+        let pool = Pool::builder().max_size(pool_size).build(manager)?;
+
+        // <!-- Initialize parquet extension on a connection from pool -->
+        let conn = pool.get()?;
+        conn.execute_batch("INSTALL parquet; LOAD parquet;")?;
+        drop(conn);
+
+        Ok(Self { pool })
+    }
+
+    pub fn new_file(db_path: &str, pool_size: u32) -> Result<Self> {
+        let manager = DuckdbConnectionManager::file(db_path)?;
+        let pool = Pool::builder().max_size(pool_size).build(manager)?;
+
+        // <!-- Initialize parquet extension on a connection from pool -->
+        let conn = pool.get()?;
+        conn.execute_batch("INSTALL parquet; LOAD parquet;")?;
+        drop(conn);
+
+        Ok(Self { pool })
+    }
+
+    pub fn get(&self) -> Result<PooledConn> {
+        Ok(self.pool.get()?)
+    }
+
+    pub fn execute(&self, sql: &str) -> Result<()> {
+        let conn = self.get()?;
+        conn.execute_batch(sql)?;
+        Ok(())
+    }
+
+    pub fn get_json(&self, sql: &str) -> Result<Vec<u8>> {
+        let conn = self.get()?;
+        let mut stmt = conn.prepare(sql)?;
+        let arrow = stmt.query_arrow([])?;
+
+        let buf = Vec::new();
+        let mut writer = ArrayWriter::new(buf);
+        for batch in arrow {
+            writer.write(&batch)?;
+        }
+        writer.finish()?;
+        Ok(writer.into_inner())
+    }
+
+    pub fn get_arrow(&self, sql: &str) -> Result<Vec<u8>> {
+        let conn = self.get()?;
+        let mut stmt = conn.prepare(sql)?;
+        let arrow = stmt.query_arrow([])?;
+        let schema = arrow.get_schema();
+
+        let mut buffer: Vec<u8> = Vec::new();
+        {
+            let schema_ref = schema.as_ref();
+            let mut writer = arrow::ipc::writer::FileWriter::try_new(&mut buffer, schema_ref)?;
+
+            for batch in arrow {
+                writer.write(&batch)?;
+            }
+
+            writer.finish()?;
+        }
+
+        Ok(buffer)
+    }
+}
 
 pub fn get_parquet_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../city.parquet")
 }
 
 fn create_connection_pool() -> Result<ConnectionPool> {
-    let manager = DuckdbConnectionManager::memory()?;
-    let pool = Pool::builder().max_size(10).build(manager).map_err(|e| {
-        duckdb::Error::SqliteFailure(
-            duckdb::ffi::Error::new(duckdb::ffi::SQLITE_MISUSE),
-            Some(e.to_string()),
-        )
-    })?;
-
-    // <!-- Initialize parquet extension on a connection from pool -->
-    let conn = pool.get().map_err(|e| {
-        duckdb::Error::SqliteFailure(
-            duckdb::ffi::Error::new(duckdb::ffi::SQLITE_MISUSE),
-            Some(e.to_string()),
-        )
-    })?;
-    conn.execute_batch("INSTALL parquet; LOAD parquet;")?;
-    drop(conn);
-
-    Ok(pool)
+    ConnectionPool::new_memory(20)
 }
 
 fn get_connection() -> Result<PooledConn> {
     let pool =
         POOL.get_or_init(|| create_connection_pool().expect("Failed to create connection pool"));
-
-    pool.get().map_err(|e| {
-        duckdb::Error::SqliteFailure(
-            duckdb::ffi::Error::new(duckdb::ffi::SQLITE_MISUSE),
-            Some(e.to_string()),
-        )
-    })
+    pool.get()
 }
 
 pub fn search_cities_by_prefix(prefix: &str) -> Result<Vec<RecordBatch>> {
@@ -82,16 +131,7 @@ pub fn print_results(results: &[RecordBatch]) -> Result<()> {
     if results.is_empty() {
         println!("No results found.");
     } else {
-        print_batches(results).map_err(|e| {
-            duckdb::Error::FromSqlConversionFailure(
-                0,
-                duckdb::types::Type::Null,
-                Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    e.to_string(),
-                )),
-            )
-        })?;
+        print_batches(results)?;
     }
     Ok(())
 }
