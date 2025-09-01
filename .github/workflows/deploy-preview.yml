@@ -13,13 +13,6 @@ env:
   FLY_ORG: estate-dao-769
 
 jobs:
-  build_check:
-    if: ${{ github.event.pull_request.state == 'open' }}
-    uses: ./.github/workflows/build-check.yml
-    with:
-      publish-artifact: true
-    secrets: inherit
-
   destroy_preview:
     if: ${{ github.event.pull_request.state == 'closed'}}
     runs-on: ubuntu-latest
@@ -32,6 +25,12 @@ jobs:
         uses: superfly/fly-pr-review-apps@1.2.1
         with: 
           name: pr-${{ github.event.number }}-estate
+  
+  build_check:
+    uses: ./.github/workflows/build-check.yml
+    with:
+      publish-artifact: true
+    secrets: inherit
 
   preview:
     if: ${{ github.event.pull_request.state == 'open'}}
