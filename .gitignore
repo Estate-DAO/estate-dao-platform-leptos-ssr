@@ -19,7 +19,7 @@ bun.lockb
 !.gitignore
 
 *.log
-*.json
+# *.json
 
 
 !city.json

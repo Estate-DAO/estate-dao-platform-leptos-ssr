@@ -1,0 +1,28 @@
+// To Run press ctrl + shift + b or cmd + shift + b
+
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "local run",
+            "type": "shell",
+            "group": "build",
+            "command": "bash",
+            "args": [
+                "./scripts/local_run.sh",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": false,
+                "group": "${cwd}"
+            }
+        }
+    ]
+}

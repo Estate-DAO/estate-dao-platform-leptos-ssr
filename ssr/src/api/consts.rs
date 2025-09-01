@@ -56,6 +56,35 @@ const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
 pub const GTAG_MEASUREMENT_ID: Lazy<&str> = Lazy::new(|| "G-BPRVSPTP2T");
 
+pub fn get_host() -> String {
+    #[cfg(feature = "hydrate")]
+    {
+        leptos_use::use_window()
+            .as_ref()
+            .unwrap()
+            .location()
+            .host()
+            .unwrap()
+            .to_string()
+    }
+
+    #[cfg(not(feature = "hydrate"))]
+    {
+        use leptos::prelude::*;
+
+        use axum::http::request::Parts;
+        let parts: Option<Parts> = use_context();
+        if parts.is_none() {
+            return "".to_string();
+        }
+        let headers = parts.unwrap().headers;
+        headers
+            .get("Host")
+            .map(|h| h.to_str().unwrap_or_default().to_string())
+            .unwrap_or_default()
+    }
+}
+
 cfg_if! {
     if #[cfg(feature = "local-consts")] {
         pub static APP_URL: Lazy<String> = Lazy::new(|| {
@@ -65,12 +94,12 @@ cfg_if! {
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
     }
     else if #[cfg(feature = "prod-consts")] {
-        pub static APP_URL: Lazy<String> = Lazy::new(|| PROD_APP_URL.to_string());
+        pub static APP_URL: Lazy<String> = Lazy::new(|| get_host());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else {
-        pub static APP_URL: Lazy<String> = Lazy::new(|| STAGING_APP_URL.to_string());
+        pub static APP_URL: Lazy<String> = Lazy::new(|| get_host());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
