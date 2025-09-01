@@ -26,6 +26,7 @@ jobs:
       name: pr-${{ github.event.number }}
     steps:
       - name: Destroy preview app
+        id: destroy
         uses: superfly/fly-pr-review-apps@1.2.1
 
   preview:
@@ -140,13 +141,6 @@ jobs:
           echo "✅ Dockerfile generated:"
           cat Dockerfile
 
-      - name: Deploy preview app
-        id: deploy
-        uses: superfly/fly-pr-review-apps@1.5.0
-        with:
-          name: pr-${{ github.event.number }}-estate
-          region: bom
-          path: .
 
       - name: Check if deploy succeeded and get app name
         run: |
@@ -214,3 +208,11 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
           YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}
           YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
+
+      - name: Deploy preview app
+        id: deploy
+        uses: superfly/fly-pr-review-apps@1.5.0
+        with:
+          name: pr-${{ github.event.number }}-estate
+          region: bom
+          path: .
