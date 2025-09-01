@@ -20,17 +20,20 @@ jobs:
     secrets: inherit
 
   destroy_preview:
-    if: github.event.pull_request.state == 'closed'
+    if: ${{ github.event.pull_request.state == 'closed'}}
     runs-on: ubuntu-latest
     environment:
       name: pr-${{ github.event.number }}
+      url: ${{ steps.deploy.outputs.url }}
     steps:
       - name: Destroy preview app
         id: destroy
         uses: superfly/fly-pr-review-apps@1.2.1
+        with: 
+          name: pr-${{ github.event.number }}-estate
 
   preview:
-    if: github.event.pull_request.state == 'open'
+    if: ${{ github.event.pull_request.state == 'open'}}
     needs: build_check
     runs-on: ubuntu-latest
     concurrency:
