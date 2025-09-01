@@ -193,7 +193,6 @@ jobs:
           
           # Set redirect URL with the actual app name
           flyctl secrets set YRAL_AUTH_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/callback" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_REDIRECT_URL"
-          
           echo "✅ Secrets setup completed for $APP_NAME"
         env:
           APP_NAME: ${{ env.APP_NAME }}
