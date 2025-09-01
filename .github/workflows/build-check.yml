@@ -7,7 +7,6 @@ on:
         default: false
         required: false
         type: boolean
-  # workflow_dispatch:
 
 env:
   ACTIONS_STEP_DEBUG: true
