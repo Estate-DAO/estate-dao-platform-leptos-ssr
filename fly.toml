@@ -1,0 +1,19 @@
+primary_region = "bom"
+
+[build]
+
+[http_service]
+internal_port = 3000
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 0
+processes = ["app"]
+
+[[vm]]
+size = "shared-cpu-2x"
+memory = "1gb"
+
+
+[env]
+RUST_LOG="estate_fe=debug,tower_http=info"

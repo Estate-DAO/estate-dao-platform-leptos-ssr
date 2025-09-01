@@ -1,0 +1,216 @@
+name: Deploy Preview
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed, labeled, unlabeled]
+
+permissions:
+  deployments: write
+  pull-requests: read
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+  FLY_ORG: estate-dao-769
+
+jobs:
+  build_check:
+    uses: ./.github/workflows/build-check.yml
+    with:
+      publish-artifact: true
+    secrets: inherit
+
+  destroy_preview:
+    if: github.event.pull_request.state == 'closed'
+    runs-on: ubuntu-latest
+    environment:
+      name: pr-${{ github.event.number }}
+    steps:
+      - name: Destroy preview app
+        uses: superfly/fly-pr-review-apps@1.2.1
+
+  preview:
+    if: github.event.pull_request.state == 'open'
+    needs: build_check
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pr-${{ github.event.number }}
+    environment:
+      name: pr-${{ github.event.number }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-debian
+          path: .
+
+      - name: Check where artifacts were downloaded
+        run: |
+          echo "Current directory structure:"
+          ls -la
+          echo "Target directory contents:"
+          ls -la target/ || echo "No target directory"
+          echo "Looking for estate-fe binary:"
+          find . -name "estate-fe" -type f 2>/dev/null || echo "estate-fe not found"
+          echo "Looking for hash.txt:"
+          find . -name "hash.txt" -type f 2>/dev/null || echo "hash.txt not found"
+          echo "Looking for site directory:"
+          find . -name "site" -type d 2>/dev/null || echo "site directory not found"
+
+      - name: Move artifacts to root for Docker build
+        run: |
+          # Find and move estate-fe binary
+          ESTATE_FE_PATH=$(find . -name "estate-fe" -type f 2>/dev/null | head -1)
+          if [ -n "$ESTATE_FE_PATH" ]; then
+            echo "Moving estate-fe from: $ESTATE_FE_PATH"
+            mv "$ESTATE_FE_PATH" ./estate-fe
+            chmod +x ./estate-fe
+          else
+            echo "❌ estate-fe not found anywhere"
+            exit 1
+          fi
+
+          # Find and move hash.txt
+          HASH_PATH=$(find . -name "hash.txt" -type f 2>/dev/null | head -1)
+          if [ -n "$HASH_PATH" ]; then
+            echo "Moving hash.txt from: $HASH_PATH"
+            mv "$HASH_PATH" ./hash.txt
+          else
+            echo "❌ hash.txt not found anywhere"
+            exit 1
+          fi
+
+          # Find and move site directory
+          SITE_PATH=$(find . -name "site" -type d 2>/dev/null | head -1)
+          if [ -n "$SITE_PATH" ]; then
+            echo "Moving site directory from: $SITE_PATH"
+            # Remove existing site dir if it exists
+            rm -rf ./site 2>/dev/null || true
+            mv "$SITE_PATH" ./site
+          else
+            echo "❌ site directory not found anywhere"
+            exit 1
+          fi
+
+          # Check if city.json exists
+          if [ -f "city.json" ]; then
+            echo "✓ city.json found in root"
+          else
+            # Try to find city.json
+            CITY_PATH=$(find . -name "city.json" -type f 2>/dev/null | head -1)
+            if [ -n "$CITY_PATH" ]; then
+              echo "Moving city.json from: $CITY_PATH"
+              mv "$CITY_PATH" ./city.json
+            else
+              echo "❌ city.json not found anywhere"
+              exit 1
+            fi
+          fi
+
+      - name: Verify required artifacts in root
+        run: |
+          echo "Final files in root directory:"
+          ls -la
+          test -f "estate-fe" || { echo "❌ estate-fe missing"; exit 1; }
+          test -f "hash.txt" || { echo "❌ hash.txt missing"; exit 1; }
+          test -d "site" || { echo "❌ site directory missing"; exit 1; }
+          test -f "city.json" || { echo "❌ city.json missing"; exit 1; }
+          echo "✅ All required artifacts are in root directory"
+
+      - name: Generate Dockerfile for preview
+        run: |
+          cat > Dockerfile <<'EOF'
+          FROM debian:bookworm-slim
+          WORKDIR /app
+          RUN apt update && apt install -y tree vim curl dnsutils
+          COPY estate-fe /app/estate-fe
+          COPY hash.txt /app/hash.txt
+          COPY site /app/site
+          COPY city.json /app/city.json
+          RUN chmod +x /app/estate-fe
+          ENV LEPTOS_ENV="production"
+          ENV RUST_LOG="debug,hyper=info,tower=info"
+          ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+          ENV LEPTOS_SITE_ROOT="site"
+          ENV LEPTOS_HASH_FILES="true"
+          EXPOSE 3000
+          CMD ["/app/estate-fe"]
+          EOF
+          echo "✅ Dockerfile generated:"
+          cat Dockerfile
+
+      - name: Deploy preview app
+        id: deploy
+        uses: superfly/fly-pr-review-apps@1.5.0
+        with:
+          name: pr-${{ github.event.number }}-estate
+          region: bom
+          path: .
+
+      - name: Check if deploy succeeded and get app name
+        run: |
+          # Check if the deploy step succeeded and set app name
+          if [ -n "${{ steps.deploy.outputs.app-name }}" ]; then
+            echo "APP_NAME=${{ steps.deploy.outputs.app-name }}" >> $GITHUB_ENV
+            echo "Deploy succeeded, app name: ${{ steps.deploy.outputs.app-name }}"
+          else
+            # Fallback: construct app name manually
+            APP_NAME="pr-${{ github.event.number }}-estate"
+            echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+            echo "Using fallback app name: $APP_NAME"
+          fi
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Set Fly.io secret tokens
+        run: |
+          echo "Setting required secrets for $APP_NAME..."
+          
+          # First check if the app exists, create it if not
+          flyctl status --app "$APP_NAME" || flyctl apps create "$APP_NAME" --org "$FLY_ORG" || true
+          
+          # Set secrets one by one to avoid command line length issues
+          flyctl secrets set ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY="$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set first secret"
+          
+          flyctl secrets set PROVAB_HEADERS="$PROVAB_HEADERS" --app "$APP_NAME" --stage || echo "Warning: Failed to set PROVAB_HEADERS"
+          flyctl secrets set FLY_API_TOKEN="$FLY_API_TOKEN" --app "$APP_NAME" --stage || echo "Warning: Failed to set FLY_API_TOKEN"
+          flyctl secrets set NOW_PAYMENTS_USDC_ETHEREUM_API_KEY="$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"
+          flyctl secrets set BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE="$BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE" --app "$APP_NAME" --stage || echo "Warning: Failed to set BASIC_AUTH_PASSWORD"
+          flyctl secrets set BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE="$BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE" --app "$APP_NAME" --stage || echo "Warning: Failed to set BASIC_AUTH_USERNAME"
+          flyctl secrets set COOKIE_KEY="$COOKIE_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set COOKIE_KEY"
+          flyctl secrets set EMAIL_ACCESS_TOKEN="$EMAIL_ACCESS_TOKEN" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_ACCESS_TOKEN"
+          flyctl secrets set EMAIL_CLIENT_ID="$EMAIL_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_CLIENT_ID"
+          flyctl secrets set EMAIL_CLIENT_SECRET="$EMAIL_CLIENT_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_CLIENT_SECRET"
+          flyctl secrets set EMAIL_REFRESH_TOKEN="$EMAIL_REFRESH_TOKEN" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_REFRESH_TOKEN"
+          flyctl secrets set EMAIL_TOKEN_EXPIRY="$EMAIL_TOKEN_EXPIRY" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_TOKEN_EXPIRY"
+          flyctl secrets set LITEAPI_KEY="$LITEAPI_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set LITEAPI_KEY"
+          flyctl secrets set LITEAPI_PREBOOK_BASE_URL="$LITEAPI_PREBOOK_BASE_URL" --app "$APP_NAME" --stage || echo "Warning: Failed to set LITEAPI_PREBOOK_BASE_URL"
+          flyctl secrets set NOWPAYMENTS_IPN_SECRET="$NOWPAYMENTS_IPN_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set NOWPAYMENTS_IPN_SECRET"
+          flyctl secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set STRIPE_SECRET_KEY"
+          flyctl secrets set YRAL_AUTH_CLIENT_ID="$YRAL_AUTH_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_CLIENT_ID"
+          flyctl secrets set YRAL_AUTH_CLIENT_SECRET="$YRAL_AUTH_CLIENT_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_CLIENT_SECRET"
+          
+          # Set redirect URL with the actual app name
+          flyctl secrets set YRAL_AUTH_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/callback" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_REDIRECT_URL"
+          echo "✅ Secrets setup completed for $APP_NAME"
+        env:
+          APP_NAME: ${{ env.APP_NAME }}
+          PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+          FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{ secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY }}
+          ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{ secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY }}
+          BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE: ${{ secrets.BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE }}
+          BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE: ${{ secrets.BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE }}
+          COOKIE_KEY: ${{ secrets.COOKIE_KEY }}
+          EMAIL_ACCESS_TOKEN: ${{ secrets.EMAIL_ACCESS_TOKEN }}
+          EMAIL_CLIENT_ID: ${{ secrets.EMAIL_CLIENT_ID }}
+          EMAIL_CLIENT_SECRET: ${{ secrets.EMAIL_CLIENT_SECRET }}
+          EMAIL_REFRESH_TOKEN: ${{ secrets.EMAIL_REFRESH_TOKEN }}
+          EMAIL_TOKEN_EXPIRY: ${{ secrets.EMAIL_TOKEN_EXPIRY }}
+          LITEAPI_KEY: ${{ secrets.LITEAPI_KEY_STAGING_TEST }}
+          LITEAPI_PREBOOK_BASE_URL: ${{ secrets.LITEAPI_PREBOOK_BASE_URL }}
+          NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
+          YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}
+          YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
