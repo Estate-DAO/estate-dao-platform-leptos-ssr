@@ -17,6 +17,10 @@ use crate::{
 const CSRF_COOKIE: &str = "g_csrf";
 const SESSION_COOKIE: &str = "session"; // signed session cookie
 
+pub async fn get_app_url() -> String {
+    std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into())
+}
+
 fn build_google_client() -> BasicClient {
     let client_id = std::env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID not set");
     let client_secret =

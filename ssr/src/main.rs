@@ -375,6 +375,7 @@ cfg_if! {
                     get(server_fn_handler).post(server_fn_handler),
                 )
                 .route("/auth/google", get(google_auth))
+                .route("/app", get(get_app_url))
                 .route("/api/user-info", get(api_user_info))
                 .route("/auth/google/callback", get(google_callback))
                 .route("/auth/logout", get(logout))
