@@ -11,7 +11,7 @@ use web_sys::Window;
 use crate::api::{
     auth::types::{LoginProvider, NewIdentity, OidcUser, ProviderKind, YralAuthMessage},
     client_side_api::ClientSideApiClient,
-    consts::{APP_URL, USER_IDENTITY},
+    consts::{get_host, APP_URL, USER_IDENTITY},
 };
 
 // use super::auth::{NewIdentity, LoginProvider, ProviderKind, YralAuthMessage, YralOAuthClient, yral_auth_url_impl};
@@ -98,8 +98,8 @@ pub fn YralAuthProvider() -> impl IntoView {
     let profile_details = Resource::local(
         || (),
         move |_| async move {
-            let app_url = APP_URL.clone();
-            let url = format!("{app_url}api/user-info");
+            let app_url = get_host();
+            let url = format!("{app_url}/api/user-info");
             match reqwest::get(&url).await {
                 Ok(response) => {
                     if response.status().is_success() {
