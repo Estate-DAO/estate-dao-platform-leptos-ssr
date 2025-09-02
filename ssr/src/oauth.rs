@@ -25,7 +25,6 @@ pub async fn get_app_url() -> Json<AppUrl> {
     let const_url = APP_URL.to_string();
     Json(AppUrl { env_url, const_url })
 }
-
 fn build_google_client() -> BasicClient {
     let client_id = std::env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID not set");
     let client_secret =

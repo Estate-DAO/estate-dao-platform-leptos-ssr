@@ -85,6 +85,13 @@ impl Default for LoginProvCtx {
 // 1. extract user_principal and use that to make any api calls - to backend via client_side_api.rs
 // 2. routes to /logout
 
+#[server]
+pub async fn get_app_url_server() -> Result<String, ServerFnError> {
+    let env_url = std::env::var("APP_URL")
+        .map_err(|e| ServerFnError::new(format!("Failed to read APP_URL from env: {}", e)))?;
+    Ok(env_url)
+}
+
 #[component]
 pub fn YralAuthProvider() -> impl IntoView {
     let ctx: LoginProvCtx = expect_context();
@@ -98,8 +105,8 @@ pub fn YralAuthProvider() -> impl IntoView {
     let profile_details = Resource::local(
         || (),
         move |_| async move {
-            let app_url = get_host();
-            let url = format!("{app_url}/api/user-info");
+            let app_url = get_app_url_server().await.ok()?;
+            let url = format!("{app_url}api/user-info");
             match reqwest::get(&url).await {
                 Ok(response) => {
                     if response.status().is_success() {
