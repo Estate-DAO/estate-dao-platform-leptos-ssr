@@ -2,15 +2,21 @@
 app = 'estatefe'
 primary_region = 'bom'
 
-[build]
+[processes]
+# The command below is used to launch a Rails server; be sure to
+# replace with the command you're using to launch your server.
+web = "./estate-fe"
 
-[http_service]
+[[services]]
 internal_port = 3000
-force_https = true
-auto_stop_machines = true
-auto_start_machines = true
-min_machines_running = 0
-processes = ["app"]
+protocol = "tcp"
+processes = ["web"]
+http_checks = []
+
+[[services.ports]]
+handlers = ["tls", "http"] 
+tls_options = { "versions" = ["TLSv1.2", "TLSv1.3"] } 
+port = 443
 
 [env]
 RUST_LOG="debug"

@@ -15,6 +15,9 @@ jobs:
     name: Deploy
     needs: build_check
     runs-on: ubuntu-latest
+    environment:
+      name: pr-${{ github.event.number }}
+      url: https://estatefe.fly.dev
     steps:
       - name: Download build
         uses: actions/download-artifact@v4
