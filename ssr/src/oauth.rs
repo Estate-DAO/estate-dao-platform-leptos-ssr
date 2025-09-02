@@ -10,15 +10,20 @@ use oauth2::{
 use tower_cookies::cookie::time::Duration;
 
 use crate::{
-    api::{auth::types::OidcUser, consts::APP_URL},
+    api::{
+        auth::types::{AppUrl, OidcUser},
+        consts::APP_URL,
+    },
     view_state_layer::AppState,
 };
 
 const CSRF_COOKIE: &str = "g_csrf";
 const SESSION_COOKIE: &str = "session"; // signed session cookie
 
-pub async fn get_app_url() -> String {
-    std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into())
+pub async fn get_app_url() -> Json<AppUrl> {
+    let env_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
+    let const_url = APP_URL.to_string();
+    Json(AppUrl { env_url, const_url })
 }
 
 fn build_google_client() -> BasicClient {

@@ -10,6 +10,12 @@ pub struct OidcUser {
     pub picture: Option<String>,
 }
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct AppUrl {
+    pub env_url: String,
+    pub const_url: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct YralAuthAdditionalTokenClaims {
     pub ext_is_anonymous: bool,
