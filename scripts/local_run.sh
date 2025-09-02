@@ -38,7 +38,7 @@ export RUST_LOG="estate_fe=debug,tower_http=debug"
 export RUST_BACKTRACE=1
 export LEPTOS_SITE_ROOT="target/site"
 export PAYMENTS_SKIP_LOCAL="true"
-export LEPTOS_SITE_ADDR="0.0.0.0:3002"
+export LEPTOS_SITE_ADDR="127.0.0.1:3002"
 export NOWPAYMENTS_API_HOST="http://localhost:3001"
 
 echo "NGROK_LOCALHOST_URL: $NGROK_LOCALHOST_URL"

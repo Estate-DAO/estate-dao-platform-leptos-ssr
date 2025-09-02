@@ -1,6 +1,15 @@
 use serde::{Deserialize, Serialize};
 use yral_types::delegated_identity::DelegatedIdentityWire;
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct OidcUser {
+    pub sub: String,
+    pub email: Option<String>,
+    pub email_verified: Option<bool>,
+    pub name: Option<String>,
+    pub picture: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct YralAuthAdditionalTokenClaims {
     pub ext_is_anonymous: bool,

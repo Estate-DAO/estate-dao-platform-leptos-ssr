@@ -137,7 +137,7 @@ jobs:
           RUN chmod +x /app/estate-fe
           ENV LEPTOS_ENV="production"
           ENV RUST_LOG="debug,hyper=info,tower=info"
-          ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+          ENV LEPTOS_SITE_ADDR="127.0.0.1:3000"
           ENV LEPTOS_SITE_ROOT="site"
           ENV LEPTOS_HASH_FILES="true"
           EXPOSE 3000
@@ -192,6 +192,11 @@ jobs:
           
           # Set redirect URL with the actual app name
           flyctl secrets set YRAL_AUTH_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/callback" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_REDIRECT_URL"
+          flyctl secrets set APP_URL="https://$APP_NAME.fly.dev/" --app "$APP_NAME" --stage || echo "Warning: Failed to set APP_URL"
+          flyctl secrets set GOOGLE_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/google/callback" --app "$APP_NAME" --stage || echo "Warning: Failed to set GOOGLE_REDIRECT_URL"
+          flyctl secrets set GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set GOOGLE_CLIENT_SECRET"
+          flyctl secrets set GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set GOOGLE_CLIENT_ID"
+
           echo "✅ Secrets setup completed for $APP_NAME"
         env:
           APP_NAME: ${{ env.APP_NAME }}
@@ -213,6 +218,8 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
           YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}
           YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       - name: Deploy preview app
         id: deploy

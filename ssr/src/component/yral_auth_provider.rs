@@ -9,10 +9,11 @@ use leptos_use::{
 use web_sys::Window;
 
 use crate::api::{
-    auth::types::{LoginProvider, NewIdentity, ProviderKind, YralAuthMessage},
+    auth::types::{LoginProvider, NewIdentity, OidcUser, ProviderKind, YralAuthMessage},
     client_side_api::ClientSideApiClient,
-    consts::USER_IDENTITY,
+    consts::{USER_IDENTITY, APP_URL},
 };
+
 
 // use super::auth::{NewIdentity, LoginProvider, ProviderKind, YralAuthMessage, YralOAuthClient, yral_auth_url_impl};
 // use super::{LoginProvButton, LoginProvCtx, ProviderKind};
@@ -39,35 +40,35 @@ impl Default for LoginProvCtx {
 
 /// Login providers must use this button to trigger the login action
 /// automatically sets the processing state to true
-#[component]
-fn LoginProvButton<Cb: Fn(ev::MouseEvent) + 'static>(
-    prov: ProviderKind,
-    #[prop(into)] class: Oco<'static, str>,
-    on_click: Cb,
-    #[prop(optional, into)] disabled: Signal<bool>,
-    children: Children,
-) -> impl IntoView {
-    let ctx: LoginProvCtx = expect_context();
+// #[component]
+// fn LoginProvButton<Cb: Fn(ev::MouseEvent) + 'static>(
+//     prov: ProviderKind,
+//     #[prop(into)] class: Oco<'static, str>,
+//     on_click: Cb,
+//     #[prop(optional, into)] disabled: Signal<bool>,
+//     children: Children,
+// ) -> impl IntoView {
+//     let ctx: LoginProvCtx = expect_context();
 
-    // let click_action = Action::new(move |()| async move {
-    //     // LoginMethodSelected.send_event(prov);
-    // });
+//     // let click_action = Action::new(move |()| async move {
+//     //     // LoginMethodSelected.send_event(prov);
+//     // });
 
-    view! {
-        <button
-            disabled=move || ctx.processing.get().is_some() || disabled()
-            class=class
-            on:click=move |ev| {
-                ctx.set_processing.set(Some(prov));
-                on_click(ev);
-                // click_action.dispatch(());
-            }
-        >
+//     view! {
+//         <button
+//             disabled=move || ctx.processing.get().is_some() || disabled()
+//             class=class
+//             on:click=move |ev| {
+//                 ctx.set_processing.set(Some(prov));
+//                 on_click(ev);
+//                 // click_action.dispatch(());
+//             }
+//         >
 
-            {children()}
-        </button>
-    }
-}
+//             {children()}
+//         </button>
+//     }
+// }
 
 // #[server]
 // async fn yral_auth_login_url(
@@ -90,164 +91,165 @@ pub fn YralAuthProvider() -> impl IntoView {
     let ctx: LoginProvCtx = expect_context();
     let signing_in = move || ctx.processing.get() == Some(ProviderKind::YralAuth);
     let signing_in_provider = create_rw_signal(LoginProvider::Google);
-    let done_guard = create_rw_signal(false);
-    // let close_popup_store = StoredValue::new(None::<Callback<()>>);
-    // let close_popup =
-    //     move || _ = close_popup_store.with_value(|cb| cb.as_ref().map(|close_cb| close_cb.run(())));
-    // let (_, set_notifs_enabled, _) =
-    //     use_local_storage::<bool, FromToStringCodec>(NOTIFICATIONS_ENABLED_STORE);
 
-    // let auth = auth_state();
+    // State for user data and authentication status
+    // let (user, set_user) = create_signal::<Option<OidcUser>>(None);
+    // let (loading, set_loading) = create_signal(true);
 
-    let (stored_identity, set_stored_identity) =
-        use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-            USER_IDENTITY,
-            UseCookieOptions::default()
-                .path("/")
-                .same_site(leptos_use::SameSite::Lax)
-                .http_only(false)
-                .secure(false),
-        );
-
-    Effect::new(move |_| {
-        if let Some(identity) = stored_identity.get() {
-            ctx.login_complete.set(Some(identity));
-        }
-    });
-
-    // let open_yral_auth = Action::new_unsync_local(
-    let open_yral_auth = create_action(
-        move |(target, origin, provider): &(Window, String, LoginProvider)| {
-            let target = target.clone();
-            let origin = origin.clone();
-            let provider = provider.clone();
-
-            let url_fut = async move {
-                // let id = auth.user_identity.await?;
-                // let id = DelegatedIdentity::try_from(id.id_wire)?;
-                // let login_hint = yral_auth_login_hint(&id)?;
-                // let login_hint = "".to_string();
-                let client = ClientSideApiClient::new();
-                client.yral_auth_login_url(provider).await
-
-                // yral_auth_login_url(provider).await
-            };
-
-            async move {
-                let url = match url_fut.await {
-                    Ok(url) => url,
-                    Err(e) => {
-                        format!("{origin}/error?err={e}")
+    let profile_details = Resource::local(
+        || (),
+        move |_| async move {
+            let app_url = APP_URL.clone();
+            let url = format!("{app_url}api/user-info");
+            match reqwest::get(&url).await {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        if let Ok(user_data) = response.json::<OidcUser>().await {
+                            return Some(user_data);
+                        }
                     }
-                };
-                target
-                    .location()
-                    .replace(&url)
-                    .expect("Failed to open Yral Auth?!");
+                }
+                Err(_) => {
+                    logging::log!("Failed to fetch user info");
+                }
             }
+            None
         },
     );
 
-    let on_click = move |provider: LoginProvider, auth_journey: &str| {
-        let window = window();
-        let origin = window.origin();
-
-        // if let Some(global) = MixpanelGlobalProps::from_ev_ctx(auth.event_ctx()) {
-        //     MixPanelEvent::track_auth_initiated(global, auth_journey.to_string());
-        // }
-        // open a target window
-        let target = window.open().transpose().and_then(|w| w.ok()).unwrap();
-
-        // load yral auth url in background
-        open_yral_auth.dispatch((target.clone(), origin.clone(), provider));
-
-        // Check if the target window was closed by the user
-        let target_c = target.clone();
-        let pause = use_interval_fn(
-            move || {
-                // Target window was closed by user
-                if target_c.closed().unwrap_or_default() && !done_guard.try_get().unwrap_or(true) {
-                    ctx.set_processing.try_set(None);
-                }
-            },
-            500,
-        );
-
-        _ = use_event_listener(use_window(), ev::message, move |msg| {
-            if msg.origin() != origin {
-                return;
-            }
-
-            let Some(data) = msg.data().as_string() else {
-                log::warn!("received invalid message: {:?}", msg.data());
-                return;
-            };
-            let res = match serde_json::from_str::<YralAuthMessage>(&data)
-                .map_err(|e| e.to_string())
-                .and_then(|r| r)
-            {
-                Ok(res) => res,
-                Err(e) => {
-                    log::warn!("error processing {e:?}. msg {data}");
-                    // close_popup();
-                    return;
-                }
-            };
-            done_guard.set(true);
-            (pause.pause)();
-            _ = target.close();
-            ctx.set_processing.set(None);
-            // set_notifs_enabled.set(false);
-
-            set_stored_identity.set(Some(res.clone()));
-            ctx.login_complete.set(Some(res));
-        });
-    };
-
     view! {
-        <LoginProvButton
-            prov=ProviderKind::YralAuth
+        // <Show when=move || !loading.get() fallback=|| view! {
+        //     <div class="flex justify-center items-center w-10 h-10">
+        //         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        //     </div>
+        // }>
+            {move || profile_details.get().flatten().map(|user|{
+                view! {
+                    <div>
+                        <UserAvatar user />
+                    </div>
+                }
+            }).or_else(|| view!{
+                <div>
+                                <LoginButton
+                                    signing_in=signing_in
+                                    signing_in_provider=signing_in_provider
+                                />
+                </div>
+            }.into())
+        }
+        // </Show>
+    }
+}
+
+/// Login button component (shown when not authenticated)
+#[component]
+fn LoginButton(
+    signing_in: impl Fn() -> bool + 'static + Clone,
+    signing_in_provider: RwSignal<LoginProvider>,
+) -> impl IntoView {
+    let signing_in_clone = signing_in.clone();
+    view! {
+        <button
             class="flex gap-2 justify-center items-center px-4 py-3 sm:px-6 sm:py-3 md:gap-3 font-medium text-sm md:text-base text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-            on_click=move |ev| {
-                ev.stop_propagation();
-                signing_in_provider.set(LoginProvider::Google);
-                // MixpanelGlobalProps::set_auth_journey("google".to_string());
-                on_click(signing_in_provider.get(), "google");
+            on:click=move |ev| {
+                ev.prevent_default();
+                let window = web_sys::window().expect("no global window exists");
+                let _ = window.location().set_href("/auth/google");
             }
+            disabled=move || signing_in() && signing_in_provider.get() == LoginProvider::Google
         >
             <img class="w-5 h-5 md:w-5 md:h-5" src="/img/google.svg" alt="Google logo" />
             <span>
-                {format!(
+                {move || format!(
                     "{}Google",
-                    if signing_in() && signing_in_provider.get() == LoginProvider::Google {
+                    if signing_in_clone() && signing_in_provider.get() == LoginProvider::Google {
                         "Logging in with "
                     } else {
                         "Login with "
                     },
                 )}
             </span>
-        </LoginProvButton>
-        // <LoginProvButton
-        //     prov=ProviderKind::YralAuth
-        //     class="flex gap-3 justify-center items-center py-3 w-full font-bold text-black bg-white rounded-md hover:bg-white/95"
-        //     on_click=move |ev| {
-        //         ev.stop_propagation();
-        //         signing_in_provider.set(LoginProvider::Apple);
-        //         // MixpanelGlobalProps::set_auth_journey("apple".to_string());
-        //         on_click(signing_in_provider.get(), "apple");
-        //     }
-        // >
-        //     <img class="size-5" src="/img/common/apple.svg" />
-        //     <span>
-        //         {format!(
-        //             "{}Apple",
-        //             if signing_in() && signing_in_provider.get() == LoginProvider::Apple {
-        //                 "Logging in with "
-        //             } else {
-        //                 "Login with "
-        //             },
-        //         )}
-        //     </span>
-        // </LoginProvButton>
+        </button>
+    }
+}
+
+/// User avatar component (shown when authenticated)
+#[component]
+fn UserAvatar(user: OidcUser) -> impl IntoView {
+    let picture_url = user
+        .picture
+        .unwrap_or_else(|| "/img/default-avatar.png".to_string());
+    let user_name = user.name.unwrap_or_else(|| "User".to_string());
+
+    view! {
+        <div class="relative group">
+            // Circular avatar image
+            <img
+                src=picture_url
+                alt=format!("{} profile picture", user_name)
+                class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm cursor-pointer hover:border-blue-500 transition-all duration-200"
+            />
+
+            // Optional: Dropdown menu on hover/click
+            <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div class="px-4 py-2 border-b border-gray-100">
+                    <p class="text-sm font-medium text-gray-900 truncate">{user_name}</p>
+                    <p class="text-xs text-gray-500 truncate">{user.email.unwrap_or_default()}</p>
+                </div>
+                <button
+                    on:click=move |ev| {
+                        ev.prevent_default();
+                        let window = web_sys::window().expect("no global window exists");
+                        let _ = window.location().set_href("/auth/logout");
+                    }
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                    "Logout"
+                </button>
+            </div>
+        </div>
+    }
+}
+
+/// Alternative: Simple avatar without dropdown
+#[component]
+fn SimpleUserAvatar(user: OidcUser) -> impl IntoView {
+    let picture_url = user
+        .picture
+        .unwrap_or_else(|| "/img/default-avatar.png".to_string());
+
+    view! {
+        <a href="/profile" class="block">
+            <img
+                src=picture_url
+                alt="User profile"
+                class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm hover:border-blue-500 transition-all duration-200"
+            />
+        </a>
+    }
+}
+
+/// Alternative: Avatar with tooltip
+#[component]
+fn UserAvatarWithTooltip(user: OidcUser) -> impl IntoView {
+    let picture_url = user
+        .picture
+        .unwrap_or_else(|| "/img/default-avatar.png".to_string());
+    let user_name = user.name.unwrap_or_else(|| "User".to_string());
+
+    view! {
+        <div class="relative group">
+            <img
+                src=picture_url
+                alt="User profile"
+                class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm cursor-pointer"
+            />
+            // Tooltip
+            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                {user_name}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+            </div>
+        </div>
     }
 }
