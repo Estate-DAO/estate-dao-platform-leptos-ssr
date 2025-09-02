@@ -11,9 +11,8 @@ use web_sys::Window;
 use crate::api::{
     auth::types::{LoginProvider, NewIdentity, OidcUser, ProviderKind, YralAuthMessage},
     client_side_api::ClientSideApiClient,
-    consts::{USER_IDENTITY, APP_URL},
+    consts::{APP_URL, USER_IDENTITY},
 };
-
 
 // use super::auth::{NewIdentity, LoginProvider, ProviderKind, YralAuthMessage, YralOAuthClient, yral_auth_url_impl};
 // use super::{LoginProvButton, LoginProvCtx, ProviderKind};

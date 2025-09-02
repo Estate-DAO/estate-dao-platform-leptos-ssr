@@ -9,7 +9,10 @@ use oauth2::{
 };
 use tower_cookies::cookie::time::Duration;
 
-use crate::{api::{auth::types::OidcUser, consts::APP_URL}, view_state_layer::AppState};
+use crate::{
+    api::{auth::types::OidcUser, consts::APP_URL},
+    view_state_layer::AppState,
+};
 
 const CSRF_COOKIE: &str = "g_csrf";
 const SESSION_COOKIE: &str = "session"; // signed session cookie
