@@ -56,9 +56,37 @@ jobs:
           YRAL_AUTH_REDIRECT_URL: ${{secrets.YRAL_AUTH_REDIRECT_URL_STAGING}}
           GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
           GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
+
+          
+      - name: Generate Dockerfile for preview
+        run: |
+          cat > Dockerfile <<'EOF'
+          FROM debian:bookworm-slim
+          WORKDIR /app
+          RUN apt update && apt install -y tree vim curl dnsutils
+          COPY estate-fe /app/estate-fe
+          COPY hash.txt /app/hash.txt
+          COPY site /app/site
+          COPY city.json /app/city.json
+          RUN chmod +x /app/estate-fe
+          ENV LEPTOS_ENV="production"
+          ENV RUST_LOG="debug,hyper=info,tower=info"
+          ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+          ENV LEPTOS_SITE_ROOT="site"
+          ENV LEPTOS_HASH_FILES="true"
+          EXPOSE 3000
+          CMD ["/app/estate-fe"]
+          EOF
+          echo "✅ Dockerfile generated:"
+          cat Dockerfile
           
       
       - name: Deploy a docker container to Fly.io
-        run: flyctl deploy --remote-only -c fly-staging.toml
+        id: deploy
+        uses: superfly/fly-pr-review-apps@1.5.0
+        with:
+          name: estatefe
+          region: bom
+          path: .
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
