@@ -81,7 +81,6 @@ pub struct VerifyOtpRequest {
     pub otp: String,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserPrincipalEmailRequest {
     pub user_email: String,
@@ -479,7 +478,6 @@ impl ClientSideApiClient {
         let request = VerifyOtpRequest { booking_id, otp };
         Self::api_call_with_error(request, "server_fn_api/verify_otp_api", "verify OTP").await
     }
-
 
     pub async fn update_user_principal_email_mapping_in_canister_client_side_fn(
         &self,

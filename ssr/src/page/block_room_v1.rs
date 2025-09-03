@@ -652,9 +652,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
     // );
 
     // Get user email from identity for auto-fill
-    let user_email = Signal::derive(move || {
-        auth_state_signal.get().email
-    });
+    let user_email = Signal::derive(move || auth_state_signal.get().email);
 
     // crate::log!(
     //     "AUTH_FLOW: block_room - AuthGatedGuestForm initialized - cookie_identity: {}, auth_signal_identity: {}",
@@ -685,7 +683,6 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
 
 #[component]
 pub fn LoginPrompt() -> impl IntoView {
-
     view! {
         <div class="bg-white rounded-2xl shadow p-6 text-center">
             <div class="mb-4">

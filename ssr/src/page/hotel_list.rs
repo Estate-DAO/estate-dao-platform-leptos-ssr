@@ -180,7 +180,6 @@ pub fn HotelListPage() -> impl IntoView {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             async move {
-
                 log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
 
                 if !is_ready {

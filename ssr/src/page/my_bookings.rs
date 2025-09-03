@@ -1,6 +1,6 @@
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
-use crate::component::yral_auth_provider::{YralAuthProvider};
+use crate::component::yral_auth_provider::YralAuthProvider;
 use crate::component::Navbar;
 use crate::log;
 use crate::utils::parent_resource::MockPartialEq;
@@ -22,7 +22,8 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     let auth_state_signal: AuthStateSignal = expect_context();
     let auth_state = auth_state_signal.get();
     // Call actual canister API to get bookings
-    let backend_bookings = user_get_my_bookings(auth_state.email.ok_or(ServerFnError::new("Unauthorized"))?).await?;
+    let backend_bookings =
+        user_get_my_bookings(auth_state.email.ok_or(ServerFnError::new("Unauthorized"))?).await?;
     log!(
         "[MyBookings] Retrieved {} bookings from backend",
         backend_bookings.len()
@@ -95,7 +96,7 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
 pub fn BookingsLoader() -> impl IntoView {
     // Create resource for loading bookings data - following pattern from base_route.rs user_email_sync_resource
     let bookings_resource = create_resource(
-         || (),
+        || (),
         move |_| async move {
             log!("[MyBookings] Resource loading bookings");
             load_my_bookings().await

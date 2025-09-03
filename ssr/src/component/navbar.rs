@@ -1,11 +1,10 @@
-use crate::api::{ consts::USER_IDENTITY};
-use crate::component::{ yral_auth_provider::YralAuthProvider};
+use crate::api::consts::USER_IDENTITY;
+use crate::component::yral_auth_provider::YralAuthProvider;
 use leptos::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
 #[component]
 pub fn Navbar() -> impl IntoView {
-    
     view! {
         // <!-- Improved mobile navbar with better padding and icon sizing -->
         <nav class="flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8">

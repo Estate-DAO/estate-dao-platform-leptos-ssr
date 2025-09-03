@@ -8,11 +8,17 @@ use leptos_use::{
 };
 use web_sys::Window;
 
-use crate::{api::{
-    auth::{auth_state::{AuthState, AuthStateSignal}, types::OidcUser},
-    client_side_api::ClientSideApiClient,
-    consts::{get_host, APP_URL, USER_IDENTITY},
-}, app::AppRoutes};
+use crate::{
+    api::{
+        auth::{
+            auth_state::{AuthState, AuthStateSignal},
+            types::OidcUser,
+        },
+        client_side_api::ClientSideApiClient,
+        consts::{get_host, APP_URL, USER_IDENTITY},
+    },
+    app::AppRoutes,
+};
 
 #[server]
 pub async fn get_app_url_server() -> Result<String, ServerFnError> {
@@ -23,12 +29,11 @@ pub async fn get_app_url_server() -> Result<String, ServerFnError> {
 
 #[component]
 pub fn YralAuthProvider() -> impl IntoView {
-
     let profile_details = Resource::local(
         move || (AuthStateSignal::auth_state().get()),
         move |auth| async move {
-            if  auth.is_authenticated() {
-                return  Some(auth);
+            if auth.is_authenticated() {
+                return Some(auth);
             }
 
             let app_url = get_app_url_server().await.ok()?;
