@@ -1,4 +1,3 @@
-use crate::api::auth::types::{LoginProvider, NewIdentity};
 use crate::api::consts::APP_URL;
 use crate::api::payments::domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse};
 use crate::api::payments::ports::GetPaymentStatusResponse;
@@ -9,13 +8,12 @@ use crate::domain::{
     DomainHotelListAfterSearch, DomainHotelSearchCriteria,
 };
 use crate::log;
-use crate::page::OAuthQuery;
 use crate::utils::route::join_base_and_path_url;
 use candid::Principal;
 use leptos::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
-use yral_types::delegated_identity::DelegatedIdentityWire;
+// use yral_types::delegated_identity::DelegatedIdentityWire;
 
 #[cfg(not(feature = "ssr"))]
 use web_sys;
@@ -83,10 +81,6 @@ pub struct VerifyOtpRequest {
     pub otp: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct YralAuthLoginUrlRequest {
-    pub provider: LoginProvider,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateUserPrincipalEmailRequest {
@@ -486,75 +480,6 @@ impl ClientSideApiClient {
         Self::api_call_with_error(request, "server_fn_api/verify_otp_api", "verify OTP").await
     }
 
-    pub async fn yral_auth_login_url(&self, provider: LoginProvider) -> Result<String, String> {
-        let request = YralAuthLoginUrlRequest { provider };
-        let response: serde_json::Value = Self::api_call_with_error(
-            request,
-            "server_fn_api/yral_auth_login_url_api",
-            "yral auth login url",
-        )
-        .await?;
-
-        // Extract auth_url from the JSON response
-        response
-            .get("auth_url")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .ok_or_else(|| "Missing or invalid auth_url in response".to_string())
-    }
-
-    // #[tracing::instrument(skip(self))]
-    pub async fn perform_yral_oauth(&self, oauth: OAuthQuery) -> Result<NewIdentity, String> {
-        log!(
-            "[YRAL_OAUTH] Starting OAuth flow with code: {}, state: {}",
-            &oauth.code,
-            &oauth.state
-        );
-
-        let request = OAuthQuery {
-            code: oauth.code,
-            state: oauth.state,
-        };
-        Self::api_call_with_error(
-            request,
-            "server_fn_api/perform_yral_oauth_api",
-            "perform yral oauth",
-        )
-        .await
-    }
-
-    // pub async fn extract_identity(&self) -> Result<Option<DelegatedIdentityWire>, String> {
-    //     Self::api_call_with_error(
-    //         "extract_identity_api_from_client_call",
-    //         "server_fn_api/extract_identity_api",
-    //         "extract identity api",
-    //     )
-    //     .await
-    // }
-
-    pub async fn extract_new_identity(
-        &self,
-    ) -> Result<Option<crate::api::auth::types::NewIdentity>, String> {
-        Self::api_call_with_error(
-            "extract_new_identity_api_from_client_call",
-            "server_fn_api/extract_new_identity_api",
-            "extract new identity api",
-        )
-        .await
-    }
-
-    // pub async fn update_user_principal_email_mapping(
-    //     &self,
-    //     user_email: String,
-    // ) -> Result<String, String> {
-    //     let request = UpdateUserPrincipalEmailRequest { user_email };
-    //     Self::api_call_with_error(
-    //         request,
-    //         "server_fn_api/update_user_principal_email_mapping_in_canister",
-    //         "update user principal email mapping",
-    //     )
-    //     .await
-    // }
 
     pub async fn update_user_principal_email_mapping_in_canister_client_side_fn(
         &self,

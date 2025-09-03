@@ -6,7 +6,6 @@ use base64::{engine::general_purpose, Engine as _};
 use leptos::LeptosOptions;
 use leptos_router::RouteListing;
 
-use crate::api::auth::types::YralOAuthClient;
 use crate::{
     api::consts::EnvVarConfig, ssr_booking::PipelineLockManager, utils::notifier::Notifier,
     view_state_layer::AppState,
@@ -19,7 +18,6 @@ use once_cell::sync::OnceCell;
 static PROVAB_CLIENT: OnceCell<Provab> = OnceCell::new();
 static LITEAPI_CLIENT: OnceCell<LiteApiHTTPClient> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
-static YRAL_OAUTH_CLIENT: OnceCell<YralOAuthClient> = OnceCell::new();
 
 pub fn initialize_provab_client() {
     PROVAB_CLIENT
@@ -51,54 +49,12 @@ pub fn get_notifier() -> &'static Notifier {
     NOTIFIER.get().expect("Failed to get Notifier")
 }
 
-fn init_yral_oauth() -> YralOAuthClient {
-    use crate::api::consts::yral_auth::{
-        YRAL_AUTH_AUTHORIZATION_URL, YRAL_AUTH_CLIENT_ID_ENV, YRAL_AUTH_ISSUER_URL,
-        YRAL_AUTH_TOKEN_URL,
-    };
-    use openidconnect::{AuthType, AuthUrl, TokenUrl};
-    use openidconnect::{ClientId, ClientSecret, IssuerUrl, RedirectUrl};
-    use std::env;
-
-    let client_id = env::var(YRAL_AUTH_CLIENT_ID_ENV)
-        .unwrap_or_else(|_| panic!("`{YRAL_AUTH_CLIENT_ID_ENV}` is required!"));
-    let client_secret =
-        env::var("YRAL_AUTH_CLIENT_SECRET").expect("`YRAL_AUTH_CLIENT_SECRET` is required!");
-    let redirect_uri =
-        env::var("YRAL_AUTH_REDIRECT_URL").expect("`YRAL_AUTH_REDIRECT_URL` is required!");
-
-    YralOAuthClient::new(
-        ClientId::new(client_id),
-        Some(ClientSecret::new(client_secret)),
-        IssuerUrl::new(YRAL_AUTH_ISSUER_URL.to_string()).unwrap(),
-        AuthUrl::new(YRAL_AUTH_AUTHORIZATION_URL.to_string()).unwrap(),
-        Some(TokenUrl::new(YRAL_AUTH_TOKEN_URL.to_string()).unwrap()),
-        None,
-        Default::default(),
-    )
-    .set_redirect_uri(RedirectUrl::new(redirect_uri).unwrap())
-    .set_auth_type(AuthType::RequestBody)
-}
-
-pub fn initialize_yral_oauth_client() {
-    YRAL_OAUTH_CLIENT
-        .set(init_yral_oauth())
-        .expect("Failed to initialize Yral OAuth client");
-}
-
-pub fn get_yral_oauth_client() -> &'static YralOAuthClient {
-    YRAL_OAUTH_CLIENT
-        .get()
-        .expect("Failed to get Yral OAuth client")
-}
-
 pub struct AppStateBuilder {
     leptos_options: LeptosOptions,
     routes: Vec<RouteListing>,
     provab_client: &'static Provab,
     liteapi_client: &'static LiteApiHTTPClient,
     notifier_for_pipeline: &'static Notifier,
-    yral_oauth_client: &'static YralOAuthClient,
 }
 
 impl AppStateBuilder {
@@ -106,7 +62,6 @@ impl AppStateBuilder {
         initialize_provab_client();
         initialize_liteapi_client();
         initialize_notifier();
-        initialize_yral_oauth_client();
 
         Self {
             leptos_options,
@@ -114,7 +69,6 @@ impl AppStateBuilder {
             provab_client: get_provab_client(),
             liteapi_client: get_liteapi_client(),
             notifier_for_pipeline: get_notifier(),
-            yral_oauth_client: get_yral_oauth_client(),
         }
     }
 
@@ -135,7 +89,6 @@ impl AppStateBuilder {
             provab_client: self.provab_client,
             liteapi_client: self.liteapi_client,
             notifier_for_pipeline: self.notifier_for_pipeline,
-            yral_oauth_client: self.yral_oauth_client,
             cookie_key: cookie_key.clone(),
             // private_cookie_jar: Arc::new(Mutex::new(PrivateCookieJar::new(cookie_key)))
         };

@@ -1,28 +1,11 @@
-use crate::api::{auth::types::NewIdentity, consts::USER_IDENTITY};
-use crate::component::{profile_component::ProfileComponent, yral_auth_provider::YralAuthProvider};
-use codee::string::JsonSerdeCodec;
-use leptos::SignalGetUntracked;
+use crate::api::{ consts::USER_IDENTITY};
+use crate::component::{ yral_auth_provider::YralAuthProvider};
 use leptos::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
 #[component]
 pub fn Navbar() -> impl IntoView {
-    // <!-- Check if user is logged in by reading USER_IDENTITY cookie -->
-    let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-        USER_IDENTITY,
-        UseCookieOptions::default()
-            .path("/")
-            .same_site(leptos_use::SameSite::Lax)
-            .http_only(false)
-            .secure(false),
-    );
-
-    crate::log!(
-        "AUTH_FLOW: navbar - USER_IDENTITY cookie check - is_some: {}, data: {:?}",
-        stored_identity.get_untracked().is_some(),
-        stored_identity.get_untracked()
-    );
-
+    
     view! {
         // <!-- Improved mobile navbar with better padding and icon sizing -->
         <nav class="flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8">
@@ -48,13 +31,7 @@ pub fn Navbar() -> impl IntoView {
             // </div>
             // <!-- Conditional rendering based on login state -->
             {move || {
-                if stored_identity.get().is_some() {
-                    // <!-- User is logged in, show profile component -->
-                    view! { <ProfileComponent /> }.into_view()
-                } else {
-                    // <!-- User is not logged in, show auth provider -->
-                    view! { <YralAuthProvider /> }.into_view()
-                }
+                view! { <YralAuthProvider /> }.into_view()
             }}
         </nav>
     }
