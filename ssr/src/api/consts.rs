@@ -99,7 +99,7 @@ cfg_if! {
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else {
-        pub static APP_URL: Lazy<String> = Lazy::new(|| get_host() );
+        pub static APP_URL: Lazy<String> = Lazy::new(||  env_w_default("APP_URL", STAGING_APP_URL).unwrap().to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
