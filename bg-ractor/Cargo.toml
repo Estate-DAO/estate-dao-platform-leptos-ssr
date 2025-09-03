@@ -14,3 +14,4 @@ tracing-subscriber = { workspace = true }
 telemetry_axum = { workspace = true }
 async-trait = "0.1"
 anyhow = { workspace = true }
+duck-searcher = { path = "../duck-searcher" }

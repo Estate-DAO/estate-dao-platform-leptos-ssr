@@ -580,14 +580,30 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
         let mut cities_vec: Vec<CityEntry> = cities.into_values().collect();
         cities_vec.sort_by(|a, b| a.city_name.cmp(&b.city_name));
 
-        let json = serde_json::to_string_pretty(&cities_vec)?;
-        tokio::fs::write(&self.cities_file_path, json).await?;
+        // Convert bg-ractor CityEntry to duck-searcher CityEntry format
+        let duck_cities: Vec<duck_searcher::CityEntry> = cities_vec
+            .into_iter()
+            .map(|city| duck_searcher::CityEntry {
+                city_code: city.city_code,
+                city_name: city.city_name,
+                country_name: city.country_name,
+                country_code: city.country_code,
+                image_url: city.image_url,
+                latitude: city.latitude,
+                longitude: city.longitude,
+            })
+            .collect();
 
-        debug!(
-            cities_count = cities_vec.len(),
-            file_path = self.cities_file_path,
-            "Saved cities to file"
-        );
+        let cities_count = duck_cities.len();
+
+        // Use duck-searcher to write to parquet format
+        duck_searcher::write_cities_to_parquet(duck_cities).map_err(|e| {
+            let error_msg = format!("Failed to write cities to parquet: {}", e);
+            Box::new(std::io::Error::new(std::io::ErrorKind::Other, error_msg))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
+
+        debug!(cities_count = cities_count, "Saved cities to parquet file");
 
         Ok(())
     }

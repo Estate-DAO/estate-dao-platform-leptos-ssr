@@ -747,6 +747,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "duck-searcher",
  "ractor",
  "serde",
  "serde_json",
@@ -1865,6 +1866,8 @@ dependencies = [
  "arrow",
  "duckdb",
  "r2d2",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
