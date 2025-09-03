@@ -333,7 +333,7 @@ cfg_if! {
             .build()
             .await;
 
-            // Start cities polling as an actor with custom intervals
+            // Start cities polling as an actor with custom intervals and initial delay
             #[cfg(not(target_arch = "wasm32"))]
             let city_actor_ref = {
                 let api_provider = SsrCityApiProvider::new();
@@ -344,8 +344,9 @@ cfg_if! {
                     service.name = "city_updater",
                     service.version = env!("CARGO_PKG_VERSION"),
                     background_task = true,
-                    update_interval_secs = 600,
-                    heartbeat_interval_secs = 3,
+                    update_interval_secs = 24*60*60,
+                    heartbeat_interval_secs = 30,
+                    initial_delay_secs = 600*3,
                     component = "background_task",
                     task.type = "periodic_updater",
                     otel.name = "city_updater_service",
@@ -354,17 +355,18 @@ cfg_if! {
                     otel.scope.version = env!("CARGO_PKG_VERSION")
                 );
 
-                let actor_ref = bg_ractor::start_cities_polling_with_secs(
+                let actor_ref = bg_ractor::start_cities_polling_with_delay(
                     api_provider,
                     24*60*60,  // Update cities every 24 hrs
                     30,   // Heartbeat every 30 seconds
                     "city.json".to_string(),
+                    600,  // Initial delay of 10 minutes before first update
                 )
                 .instrument(city_updater_span)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to start cities polling: {}", e))?;
 
-                info!("Cities polling background actor started with 600s update and 3s heartbeat intervals");
+                info!("Cities polling background actor started with 24hr update interval, 30s heartbeat, and 10min initial delay");
                 actor_ref
             };
 

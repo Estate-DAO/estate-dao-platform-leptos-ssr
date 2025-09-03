@@ -68,6 +68,42 @@ where
     .await
 }
 
+/// Start the cities polling background actor with intervals in seconds and optional initial delay
+///
+/// # Arguments
+/// * `api_provider` - Implementation of CityApiProvider trait
+/// * `update_interval_secs` - How often to update cities.json (in seconds)
+/// * `heartbeat_interval_secs` - How often to log heartbeat messages (in seconds)
+/// * `cities_file_path` - Path to the cities.json file
+/// * `initial_delay_secs` - Initial delay before starting the first update (in seconds)
+///
+/// # Returns
+/// ActorRef for the spawned cities updater actor
+pub async fn start_cities_polling_with_delay<T>(
+    api_provider: T,
+    update_interval_secs: u32,
+    heartbeat_interval_secs: u32,
+    cities_file_path: String,
+    initial_delay_secs: u32,
+) -> Result<ActorRef<CityUpdaterMessage>, Box<dyn std::error::Error + Send + Sync>>
+where
+    T: CityApiProvider,
+{
+    let city_updater = PeriodicCityUpdater::new_with_delay(
+        Duration::from_secs(update_interval_secs as u64),
+        Duration::from_secs(heartbeat_interval_secs as u64),
+        cities_file_path,
+        api_provider,
+        Duration::from_secs(initial_delay_secs as u64),
+    );
+
+    let (actor_ref, _handle) = Actor::spawn(Some("cities_updater".to_string()), city_updater, ())
+        .await
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+    Ok(actor_ref)
+}
+
 // Keep the original periodic actor for backward compatibility
 pub struct PeriodicActor {
     interval: Duration,

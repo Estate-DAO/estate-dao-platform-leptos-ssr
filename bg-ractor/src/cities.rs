@@ -52,6 +52,7 @@ pub struct PeriodicCityUpdater<T: CityApiProvider> {
     heartbeat_interval: Duration,
     cities_file_path: String,
     api_provider: T,
+    initial_delay: Option<Duration>,
 }
 
 impl<T: CityApiProvider> PeriodicCityUpdater<T> {
@@ -66,6 +67,23 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
             heartbeat_interval,
             cities_file_path,
             api_provider,
+            initial_delay: None,
+        }
+    }
+
+    pub fn new_with_delay(
+        update_interval: Duration,
+        heartbeat_interval: Duration,
+        cities_file_path: String,
+        api_provider: T,
+        initial_delay: Duration,
+    ) -> Self {
+        Self {
+            update_interval,
+            heartbeat_interval,
+            cities_file_path,
+            api_provider,
+            initial_delay: Some(initial_delay),
         }
     }
 
@@ -80,6 +98,7 @@ impl<T: CityApiProvider> PeriodicCityUpdater<T> {
             heartbeat_interval: Duration::from_secs(heartbeat_interval_secs as u64),
             cities_file_path,
             api_provider,
+            initial_delay: None,
         }
     }
 }
@@ -91,6 +110,7 @@ impl<T: CityApiProvider + Default> Default for PeriodicCityUpdater<T> {
             heartbeat_interval: Duration::from_secs(60), // 1 minute default
             cities_file_path: "city.json".to_string(),
             api_provider: T::default(),
+            initial_delay: None,
         }
     }
 }
@@ -123,26 +143,51 @@ impl<T: CityApiProvider> Actor for PeriodicCityUpdater<T> {
         _: (),
     ) -> Result<Self::State, ActorProcessingErr> {
         info!(
-            "Starting PeriodicCityUpdater with update_interval: {:?}, heartbeat_interval: {:?}",
-            self.update_interval, self.heartbeat_interval
+            "Starting PeriodicCityUpdater with update_interval: {:?}, heartbeat_interval: {:?}, initial_delay: {:?}",
+            self.update_interval, self.heartbeat_interval, self.initial_delay
         );
 
         let now = std::time::Instant::now();
 
-        // Schedule the first heartbeat, update, and city.json print
+        // Schedule the first heartbeat immediately
         myself
             .cast(CityUpdaterMessage::Heartbeat)
             .expect("Failed to send initial heartbeat");
-        myself
-            .cast(CityUpdaterMessage::UpdateCities)
-            .expect("Failed to send initial update");
+
+        // Handle initial delay for the first update
+        if let Some(delay) = self.initial_delay {
+            info!("Delaying first city update by {:?}", delay);
+
+            // Schedule the first update after the initial delay
+            let myself_clone = myself.clone();
+            tokio::spawn(async move {
+                ractor::concurrency::sleep(delay).await;
+                myself_clone
+                    .cast(CityUpdaterMessage::UpdateCities)
+                    .expect("Failed to send initial update after delay");
+            });
+        } else {
+            // No delay, schedule update immediately
+            myself
+                .cast(CityUpdaterMessage::UpdateCities)
+                .expect("Failed to send initial update");
+        }
+
+        // Always schedule PrintCityJson immediately
         myself
             .cast(CityUpdaterMessage::PrintCityJson)
             .expect("Failed to send initial print city.json");
 
+        // Set the next_update_time based on whether there's an initial delay
+        let next_update_time = if let Some(delay) = self.initial_delay {
+            now + delay + self.update_interval
+        } else {
+            now + self.update_interval
+        };
+
         Ok(PeriodicCityUpdaterState {
             last_update_time: now,
-            next_update_time: now + self.update_interval,
+            next_update_time,
             update_count: 0,
             heartbeat_count: 0,
             last_update_span_context: None,
