@@ -12,6 +12,7 @@ RUN apt update && apt install tree vim curl dnsutils -y
 RUN tree .
 
 COPY target/release/estate-fe .
+RUN chmod +x ./estate-fe
 COPY target/release/hash.txt .
 COPY target/site ./site
 COPY city.json ./city.json
