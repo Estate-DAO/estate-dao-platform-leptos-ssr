@@ -27,13 +27,14 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
     . "$HOME/.cargo/env"
 
 # Setup Node.js and cargo-binstall in optimized layers
-RUN curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz | \
-    tar -xJ -C /usr/local && \
-    mv /usr/local/node-v22.14.0-linux-x64 /usr/local/node
-
-# Install cargo-binstall
-RUN curl -fsSL https://github.com/cargo-bins/cargo-binstall/releases/download/v1.11.2/cargo-binstall-x86_64-unknown-linux-gnu.tgz | \
-    tar -xz -C /root/.cargo/bin cargo-binstall
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest
+    
+RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/download/v0.2.31/cargo-leptos-installer.sh | sh
+# # Install cargo-binstall
+# RUN curl -fsSL https://github.com/cargo-bins/cargo-binstall/releases/download/v1.11.2/cargo-binstall-x86_64-unknown-linux-gnu.tgz | \
+#     tar -xz -C /root/.cargo/bin cargo-binstall
 
 
 RUN . "$HOME/.cargo/env"
@@ -48,10 +49,9 @@ ENV RUSTUP_HOME="/root/.rustup"
 ENV PATH="/usr/local/node/bin:${PATH}"
 
 # Verify installations
-RUN node -v && npm -v
 # Install cargo-leptos
-RUN cargo binstall cargo-leptos --version 0.2.21 
 
+RUN node -v && npm -v
 # Make an /app dir, which everything will eventually live in
 RUN mkdir -p /app
 WORKDIR /app

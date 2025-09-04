@@ -91,31 +91,31 @@ jobs:
           NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
           APP_URL: ${{ inputs.app-url }}
 
-      - name: Verify files exist before moving
-        run: |
-          echo "Checking if files exist:"
-          ls -la target/x86_64-unknown-linux-gnu/release/ || echo "gnu target directory not found"
-          ls -la ssr/target/x86_64-unknown-linux-gnu/release/ || echo "ssr gnu target directory not found"
+      # - name: Verify files exist before moving
+      #   run: |
+      #     echo "Checking if files exist:"
+      #     ls -la target/x86_64-unknown-linux-gnu/release/ || echo "gnu target directory not found"
+      #     ls -la ssr/target/x86_64-unknown-linux-gnu/release/ || echo "ssr gnu target directory not found"
 
-      - name: Move files to simpler structure
-        run: |
-          mkdir -p target/release
-          cp target/x86_64-unknown-linux-gnu/release/estate-fe target/release/
-          if [ -f "ssr/target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
-            cp ssr/target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
-          elif [ -f "target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
-            cp target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
-          else
-            echo "ERROR: hash.txt not found in either location!"
-            exit 1
-          fi
+      # - name: Move files to simpler structure
+      #   run: |
+      #     mkdir -p target/release
+      #     cp target/x86_64-unknown-linux-gnu/release/estate-fe target/release/
+      #     if [ -f "ssr/target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
+      #       cp ssr/target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
+      #     elif [ -f "target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
+      #       cp target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
+      #     else
+      #       echo "ERROR: hash.txt not found in either location!"
+      #       exit 1
+      #     fi
       
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         if: ${{ inputs.publish-artifact }}
         with:
-          name: build
+          name: build-debian
           path: |
             target/release/estate-fe
             target/site
