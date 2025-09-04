@@ -95,8 +95,6 @@ pub mod data_table_3;
 pub use data_table_3::*;
 
 // pub mod auth;
-pub mod base_route;
-pub mod logout;
 pub mod profile_component;
 pub mod profile_dropdown;
 pub mod user_profile_icon;

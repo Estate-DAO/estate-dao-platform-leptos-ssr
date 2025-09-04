@@ -26,7 +26,9 @@ cfg_if::cfg_if! {
     if #[cfg(feature =   "ssr")]{
         pub mod fallback;
         pub mod init;
+        // pub mod poll_for_cities; // moved to bg-ractor crate
         pub mod ssr_booking;
+        pub mod oauth;
     }
 }
 

@@ -180,20 +180,20 @@ pub fn HotelListPage() -> impl IntoView {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             async move {
-                // log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
+                log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
 
                 if !is_ready {
-                    // log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
+                    log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
                     return None;
                 }
 
-                // log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
+                log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
 
                 // Use the same API client as root.rs
                 let api_client = ClientSideApiClient::new();
                 let result = api_client.search_hotel(search_ctx_clone.into()).await;
 
-                // log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
+                log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
 
                 // Set results in the same way as root.rs
                 SearchListResults::set_search_results(result.clone());

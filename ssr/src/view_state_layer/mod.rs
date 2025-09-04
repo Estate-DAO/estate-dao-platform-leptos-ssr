@@ -14,7 +14,6 @@ pub mod ui_confirmation_page;
 pub mod ui_confirmation_page_v2;
 pub mod ui_hotel_details;
 pub mod ui_search_state;
-pub mod user_auth_state;
 // pub mod ui_bookings_state;
 pub mod view_state;
 // pub mod pricing_book_now;
@@ -58,7 +57,6 @@ cfg_if! {
             utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent},
         };
         use tracing::instrument;
-        use crate::api::auth::types::YralOAuthClient;
         use axum_extra::extract::cookie::Key;
         use axum_extra::extract::cookie::PrivateCookieJar;
 
@@ -78,7 +76,6 @@ cfg_if! {
             pub provab_client: &'static Provab,
             pub liteapi_client: &'static LiteApiHTTPClient,
             pub notifier_for_pipeline: &'static Notifier,
-            pub yral_oauth_client: &'static YralOAuthClient,
             pub cookie_key: Key,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,

@@ -1,3 +1,4 @@
+use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::{SendOtpResponse, VerifyOtpResponse};
 use crate::view_state_layer::GlobalStateForLeptos;
 use leptos::*;
@@ -194,8 +195,10 @@ impl EmailVerificationState {
     }
 
     pub fn get_email_verified() -> bool {
-        let this = Self::from_leptos_context();
-        this.email_verified.get()
+        AuthStateSignal::auth_state().get().email.is_some() || {
+            let this = Self::from_leptos_context();
+            this.email_verified.get()
+        }
     }
 
     pub fn get_send_otp_loading() -> bool {

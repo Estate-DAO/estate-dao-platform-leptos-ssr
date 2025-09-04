@@ -4,13 +4,12 @@ use leptos_router::use_navigate;
 use leptos_use::{use_interval_fn, utils::Pausable};
 
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
-use crate::api::auth::types::NewIdentity;
 use crate::api::client_side_api::{ClientSideApiClient, SendOtpResponse, VerifyOtpResponse};
 use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
 use crate::api::payments::{create_domain_request, PaymentProvider};
 use crate::app::AppRoutes;
 use crate::application_services::BookingService;
-use crate::component::yral_auth_provider::{LoginProvCtx, YralAuthProvider};
+use crate::component::yral_auth_provider::YralAuthProvider;
 use crate::component::ChildrenAgesSignalExt;
 use crate::component::{Divider, Navbar, SpinnerGray};
 use crate::domain::{
@@ -642,38 +641,29 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
     // Use AuthStateSignal pattern (same as base_route.rs and my_bookings.rs)
     let auth_state_signal: AuthStateSignal = expect_context();
 
-    // Also monitor the USER_IDENTITY cookie directly (same as navbar pattern)
-    let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-        USER_IDENTITY,
-        UseCookieOptions::default()
-            .path("/")
-            .same_site(leptos_use::SameSite::Lax)
-            .http_only(false)
-            .secure(false),
-    );
+    // // Also monitor the USER_IDENTITY cookie directly (same as navbar pattern)
+    // let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
+    //     USER_IDENTITY,
+    //     UseCookieOptions::default()
+    //         .path("/")
+    //         .same_site(leptos_use::SameSite::Lax)
+    //         .http_only(false)
+    //         .secure(false),
+    // );
 
     // Get user email from identity for auto-fill
-    let user_email = Signal::derive(move || {
-        // Try stored_identity first (cookie), fallback to auth_state_signal
-        if let Some(identity) = stored_identity.get() {
-            identity.email
-        } else {
-            let auth = auth_state_signal.get();
-            auth.user_identity.get().and_then(|identity| identity.email)
-        }
-    });
+    let user_email = Signal::derive(move || auth_state_signal.get().email);
 
-    crate::log!(
-        "AUTH_FLOW: block_room - AuthGatedGuestForm initialized - cookie_identity: {}, auth_signal_identity: {}",
-        stored_identity.get().is_some(),
-        auth_state_signal.get().user_identity.get().is_some()
-    );
+    // crate::log!(
+    //     "AUTH_FLOW: block_room - AuthGatedGuestForm initialized - cookie_identity: {}, auth_signal_identity: {}",
+    //     stored_identity.get().is_some(),
+    //     auth_state_signal.get().user_identity.get().is_some()
+    // );
 
     // Return the reactive view - use move closure for reactivity
     move || {
         // Check auth state from both sources (cookie takes priority)
-        let is_logged_in = stored_identity.get().is_some()
-            || auth_state_signal.get().user_identity.get().is_some();
+        let is_logged_in = user_email.get().is_some();
 
         crate::log!(
             "AUTH_FLOW: block_room - AuthGatedGuestForm render check - is_logged_in: {}, email: {:?}",
@@ -693,9 +683,6 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
 
 #[component]
 pub fn LoginPrompt() -> impl IntoView {
-    // Provide login context for YralAuthProvider
-    provide_context(LoginProvCtx::default());
-
     view! {
         <div class="bg-white rounded-2xl shadow p-6 text-center">
             <div class="mb-4">

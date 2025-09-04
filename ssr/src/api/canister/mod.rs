@@ -4,5 +4,4 @@ pub mod get_all_bookings;
 pub mod get_user_booking;
 pub mod greet_call;
 pub mod update_payment_details;
-pub mod update_user_principal_email;
 pub mod user_my_bookings;
