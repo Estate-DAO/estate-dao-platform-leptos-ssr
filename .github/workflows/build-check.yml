@@ -18,7 +18,6 @@ env:
 
 jobs:
   build_check:
-    # if: ${{ github.event.pull_request.state == 'open'}}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo and submodules
@@ -29,26 +28,21 @@ jobs:
       - name: Rust Setup
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "nightly-2024-11-07"
-          targets: "x86_64-unknown-linux-musl,wasm32-unknown-unknown"  # ADD MUSL TARGET
+          toolchain: "nightly-2025-01-15"
+          targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
           
       - name: Override Rust toolchain
-        run: rustup override set nightly-2024-11-07
+        run: rustup override set nightly-2025-01-15
           
       - name: Verify Rust version
         run: rustc --version && cargo --version
 
-      - uses: cargo-bins/cargo-binstall@main
+      # - uses: cargo-bins/cargo-binstall@main
 
       - name: Install cargo-leptos
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/download/v0.2.31/cargo-leptos-installer.sh | sh
-
-      - name: Install musl tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools
 
       - name: Cache rust dependencies and build output
         uses: Swatinem/rust-cache@v2
@@ -92,34 +86,29 @@ jobs:
       - name: Build the Leptos project
         run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
-          LEPTOS_BIN_TARGET_TRIPLE: x86_64-unknown-linux-musl  # CRITICAL: ADD THIS
           LEPTOS_HASH_FILES: true
           PROVAB_HEADERS: ${{ secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
           APP_URL: ${{ inputs.app-url }}
 
-      - name: Verify files exist before moving
-        run: |
-          echo "Checking if files exist:"
-          ls -la target/x86_64-unknown-linux-musl/release/ || echo "musl target directory not found"
-          ls -la ssr/target/x86_64-unknown-linux-musl/release/ || echo "ssr musl target directory not found"
+      # - name: Verify files exist before moving
+      #   run: |
+      #     echo "Checking if files exist:"
+      #     ls -la target/x86_64-unknown-linux-gnu/release/ || echo "gnu target directory not found"
+      #     ls -la ssr/target/x86_64-unknown-linux-gnu/release/ || echo "ssr gnu target directory not found"
 
-      - name: Move files to simpler structure
-        run: |
-          # Move binary to standard location
-          mkdir -p target/release
-          cp target/x86_64-unknown-linux-musl/release/estate-fe target/release/
-          # Move hash.txt to standard location  
-          mkdir -p target/release
-          # Check which path actually exists and use it
-          if [ -f "ssr/target/x86_64-unknown-linux-musl/release/hash.txt" ]; then
-            cp ssr/target/x86_64-unknown-linux-musl/release/hash.txt target/release/
-          elif [ -f "target/x86_64-unknown-linux-musl/release/hash.txt" ]; then
-            cp target/x86_64-unknown-linux-musl/release/hash.txt target/release/
-          else
-            echo "ERROR: hash.txt not found in either location!"
-            exit 1
-          fi
+      # - name: Move files to simpler structure
+      #   run: |
+      #     mkdir -p target/release
+      #     cp target/x86_64-unknown-linux-gnu/release/estate-fe target/release/
+      #     if [ -f "ssr/target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
+      #       cp ssr/target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
+      #     elif [ -f "target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
+      #       cp target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
+      #     else
+      #       echo "ERROR: hash.txt not found in either location!"
+      #       exit 1
+      #     fi
       
       - run: touch .empty
       - name: Archive production artifacts

@@ -42,6 +42,8 @@ fn detect_payment_provider_sync(payment_id: &Option<String>) -> String {
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
+        use estate_fe::api::SsrCityApiProvider;
+
         use axum::{
             body::Body as AxumBody,
             extract::{Path, State,ConnectInfo},
@@ -331,6 +333,43 @@ cfg_if! {
             .build()
             .await;
 
+            // Start cities polling as an actor with custom intervals and initial delay
+            #[cfg(not(target_arch = "wasm32"))]
+            let city_actor_ref = {
+                let api_provider = SsrCityApiProvider::new();
+
+                // Create a dedicated root span for the background city updater service with full tracing context
+                let city_updater_span = tracing::info_span!(
+                    "city_updater_service",
+                    service.name = "city_updater",
+                    service.version = env!("CARGO_PKG_VERSION"),
+                    background_task = true,
+                    update_interval_secs = 24*60*60,
+                    heartbeat_interval_secs = 30,
+                    initial_delay_secs = 600*3,
+                    component = "background_task",
+                    task.type = "periodic_updater",
+                    otel.name = "city_updater_service",
+                    otel.kind = "internal",
+                    otel.scope.name = "bg-ractor",
+                    otel.scope.version = env!("CARGO_PKG_VERSION")
+                );
+
+                let actor_ref = bg_ractor::start_cities_polling_with_delay(
+                    api_provider,
+                    24*60*60,  // Update cities every 24 hrs
+                    30,   // Heartbeat every 30 seconds
+                    "city.json".to_string(),
+                    600,  // Initial delay of 10 minutes before first update
+                )
+                .instrument(city_updater_span)
+                .await
+                .map_err(|e| anyhow::anyhow!("Failed to start cities polling: {}", e))?;
+
+                info!("Cities polling background actor started with 24hr update interval, 30s heartbeat, and 10min initial delay");
+                actor_ref
+            };
+
             let trace_layer = tower_http::trace::TraceLayer::new_for_http()
                 .make_span_with(|request: &axum::extract::Request<_>| {
                     let method = request.method();
@@ -401,6 +440,15 @@ cfg_if! {
                 axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
                     .await
                     .unwrap();
+
+                // Stop the city updater actor
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    info!("Stopping city updater actor");
+                    city_actor_ref.stop(None);
+                }
+
+                info!("Application shutting down");
 
                 //   cleanup tracing config.
 
