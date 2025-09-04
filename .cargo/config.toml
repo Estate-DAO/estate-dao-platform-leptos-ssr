@@ -1,6 +1,12 @@
 [env]
 RUSTFLAGS = "--cfg=web_sys_unstable_apis"
-
+CXX_x86_64_unknown_linux_musl = "g++"
+CC_x86_64_unknown_linux_musl = "musl-gcc"
 
 [target.wasm32-unknown-unknown]
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+
+[target.x86_64-unknown-linux-musl]
+linker = "musl-gcc"
+rustflags = ["-C", "target-feature=-crt-static"]
+
