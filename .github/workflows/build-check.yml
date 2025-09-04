@@ -82,7 +82,7 @@ jobs:
           cargo fmt --check
 
       - name: Build the Leptos project
-        run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin" --target x86_64-unknown-linux-musl
+        run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
           LEPTOS_HASH_FILES: true
           PROVAB_HEADERS: ${{ secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
