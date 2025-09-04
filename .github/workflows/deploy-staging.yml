@@ -60,6 +60,106 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
           GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
       
+      # - name: Check where artifacts were downloaded
+      #   run: |
+      #     echo "Current directory structure:"
+      #     ls -la
+      #     echo "Target directory contents:"
+      #     ls -la target/ || echo "No target directory"
+      #     echo "Looking for estate-fe binary:"
+      #     find . -name "estate-fe" -type f 2>/dev/null || echo "estate-fe not found"
+      #     echo "Looking for hash.txt:"
+      #     find . -name "hash.txt" -type f 2>/dev/null || echo "hash.txt not found"
+      #     echo "Looking for site directory:"
+      #     find . -name "site" -type d 2>/dev/null || echo "site directory not found"
+
+      # - name: Move artifacts to root for Docker build
+      #   run: |
+      #     # Find and move estate-fe binary
+      #     ESTATE_FE_PATH=$(find . -name "estate-fe" -type f 2>/dev/null | head -1)
+      #     if [ -n "$ESTATE_FE_PATH" ]; then
+      #       echo "Moving estate-fe from: $ESTATE_FE_PATH"
+      #       mv "$ESTATE_FE_PATH" ./estate-fe
+      #       chmod +x ./estate-fe
+      #     else
+      #       echo "❌ estate-fe not found anywhere"
+      #       exit 1
+      #     fi
+
+      #     # Find and move hash.txt
+      #     HASH_PATH=$(find . -name "hash.txt" -type f 2>/dev/null | head -1)
+      #     if [ -n "$HASH_PATH" ]; then
+      #       echo "Moving hash.txt from: $HASH_PATH"
+      #       mv "$HASH_PATH" ./hash.txt
+      #     else
+      #       echo "❌ hash.txt not found anywhere"
+      #       exit 1
+      #     fi
+
+      #     # Find and move site directory
+      #     SITE_PATH=$(find . -name "site" -type d 2>/dev/null | head -1)
+      #     if [ -n "$SITE_PATH" ]; then
+      #       echo "Moving site directory from: $SITE_PATH"
+      #       # Remove existing site dir if it exists
+      #       rm -rf ./site 2>/dev/null || true
+      #       mv "$SITE_PATH" ./site
+      #     else
+      #       echo "❌ site directory not found anywhere"
+      #       exit 1
+      #     fi
+
+      #     # Check if city.json exists
+      #     if [ -f "city.json" ]; then
+      #       echo "✓ city.json found in root"
+      #     else
+      #       # Try to find city.json
+      #       CITY_PATH=$(find . -name "city.json" -type f 2>/dev/null | head -1)
+      #       if [ -n "$CITY_PATH" ]; then
+      #         echo "Moving city.json from: $CITY_PATH"
+      #         mv "$CITY_PATH" ./city.json
+      #       else
+      #         echo "❌ city.json not found anywhere"
+      #         exit 1
+      #       fi
+      #     fi
+
+      # - name: Verify required artifacts in root
+      #   run: |
+      #     echo "Final files in root directory:"
+      #     ls -la
+      #     test -f "estate-fe" || { echo "❌ estate-fe missing"; exit 1; }
+      #     test -f "hash.txt" || { echo "❌ hash.txt missing"; exit 1; }
+      #     test -d "site" || { echo "❌ site directory missing"; exit 1; }
+      #     test -f "city.json" || { echo "❌ city.json missing"; exit 1; }
+      #     echo "✅ All required artifacts are in root directory"
+
+          
+      - name: Generate Dockerfile for preview
+        run: |
+          cat > Dockerfile <<'EOF'
+          FROM ubuntu:24.04 as runner
+          WORKDIR /app
+          RUN apt-get update && apt-get install -y \
+              curl \
+              dnsutils \
+              && rm -rf /var/lib/apt/lists/*
+
+          COPY target/release/estate-fe .
+          RUN chmod +x ./estate-fe
+          COPY target/release/hash.txt .
+          COPY target/site ./site
+          COPY city.json ./city.json
+          ENV LEPTOS_ENV="production"
+          ENV RUST_LOG="debug,hyper=info,tower=info"
+          ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+          ENV LEPTOS_SITE_ROOT="site"
+          ENV LEPTOS_HASH_FILES="true"
+          EXPOSE 3000
+          CMD ["./estate-fe"]
+          EOF
+          echo "✅ Dockerfile generated:"
+          cat Dockerfile
+      
       - name: Deploy a docker container to Fly.io
         run: flyctl deploy --remote-only -c fly-staging.toml --app "estatefe"
         env:
