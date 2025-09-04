@@ -1,11 +1,13 @@
 pub mod yral_auth {
+    #[cfg(feature = "ssr")]
     use jsonwebtoken::DecodingKey;
     use std::{sync::LazyLock, time::Duration};
-
+    
     pub const YRAL_AUTH_AUTHORIZATION_URL: &str = "https://auth.yral.com/oauth/auth";
     pub const YRAL_AUTH_TOKEN_URL: &str = "https://auth.yral.com/oauth/token";
     pub const YRAL_AUTH_ISSUER_URL: &str = "https://auth.yral.com";
-
+    
+    #[cfg(feature = "ssr")]
     pub static YRAL_AUTH_TRUSTED_KEY: LazyLock<DecodingKey> = LazyLock::new(|| {
         let pem = "-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoqN3/0RNfrnrnYGxKBgy/qHnmITr
