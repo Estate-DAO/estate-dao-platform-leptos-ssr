@@ -29,45 +29,21 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "nightly-2025-01-15"
-          targets: "wasm32-unknown-unknown,x86_64-unknown-linux-musl"
+          targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
-      
-      - name: Override Rust toolchain 
+          
+      - name: Override Rust toolchain
         run: rustup override set nightly-2025-01-15
           
       - name: Verify Rust version
         run: rustc --version && cargo --version
 
+      # - uses: cargo-bins/cargo-binstall@main
+
       - name: Install cargo-leptos
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/download/v0.2.31/cargo-leptos-installer.sh | sh
 
-      - name: Install musl C and C++ compilers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools musl-dev g++-x86-64-linux-gnu
-          
-          # Create symlinks for musl C++ compiler
-          sudo ln -sf /usr/bin/x86_64-linux-gnu-g++ /usr/bin/x86_64-linux-musl-g++ || true
-          sudo ln -sf /usr/bin/x86_64-linux-gnu-gcc /usr/bin/x86_64-linux-musl-gcc || true
-          
-          # Verify compilers exist
-          if ! command -v x86_64-linux-musl-g++ &> /dev/null; then
-            echo "❌ C++ compiler not found"
-            exit 1
-          fi
-          if ! command -v x86_64-linux-musl-gcc &> /dev/null; then
-            echo "❌ C compiler not found"
-            exit 1
-          fi
-          echo "✅ Compilers verified"
-      
-      - name: Set compiler environment variables
-        run: |
-          echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=x86_64-linux-musl-gcc" >> $GITHUB_ENV
-          echo "CC_x86_64-unknown-linux-musl=x86_64-linux-musl-gcc" >> $GITHUB_ENV
-          echo "CXX_x86_64-unknown-linux-musl=x86_64-linux-musl-g++" >> $GITHUB_ENV
-      
       - name: Cache rust dependencies and build output
         uses: Swatinem/rust-cache@v2
 
@@ -98,40 +74,42 @@ jobs:
       - name: Install npm deps
         run: pnpm install
 
-      - name: lint check
-        run: cargo fmt --check
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang
 
-      - name: Build the Leptos project (static musl)
+      - name: lint check
+        run: |
+          cargo fmt --check
+
+      - name: Build the Leptos project
         run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
-          LEPTOS_BIN_TARGET_TRIPLE: x86_64-unknown-linux-musl
           LEPTOS_HASH_FILES: true
           PROVAB_HEADERS: ${{ secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
           APP_URL: ${{ inputs.app-url }}
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: x86_64-linux-musl-gcc
-          CC_x86_64-unknown-linux-musl: x86_64-linux-musl-gcc
-          CXX_x86_64-unknown-linux-musl: x86_64-linux-musl-g++
 
-      - name: Verify files exist before moving
-        run: |
-          echo "Checking if files exist:"
-          ls -la target/x86_64-unknown-linux-musl/release/ || echo "musl target directory not found"
-          ls -la ssr/target/x86_64-unknown-linux-musl/release/ || echo "ssr musl target directory not found"
+      # - name: Verify files exist before moving
+      #   run: |
+      #     echo "Checking if files exist:"
+      #     ls -la target/x86_64-unknown-linux-gnu/release/ || echo "gnu target directory not found"
+      #     ls -la ssr/target/x86_64-unknown-linux-gnu/release/ || echo "ssr gnu target directory not found"
 
-      - name: Move files to simpler structure
-        run: |
-          mkdir -p target/release
-          cp target/x86_64-unknown-linux-musl/release/estate-fe target/release/
-          if [ -f "ssr/target/x86_64-unknown-linux-musl/release/hash.txt" ]; then
-            cp ssr/target/x86_64-unknown-linux-musl/release/hash.txt target/release/
-          elif [ -f "target/x86_64-unknown-linux-musl/release/hash.txt" ]; then
-            cp target/x86_64-unknown-linux-musl/release/hash.txt target/release/
-          else
-            echo "ERROR: hash.txt not found in either location!"
-            exit 1
-          fi
-
+      # - name: Move files to simpler structure
+      #   run: |
+      #     mkdir -p target/release
+      #     cp target/x86_64-unknown-linux-gnu/release/estate-fe target/release/
+      #     if [ -f "ssr/target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
+      #       cp ssr/target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
+      #     elif [ -f "target/x86_64-unknown-linux-gnu/release/hash.txt" ]; then
+      #       cp target/x86_64-unknown-linux-gnu/release/hash.txt target/release/
+      #     else
+      #       echo "ERROR: hash.txt not found in either location!"
+      #       exit 1
+      #     fi
+      
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4

@@ -7,6 +7,12 @@ FROM debian:bookworm-slim as runner
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    libstdc++6 \
+    libgcc-s1 \
+    libc6 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN apt update && apt install tree vim curl dnsutils -y
 
 RUN tree .
