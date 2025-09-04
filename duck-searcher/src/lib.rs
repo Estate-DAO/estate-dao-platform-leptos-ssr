@@ -24,6 +24,7 @@ pub struct CityEntry {
 
 pub struct ConnectionPool {
     pool: Pool<DuckdbConnectionManager>,
+    cities_table_initialized: std::sync::Arc<std::sync::Mutex<bool>>,
 }
 
 impl ConnectionPool {
@@ -36,7 +37,10 @@ impl ConnectionPool {
         conn.execute_batch("INSTALL parquet; LOAD parquet;")?;
         drop(conn);
 
-        Ok(Self { pool })
+        Ok(Self { 
+            pool,
+            cities_table_initialized: std::sync::Arc::new(std::sync::Mutex::new(false)),
+        })
     }
 
     pub fn new_file(db_path: &str, pool_size: u32) -> Result<Self> {
@@ -48,7 +52,10 @@ impl ConnectionPool {
         conn.execute_batch("INSTALL parquet; LOAD parquet;")?;
         drop(conn);
 
-        Ok(Self { pool })
+        Ok(Self { 
+            pool,
+            cities_table_initialized: std::sync::Arc::new(std::sync::Mutex::new(false)),
+        })
     }
 
     pub fn get(&self) -> Result<PooledConn> {
@@ -95,6 +102,31 @@ impl ConnectionPool {
 
         Ok(buffer)
     }
+
+    fn ensure_cities_table_loaded(&self) -> Result<()> {
+        let mut initialized = self.cities_table_initialized.lock().unwrap();
+        if *initialized {
+            return Ok(());
+        }
+
+        let conn = self.get()?;
+        let parquet_path = get_parquet_path();
+        
+        // <!-- Check if parquet file exists -->
+        if !parquet_path.exists() {
+            return Err(anyhow::anyhow!("Cities parquet file not found at: {}", parquet_path.display()));
+        }
+
+        // <!-- Create persistent cities table from parquet file -->
+        conn.execute_batch("DROP TABLE IF EXISTS cities")?;
+        conn.execute_batch(&format!(
+            "CREATE TABLE cities AS SELECT * FROM read_parquet('{}')",
+            parquet_path.to_string_lossy()
+        ))?;
+
+        *initialized = true;
+        Ok(())
+    }
 }
 
 pub fn get_parquet_path() -> PathBuf {
@@ -105,20 +137,26 @@ fn create_connection_pool() -> Result<ConnectionPool> {
     ConnectionPool::new_memory(20)
 }
 
+fn get_connection_pool() -> &'static ConnectionPool {
+    POOL.get_or_init(|| create_connection_pool().expect("Failed to create connection pool"))
+}
+
 fn get_connection() -> Result<PooledConn> {
-    let pool =
-        POOL.get_or_init(|| create_connection_pool().expect("Failed to create connection pool"));
+    let pool = get_connection_pool();
     pool.get()
 }
 
 pub fn search_cities_by_prefix(prefix: &str) -> Result<Vec<RecordBatch>> {
-    let conn = get_connection()?;
-    let parquet_path = get_parquet_path();
+    let pool = get_connection_pool();
+    
+    // <!-- Ensure the cities table is loaded from parquet -->
+    pool.ensure_cities_table_loaded()?;
+    
+    let conn = pool.get()?;
 
-    // <!-- SQL query to filter cities by prefix (case-insensitive) -->
+    // <!-- SQL query to filter cities by prefix (case-insensitive) using table instead of reading parquet -->
     let query = format!(
-        "SELECT * FROM read_parquet('{}') WHERE LOWER(city_name) LIKE LOWER('{}%') ORDER BY city_name LIMIT 20",
-        parquet_path.to_string_lossy(),
+        "SELECT * FROM cities WHERE LOWER(city_name) LIKE LOWER('{}%') ORDER BY city_name LIMIT 20",
         prefix.replace("'", "''")  // <!-- Escape single quotes for SQL safety -->
     );
 
