@@ -83,7 +83,13 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang musl-tools g++-musl
+          sudo apt-get install -y build-essential clang musl-tools
+      
+      - name: Set MUSL compilers
+        run: |
+          echo "CC_x86_64_unknown_linux_musl=musl-gcc" >> $GITHUB_ENV
+          echo "CXX_x86_64_unknown_linux_musl=clang++" >> $GITHUB_ENV
+          echo "CXXFLAGS_x86_64_unknown_linux_musl=--target=x86_64-unknown-linux-musl" >> $GITHUB_ENV
 
       - name: lint check
         run: |
