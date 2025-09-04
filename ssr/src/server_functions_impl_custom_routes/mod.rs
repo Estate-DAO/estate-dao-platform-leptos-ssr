@@ -41,12 +41,10 @@ use serde_json::json;
 
 // Import all route modules
 mod admin_payment;
-mod auth;
 mod block_room;
 mod book_room;
 mod create_payment_invoice;
 mod email_verification;
-mod extract_identity_route;
 mod get_hotel_info;
 mod get_hotel_rates;
 mod integrated_block_room;
@@ -54,12 +52,6 @@ mod process_confirmation;
 mod search_hotel;
 mod update_email_principal_mapping;
 
-// Re-export route handlers to maintain public API compatibility
-use crate::server_functions_impl_custom_routes::extract_identity_route::extract_identity_impl_server_fn_route;
-pub use auth::{
-    extract_cookie_jars, initiate_auth, initiate_auth_axum_handler,
-    perform_yral_oauth_api_server_fn_route,
-};
 pub use block_room::block_room_api_server_fn_route;
 pub use book_room::book_room_api_server_fn_route;
 pub use create_payment_invoice::create_payment_invoice_api_server_fn_route;
@@ -236,18 +228,6 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/verify_otp_api",
             post(verify_otp_api_server_fn_route).options(handle_options),
-        )
-        .route(
-            "/yral_auth_login_url_api",
-            post(initiate_auth_axum_handler).options(handle_options),
-        )
-        .route(
-            "/perform_yral_oauth_api",
-            post(perform_yral_oauth_api_server_fn_route).options(handle_options),
-        )
-        .route(
-            "/extract_new_identity_api",
-            post(extract_identity_impl_server_fn_route).options(handle_options),
         )
         .route(
             "/update_user_principal_email_mapping_in_canister_server_fn",

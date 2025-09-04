@@ -1,8 +1,4 @@
 use crate::api::auth::auth_state::AuthStateSignal;
-use crate::api::auth::canisters::Canisters;
-use crate::component::base_route::BaseRoute;
-use crate::component::logout::LogoutPage;
-use crate::component::yral_auth_provider::LoginProvCtx;
 use crate::{
     api::{
         consts::{EnvVarConfig, APP_URL},
@@ -17,7 +13,6 @@ use crate::{
         AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
         ConfirmationPageV1, ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
         HotelListPage, MyBookingsPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
-        YralAuthRedirectHandlerPage,
     },
     view_state_layer::{
         api_error_state::ApiErrorState,
@@ -72,8 +67,6 @@ pub enum AppRoutes {
     // ConfirmationV2,
     AdminPanel,
     AdminEditPanel,
-    YralAuthRedirectHandler,
-    Logout,
     MyBookings,
     // Notifications
 }
@@ -90,8 +83,6 @@ impl AppRoutes {
             // AppRoutes::ConfirmationV2 => "/confirmation-v2",
             AppRoutes::AdminPanel => "/admin-panel",
             AppRoutes::AdminEditPanel => "/admin-edit-panel",
-            AppRoutes::YralAuthRedirectHandler => "/auth/callback",
-            AppRoutes::Logout => "/logout",
             AppRoutes::MyBookings => "/my-bookings",
             // AppRoutes::Notifications => "/notifications"
         }
@@ -108,8 +99,6 @@ impl AppRoutes {
             // Self::ConfirmationV2,
             Self::AdminPanel,
             Self::AdminEditPanel,
-            Self::YralAuthRedirectHandler,
-            Self::Logout,
             Self::MyBookings,
             // Self::Notifications,
         ]
@@ -164,12 +153,7 @@ pub fn App() -> impl IntoView {
     // -> if environment variables are not defined, panic!
     // provide_context(get_yral_oauth_client());
 
-    provide_context(AuthStateSignal::default());
-
-    // this is unauth canisters in the default state
-    provide_context(Canisters::default());
-
-    provide_context(LoginProvCtx::default());
+    let _ = AuthStateSignal::init();
 
     provide_context(InputGroupState::default());
 
@@ -244,7 +228,6 @@ pub fn App() -> impl IntoView {
         // content for this welcome page
         <Router fallback=|| { view! { <NotFound /> }.into_view() }>
                 <Routes>
-                    <Route path="" view=BaseRoute>
                         <Route path=AppRoutes::Root.to_string() view=RootPage />
                         <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
                         <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
@@ -254,12 +237,9 @@ pub fn App() -> impl IntoView {
                         // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
                         <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                         <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
-                        <Route path=AppRoutes::YralAuthRedirectHandler.to_string() view=YralAuthRedirectHandlerPage />
-                        <Route path=AppRoutes::Logout.to_string() view=LogoutPage />
                         <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
                         // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                         // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
-                        </Route>
                 </Routes>
         </Router>
         </main>

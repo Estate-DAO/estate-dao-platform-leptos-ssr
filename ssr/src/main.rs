@@ -85,6 +85,7 @@ cfg_if! {
         mod server_functions_impl_custom_routes;
 
         use server_functions_impl_custom_routes::api_routes;
+        use estate_fe::oauth::*;
 
         // Helper: verify NowPayments HMAC-SHA512 signature (gated by feature)
         #[cfg(not(feature = "debug_log"))]
@@ -373,6 +374,11 @@ cfg_if! {
                     "/api/*fn_name",
                     get(server_fn_handler).post(server_fn_handler),
                 )
+                .route("/auth/google", get(google_auth))
+                .route("/app", get(get_app_url))
+                .route("/api/user-info", get(api_user_info))
+                .route("/auth/google/callback", get(google_callback))
+                .route("/auth/logout", get(logout))
                 .route("/ipn/webhook", post(nowpayments_webhook))
                 .route("/stream/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))

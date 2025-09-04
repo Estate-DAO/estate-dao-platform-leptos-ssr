@@ -27,6 +27,7 @@ cfg_if::cfg_if! {
         pub mod fallback;
         pub mod init;
         pub mod ssr_booking;
+        pub mod oauth;
     }
 }
 

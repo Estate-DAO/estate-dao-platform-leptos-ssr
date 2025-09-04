@@ -1,7 +1,6 @@
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
-use crate::api::auth::types::NewIdentity;
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
-use crate::component::yral_auth_provider::{LoginProvCtx, YralAuthProvider};
+use crate::component::yral_auth_provider::YralAuthProvider;
 use crate::component::Navbar;
 use crate::log;
 use crate::utils::parent_resource::MockPartialEq;
@@ -23,7 +22,8 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     let auth_state_signal: AuthStateSignal = expect_context();
     let auth_state = auth_state_signal.get();
     // Call actual canister API to get bookings
-    let backend_bookings = user_get_my_bookings(auth_state).await?;
+    let backend_bookings =
+        user_get_my_bookings(auth_state.email.ok_or(ServerFnError::new("Unauthorized"))?).await?;
     log!(
         "[MyBookings] Retrieved {} bookings from backend",
         backend_bookings.len()
@@ -49,27 +49,10 @@ pub fn AuthGatedBookings() -> impl IntoView {
     // Use AuthStateSignal pattern (same as base_route.rs and block_room_v1.rs)
     let auth_state_signal: AuthStateSignal = expect_context();
 
-    // Also monitor the USER_IDENTITY cookie directly (same as navbar pattern)
-    let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
-        USER_IDENTITY,
-        UseCookieOptions::default()
-            .path("/")
-            .same_site(leptos_use::SameSite::Lax)
-            .http_only(false)
-            .secure(false),
-    );
-
-    crate::log!(
-        "AUTH_FLOW: my_bookings - AuthGatedBookings initialized - cookie_identity: {}, auth_signal_identity: {}",
-        stored_identity.get().is_some(),
-        auth_state_signal.get().user_identity.get().is_some()
-    );
-
     // Return the reactive view - use move closure for reactivity
     move || {
         // Check auth state from both sources (cookie takes priority)
-        let is_logged_in = stored_identity.get().is_some()
-            || auth_state_signal.get().user_identity.get().is_some();
+        let is_logged_in = auth_state_signal.get().email.is_some();
 
         crate::log!(
             "AUTH_FLOW: my_bookings - AuthGatedBookings render check - is_logged_in: {}",
@@ -89,8 +72,6 @@ pub fn AuthGatedBookings() -> impl IntoView {
 #[component]
 pub fn BookingsLoginPrompt() -> impl IntoView {
     // Provide login context for YralAuthProvider
-    provide_context(LoginProvCtx::default());
-
     view! {
         <div class="max-w-md mx-auto mt-16">
             <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -113,51 +94,10 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
 
 #[component]
 pub fn BookingsLoader() -> impl IntoView {
-    let auth_state_signal: AuthStateSignal = expect_context();
-
     // Create resource for loading bookings data - following pattern from base_route.rs user_email_sync_resource
     let bookings_resource = create_resource(
-        move || {
-            log!("[MyBookings] Resource signal tracker called");
-
-            // Track auth state signal to establish reactivity
-            let auth = auth_state_signal.get();
-
-            // Track the key auth signals that indicate we're ready to load bookings
-            let canister_store = auth.new_cans_setter.get();
-            let user_identity = auth.user_identity.get();
-            let auth_initialized = auth.auth_initialized.get();
-
-            log!(
-                "[MyBookings] Resource signal - canister_store_ready: {}, user_identity_ready: {}, auth_initialized: {}",
-                canister_store.is_some(),
-                user_identity.is_some(),
-                auth_initialized
-            );
-
-            // Return tuple with all tracked signals to ensure proper reactivity
-            MockPartialEq((canister_store, user_identity, auth_initialized))
-        },
-        move |data| async move {
-            let (canister_store, identity_store, auth_initialized) = data.0;
-
-            log!(
-                "[MyBookings] Resource triggered - canister_ready: {}, identity_ready: {}, auth_initialized: {}",
-                canister_store.is_some(),
-                identity_store.is_some(),
-                auth_initialized
-            );
-
-            // We need both canister store and user identity to proceed
-            // Auth initialization status helps us know when async auth flow is complete
-            if canister_store.is_none() || identity_store.is_none() {
-                log!("[MyBookings] Resource waiting - auth components not ready yet (canister: {}, identity: {})", 
-                    canister_store.is_some(), identity_store.is_some());
-                // Return a pending future that never resolves instead of an error
-                // This keeps the Suspense in loading state instead of showing error
-                return std::future::pending().await;
-            }
-
+        || (),
+        move |_| async move {
             log!("[MyBookings] Resource loading bookings");
             load_my_bookings().await
         },
