@@ -1,6 +1,6 @@
 mod destination_picker_v5;
 mod destination_picker_v6;
-pub use destination_picker_v5::DestinationPickerV5;
+// pub use destination_picker_v5::DestinationPickerV5;
 pub use destination_picker_v6::DestinationPickerV6;
 
 use leptos::html::Input;

@@ -9,7 +9,9 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_query::QueryResult;
 
-use crate::component::{DestinationPickerV5, DestinationPickerV6, Footer, MostPopular, Navbar};
+use crate::component::{
+    /* DestinationPickerV5, */ DestinationPickerV6, Footer, MostPopular, Navbar,
+};
 use crate::{
     api::canister::greet_call::greet_backend,
     app::AppRoutes,
