@@ -26,6 +26,11 @@ use crate::application_services::booking_service::{
     IntegratedBlockRoomRequest, IntegratedBlockRoomResponse,
 };
 
+// // Import city search types
+// use crate::server_functions_impl_custom_routes::search_cities::{
+//     CitySearchResult, SearchCitiesRequest, SearchCitiesResponse,
+// };
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfirmationProcessRequest {
     pub payment_id: Option<String>,
@@ -91,6 +96,27 @@ pub struct UpdateUserPrincipalEmailRequest {
 pub struct VerifyOtpResponse {
     pub success: bool,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchCitiesRequest {
+    pub prefix: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchCitiesResponse {
+    pub cities: Vec<CitySearchResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitySearchResult {
+    pub city_code: String,
+    pub city_name: String,
+    pub country_name: String,
+    pub country_code: String,
+    pub image_url: String,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Clone)]
@@ -343,6 +369,14 @@ impl ClientSideApiClient {
         request: DomainHotelSearchCriteria,
     ) -> Option<DomainHotelListAfterSearch> {
         Self::api_call(request, "server_fn_api/search_hotel_api", "search hotel").await
+    }
+
+    pub async fn search_cities(&self, prefix: String) -> Result<Vec<CitySearchResult>, String> {
+        let request = SearchCitiesRequest { prefix };
+        let response: SearchCitiesResponse =
+            Self::api_call_with_error(request, "server_fn_api/search_cities_api", "search cities")
+                .await?;
+        Ok(response.cities)
     }
 
     pub async fn get_hotel_info(

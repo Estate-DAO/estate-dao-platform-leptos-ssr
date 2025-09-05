@@ -87,6 +87,7 @@ COPY --from=builder /app/target/release/estate-fe .
 COPY --from=builder /app/ssr/target/release/hash.txt .
 COPY --from=builder /app/target/site ./site
 COPY --from=builder /app/city.json ./city.json
+COPY --from=builder /app/city.parquet ./city.parquet
 
 COPY --from=builder /app/.env ./.env
 

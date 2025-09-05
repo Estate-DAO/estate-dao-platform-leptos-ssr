@@ -161,7 +161,10 @@ telemetry_axum = { workspace = true, optional = true }
 
 
 # bg-ractor as optional dependency (only for SSR builds)
-bg-ractor = { path = "../bg-ractor", optional = true }
+bg-ractor = { workspace = true, optional = true }
+
+# duck-searcher for city search functionality
+duck-searcher = { workspace = true, optional = true }
 
 
 
@@ -224,6 +227,7 @@ ssr = [
     "dep:uuid",
     "dep:tower-cookies",
     "dep:bg-ractor", # cities polling background jobs
+    "dep:duck-searcher", # city search functionality
     # "dep:ractor", # moved to bg-ractor crate
     "dep:jsonwebtoken",
     # "dep:colored"
