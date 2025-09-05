@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY ./target/x86_64-unknown-linux-musl/release/estate-fe .
 COPY ./city.json .
+COPY ./city.parquet .
 COPY ./ssr/target/x86_64-unknown-linux-musl/release/hash.txt ./release/hash.txt
 COPY ./ssr/target/x86_64-unknown-linux-musl/release/hash.txt ./hash.txt
 COPY ./target/site ./site

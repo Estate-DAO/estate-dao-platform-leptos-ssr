@@ -18,6 +18,10 @@ handlers = ["tls", "http"]
 tls_options = { "versions" = ["TLSv1.2", "TLSv1.3"] } 
 port = 443
 
+[build]
+dockerfile = "Dockerfile"
+
+
 [env]
 RUST_LOG="debug"
 

@@ -49,5 +49,18 @@ cfg_if::cfg_if! {
             LiteApiGetBookingRequest, LiteApiGetBookingResponse,
         };
 
+        pub use l06_get_countries::{liteapi_get_countries, get_countries_list};
+        pub mod l06_get_countries;
+        pub use l06_get_countries::{
+            LiteApiGetCountriesRequest, LiteApiGetCountriesResponse, Country,
+        };
+
+        pub use l10_cities::{liteapi_get_cities, get_cities_list, get_all_cities};
+        pub mod l10_cities;
+        pub use l10_cities::{
+            LiteApiGetCitiesRequest, LiteApiGetCitiesResponse, City,
+            AllCitiesIterator, CountryCitiesResult,
+        };
+
     }
 }

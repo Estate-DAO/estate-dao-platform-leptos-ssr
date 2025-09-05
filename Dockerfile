@@ -3,20 +3,22 @@
 # FROM debian:bullseye-slim as runner
 # FROM scratch
 
-FROM debian:bookworm-slim as runner
+FROM ubuntu:24.04 as runner
 
 WORKDIR /app
 
-RUN apt update && apt install tree vim curl dnsutils -y
-
-RUN tree .
+RUN apt-get update && apt-get install -y \
+    curl \
+    dnsutils \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY target/release/estate-fe .
+RUN chmod +x ./estate-fe
 COPY target/release/hash.txt .
 COPY target/site ./site
 COPY city.json ./city.json
+COPY city.parquet ./city.parquet
 
-# Set any required env variables
 ENV LEPTOS_ENV="production"
 ENV RUST_LOG="debug,hyper=info,tower=info"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
@@ -26,7 +28,6 @@ ENV LEPTOS_HASH_FILES="true"
 EXPOSE 3000
 
 CMD ["./estate-fe"]
-
 
 # # Get started with a build env with Rust nightly
 # FROM rustlang/rust:nightly-bullseye-slim as builder
