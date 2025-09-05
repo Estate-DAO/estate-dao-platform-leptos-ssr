@@ -138,7 +138,7 @@ impl ConnectionPool {
 }
 
 pub fn get_parquet_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../city.parquet")
+        PathBuf::from("city.parquet")
 }
 
 fn create_connection_pool() -> Result<ConnectionPool> {
