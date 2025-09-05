@@ -3,46 +3,10 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use estate_fe::view_state_layer::AppState;
+use estate_fe::{api::client_side_api::{CitySearchResult, SearchCitiesRequest}, view_state_layer::AppState};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-
 use super::parse_json_request;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchCitiesRequest {
-    pub prefix: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchCitiesResponse {
-    pub cities: Vec<CitySearchResult>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CitySearchResult {
-    pub city_code: String,
-    pub city_name: String,
-    pub country_name: String,
-    pub country_code: String,
-    pub image_url: String,
-    pub latitude: f64,
-    pub longitude: f64,
-}
-
-impl From<duck_searcher::CityEntry> for CitySearchResult {
-    fn from(city_entry: duck_searcher::CityEntry) -> Self {
-        Self {
-            city_code: city_entry.city_code,
-            city_name: city_entry.city_name,
-            country_name: city_entry.country_name,
-            country_code: city_entry.country_code,
-            image_url: city_entry.image_url,
-            latitude: city_entry.latitude,
-            longitude: city_entry.longitude,
-        }
-    }
-}
 
 #[axum::debug_handler]
 #[tracing::instrument(skip_all)]
@@ -62,6 +26,7 @@ pub async fn search_cities_api_server_fn_route(
     #[cfg(feature = "ssr")]
     {
         use duck_searcher::search_cities_by_prefix_as_entries;
+        use estate_fe::api::client_side_api::{CitySearchResult, SearchCitiesResponse};
 
         let city_entries = search_cities_by_prefix_as_entries(&request.prefix).map_err(|e| {
             tracing::error!("City search failed: {:?}", e);
@@ -78,7 +43,15 @@ pub async fn search_cities_api_server_fn_route(
         // <!-- Convert CityEntry to CitySearchResult -->
         let cities: Vec<CitySearchResult> = city_entries
             .into_iter()
-            .map(CitySearchResult::from)
+            .map(|f| CitySearchResult {
+                city_code: f.city_code,
+                city_name: f.city_name,
+                country_name: f.country_name,
+                country_code: f.country_code,
+                image_url: f.image_url,
+                latitude: f.latitude,
+                longitude: f.longitude,
+            })
             .collect();
 
         let response = SearchCitiesResponse { cities };

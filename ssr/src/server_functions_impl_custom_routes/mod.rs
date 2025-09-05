@@ -61,9 +61,7 @@ pub use get_hotel_info::get_hotel_info_api_server_fn_route;
 pub use get_hotel_rates::get_hotel_rates_api_server_fn_route;
 pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
-pub use search_cities::{
-    search_cities_api_server_fn_route, CitySearchResult, SearchCitiesRequest, SearchCitiesResponse,
-};
+pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 

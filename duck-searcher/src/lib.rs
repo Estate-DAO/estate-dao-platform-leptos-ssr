@@ -205,32 +205,23 @@ pub fn convert_record_batches_to_cities(results: Vec<RecordBatch>) -> Result<Vec
 
         // Extract data from each row
         for i in 0..batch.num_rows() {
-            if let (
-                Some(city_code),
-                Some(city_name),
-                Some(country_name),
-                Some(country_code),
-                Some(image_url),
-            ) = (
-                city_codes.value(i),
-                city_names.value(i),
-                country_names.value(i),
-                country_codes.value(i),
-                image_urls.value(i),
-            ) {
-                let latitude = latitudes.value(i);
-                let longitude = longitudes.value(i);
+            let city_code = city_codes.value(i);
+            let city_name = city_names.value(i);
+            let country_name = country_names.value(i);
+            let country_code = country_codes.value(i);
+            let image_url = image_urls.value(i);
+            let latitude = latitudes.value(i);
+            let longitude = longitudes.value(i);
 
-                cities.push(CityEntry {
-                    city_code: city_code.to_string(),
-                    city_name: city_name.to_string(),
-                    country_name: country_name.to_string(),
-                    country_code: country_code.to_string(),
-                    image_url: image_url.to_string(),
-                    latitude,
-                    longitude,
-                });
-            }
+            cities.push(CityEntry {
+                city_code: city_code.to_string(),
+                city_name: city_name.to_string(),
+                country_name: country_name.to_string(),
+                country_code: country_code.to_string(),
+                image_url: image_url.to_string(),
+                latitude,
+                longitude,
+            });
         }
     }
 

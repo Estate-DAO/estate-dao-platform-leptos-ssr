@@ -98,6 +98,28 @@ pub struct VerifyOtpResponse {
     pub message: String,
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchCitiesRequest {
+    pub prefix: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchCitiesResponse {
+    pub cities: Vec<CitySearchResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CitySearchResult {
+    pub city_code: String,
+    pub city_name: String,
+    pub country_name: String,
+    pub country_code: String,
+    pub image_url: String,
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
 #[derive(Clone)]
 pub struct ClientSideApiClient;
 

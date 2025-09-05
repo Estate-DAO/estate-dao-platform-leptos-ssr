@@ -1,9 +1,7 @@
 use super::*;
-use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::client_side_api::{CitySearchResult, ClientSideApiClient};
 
 use crate::log;
-#[cfg(feature = "ssr")]
-use crate::server_functions_impl_custom_routes::CitySearchResult;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use leptos::{html::Div, NodeRef};
 use leptos_use::on_click_outside;
@@ -12,7 +10,7 @@ use web_sys::MouseEvent;
 
 // Helper function to convert CitySearchResult to Destination
 fn city_search_result_to_destination(
-    city: crate::server_functions_impl_custom_routes::search_cities::CitySearchResult,
+    city: CitySearchResult,
 ) -> Destination {
     Destination {
         city: city.city_name,
