@@ -98,7 +98,6 @@ pub struct VerifyOtpResponse {
     pub message: String,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCitiesRequest {
     pub prefix: String,

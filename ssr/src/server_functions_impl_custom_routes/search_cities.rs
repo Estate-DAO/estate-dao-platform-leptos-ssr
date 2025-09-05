@@ -1,12 +1,15 @@
+use super::parse_json_request;
 use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use estate_fe::{api::client_side_api::{CitySearchResult, SearchCitiesRequest}, view_state_layer::AppState};
+use estate_fe::{
+    api::client_side_api::{CitySearchResult, SearchCitiesRequest},
+    view_state_layer::AppState,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use super::parse_json_request;
 
 #[axum::debug_handler]
 #[tracing::instrument(skip_all)]

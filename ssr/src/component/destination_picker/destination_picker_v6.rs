@@ -9,9 +9,7 @@ use wasm_bindgen::JsCast;
 use web_sys::MouseEvent;
 
 // Helper function to convert CitySearchResult to Destination
-fn city_search_result_to_destination(
-    city: CitySearchResult,
-) -> Destination {
+fn city_search_result_to_destination(city: CitySearchResult) -> Destination {
     Destination {
         city: city.city_name,
         country_name: city.country_name,

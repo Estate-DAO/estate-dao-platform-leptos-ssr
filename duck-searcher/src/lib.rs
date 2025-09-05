@@ -2,7 +2,12 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use anyhow::Result;
-use arrow::{json::ArrayWriter, record_batch::RecordBatch, util::pretty::print_batches, array::{Float64Array, StringArray}};
+use arrow::{
+    array::{Float64Array, StringArray},
+    json::ArrayWriter,
+    record_batch::RecordBatch,
+    util::pretty::print_batches,
+};
 use duckdb::DuckdbConnectionManager;
 use r2d2::{Pool, PooledConnection};
 use serde::{Deserialize, Serialize};
@@ -238,7 +243,7 @@ pub fn search_cities_by_prefix(prefix: &str) -> Result<Vec<RecordBatch>> {
 
     // <!-- SQL query to filter cities by prefix (case-insensitive) using table instead of reading parquet -->
     let query = format!(
-        "SELECT * FROM cities WHERE LOWER(city_name) LIKE LOWER('{}%') ORDER BY city_name LIMIT 20",
+        "SELECT * FROM cities WHERE LOWER(city_name) LIKE LOWER('{}%') ORDER BY city_name LIMIT 100",
         prefix.replace("'", "''") // <!-- Escape single quotes for SQL safety -->
     );
 
