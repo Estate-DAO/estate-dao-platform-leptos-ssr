@@ -55,4 +55,6 @@ tokio = { version = "1", features = ["rt-multi-thread", "time"] }
 
 base64ct = {version = "1.6.0"}
 telemetry_axum = {path = "./telemetry_axum"}
+duck-searcher = {path = "./duck-searcher"}
+bg-ractor = {path = "./bg-ractor"}
 

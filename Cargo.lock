@@ -2127,6 +2127,7 @@ dependencies = [
  "convert_case 0.6.0",
  "dashmap 6.1.0",
  "derive_more",
+ "duck-searcher",
  "fake",
  "flate2",
  "futures",

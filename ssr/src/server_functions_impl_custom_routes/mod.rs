@@ -49,6 +49,7 @@ mod get_hotel_info;
 mod get_hotel_rates;
 mod integrated_block_room;
 mod process_confirmation;
+pub mod search_cities;
 mod search_hotel;
 mod update_email_principal_mapping;
 
@@ -60,6 +61,9 @@ pub use get_hotel_info::get_hotel_info_api_server_fn_route;
 pub use get_hotel_rates::get_hotel_rates_api_server_fn_route;
 pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
+pub use search_cities::{
+    search_cities_api_server_fn_route, CitySearchResult, SearchCitiesRequest, SearchCitiesResponse,
+};
 pub use search_hotel::search_hotel_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
@@ -180,6 +184,10 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/search_hotel_api",
             post(search_hotel_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/search_cities_api",
+            post(search_cities_api_server_fn_route).options(handle_options),
         )
         .route(
             "/block_room_api",
