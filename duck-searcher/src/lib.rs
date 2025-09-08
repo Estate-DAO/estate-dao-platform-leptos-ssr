@@ -156,81 +156,75 @@ fn get_connection() -> Result<PooledConn> {
 
 /// Convert RecordBatch results to Vec<CityEntry>
 pub fn convert_record_batches_to_cities(results: Vec<RecordBatch>) -> Result<Vec<CityEntry>> {
-    let mut cities = Vec::new();
+    results.iter().map(map_batches_to_city).collect()
+}
 
-    for batch in results {
-        let city_codes = batch
-            .column_by_name("city_code")
-            .ok_or_else(|| anyhow::anyhow!("Missing city_code column in search results"))?
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid city_code column type"))?;
+fn map_batches_to_city(batch: &RecordBatch) -> Result<CityEntry> {
+    let city_code = batch
+        .column_by_name("city_code")
+        .ok_or_else(|| anyhow::anyhow!("Missing city_code column"))?
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid city_code column type"))?
+        .value(0);
 
-        let city_names = batch
-            .column_by_name("city_name")
-            .ok_or_else(|| anyhow::anyhow!("Missing city_name column in search results"))?
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid city_name column type"))?;
+    let city_name = batch
+        .column_by_name("city_name")
+        .ok_or_else(|| anyhow::anyhow!("Missing city_name column"))?
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid city_name column type"))?
+        .value(0);
 
-        let country_names = batch
-            .column_by_name("country_name")
-            .ok_or_else(|| anyhow::anyhow!("Missing country_name column in search results"))?
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid country_name column type"))?;
+    let country_name = batch
+        .column_by_name("country_name")
+        .ok_or_else(|| anyhow::anyhow!("Missing country_name column"))?
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid country_name column type"))?
+        .value(0);
 
-        let country_codes = batch
-            .column_by_name("country_code")
-            .ok_or_else(|| anyhow::anyhow!("Missing country_code column in search results"))?
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid country_code column type"))?;
+    let country_code = batch
+        .column_by_name("country_code")
+        .ok_or_else(|| anyhow::anyhow!("Missing country_code column"))?
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid country_code column type"))?
+        .value(0);
 
-        let image_urls = batch
-            .column_by_name("image_url")
-            .ok_or_else(|| anyhow::anyhow!("Missing image_url column in search results"))?
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid image_url column type"))?;
+    let image_url = batch
+        .column_by_name("image_url")
+        .ok_or_else(|| anyhow::anyhow!("Missing image_url column"))?
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid image_url column type"))?
+        .value(0);
 
-        let latitudes = batch
-            .column_by_name("latitude")
-            .ok_or_else(|| anyhow::anyhow!("Missing latitude column in search results"))?
-            .as_any()
-            .downcast_ref::<Float64Array>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid latitude column type"))?;
+    let latitude = batch
+        .column_by_name("latitude")
+        .ok_or_else(|| anyhow::anyhow!("Missing latitude column"))?
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid latitude column type"))?
+        .value(0);
 
-        let longitudes = batch
-            .column_by_name("longitude")
-            .ok_or_else(|| anyhow::anyhow!("Missing longitude column in search results"))?
-            .as_any()
-            .downcast_ref::<Float64Array>()
-            .ok_or_else(|| anyhow::anyhow!("Invalid longitude column type"))?;
+    let longitude = batch
+        .column_by_name("longitude")
+        .ok_or_else(|| anyhow::anyhow!("Missing longitude column"))?
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .ok_or_else(|| anyhow::anyhow!("Invalid longitude column type"))?
+        .value(0);
 
-        // Extract data from each row
-        for i in 0..batch.num_rows() {
-            let city_code = city_codes.value(i);
-            let city_name = city_names.value(i);
-            let country_name = country_names.value(i);
-            let country_code = country_codes.value(i);
-            let image_url = image_urls.value(i);
-            let latitude = latitudes.value(i);
-            let longitude = longitudes.value(i);
-
-            cities.push(CityEntry {
-                city_code: city_code.to_string(),
-                city_name: city_name.to_string(),
-                country_name: country_name.to_string(),
-                country_code: country_code.to_string(),
-                image_url: image_url.to_string(),
-                latitude,
-                longitude,
-            });
-        }
-    }
-
-    Ok(cities)
+    Ok(CityEntry {
+        city_code: city_code.to_string(),
+        city_name: city_name.to_string(),
+        country_name: country_name.to_string(),
+        country_code: country_code.to_string(),
+        image_url: image_url.to_string(),
+        latitude,
+        longitude,
+    })
 }
 
 pub fn search_cities_by_prefix(prefix: &str) -> Result<Vec<RecordBatch>> {
@@ -252,10 +246,38 @@ pub fn search_cities_by_prefix(prefix: &str) -> Result<Vec<RecordBatch>> {
     Ok(rbs)
 }
 
+pub fn search_city_by_city_name(prefix: &str) -> Result<RecordBatch> {
+    let pool = get_connection_pool();
+
+    // <!-- Ensure the cities table is loaded from parquet -->
+    pool.ensure_cities_table_loaded()?;
+
+    let conn = pool.get()?;
+
+    // <!-- SQL query to filter cities by prefix (case-insensitive) using table instead of reading parquet -->
+    let query = format!(
+        "SELECT * FROM cities WHERE LOWER(city_name) = LOWER('{}') ORDER BY city_name LIMIT 1",
+        prefix.replace("'", "''")
+    );
+
+    let rbs: Vec<RecordBatch> = conn.prepare(&query)?.query_arrow([])?.collect();
+
+    if rbs.is_empty() {
+        return Err(anyhow::anyhow!("City not found: {}", prefix));
+    }
+
+    Ok(rbs.first().cloned().unwrap())
+}
+
 /// Search cities by prefix and return CityEntry directly
 pub fn search_cities_by_prefix_as_entries(prefix: &str) -> Result<Vec<CityEntry>> {
     let record_batches = search_cities_by_prefix(prefix)?;
     convert_record_batches_to_cities(record_batches)
+}
+
+pub fn search_city_by_name(name: &str) -> Result<CityEntry> {
+    let record_batches = search_city_by_city_name(name)?;
+    map_batches_to_city(&record_batches)
 }
 
 pub fn execute_query(query: &str) -> Result<Vec<RecordBatch>> {

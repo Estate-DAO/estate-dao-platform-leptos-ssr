@@ -65,6 +65,8 @@ pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
+use crate::server_functions_impl_custom_routes::search_cities::search_city_by_name_api_server_fn_route;
+
 // Common helper functions and types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfirmationProcessRequest {
@@ -186,6 +188,10 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/search_cities_api",
             post(search_cities_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/search_city_api",
+            post(search_city_by_name_api_server_fn_route).options(handle_options),
         )
         .route(
             "/block_room_api",
