@@ -291,6 +291,15 @@ pub fn HotelListPage() -> impl IntoView {
                                 .get()
                                 .unwrap()
                                 .hotel_list();
+                            let mut sorted_hotels = hotel_results.clone();
+
+                            sorted_hotels.sort_by_key(|hotel_result| {
+                                match hotel_result.price.as_ref().map(|p| p.room_price) {
+                                    Some(price) if price > 0.0 => 0, // valid prices come first
+                                    _ => 1, // None or 0.0 go to the end
+                                }
+                            });
+
                             if hotel_results.is_empty() {
                                 let current_page = pagination_state.current_page.get();
 
@@ -323,17 +332,31 @@ pub fn HotelListPage() -> impl IntoView {
                                 }
                                     .into_view()
                             } else {
-                                hotel_results
+                                sorted_hotels
                                     .iter()
                                     .map(|hotel_result| {
+                                        let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                        if is_disabled {
+                                            price = None; // Hide price if invalid
+                                        }
+                                        let img = if hotel_result.hotel_picture.is_empty() {
+                                            "https://via.placeholder.com/300x200?text=No+Image".into()
+                                        } else {
+                                            hotel_result.hotel_picture.clone()
+                                        };
                                         view! {
                                             <HotelCard
-                                                img=hotel_result.hotel_picture.clone()
+                                                img
                                                 rating=hotel_result.star_rating
                                                 hotel_name=hotel_result.hotel_name.clone()
-                                                price=hotel_result.price.room_price
+                                                price
                                                 hotel_code=hotel_result.hotel_code.clone()
-                                                class="w-full max-w-xs mx-auto px-2 sm:px-0".to_string()
+                                                class=format!(
+                                                        "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
+                                                        if is_disabled { "grayscale" } else { "" },
+                                                        if is_disabled { "pointer-events-none opacity-50" } else { "" },
+                                                    )
                                             />
                                         }
                                     })
@@ -365,7 +388,7 @@ pub fn HotelListPage() -> impl IntoView {
 pub fn HotelCard(
     img: String,
     rating: u8,
-    price: f64,
+    price: Option<f64>,
     hotel_code: String,
     hotel_name: String,
     class: String,
@@ -476,7 +499,9 @@ pub fn HotelCard(
                         </div>
 
                         <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
-                            <PriceDisplay price=price />
+                            {move || price.get().map(|p| view! {
+                                <PriceDisplay price=p />
+                            })}
                             <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
                                 "View details"
                             </button>

@@ -136,12 +136,18 @@ pub fn filter_hotels_with_valid_pricing(
     let hotels_without_pricing = search_result
         .hotel_results
         .iter()
-        .filter(|hotel| hotel.price.room_price <= 0.0)
+        .filter(|hotel| {
+            hotel
+                .price
+                .clone()
+                .map(|f| f.room_price <= 0.0)
+                .unwrap_or(false)
+        })
         .count();
 
-    search_result
-        .hotel_results
-        .retain(|hotel| hotel.price.room_price > 0.0);
+    // search_result
+    //     .hotel_results
+    //     .retain(|hotel| hotel.price.room_price > 0.0);
 
     let final_count = search_result.hotel_results.len();
 

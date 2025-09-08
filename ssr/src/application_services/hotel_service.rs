@@ -51,9 +51,10 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         // todo (sorting) allow this sorting based on the sort options later.
         domain_result.hotel_results.sort_by(|a, b| {
             a.price
-                .room_price
-                .partial_cmp(&b.price.room_price)
-                .unwrap_or(Ordering::Equal)
+                .clone()
+                .map(|f| f.room_price)
+                .partial_cmp(&b.price.clone().map(|f| f.room_price))
+                .unwrap_or(Ordering::Less)
         });
 
         // todo (filtering) is not implemented at the moment

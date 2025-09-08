@@ -89,7 +89,7 @@ pub struct DomainHotelAfterSearch {
     pub hotel_name: String,
     pub hotel_category: String,
     pub star_rating: u8,
-    pub price: DomainPrice,
+    pub price: Option<DomainPrice>,
     pub hotel_picture: String,
     // todo (liteapi) how does liteapi propagate tokens?
     pub result_token: String,

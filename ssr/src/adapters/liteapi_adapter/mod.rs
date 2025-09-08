@@ -299,10 +299,10 @@ impl LiteApiAdapter {
             hotel_name: liteapi_hotel.name,
             hotel_category: format!("{} Star", liteapi_hotel.stars),
             star_rating: liteapi_hotel.stars as u8,
-            price: DomainPrice {
+            price: Some(DomainPrice {
                 room_price: 0.0, // Will be populated by get_hotel_rates in search_hotels
                 currency_code: liteapi_hotel.currency,
-            },
+            }),
             hotel_picture: liteapi_hotel.main_photo,
             result_token: hotel_id,
         }
@@ -452,7 +452,7 @@ impl LiteApiAdapter {
 
         for hotel in &mut domain_results.hotel_results {
             if let Some(price) = hotel_prices.get(&hotel.hotel_code) {
-                hotel.price = price.clone();
+                hotel.price = Some(price.clone());
             } else {
                 warn!(hotel_code = %hotel.hotel_code, "No pricing data found for hotel in rates response");
             }
@@ -470,13 +470,19 @@ impl LiteApiAdapter {
         let hotels_without_pricing_ids: Vec<String> = domain_results
             .hotel_results
             .iter()
-            .filter(|hotel| hotel.price.room_price <= 0.0)
+            .filter(|hotel| {
+                hotel
+                    .price
+                    .as_ref()
+                    .map(|f| f.room_price <= 0.0)
+                    .unwrap_or(false)
+            })
             .map(|hotel| hotel.hotel_code.clone())
             .collect();
 
-        domain_results
-            .hotel_results
-            .retain(|hotel| hotel.price.room_price > 0.0);
+        // domain_results
+        //     .hotel_results
+        //     .retain(|hotel| hotel.price.room_price > 0.0);
 
         let final_count = domain_results.hotel_results.len();
 
