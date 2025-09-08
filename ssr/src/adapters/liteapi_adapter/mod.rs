@@ -243,15 +243,16 @@ impl LiteApiAdapter {
         );
 
         LiteApiHotelSearchRequest {
-            country_code: domain_criteria.destination_country_code.clone(),
-            city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
-            offset,
-            limit,
-            destination_latitude: domain_criteria.destination_latitude,
-            destination_longitude: domain_criteria.destination_longitude,
-            // todo(hotel_search): default search radius is 10km in liteapi for now.
-            // not sure if to put this in domain_search_criteria
-            radius: Some(10000),
+            ai_search: domain_criteria.destination_city_name.clone(),
+            // country_code: domain_criteria.destination_country_code.clone(),
+            // city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
+            // offset,
+            // limit,
+            // destination_latitude: domain_criteria.destination_latitude,
+            // destination_longitude: domain_criteria.destination_longitude,
+            // // todo(hotel_search): default search radius is 10km in liteapi for now.
+            // // not sure if to put this in domain_search_criteria
+            // radius: Some(100000),
         }
     }
 

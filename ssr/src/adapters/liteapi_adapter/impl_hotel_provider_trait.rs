@@ -49,6 +49,11 @@ impl HotelProviderPort for LiteApiAdapter {
                 ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelSearch)
             })?;
 
+        crate::log!(
+            "LiteAPI search_hotels: received response with {} hotels",
+            liteapi_response.data.len()
+        );
+
         // Use the new method that includes pricing from rates API
         self.map_liteapi_search_to_domain_with_pricing(liteapi_response, &criteria)
             .await
