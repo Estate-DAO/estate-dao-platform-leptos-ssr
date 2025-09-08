@@ -46,7 +46,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn print_help() {
     println!("\nExample queries:");
     println!("  SELECT * FROM read_parquet('$PARQUET_PATH') LIMIT 5;");
-    println!("  SELECT city_name, country_name FROM read_parquet('$PARQUET_PATH') WHERE city_name LIKE 'New%';");
+    println!("  SELECT * FROM read_parquet('$PARQUET_PATH') WHERE LOWER(city_name) LIKE LOWER('A%') ORDER BY city_name LIMIT 100;");
+    println!("  SELECT * FROM read_parquet('$PARQUET_PATH') where LOWER(city_name) = LOWER('a') ORDER BY city_name LIMIT 100;");
+    println!("  SELECT city_name, country_name FROM read_parquet('$PARQUET_PATH') WHERE city_name LIKE 'A%' LIMIT 5;");
     println!("  SELECT COUNT(*) as total_cities FROM read_parquet('$PARQUET_PATH');");
     println!("  SELECT country_name, COUNT(*) as city_count FROM read_parquet('$PARQUET_PATH') GROUP BY country_name ORDER BY city_count DESC LIMIT 10;");
     println!(
