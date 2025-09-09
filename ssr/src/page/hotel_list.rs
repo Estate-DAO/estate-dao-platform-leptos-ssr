@@ -424,15 +424,15 @@ pub fn HotelCard(
             log!("Hotel code set: {}", hotel_code_cloned);
 
             // ✅ 3. Try to build query params
+            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
             if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                let shareable_url = hotel_params.to_shareable_url();
-                log!("Navigating via query params: {}", shareable_url);
-                navigate(&shareable_url, Default::default());
-            } else {
-                log!("No query params, fallback to default navigation");
+                target_url = hotel_params.to_shareable_url();
+            }
+            log!("Opening in new tab: {}", target_url);
 
-                // Fallback navigation (minimal — no server fetch inline)
-                navigate(AppRoutes::HotelDetails.to_string(), Default::default());
+            // ✅ 4. Open in new tab
+            if let Some(window) = web_sys::window() {
+                let _ = window.open_with_url_and_target(&target_url, "_blank");
             }
 
             // ✅ 4. Close dialogs after navigation
