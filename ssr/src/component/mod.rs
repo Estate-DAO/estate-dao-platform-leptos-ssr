@@ -58,6 +58,18 @@ pub use error_popup::*;
 mod most_popular;
 pub use most_popular::*;
 
+mod feature_section;
+pub use feature_section::*;
+
+mod crypto_carousel;
+pub use crypto_carousel::*;
+
+mod feedback_section;
+pub use feedback_section::*;
+
+mod destination_section;
+pub use destination_section::*;
+
 mod navbar;
 pub use navbar::*;
 

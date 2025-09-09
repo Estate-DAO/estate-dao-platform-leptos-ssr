@@ -158,7 +158,7 @@ pub fn MostPopular() -> impl IntoView {
     } = destinations_query().use_query(move || true);
 
     view! {
-        <div class="bg-white rounded-[45px] p-2 md:p-4 w-full -mt-8 most-popular-card">
+        <div class="bg-white p-2 md:p-4 w-full mt-8 most-popular-card">
             <div class="py-8 px-4 md:py-16 md:px-20">
                 <div class="text-xl md:text-2xl font-semibold text-left mb-6">Most popular destinations</div>
 

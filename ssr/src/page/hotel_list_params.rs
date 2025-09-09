@@ -9,25 +9,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[server(LookupDestinationById)]
-pub async fn lookup_destination_by_id(
-    city_id: String,
-) -> Result<Option<Destination>, ServerFnError> {
+pub async fn lookup_destination_by_id(city: String) -> Result<Destination, ServerFnError> {
     use std::io::BufReader;
 
-    let file = match std::fs::File::open("city.json") {
-        Ok(f) => f,
-        Err(_) => return Ok(None),
-    };
-
-    let reader = BufReader::new(file);
-    let destinations: Vec<Destination> = match serde_json::from_reader(reader) {
-        Ok(d) => d,
-        Err(_) => return Ok(None),
-    };
-
-    let destination = destinations.iter().find(|d| d.city_id == city_id).cloned();
-
-    Ok(destination)
+    let res =
+        duck_searcher::search_city_by_name(&city).map_err(|e| ServerFnError::new(e.to_string()))?;
+    Ok(Destination {
+        city_id: res.city_code,
+        city: res.city_name,
+        country_name: res.country_name,
+        country_code: res.country_code,
+        latitude: Some(res.latitude),
+        longitude: Some(res.longitude),
+    })
 }
 
 /// Hotel List page state that can be encoded in URL via base64
@@ -84,7 +78,7 @@ impl HotelListParams {
         let destination = search_ctx
             .destination
             .get_untracked()
-            .map(|d| d.city_id.clone());
+            .map(|d| d.city.clone());
 
         let latitude = search_ctx
             .destination
@@ -215,16 +209,16 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
         let search_ctx: UISearchCtx = expect_context();
 
         // Set destination if available
-        if let Some(city_id) = &self.destination {
+        if let Some(city) = &self.destination {
             // Spawn async lookup task
-            let city_id = city_id.clone();
+            let city = city.clone();
             spawn_local(async move {
-                if let Ok(Some(destination)) = lookup_destination_by_id(city_id.clone()).await {
+                if let Ok(destination) = lookup_destination_by_id(city.clone()).await {
                     UISearchCtx::set_destination(destination);
                 } else {
                     // Fallback to placeholder if lookup fails
                     let destination = Destination {
-                        city_id: city_id.clone(),
+                        city_id: city.clone(),
                         city: "Unknown".to_string(),
                         country_name: "Unknown".to_string(),
                         country_code: "XX".to_string(),

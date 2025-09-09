@@ -104,31 +104,34 @@ impl LiteApiHotelSearchResponse {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiHotelSearchRequest {
-    #[serde(rename = "countryCode")]
-    pub country_code: String,
-    #[serde(rename = "cityName")]
-    pub city_name: String,
-    pub offset: i32,
-    pub limit: i32,
-    #[serde(skip_serializing, rename = "latitude")]
-    pub destination_latitude: Option<f64>,
-    #[serde(skip_serializing, rename = "longitude")]
-    pub destination_longitude: Option<f64>,
-    // radius in meters, min 1000
-    #[serde(skip_serializing, rename = "radius")]
-    pub radius: Option<u32>,
+    #[serde(rename = "aiSearch")]
+    pub ai_search: String,
+    // #[serde(rename = "countryCode")]
+    // pub country_code: String,
+    // #[serde(rename = "cityName")]
+    // pub city_name: String,
+    // pub offset: i32,
+    // pub limit: i32,
+    // #[serde(skip_serializing, rename = "latitude")]
+    // pub destination_latitude: Option<f64>,
+    // #[serde(skip_serializing, rename = "longitude")]
+    // pub destination_longitude: Option<f64>,
+    // // radius in meters, min 1000
+    // #[serde(skip_serializing, rename = "radius")]
+    // pub radius: Option<u32>,
 }
 
 impl Default for LiteApiHotelSearchRequest {
     fn default() -> Self {
         Self {
-            country_code: "US".into(),
-            city_name: "New York".into(),
-            offset: 0,
-            limit: 10,
-            destination_latitude: Some(40.7),
-            destination_longitude: Some(-74.0),
-            radius: Some(1000),
+            ai_search: "New York".into(),
+            // country_code: "US".into(),
+            // city_name: "New York".into(),
+            // offset: 0,
+            // limit: 10,
+            // destination_latitude: Some(40.7),
+            // destination_longitude: Some(-74.0),
+            // radius: Some(1000),
         }
     }
 }
@@ -136,13 +139,14 @@ impl Default for LiteApiHotelSearchRequest {
 impl LiteApiHotelSearchRequest {
     pub fn new(destination: &Destination) -> Self {
         Self {
-            country_code: destination.country_code.clone(),
-            city_name: destination.city.clone(),
-            offset: 0,
-            limit: 50,
-            destination_latitude: destination.latitude,
-            destination_longitude: destination.longitude,
-            radius: Some(1000),
+            ai_search: destination.city.clone(),
+            // country_code: destination.country_code.clone(),
+            // city_name: destination.city.clone(),
+            // offset: 0,
+            // limit: 50,
+            // destination_latitude: destination.latitude,
+            // destination_longitude: destination.longitude,
+            // radius: Some(1000),
         }
     }
 }

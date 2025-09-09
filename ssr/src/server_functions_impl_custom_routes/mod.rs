@@ -49,6 +49,7 @@ mod get_hotel_info;
 mod get_hotel_rates;
 mod integrated_block_room;
 mod process_confirmation;
+pub mod search_cities;
 mod search_hotel;
 mod update_email_principal_mapping;
 
@@ -60,8 +61,11 @@ pub use get_hotel_info::get_hotel_info_api_server_fn_route;
 pub use get_hotel_rates::get_hotel_rates_api_server_fn_route;
 pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
+pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
+
+use crate::server_functions_impl_custom_routes::search_cities::search_city_by_name_api_server_fn_route;
 
 // Common helper functions and types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,12 +136,18 @@ pub fn filter_hotels_with_valid_pricing(
     let hotels_without_pricing = search_result
         .hotel_results
         .iter()
-        .filter(|hotel| hotel.price.room_price <= 0.0)
+        .filter(|hotel| {
+            hotel
+                .price
+                .clone()
+                .map(|f| f.room_price <= 0.0)
+                .unwrap_or(false)
+        })
         .count();
 
-    search_result
-        .hotel_results
-        .retain(|hotel| hotel.price.room_price > 0.0);
+    // search_result
+    //     .hotel_results
+    //     .retain(|hotel| hotel.price.room_price > 0.0);
 
     let final_count = search_result.hotel_results.len();
 
@@ -180,6 +190,14 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/search_hotel_api",
             post(search_hotel_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/search_cities_api",
+            post(search_cities_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/search_city_api",
+            post(search_city_by_name_api_server_fn_route).options(handle_options),
         )
         .route(
             "/block_room_api",

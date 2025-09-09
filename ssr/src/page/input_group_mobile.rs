@@ -9,13 +9,13 @@ pub fn InputGroupMobile() -> impl IntoView {
     let search_ctx: UISearchCtx = expect_context();
 
     // Create derived signals for display values
-    let destination_display = create_memo(move |_| {
+    let destination_display = move || {
         search_ctx
             .destination
             .get()
             .map(|d| format!("{}", d.city))
             .unwrap_or_else(|| "Where to?".to_string())
-    });
+    };
 
     // Format date range display
     let date_range_display = create_memo(move |_| {
@@ -58,7 +58,7 @@ pub fn InputGroupMobile() -> impl IntoView {
                 </span>
                 <div class="flex flex-col flex-1">
                     <span class="text-lg font-medium text-gray-900 leading-tight">
-                        {move || destination_display.get()}
+                        {move || destination_display()}
                     </span>
                     <span class="text-sm text-gray-500 mt-1">
                         {move || format!("{} - {}", date_range_display.get(), guest_info_display.get())}

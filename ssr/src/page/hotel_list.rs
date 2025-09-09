@@ -291,6 +291,15 @@ pub fn HotelListPage() -> impl IntoView {
                                 .get()
                                 .unwrap()
                                 .hotel_list();
+                            let mut sorted_hotels = hotel_results.clone();
+
+                            sorted_hotels.sort_by_key(|hotel_result| {
+                                match hotel_result.price.as_ref().map(|p| p.room_price) {
+                                    Some(price) if price > 0.0 => 0, // valid prices come first
+                                    _ => 1, // None or 0.0 go to the end
+                                }
+                            });
+
                             if hotel_results.is_empty() {
                                 let current_page = pagination_state.current_page.get();
 
@@ -323,17 +332,31 @@ pub fn HotelListPage() -> impl IntoView {
                                 }
                                     .into_view()
                             } else {
-                                hotel_results
+                                sorted_hotels
                                     .iter()
                                     .map(|hotel_result| {
+                                        let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                        if is_disabled {
+                                            price = None; // Hide price if invalid
+                                        }
+                                        let img = if hotel_result.hotel_picture.is_empty() {
+                                            "https://via.placeholder.com/300x200?text=No+Image".into()
+                                        } else {
+                                            hotel_result.hotel_picture.clone()
+                                        };
                                         view! {
                                             <HotelCard
-                                                img=hotel_result.hotel_picture.clone()
+                                                img
                                                 rating=hotel_result.star_rating
                                                 hotel_name=hotel_result.hotel_name.clone()
-                                                price=hotel_result.price.room_price
+                                                price
                                                 hotel_code=hotel_result.hotel_code.clone()
-                                                class="w-full max-w-xs mx-auto px-2 sm:px-0".to_string()
+                                                class=format!(
+                                                        "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
+                                                        if is_disabled { "grayscale" } else { "" },
+                                                        if is_disabled { "pointer-events-none opacity-50" } else { "" },
+                                                    )
                                             />
                                         }
                                     })
@@ -365,7 +388,7 @@ pub fn HotelListPage() -> impl IntoView {
 pub fn HotelCard(
     img: String,
     rating: u8,
-    price: f64,
+    price: Option<f64>,
     hotel_code: String,
     hotel_name: String,
     class: String,
@@ -373,92 +396,59 @@ pub fn HotelCard(
     let price = create_rw_signal(price);
 
     let search_list_page: SearchListResults = expect_context();
-    let search_list_page_clone = search_list_page.clone();
-    let search_ctx: UISearchCtx = expect_context();
-
-    let navigate = use_navigate();
-    let navigate_clone = navigate.clone();
-
-    let hotel_code_cloned = hotel_code.clone();
-
-    let search_hotel_info_action = create_action(move |_| {
-        let nav = navigate_clone.clone();
-        let search_list_page = search_list_page.clone();
-        let hotel_code = hotel_code.clone();
-        log!("from action -- {search_list_page:?}");
-        log!("from action -- {hotel_code:?}");
-        async move {
-            //  move to the hotel info page
-            nav(AppRoutes::HotelDetails.to_string(), Default::default());
-
-            // todo (uncomment)
-            // HotelInfoResults::reset();
-
-            // Get hotel info request
-            // todo (uncomment)
-            // let hotel_info_request = search_list_page.hotel_info_request(&hotel_code);
-            // log!("{hotel_info_request:?}");
-
-            // Call server function inside action
-            spawn_local(async move {
-                // todo (uncomment)
-                // let result = hotel_info(hotel_info_request).await.ok();
-                // log!("SEARCH_HOTEL_API: {result:?}");
-                // HotelInfoResults::set_info_results(result);
-
-                // Navigate after data is loaded to ensure clean state transition
-                nav(AppRoutes::HotelDetails.to_string(), Default::default());
-
-                // close all the dialogs
-                InputGroupState::toggle_dialog(OpenDialogComponent::None);
-            });
-        }
-    });
-
-    let hotel_code_2_cloned = hotel_code_cloned.clone();
-    // let search_hotel_room_action = create_action(move |_: &()| {
-    //     let search_list_page = search_list_page_clone.clone();
-    //     let hotel_code = hotel_code_2_cloned.clone();
-    //     async move {
-    //         // let hotel_room_request = search_list_page.hotel_room_request(&hotel_code);
-    //         // call server function inside action
-    //         spawn_local(async move {
-    //             // todo (uncomment)
-    //             // let result = get_room(hotel_room_request).await.ok();
-    //             // log!("SEARCH_ROOM_API: {result:?}");
-    //             // HotelInfoResults::set_room_results(result);
-    //         });
-    //     }
-    // });
-
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
-    view! {
-        <div // href=AppRoutes::HotelDetails.to_string()
-        on:click=move |ev| {
-            ev.prevent_default();
-            ev.stop_propagation();
+    let navigate = use_navigate();
 
-            // Set hotel code in context for hotel details page
-            hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
-            log!("hotel_code: {}", hotel_code_cloned);
-            log!("hotel_code from hotel_view_info_ctx: {}", hotel_view_info_ctx.hotel_code.get());
+    // ---- Navigation Handler ----
+    let on_navigate = {
+        let hotel_code_cloned = hotel_code.clone();
+        let navigate = navigate.clone();
+        let price = price.clone();
 
-            // Reset hotel details state
+        move || {
+            // ✅ 1. Block navigation if no price or price is zero
+            if !price.get_untracked().map(|f| f > 0.0).unwrap_or(false) {
+                log!(
+                    "Navigation blocked: no valid price for {}",
+                    hotel_code_cloned
+                );
+                return;
+            }
+
+            // ✅ 2. Set context for Hotel Info
+            hotel_view_info_ctx
+                .hotel_code
+                .set(hotel_code_cloned.clone());
             HotelDetailsUIState::reset();
+            log!("Hotel code set: {}", hotel_code_cloned);
 
-            // Generate query params for shareable URL
+            // ✅ 3. Try to build query params
             if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                log!("Generated hotel details params: {:?}", hotel_params);
                 let shareable_url = hotel_params.to_shareable_url();
-                log!("Navigating to hotel details with query params: {}", shareable_url);
+                log!("Navigating via query params: {}", shareable_url);
                 navigate(&shareable_url, Default::default());
             } else {
-                log!("Failed to generate hotel params, using fallback navigation");
-                // Fallback to original navigation
-                search_hotel_info_action.dispatch(());
+                log!("No query params, fallback to default navigation");
+
+                // Fallback navigation (minimal — no server fetch inline)
+                navigate(AppRoutes::HotelDetails.to_string(), Default::default());
             }
-        }>
+
+            // ✅ 4. Close dialogs after navigation
+            InputGroupState::toggle_dialog(OpenDialogComponent::None);
+        }
+    };
+
+    // ---- UI ----
+    view! {
+        <div
+            on:click=move |ev| {
+                ev.prevent_default();
+                ev.stop_propagation();
+                on_navigate();
+            }
+        >
             <div class={class}>
                 <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
                     <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
@@ -476,8 +466,12 @@ pub fn HotelCard(
                         </div>
 
                         <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
-                            <PriceDisplay price=price />
-                            <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
+                            {move || price.get().map(|p| view! {
+                                <PriceDisplay price=p />
+                            })}
+                            <button
+                                class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm"
+                            >
                                 "View details"
                             </button>
                         </div>

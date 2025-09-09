@@ -4,7 +4,7 @@ use leptos::*;
 
 #[component]
 pub fn PriceDisplay(
-    #[prop(into)] price: Signal<f64>,
+    #[prop(into)] price: f64,
     #[prop(default = "$".into(), into)] currency: String,
     #[prop(default = "".into(), into)] base_class: String,
     #[prop(default = "font-semibold".into(), into)] price_class: String,
@@ -15,7 +15,7 @@ pub fn PriceDisplay(
     let formatted_price = move || {
         let mut ac = Accounting::new_from(&cr, 2);
         ac.set_format("{s} {v}");
-        ac.format_money(price())
+        ac.format_money(price)
     };
 
     let merged_base_class = format!("{} flex items-center space-x-1", base_class);

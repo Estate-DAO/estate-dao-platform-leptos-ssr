@@ -9,7 +9,10 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_query::QueryResult;
 
-use crate::component::{DestinationPickerV5, Footer, MostPopular, Navbar};
+use crate::component::{
+    /* DestinationPickerV5, */ CryptoCarousel, DestinationPickerV6, DestinationsSection,
+    FeaturesSection, FeedbackSection, Footer, MostPopular, Navbar,
+};
 use crate::{
     api::canister::greet_call::greet_backend,
     app::AppRoutes,
@@ -41,13 +44,15 @@ pub fn RootPage() -> impl IntoView {
     view! {
         <main>
             // <FullScreenBannerForMobileModeNotReady>
-            <div>
                 <HeroSection />
                 // <LiveSelectExample />
-                <MostPopular />
-            </div>
+                <FeaturesSection />
+                <DestinationsSection />
+                <CryptoCarousel />
+                // <MostPopular />
+                <FeedbackSection />
             // </FullScreenBannerForMobileModeNotReady>
-            // <Footer />
+                <Footer />
         </main>
     }
 }
@@ -69,8 +74,11 @@ pub fn HeroSection() -> impl IntoView {
                 <div class="flex flex-col items-center justify-center h-full">
                     // <!-- Enhanced mobile typography with better line height -->
                     <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight">
-                        Hey! Where are you off to?
+                        Your Next Travel, Paid in Crypto.
                     </h1>
+                    <h6 class="font-semibold text-black my-2 sm:mb-6 md:mb-8 text-center leading-tight">
+                        Plan your next escape and pay in BTC, ETH, or your favorite token.
+                    </h6>
 
                     <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click />
                     <br />
@@ -81,25 +89,25 @@ pub fn HeroSection() -> impl IntoView {
                     <br />
                     <br />
                     // <!-- Improved mobile card layout with better responsive padding -->
-                    <div class="flex flex-col md:flex-row items-center md:items-end px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-xl max-w-fit w-full text-center md:text-left mx-2 sm:mx-0">
-                        <span class="text-sm sm:text-base">
-                            "We're the first decentralized booking platform powered by ICP."
-                        </span>
-                        <div class="flex items-center mt-2 md:mt-0">
-                            <a
-                                href="https://internetcomputer.org/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="font-semibold text-blue-500 md:ml-4 inline text-sm sm:text-base"
-                            >
-                                "Learn more about ICP "
-                            </a>
-                            <Icon
-                                class="w-5 h-5 sm:w-6 sm:h-6 font-semibold inline ml-2 text-blue-500"
-                                icon=icondata::CgArrowRight
-                            />
-                        </div>
-                    </div>
+                    // <div class="flex flex-col md:flex-row items-center md:items-end px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-xl max-w-fit w-full text-center md:text-left mx-2 sm:mx-0">
+                    //     <span class="text-sm sm:text-base">
+                    //         "We're the first decentralized booking platform powered by ICP."
+                    //     </span>
+                    //     <div class="flex items-center mt-2 md:mt-0">
+                    //         <a
+                    //             href="https://internetcomputer.org/"
+                    //             target="_blank"
+                    //             rel="noopener noreferrer"
+                    //             class="font-semibold text-blue-500 md:ml-4 inline text-sm sm:text-base"
+                    //         >
+                    //             "Learn more about ICP "
+                    //         </a>
+                    //         <Icon
+                    //             class="w-5 h-5 sm:w-6 sm:h-6 font-semibold inline ml-2 text-blue-500"
+                    //             icon=icondata::CgArrowRight
+                    //         />
+                    //     </div>
+                    // </div>
                     <br />
                     <br />
                     <br />
@@ -129,10 +137,10 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     let bg_class = move || {
         if disabled.get() {
             // <!-- Updated disabled state to be more subtle on mobile -->
-            "bg-gray-100 md:bg-gray-300 md:bg-opacity-[40%]"
+            "bg-gray-100 md:bg-gray-300"
         } else {
             // <!-- Removed opacity for mobile to match screenshot -->
-            "bg-white md:bg-white md:bg-opacity-[40%]"
+            "bg-white"
         }
     };
 
@@ -186,7 +194,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     // <!-- Changed mobile styling to use solid white background instead of transparent/backdrop-blur -->
                     // <!-- Added more rounded corners for mobile and better spacing -->
                     // <!-- Improved shadow for better card-like appearance on mobile -->
-                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white md:bg-transparent rounded-xl md:rounded-full border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
+                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white rounded-xl md:rounded-full border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
                     bg_class(),
                 )
             }
@@ -194,11 +202,11 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Destination input -->
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             // <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-            <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none">
+            <div class="relative flex-1 border-0 md:border-0 rounded-lg md:rounded-none">
                 <div class="flex items-center h-[56px] px-6">
                     <Show when=move || !disabled.get()>
                         <div class="absolute inset-0">
-                            <DestinationPickerV5 />
+                            <DestinationPickerV6 />
                         </div>
                     </Show>
 

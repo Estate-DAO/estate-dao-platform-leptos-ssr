@@ -113,10 +113,10 @@ impl ProvabAdapter {
             hotel_name: provab_hotel.hotel_name,
             hotel_category: provab_hotel.hotel_category,
             star_rating: provab_hotel.star_rating,
-            price: DomainPrice {
+            price: Some(DomainPrice {
                 room_price: provab_hotel.price.room_price,
                 currency_code: provab_hotel.price.currency_code,
-            },
+            }),
             hotel_picture: provab_hotel.hotel_picture,
             result_token: provab_hotel.result_token,
         }
