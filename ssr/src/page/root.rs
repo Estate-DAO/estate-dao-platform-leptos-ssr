@@ -10,8 +10,8 @@ use leptos_icons::*;
 use leptos_query::QueryResult;
 
 use crate::component::{
-    /* DestinationPickerV5, */ CryptoCarousel, DestinationPickerV6, FeaturesSection, Footer,
-    MostPopular, Navbar,
+    /* DestinationPickerV5, */ CryptoCarousel, DestinationPickerV6, DestinationsSection,
+    FeaturesSection, FeedbackSection, Footer, MostPopular, Navbar,
 };
 use crate::{
     api::canister::greet_call::greet_backend,
@@ -44,15 +44,15 @@ pub fn RootPage() -> impl IntoView {
     view! {
         <main>
             // <FullScreenBannerForMobileModeNotReady>
-            <div>
                 <HeroSection />
                 // <LiveSelectExample />
                 <FeaturesSection />
+                <DestinationsSection />
                 <CryptoCarousel />
-                <MostPopular />
-            </div>
+                // <MostPopular />
+                <FeedbackSection />
             // </FullScreenBannerForMobileModeNotReady>
-            // <Footer />
+                <Footer />
         </main>
     }
 }

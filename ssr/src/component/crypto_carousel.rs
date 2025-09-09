@@ -15,7 +15,7 @@ pub fn CryptoCarousel() -> impl IntoView {
     ];
 
     view! {
-        <section class="bg-[#0B1C4A] text-white py-16 px-6">
+        <section class="bg-[#162456] text-white py-16 px-6">
             <div class="max-w-6xl mx-auto text-center space-y-4">
                 <h2 class="text-2xl md:text-3xl font-bold">"Travel Without Limits"</h2>
                 <p class="max-w-2xl mx-auto text-sm md:text-base text-gray-300">

@@ -4,20 +4,59 @@ use leptos_icons::*;
 #[component]
 pub fn Footer() -> impl IntoView {
     view! {
-        <div class="py-16 px-20 flex items-center justify-between">
-            <div class="flex items-center space-x-6">
-                <div class="font-semibold text-xl">hello@estatedao.com</div>
-                <div class="text-xl">
-                    <Icon icon=icondata::IoLogoInstagram />
-                </div>
-                <div class="text-xl">
-                    <Icon icon=icondata::BiLinkedin />
+        <footer class="bg-neutral-900 text-gray-300 py-16 px-6 sm:px-12">
+            <div class="max-w-8xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
+                {/* Left section (Logo + Info) */}
+                <div class="space-y-6 order-2 lg:order-1">
+                    <div class="flex items-center space-x-2">
+                        <img src="/img/nofeebooking.webp" alt="NoFee Booking Logo" class="h-8 w-auto" />
+                        <span class="text-xl font-semibold text-white">"NoFee Booking"</span>
+                    </div>
+
+                    <p class="text-sm">
+                        "First decentralised booking platform powered by ICP."
+                    </p>
+
+                    <img src="/img/icp.svg" alt="Internet Computer Logo" class="h-6 w-auto" />
+
+                    <p class="text-xs text-gray-400">
+                        "Copyright © 2024 EstateDao. All Rights Reserved."
+                    </p>
                 </div>
 
+                {/* Right section (Company + Support) */}
+                <div class="grid grid-cols-2 gap-8 order-1 lg:order-2">
+                    <div class="space-y-3">
+                        <h3 class="text-white font-semibold">"Company"</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="/about" class="hover:text-white">"About Us"</a></li>
+                            <li><a href="/trips" class="hover:text-white">"My Trips"</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-white font-semibold">"Support"</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="/help" class="hover:text-white">"Help Centre"</a></li>
+                            <li><a href="/faq" class="hover:text-white">"FAQ"</a></li>
+                            <li><a href="/privacy" class="hover:text-white">"Privacy Policy"</a></li>
+                            <li><a href="/terms" class="hover:text-white">"Terms & Conditions"</a></li>
+                        </ul>
+
+                        <div class="flex space-x-4 pt-2">
+                            <a href="https://twitter.com" target="_blank" class="text-blue-400 hover:text-white">
+                                <Icon icon=icondata::BiTwitter />
+                            </a>
+                            <a href="https://facebook.com" target="_blank" class="text-blue-400 hover:text-white">
+                                <Icon icon=icondata::BiFacebook />
+                            </a>
+                            <a href="https://instagram.com" target="_blank" class="text-blue-400 hover:text-white">
+                                <Icon icon=icondata::IoLogoInstagram />
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="text-gray-400 font-semibold">
-                "Copyright © 2025 EstateDao. All Rights Reserved."
-            </div>
-        </div>
+        </footer>
     }
 }
