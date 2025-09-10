@@ -47,7 +47,7 @@ pub fn Footer() -> impl IntoView {
                             <a href="https://x.com/estatedao_icp?s=11" target="_blank" class="text-blue-400 hover:text-white">
                                 <Icon icon=icondata::BiTwitter />
                             </a>
-                            <a href="https://facebook.com" target="_blank" class="text-blue-400 hover:text-white">
+                            <a href="https://www.facebook.com/profile.php?id=61576590939204" target="_blank" class="text-blue-400 hover:text-white">
                                 <Icon icon=icondata::BiFacebook />
                             </a>
                             <a href="https://www.instagram.com/estatedao_/" target="_blank" class="text-blue-400 hover:text-white">
