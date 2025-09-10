@@ -18,7 +18,7 @@ use crate::{
     app::AppRoutes,
     component::{
         DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy,
-        FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
+        GuestQuantity, GuestSelection, HSettingIcon,
         SelectedDateRange,
     },
     page::HotelListParams,
