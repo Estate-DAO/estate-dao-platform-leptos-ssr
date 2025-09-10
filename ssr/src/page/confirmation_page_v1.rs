@@ -19,7 +19,7 @@
 // ///
 // /// **Integration Points**:
 // /// - SSE workflow via NotificationListener
-// /// - Domain struct conversion via BackendIntegrationHelper  
+// /// - Domain struct conversion via BackendIntegrationHelper
 // /// - State management via ConfirmationPageUIState
 // /// - Responsive design using existing CSS patterns
 

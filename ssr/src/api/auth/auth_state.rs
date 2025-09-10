@@ -8,9 +8,7 @@ use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
 use crate::{
     api::{
         auth::types::OidcUser,
-        consts::{
-            USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY,
-        },
+        consts::{USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY},
     },
     send_wrap,
     utils::parent_resource::{MockPartialEq, ParentResource},

@@ -5,8 +5,7 @@ use crate::{
         payments::ports::GetPaymentStatusResponse,
     },
     component::{
-        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame,
-        NotificationState,
+        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationState,
     },
     error_template::{AppError, ErrorTemplate},
     page::{

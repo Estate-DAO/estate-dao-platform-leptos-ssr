@@ -1,4 +1,3 @@
-
 // CONST FOR LOCAL STORAGE
 pub const PAYMENT_ID: &str = "estatedao_payment_id";
 pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
