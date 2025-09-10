@@ -73,6 +73,9 @@ pub use destination_section::*;
 mod navbar;
 pub use navbar::*;
 
+mod image_lightbox;
+pub use image_lightbox::*;
+
 pub mod code_print;
 
 pub mod api_error_popup_component;
