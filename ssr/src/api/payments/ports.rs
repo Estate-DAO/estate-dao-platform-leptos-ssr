@@ -5,14 +5,14 @@ use anyhow::{anyhow, Result};
 use reqwest::{IntoUrl, Method, RequestBuilder, Url};
 use std::fmt::Debug;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "mock-provab")] {
-        // fake imports
-        use fake::{Dummy, Fake, Faker};
-        use rand::rngs::StdRng;
-        use rand::SeedableRng;
-    }
-}
+// cfg_if::cfg_if! {
+//     if #[cfg(feature = "mock-provab")] {
+//         // fake imports
+//         use fake::{Dummy, Fake, Faker};
+//         use rand::rngs::StdRng;
+//         use rand::SeedableRng;
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CreateInvoiceRequest {
@@ -29,7 +29,7 @@ pub struct CreateInvoiceRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+// #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct CreateInvoiceResponse {
     pub id: String,
     pub token_id: String,
@@ -97,7 +97,7 @@ pub struct SuccessGetPaymentStatusResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+// #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct FailureGetPaymentStatusResponse {
     status: bool,
     #[serde(rename = "statusCode")]
@@ -108,7 +108,7 @@ pub struct FailureGetPaymentStatusResponse {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
-#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+// #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub enum GetPaymentStatusResponse {
     Success(SuccessGetPaymentStatusResponse),
     Failure(FailureGetPaymentStatusResponse),
@@ -181,10 +181,10 @@ impl From<(GetPaymentStatusResponse, String)> for BePaymentApiResponse {
 pub trait PaymentGateway {
     const METHOD: Method;
 
-    #[cfg(feature = "mock-provab")]
-    type PaymentGatewayResponse: DeserializeOwned + Debug + Dummy<Faker>;
+    // #[cfg(feature = "mock-provab")]
+    // type PaymentGatewayResponse: DeserializeOwned + Debug + Dummy<Faker>;
 
-    #[cfg(not(feature = "mock-provab"))]
+    // #[cfg(not(feature = "mock-provab"))]
     type PaymentGatewayResponse: DeserializeOwned + Debug;
 
     // fn get_payment_status(&self, payment_id: &str) -> Result<PaymentStatus, String>;

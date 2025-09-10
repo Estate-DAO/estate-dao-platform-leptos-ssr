@@ -3,12 +3,11 @@
 
 use cfg_if::cfg_if;
 use estate_fe::{
-    api::provab::Provab,
     api::{
         consts::EnvVarConfig,
         payments::{service::PaymentServiceImpl, NowPayments},
     },
-    init::{get_provab_client, initialize_provab_client, AppStateBuilder},
+    init::AppStateBuilder,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
         email_handler::SendEmailAfterSuccessfullBooking,

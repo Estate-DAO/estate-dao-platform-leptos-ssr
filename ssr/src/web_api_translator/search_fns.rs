@@ -1,6 +1,6 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
-        use crate::adapters::ProvabAdapter;
+        // use crate::adapters::ProvabAdapter;
     }
 }
 // use crate::application_services::HotelService;
