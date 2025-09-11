@@ -4,6 +4,7 @@ use leptos_router::{use_navigate, use_query_map};
 
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
+use crate::component::ImageLightbox;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
 use crate::domain::{DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest};
 use crate::log;
@@ -403,12 +404,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         }
     };
 
+    let open_image_viewer = RwSignal::new(false);
+
     view! {
         <section class="relative min-h-screen bg-gray-50">
             <Navbar />
-            <div class="flex flex-col items-center mt-6 p-4">
-                <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
-            </div>
+            <Show when=move || !open_image_viewer.get()>
+                <div class="flex flex-col items-center mt-6 p-4">
+                    <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
+                </div>
+            </Show>
 
             // <!-- Use resource pattern like prebook_resource in block_room_v1.rs -->
             // <!-- The resource automatically triggers data loading when dependencies change -->
@@ -476,7 +481,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                             </div>
 
                             <div class="mt-4 md:mt-6">
-                                <HotelImages />
+                                <HotelImages open_image_viewer/>
                             </div>
 
                             <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
@@ -541,12 +546,15 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 }
 
 #[component]
-pub fn HotelImages() -> impl IntoView {
+pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    let images_signal = move || {
+    // let (show_viewer, set_show_viewer) = create_signal(false);
+    let (selected_index, set_selected_index) = create_signal(0);
+
+    let images_signal = create_memo(move |_| {
         if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
-            let mut images = hotel_details.images;
+            let mut images = hotel_details.images.clone();
             if images.len() < 6 {
                 let repeat_count = 6 - images.len();
                 let repeated_images = images.clone();
@@ -556,7 +564,7 @@ pub fn HotelImages() -> impl IntoView {
         } else {
             vec![]
         }
-    };
+    });
 
     move || {
         if images_signal().is_empty() {
@@ -568,7 +576,11 @@ pub fn HotelImages() -> impl IntoView {
                         <img
                             src=move || images_signal()[0].clone()
                             alt="Hotel"
-                            class="w-full h-64 rounded-xl object-cover"
+                            class="w-full h-64 rounded-xl object-cover cursor-pointer"
+                            on:click=move |_| {
+                                set_selected_index(0);
+                                open_image_viewer.set(true);
+                            }
                         />
                     </div>
                     <div class="hidden sm:flex flex-col space-y-3">
@@ -576,18 +588,30 @@ pub fn HotelImages() -> impl IntoView {
                             <img
                                 src=move || images_signal()[0].clone()
                                 alt="Hotel"
-                                class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover"
+                                class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| {
+                                    set_selected_index(0);
+                                    open_image_viewer.set(true);
+                                }
                             />
                             <div class="flex flex-row sm:flex-col space-x-3 sm:space-x-0 sm:space-y-3 w-full sm:w-2/5">
                                 <img
                                     src=move || images_signal().get(1).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                     alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill"
+                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
+                                    on:click=move |_| {
+                                        set_selected_index(1);
+                                        open_image_viewer.set(true);
+                                    }
                                 />
                                 <img
                                     src=move || images_signal().get(2).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                     alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill"
+                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
+                                    on:click=move |_| {
+                                        set_selected_index(2);
+                                        open_image_viewer.set(true);
+                                    }
                                 />
                             </div>
                         </div>
@@ -595,22 +619,45 @@ pub fn HotelImages() -> impl IntoView {
                             <img
                                 src=move || images_signal().get(3).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                 alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover"
+                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| {
+                                    set_selected_index(3);
+                                    open_image_viewer.set(true);
+                                }
                             />
                             <img
                                 src=move || images_signal().get(4).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                 alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover"
+                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| {
+                                    set_selected_index(4);
+                                    open_image_viewer.set(true);
+                                }
                             />
                             <div class="relative w-72 h-48 rounded-xl">
                                 <img
                                     src=move || images_signal().get(5).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                     alt="Hotel"
-                                    class="object-cover h-full w-full rounded-xl"
+                                    class="object-cover h-full w-full rounded-xl cursor-pointer"
+                                    on:click=move |_| {
+                                        set_selected_index(5);
+                                        open_image_viewer.set(true);
+                                    }
                                 />
                             </div>
                         </div>
                     </div>
+
+                    {move || open_image_viewer.get().then(|| {
+                        view! {
+                            <ImageLightbox
+                                images=images_signal()
+                                initial_index=selected_index.get()
+                                loop_images=true
+                                on_close=Callback::new(move |_| open_image_viewer.set(false))
+                            />
+                        }
+                    })}
                 </div>
             }
         }

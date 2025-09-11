@@ -41,7 +41,6 @@ use leptos::{provide_context, use_context};
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::extract::FromRef;
-        use crate::api::provab::Provab;
         use crate::api::liteapi::LiteApiHTTPClient;
         use leptos::LeptosOptions;
         use leptos_router::RouteListing;
@@ -73,7 +72,6 @@ cfg_if! {
             pub env_var_config: EnvVarConfig,
             // pub count_tx: broadcast::Sender<i32>,
             pub pipeline_lock_manager: PipelineLockManager,
-            pub provab_client: &'static Provab,
             pub liteapi_client: &'static LiteApiHTTPClient,
             pub notifier_for_pipeline: &'static Notifier,
             pub cookie_key: Key,

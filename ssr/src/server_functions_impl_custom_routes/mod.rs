@@ -8,7 +8,7 @@ use axum::{
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
     adapters::LiteApiAdapter,
-    adapters::ProvabAdapter,
+    // adapters::ProvabAdapter,
     api::{
         canister::add_booking::call_add_booking_backend,
         liteapi::LiteApiHTTPClient,

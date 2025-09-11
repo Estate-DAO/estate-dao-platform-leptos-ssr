@@ -70,62 +70,63 @@ impl StripeEstate {
         &self,
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "mock-provab")] {
-                let resp: Req::PaymentGatewayResponse = Faker.fake();
-                log!("[Stripe] Faker Response {:?}", resp);
-                Ok(resp)
-            } else {
-                let url = req.build_url(&self.api_host)?;
-                log!("[Stripe] url = {url:#?}");
-                // Log serialized form data for debugging
-                match serde_urlencoded::to_string(&req) {
-                    Ok(form_str) => {
-                        log!("[Stripe] Serialized form data: {}", form_str);
-                        // Check specifically for line_items
-                        if form_str.contains("line_items") {
-                            log!("[Stripe] ✅ line_items found in serialized data");
-                        } else {
-                            error!("[Stripe] ❌ line_items MISSING from serialized data!");
-                        }
-                    },
-                    Err(e) => error!("[Stripe] Failed to serialize form data with serde_urlencoded: {:?}", e),
+        {
+            let url = req.build_url(&self.api_host)?;
+            log!("[Stripe] url = {url:#?}");
+            // Log serialized form data for debugging
+            match serde_urlencoded::to_string(&req) {
+                Ok(form_str) => {
+                    log!("[Stripe] Serialized form data: {}", form_str);
+                    // Check specifically for line_items
+                    if form_str.contains("line_items") {
+                        log!("[Stripe] ✅ line_items found in serialized data");
+                    } else {
+                        error!("[Stripe] ❌ line_items MISSING from serialized data!");
+                    }
                 }
-
-                let request = self
-                    .client
-                    .clone()
-                    .request(Req::METHOD, url)
-                    // todo(stripe) change this in prod
-                    .basic_auth(&self.api_key, Some(""))
-                    .form(&req);
-
-                // log!("[Stripe] Request Headers = {:#?}", request.headers());
-
-                let response = request.send().await?;
-
-                let response_status = response.status();
-                log!("[Stripe] Response Status = {}", response_status);
-                let response_text_value = response.text().await?;
-
-                if !response_status.is_success() {
-                    log!("[Stripe] Error Response = {:#?}", response_text_value);
-                }
-
-                let body_string = response_text_value;
-                log!("[Stripe] stripe response = {:#?}", body_string);
-
-                let jd = &mut serde_json::Deserializer::from_str(&body_string);
-                let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
-                    .map_err(|e| {
-                        let total_error = format!("path: {} - inner: {}", e.path().to_string(), e.inner());
-                        error!("[Stripe] deserialize_response- JsonParseFailed: {:?}", total_error);
-                        e
-                    })?;
-
-                log!("[Stripe] stripe response struct = {response_struct:#?}");
-                Ok(response_struct)
+                Err(e) => error!(
+                    "[Stripe] Failed to serialize form data with serde_urlencoded: {:?}",
+                    e
+                ),
             }
+
+            let request = self
+                .client
+                .clone()
+                .request(Req::METHOD, url)
+                // todo(stripe) change this in prod
+                .basic_auth(&self.api_key, Some(""))
+                .form(&req);
+
+            // log!("[Stripe] Request Headers = {:#?}", request.headers());
+
+            let response = request.send().await?;
+
+            let response_status = response.status();
+            log!("[Stripe] Response Status = {}", response_status);
+            let response_text_value = response.text().await?;
+
+            if !response_status.is_success() {
+                log!("[Stripe] Error Response = {:#?}", response_text_value);
+            }
+
+            let body_string = response_text_value;
+            log!("[Stripe] stripe response = {:#?}", body_string);
+
+            let jd = &mut serde_json::Deserializer::from_str(&body_string);
+            let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
+                .map_err(|e| {
+                    let total_error =
+                        format!("path: {} - inner: {}", e.path().to_string(), e.inner());
+                    error!(
+                        "[Stripe] deserialize_response- JsonParseFailed: {:?}",
+                        total_error
+                    );
+                    e
+                })?;
+
+            log!("[Stripe] stripe response struct = {response_struct:#?}");
+            Ok(response_struct)
         }
     }
 }

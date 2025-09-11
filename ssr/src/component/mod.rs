@@ -73,6 +73,9 @@ pub use destination_section::*;
 mod navbar;
 pub use navbar::*;
 
+mod image_lightbox;
+pub use image_lightbox::*;
+
 pub mod code_print;
 
 pub mod api_error_popup_component;
@@ -81,9 +84,6 @@ pub mod modal;
 pub mod overlay;
 
 pub mod outside_click_detector;
-
-pub mod full_screen_mobile_banner;
-pub use full_screen_mobile_banner::*;
 
 pub mod notification_listener;
 pub use notification_listener::*;

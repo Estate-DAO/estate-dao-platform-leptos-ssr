@@ -17,9 +17,8 @@ use crate::{
     api::canister::greet_call::greet_backend,
     app::AppRoutes,
     component::{
-        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy,
-        FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
-        SelectedDateRange,
+        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy, GuestQuantity, GuestSelection,
+        HSettingIcon, SelectedDateRange,
     },
     page::HotelListParams,
     utils::query_params::QueryParamsSync,

@@ -3,12 +3,11 @@
 
 use cfg_if::cfg_if;
 use estate_fe::{
-    api::provab::Provab,
     api::{
         consts::EnvVarConfig,
         payments::{service::PaymentServiceImpl, NowPayments},
     },
-    init::{get_provab_client, initialize_provab_client, AppStateBuilder},
+    init::AppStateBuilder,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
         email_handler::SendEmailAfterSuccessfullBooking,
@@ -127,11 +126,6 @@ cfg_if! {
                     provide_context(app_state.env_var_config.clone());
                     provide_context(AdminCanisters::from_env());
                     provide_context(app_state.cookie_key.clone());
-
-                    // provide a single instance of provab client so that connection pooling can be used
-                    // creating a new client for each reqwest causes new TCP connection each time
-                    // This results in TCP handshake, slow-start, causing considerable latency!
-                    // provide_context(app_state.provab_client.clone());
                 },
                 request,
             )
