@@ -216,15 +216,19 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
         let search_ctx: UISearchCtx = expect_context();
 
         // Set destination if available
-        if let Some(place) = &self.place.clone().map(|p| p.place_id) {
-            // Spawn async lookup task
-            let place = place.clone();
-            spawn_local(async move {
-                if let Ok(place) = lookup_place_by_id(place.clone()).await {
-                    UISearchCtx::set_place_details(Some(place));
-                }
-            });
+        if let Some(place) = &self.place {
+            UISearchCtx::set_place(place.clone());
+            UISearchCtx::set_place_details(self.place_details.clone());
         }
+        // if let Some(place) = &self.place.clone().map(|p| p.place_id) {
+        //     // Spawn async lookup task
+        //     let place = place.clone();
+        //     spawn_local(async move {
+        //         if let Ok(place) = lookup_place_by_id(place.clone()).await {
+        //             UISearchCtx::set_place_details(Some(place));
+        //         }
+        //     });
+        // }
 
         // Set date range if available
         if let (Some(checkin), Some(checkout)) = (&self.checkin, &self.checkout) {

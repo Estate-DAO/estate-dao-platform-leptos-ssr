@@ -222,17 +222,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
-            let destination = ui_search_ctx.destination.get();
+            let place_details = ui_search_ctx.place_details.get();
             let date_range = ui_search_ctx.date_range.get();
             let has_hotel_code = !hotel_code.is_empty();
-            let has_destination = destination.is_some();
+            let has_place_details = place_details.is_some();
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
             // Return true when ready to call API
-            let is_ready = has_hotel_code && has_destination && has_valid_dates;
+            let is_ready = has_hotel_code && has_place_details && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, destination={}, dates={}, ready={}", 
-                has_hotel_code, has_destination, has_valid_dates, is_ready);
+            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}", 
+                has_hotel_code, has_place_details, has_valid_dates, is_ready);
 
             is_ready
         },
