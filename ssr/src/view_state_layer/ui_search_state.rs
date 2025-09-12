@@ -4,10 +4,7 @@ use crate::{
     //     BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
     //     HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     // },
-    canister::backend,
-    component::{Destination, GuestSelection, SelectedDateRange},
-    domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams},
-    utils::app_reference::generate_app_reference,
+    api::client_side_api::{Place, PlaceData}, canister::backend, component::{Destination, GuestSelection, SelectedDateRange}, domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams}, utils::app_reference::generate_app_reference
 };
 // use leptos::logging::log;
 use crate::log;
@@ -21,6 +18,8 @@ use super::{view_state::HotelInfoCtx, GlobalStateForLeptos};
 
 #[derive(Clone, Default, Debug)]
 pub struct UISearchCtx {
+    pub place: RwSignal<Option<Place>>,
+    pub place_details: RwSignal<Option<PlaceData>>,
     pub destination: RwSignal<Option<Destination>>,
     pub date_range: RwSignal<SelectedDateRange>,
     pub guests: GuestSelection,
@@ -31,6 +30,20 @@ impl UISearchCtx {
         let this: Self = expect_context();
 
         this.destination.set(Some(destination));
+    }
+
+    pub fn set_place(place: Place) {
+        let this: Self = expect_context();
+        this.place.set(Some(place));
+    }
+
+    pub fn set_place_details(place_details: Option<PlaceData>) {
+        let this: Self = expect_context();
+        if this.place.get_untracked().is_none() {
+            log::warn!("UISearchCtx::set_place_details called but place is None. This may indicate inconsistent state.");
+            return;
+        }
+        this.place_details.set(place_details);
     }
 
     pub fn set_date_range(date_range: SelectedDateRange) {

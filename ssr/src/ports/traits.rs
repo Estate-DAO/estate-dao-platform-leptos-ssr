@@ -6,7 +6,8 @@ use crate::{
         DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest,
         DomainBookRoomResponse, DomainGetBookingRequest, DomainGetBookingResponse,
         DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
-        DomainHotelSearchCriteria,
+        DomainHotelSearchCriteria, DomainPlaceDetails, DomainPlaceDetailsPayload,
+        DomainPlacesResponse, DomainPlacesSearchPayload,
     },
     ports::hotel_provider_port::ProviderError,
 };
@@ -67,4 +68,21 @@ pub trait HotelProviderPort {
 
     // <!-- Future operations to be implemented -->
     // async fn get_room_options(&self, hotel_id: String, token: String) -> Result<DomainRoomOptions, ProviderError>;
+}
+
+#[async_trait::async_trait]
+pub trait PlaceProviderPort {
+    // <!-- Core search method that takes both essential criteria and UI filters -->
+    // <!-- The adapter will try to use UI filters if the specific provider API supports them -->
+
+    async fn search_places(
+        // async fn search_hotels(
+        &self,
+        criteria: DomainPlacesSearchPayload,
+    ) -> Result<DomainPlacesResponse, ProviderError>;
+
+    async fn get_single_place_details(
+        &self,
+        payload: DomainPlaceDetailsPayload,
+    ) -> Result<DomainPlaceDetails, ProviderError>;
 }

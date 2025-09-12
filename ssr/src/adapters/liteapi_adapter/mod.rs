@@ -1,6 +1,7 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         pub mod impl_hotel_provider_trait;
+        pub mod impl_place_provider_trait;
     }
 }
 
@@ -9,7 +10,8 @@ use std::sync::Arc;
 use crate::api::api_client::ApiClient;
 use crate::api::liteapi::{
     liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook,
-    LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiHTTPClient,
+    LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiGetPlaceRequest,
+    LiteApiGetPlaceResponse, LiteApiGetPlacesRequest, LiteApiGetPlacesResponse, LiteApiHTTPClient,
     LiteApiHotelImage, LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiHotelResult,
     LiteApiHotelSearchRequest, LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest,
     LiteApiPrebookResponse, LiteApiSingleHotelDetailData, LiteApiSingleHotelDetailRequest,
@@ -22,13 +24,7 @@ use tracing::instrument;
 
 use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
-use crate::domain::{
-    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainBookingHolder,
-    DomainDetailedPrice, DomainFirstRoomDetails, DomainGetBookingRequest, DomainGetBookingResponse,
-    DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPaginationMeta,
-    DomainPaginationParams, DomainPrice, DomainRoomData, DomainRoomOccupancy, DomainRoomOption,
-};
+use crate::domain::*;
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
 use crate::utils::date::date_tuple_to_dd_mm_yyyy;
@@ -228,6 +224,71 @@ impl LiteApiAdapter {
     }
 
     // --- Mapping functions ---
+
+    fn map_places_domain_to_liteapi(payload: DomainPlacesSearchPayload) -> LiteApiGetPlacesRequest {
+        LiteApiGetPlacesRequest {
+            text_query: payload.text_query,
+        }
+    }
+
+    fn map_places_id_domain_to_liteapi(
+        payload: DomainPlaceDetailsPayload,
+    ) -> LiteApiGetPlaceRequest {
+        LiteApiGetPlaceRequest {
+            place_id: payload.place_id,
+        }
+    }
+
+    fn map_liteapi_places_response_to_domain(
+        payload: LiteApiGetPlacesResponse,
+    ) -> DomainPlacesResponse {
+        DomainPlacesResponse {
+            data: payload
+                .data
+                .into_iter()
+                .map(|place| DomainPlace {
+                    place_id: place.place_id,
+                    display_name: place.display_name,
+                    formatted_address: place.formatted_address,
+                })
+                .collect(),
+        }
+    }
+
+    fn map_liteapi_place_details_response_to_domain(
+        payload: LiteApiGetPlaceResponse,
+    ) -> DomainPlaceDetails {
+        DomainPlaceDetails {
+            data: DomainPlaceData {
+                address_components: payload
+                    .data
+                    .address_components
+                    .into_iter()
+                    .map(|ac| DomainAddressComponent {
+                        language_code: ac.language_code,
+                        long_text: ac.long_text,
+                        short_text: ac.short_text,
+                        types: ac.types,
+                    })
+                    .collect(),
+                location: DomainLocation {
+                    latitude: payload.data.location.latitude,
+                    longitude: payload.data.location.longitude,
+                },
+                viewport: DomainViewport {
+                    high: DomainHigh {
+                        latitude: payload.data.viewport.high.latitude,
+                        longitude: payload.data.viewport.high.longitude,
+                    },
+                    low: DomainLow {
+                        latitude: payload.data.viewport.low.latitude,
+                        longitude: payload.data.viewport.low.longitude,
+                    },
+                },
+            },
+        }
+    }
+
     fn map_domain_search_to_liteapi(
         domain_criteria: &DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
@@ -243,7 +304,8 @@ impl LiteApiAdapter {
         );
 
         LiteApiHotelSearchRequest {
-            ai_search: domain_criteria.destination_city_name.clone(),
+            place_id: domain_criteria.place_id.clone(),
+            // ai_search: domain_criteria.destination_city_name.clone(),
             // country_code: domain_criteria.destination_country_code.clone(),
             // city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
             // offset,
@@ -943,13 +1005,9 @@ impl LiteApiAdapter {
             } else {
                 crate::log!("Using enhanced defaults with basic hotel info");
                 // Enhanced fallback with basic hotel information
-                let hotel_name = format!("Hotel in {}", search_criteria.destination_city_name);
-                let description = format!("A quality hotel located in {}, {}. This property offers comfortable accommodations and excellent service for your stay.", 
-                    search_criteria.destination_city_name, search_criteria.destination_country_name);
-                let address = format!(
-                    "{}, {}",
-                    search_criteria.destination_city_name, search_criteria.destination_country_name
-                );
+                let hotel_name = format!("Hotel",);
+                let description = format!("A quality hotel located. This property offers comfortable accommodations and excellent service for your stay.");
+                let address = String::new();
 
                 // Add some default images - these could be placeholder images
                 let images = vec![

@@ -261,11 +261,11 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria from UI context
                 // This will work whether data came from direct navigation or URL query params
-                let destination = ui_search_ctx.destination.get_untracked();
+                let place_details = ui_search_ctx.place_details.get_untracked();
                 let date_range = ui_search_ctx.date_range.get_untracked();
                 let guests = &guests_clone;
 
-                if destination.is_none() {
+                if place_details.is_none() {
                     HotelDetailsUIState::set_error(Some(
                         "Search criteria not available".to_string(),
                     ));
@@ -273,7 +273,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     return None;
                 }
 
-                let destination = destination.unwrap();
+                let place_details = place_details.unwrap();
 
                 // Create room guests
                 let room_guests = vec![DomainRoomGuest {
@@ -295,12 +295,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria
                 let search_criteria = DomainHotelSearchCriteria {
-                    destination_city_id: destination.city_id.parse().unwrap_or(0),
-                    destination_city_name: destination.city.clone(),
-                    destination_country_code: destination.country_code.clone(),
-                    destination_country_name: destination.country_name.clone(),
-                    destination_latitude: destination.latitude,
-                    destination_longitude: destination.longitude,
+                    // destination_city_id: destination.city_id.parse().unwrap_or(0),
+                    // destination_city_name: destination.city.clone(),
+                    // destination_country_code: destination.country_code.clone(),
+                    // destination_country_name: destination.country_name.clone(),
+                    destination_latitude: Some(place_details.location.latitude),
+                    destination_longitude: Some(place_details.location.longitude),
                     check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
                     check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
                     no_of_nights: date_range.no_of_nights(),
@@ -308,10 +308,11 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     room_guests,
                     guest_nationality: "US".to_string(), // Default for now
                     pagination: None,                    // No pagination for hotel details
+                    ..Default::default()
                 };
 
-                log!("Using search criteria for hotel details API: destination={}, dates={:?}-{:?}, guests={}+{}+{}", 
-                    search_criteria.destination_city_name,
+                log!("Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}", 
+                    // search_criteria.destination_city_name,
                     search_criteria.check_in_date,
                     search_criteria.check_out_date,
                     search_criteria.room_guests[0].no_of_adults,

@@ -70,8 +70,8 @@ impl BookingConversions {
         };
 
         // Build hotel info criteria
-        let destination = ui_search_ctx
-            .destination
+        let place_details = ui_search_ctx
+            .place_details
             .get_untracked()
             .ok_or_else(|| BookingError::ValidationError("Destination is required".to_string()))?;
         let date_range = ui_search_ctx.date_range.get_untracked();
@@ -95,12 +95,12 @@ impl BookingConversions {
         }];
 
         let search_criteria = DomainHotelSearchCriteria {
-            destination_city_id: destination.city_id.parse().unwrap_or(0),
-            destination_city_name: destination.city.clone(),
-            destination_country_code: destination.country_code.clone(),
-            destination_country_name: destination.country_name.clone(),
-            destination_latitude: destination.latitude,
-            destination_longitude: destination.longitude,
+            // destination_city_id: pla.city_id.parse().unwrap_or(0),
+            // destination_city_name: destination.city.clone(),
+            // destination_country_code: destination.country_code.clone(),
+            // destination_country_name: destination.country_name.clone(),
+            destination_latitude: Some(place_details.location.latitude),
+            destination_longitude: Some(place_details.location.longitude),
             check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
             check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
             no_of_nights: date_range.no_of_nights(),
@@ -108,6 +108,7 @@ impl BookingConversions {
             room_guests,
             guest_nationality: "US".to_string(),
             pagination: None, // No pagination for booking conversions
+            ..Default::default()
         };
 
         let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
