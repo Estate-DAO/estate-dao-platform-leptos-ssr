@@ -77,14 +77,14 @@ pub async fn search_cities_api_server_fn_route(
 
     // #[cfg(not(feature = "ssr"))]
     // {
-        let error_response = json!({
-            "error": "City search not available in client-side build"
-        });
-        Ok((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            error_response.to_string(),
-        )
-            .into_response())
+    let error_response = json!({
+        "error": "City search not available in client-side build"
+    });
+    Ok((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        error_response.to_string(),
+    )
+        .into_response())
     // }
 }
 
@@ -149,13 +149,13 @@ pub async fn search_city_by_name_api_server_fn_route(
 
     // #[cfg(not(feature = "ssr"))]
     // {
-        let error_response = json!({
-            "error": "City search not available in client-side build"
-        });
-        Ok((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            error_response.to_string(),
-        )
-            .into_response())
+    let error_response = json!({
+        "error": "City search not available in client-side build"
+    });
+    Ok((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        error_response.to_string(),
+    )
+        .into_response())
     // }
 }

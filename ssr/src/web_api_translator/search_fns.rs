@@ -21,7 +21,11 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
         let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
 
         // todo (better hanlding)
-        let place_id = ctx.place.get_untracked().map(|f| f.place_id).unwrap_or_default();
+        let place_id = ctx
+            .place
+            .get_untracked()
+            .map(|f| f.place_id)
+            .unwrap_or_default();
         let destination = ctx.place_details.get_untracked().unwrap_or_default();
 
         // Get pagination parameters from UI state if available

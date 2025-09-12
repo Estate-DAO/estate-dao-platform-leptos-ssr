@@ -4,7 +4,11 @@ use crate::{
     //     BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
     //     HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     // },
-    api::client_side_api::{Place, PlaceData}, canister::backend, component::{Destination, GuestSelection, SelectedDateRange}, domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams}, utils::app_reference::generate_app_reference
+    api::client_side_api::{Place, PlaceData},
+    canister::backend,
+    component::{Destination, GuestSelection, SelectedDateRange},
+    domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams},
+    utils::app_reference::generate_app_reference,
 };
 // use leptos::logging::log;
 use crate::log;

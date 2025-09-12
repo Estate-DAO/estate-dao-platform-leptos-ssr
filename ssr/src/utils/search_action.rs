@@ -2,10 +2,15 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
-    api::client_side_api::ClientSideApiClient, app::AppRoutes, log, page::{HotelListParams, PreviousSearchContext}, utils::route::join_path_and_query_params, view_state_layer::{
+    api::client_side_api::ClientSideApiClient,
+    app::AppRoutes,
+    log,
+    page::{HotelListParams, PreviousSearchContext},
+    utils::route::join_path_and_query_params,
+    view_state_layer::{
         input_group_state::{InputGroupState, OpenDialogComponent},
         ui_search_state::{SearchListResults, UISearchCtx},
-    }
+    },
 };
 
 /// Configuration for search action behavior
@@ -61,9 +66,8 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
         if let Some(disabled_signal) = config.manage_ui_state {
             disabled_signal.set(true);
         }
-        
-        let api_client = ClientSideApiClient::new();
 
+        let api_client = ClientSideApiClient::new();
 
         async move {
             log!("Search action async execution started");
@@ -74,13 +78,13 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
                 .as_ref()
                 .and_then(|p| Some(p.place_id.clone()));
 
-            let place_details =  if let Some(place_id) = place_id {
+            let place_details = if let Some(place_id) = place_id {
                 api_client.get_place_details_by_id(place_id).await
             } else {
-                return ;
+                return;
             };
 
-            let place_details =  if let Err(e) = place_details {
+            let place_details = if let Err(e) = place_details {
                 log!("Error fetching place details: {:?}", e);
                 // Handle error (e.g., show notification to user)
                 UISearchCtx::set_place_details(None);

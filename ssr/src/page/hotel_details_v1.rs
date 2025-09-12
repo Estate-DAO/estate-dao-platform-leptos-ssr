@@ -311,13 +311,15 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     ..Default::default()
                 };
 
-                log!("Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}", 
+                log!(
+                    "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
                     // search_criteria.destination_city_name,
                     search_criteria.check_in_date,
                     search_criteria.check_out_date,
                     search_criteria.room_guests[0].no_of_adults,
                     search_criteria.room_guests[0].no_of_children,
-                    search_criteria.no_of_rooms);
+                    search_criteria.no_of_rooms
+                );
 
                 // Create hotel info criteria
                 let criteria = DomainHotelInfoCriteria {

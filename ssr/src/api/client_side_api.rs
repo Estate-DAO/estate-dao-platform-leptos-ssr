@@ -108,12 +108,10 @@ pub struct SearchPlacesRequest {
     pub text_query: String,
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SearchPlacesResponse {
     pub data: Vec<Place>,
 }
-
 
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -127,7 +125,6 @@ pub struct Place {
 pub struct PlaceDetailsRequest {
     pub place_id: String,
 }
-
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -179,7 +176,6 @@ pub struct Low {
     pub latitude: f64,
     pub longitude: f64,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCitiesResponse {
@@ -467,9 +463,12 @@ impl ClientSideApiClient {
 
     pub async fn get_place_details_by_id(&self, place_id: String) -> Result<PlaceData, String> {
         let request = PlaceDetailsRequest { place_id };
-        let response: PlaceDetailsResponse =
-            Self::api_call_with_error(request, "server_fn_api/get_place_details_api", "get place details")
-                .await?;
+        let response: PlaceDetailsResponse = Self::api_call_with_error(
+            request,
+            "server_fn_api/get_place_details_api",
+            "get place details",
+        )
+        .await?;
         Ok(response.data)
     }
 

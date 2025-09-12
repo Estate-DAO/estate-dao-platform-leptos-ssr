@@ -42,7 +42,10 @@ pub fn DestinationPickerV6() -> impl IntoView {
     create_effect(move |_| {
         if let Some(place) = search_ctx.place.get() {
             if !is_open.get() {
-                set_search_text.set(format!("{}\n{}", place.display_name, place.formatted_address));
+                set_search_text.set(format!(
+                    "{}\n{}",
+                    place.display_name, place.formatted_address
+                ));
             }
         } else if !is_open.get() {
             set_search_text.set(String::new());
@@ -132,9 +135,16 @@ pub fn DestinationPickerV6() -> impl IntoView {
     };
 
     let select_option = move |place: Place| {
-        log!("Selecting option: {}, {}", place.display_name, place.formatted_address);
+        log!(
+            "Selecting option: {}, {}",
+            place.display_name,
+            place.formatted_address
+        );
         let _ = UISearchCtx::set_place(place.clone());
-        set_search_text.set(format!("{}\n{}", place.display_name, place.formatted_address));
+        set_search_text.set(format!(
+            "{}\n{}",
+            place.display_name, place.formatted_address
+        ));
         set_is_open.set(false);
         log!(
             "Dropdown should be closed now, is_open: {}",

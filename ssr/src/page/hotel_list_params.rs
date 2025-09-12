@@ -1,5 +1,11 @@
 use crate::{
-    api::{self, client_side_api::{ClientSideApiClient, Place, PlaceData}}, component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange}, utils::query_params::{update_url_with_state, FilterMap, QueryParamsSync, SortDirection}, view_state_layer::ui_search_state::UISearchCtx
+    api::{
+        self,
+        client_side_api::{ClientSideApiClient, Place, PlaceData},
+    },
+    component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
+    utils::query_params::{update_url_with_state, FilterMap, QueryParamsSync, SortDirection},
+    view_state_layer::ui_search_state::UISearchCtx,
 };
 use chrono::Datelike;
 use leptos::*;
@@ -84,13 +90,9 @@ impl Default for HotelListParams {
 impl HotelListParams {
     /// Create from current search context state
     pub fn from_search_context(search_ctx: &UISearchCtx) -> Self {
-        let place_details = search_ctx
-            .place_details
-            .get_untracked();
+        let place_details = search_ctx.place_details.get_untracked();
 
-        let place = search_ctx
-            .place
-            .get_untracked();
+        let place = search_ctx.place.get_untracked();
 
         let latitude = place_details.as_ref().map(|f| f.location.latitude);
 

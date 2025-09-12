@@ -511,7 +511,7 @@ impl HotelRoomDetails {
         requested_payment_amount: f64,
     ) -> Self {
         Self {
-            destination: None/* destination.map(|d| d.into()) */,
+            destination: None, /* destination.map(|d| d.into()) */
             date_range: date_range.into(),
             room_details: room_details.into_iter().map(|r| r.into()).collect(),
             hotel_details: HotelDetails {

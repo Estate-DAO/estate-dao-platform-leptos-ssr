@@ -263,7 +263,7 @@ impl Default for DomainHotelSearchCriteria {
             }],
             place_id: "ChIJOwg_06VPwokRYv534QaPC8g".into(),
             pagination: None, // <!-- Default to no pagination (first page) -->
-            // ..Default::default()
+                              // ..Default::default()
         }
     }
 }

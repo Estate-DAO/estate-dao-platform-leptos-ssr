@@ -91,7 +91,9 @@ impl PlaceProviderPort for LiteApiAdapter {
         );
 
         // Use the new method that includes pricing from rates API
-        Ok(Self::map_liteapi_place_details_response_to_domain(liteapi_response))
+        Ok(Self::map_liteapi_place_details_response_to_domain(
+            liteapi_response,
+        ))
     }
 }
 

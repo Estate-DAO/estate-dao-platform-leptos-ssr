@@ -66,7 +66,10 @@ pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
-use crate::server_functions_impl_custom_routes::{search_cities::search_city_by_name_api_server_fn_route, search_places::{search_places_api_server_fn_route, search_places_details_api_server_fn_route}};
+use crate::server_functions_impl_custom_routes::{
+    search_cities::search_city_by_name_api_server_fn_route,
+    search_places::{search_places_api_server_fn_route, search_places_details_api_server_fn_route},
+};
 
 // Common helper functions and types
 #[derive(Debug, Clone, Serialize, Deserialize)]
