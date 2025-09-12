@@ -34,6 +34,7 @@ mod build_common {
     }
 
     fn build_canister_ids(out_dir: &str) -> Result<()> {
+        let app_url = env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
         let can_ids = read_candid_ids()?;
         let mut local_can_ids = Vec::<(String, Principal)>::new();
         let mut ic_can_ids = Vec::<(String, Principal)>::new();
@@ -60,6 +61,7 @@ mod build_common {
         pub use local::*;
         #[cfg(not(any(feature = "local-bin", feature = "local-lib")))]
         pub use ic::*;
+        pub static APP_URL: &str = "{app_url}";
 "#
         );
         let canister_id_mod_path = PathBuf::from(out_dir).join("canister_ids.rs");
