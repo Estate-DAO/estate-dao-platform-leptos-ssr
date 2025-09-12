@@ -1641,8 +1641,8 @@ impl LiteApiAdapter {
                 rate: DomainBookedRoomRate {
                     retail_rate: DomainBookedRetailRate {
                         total: DomainBookedPrice {
-                            amount: room.rate.retail_rate.total.amount,
-                            currency: room.rate.retail_rate.total.currency,
+                            amount: room.flattened_rate.amount,
+                            currency: room.flattened_rate.currency,
                         },
                     },
                 },

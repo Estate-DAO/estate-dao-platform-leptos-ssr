@@ -398,10 +398,10 @@ impl From<AppReferenceBookingId> for backend::BookingId {
 impl From<backend::Destination> for DomainDestination {
     fn from(backend: backend::Destination) -> Self {
         Self {
-            city_id: backend.city_id.parse().ok(),
-            city_name: Some(backend.city),
-            country_code: Some(backend.country_code),
-            country_name: Some(backend.country_name),
+            place_id: String::new(),
+            // city_name: Some(backend.city),
+            // country_code: Some(backend.country_code),
+            // country_name: Some(backend.country_name),
         }
     }
 }

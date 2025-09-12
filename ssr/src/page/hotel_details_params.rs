@@ -113,13 +113,16 @@ impl HotelDetailsParams {
             },
         }];
 
+        let place_id = self.place.place_id.clone();
+
         DomainHotelSearchCriteria {
             // destination_city_id: self.destination_city_id,
             // destination_city_name: self.destination_city_name.clone(),
             // destination_country_code: self.destination_country_code.clone(),
             // destination_country_name: self.destination_country_name.clone(),
-            destination_latitude: self.destination_latitude,
-            destination_longitude: self.destination_longitude,
+            // destination_latitude: self.destination_latitude,
+            // destination_longitude: self.destination_longitude,
+            place_id,
             check_in_date: checkin_date,
             check_out_date: checkout_date,
             no_of_nights: self.no_of_nights,
@@ -127,7 +130,7 @@ impl HotelDetailsParams {
             room_guests,
             guest_nationality: self.guest_nationality.clone(),
             pagination: None, // No pagination for hotel details
-            ..Default::default()
+                              // ..Default::default()
         }
     }
 

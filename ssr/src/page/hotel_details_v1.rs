@@ -262,6 +262,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 // Create search criteria from UI context
                 // This will work whether data came from direct navigation or URL query params
                 let place_details = ui_search_ctx.place_details.get_untracked();
+                let place = ui_search_ctx.place.get_untracked();
                 let date_range = ui_search_ctx.date_range.get_untracked();
                 let guests = &guests_clone;
 
@@ -273,7 +274,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     return None;
                 }
 
+                if place.is_none() {
+                    HotelDetailsUIState::set_error(Some(
+                        "Search criteria not available".to_string(),
+                    ));
+                    HotelDetailsUIState::set_loading(false);
+                    return None;
+                }
+
                 let place_details = place_details.unwrap();
+                let place = place.unwrap();
 
                 // Create room guests
                 let room_guests = vec![DomainRoomGuest {
@@ -299,8 +309,9 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     // destination_city_name: destination.city.clone(),
                     // destination_country_code: destination.country_code.clone(),
                     // destination_country_name: destination.country_name.clone(),
-                    destination_latitude: Some(place_details.location.latitude),
-                    destination_longitude: Some(place_details.location.longitude),
+                    // destination_latitude: Some(place.location.latitude),
+                    // destination_longitude: Some(place.location.longitude),
+                    place_id: place.place_id.clone(),
                     check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
                     check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
                     no_of_nights: date_range.no_of_nights(),

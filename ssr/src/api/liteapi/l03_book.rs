@@ -156,13 +156,84 @@ pub struct LiteApiBookedRoom {
     pub board_name: String,
     pub adults: u32,
     pub children: u32,
-    pub rate: LiteApiBookedRoomRate,
+    #[serde(flatten)]
+    pub flattened_rate: LiteApiBookedPrice,
+    // pub rate: LiteApiBookedRoomRate, --- Maybe Rate key NA ---
     #[serde(rename = "firstName")]
     pub first_name: String,
     #[serde(rename = "lastName")]
     pub last_name: String,
     #[serde(rename = "mappedRoomId")]
     pub mapped_room_id: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{json, Value};
+
+    #[test]
+    fn test_serialize_booked_room() {
+        let room = LiteApiBookedRoom {
+            room_type: LiteApiBookedRoomType {
+                name: "Deluxe Room".to_string(),
+            },
+            board_type: "HB".to_string(),
+            board_name: "Half Board".to_string(),
+            adults: 2,
+            children: 1,
+            flattened_rate: LiteApiBookedPrice {
+                amount: 200.50,
+                currency: "USD".to_string(),
+            },
+            first_name: "John".to_string(),
+            last_name: "Doe".to_string(),
+            mapped_room_id: Some("R123".to_string()),
+        };
+
+        let json_str = serde_json::to_string_pretty(&room).unwrap();
+        let v: Value = serde_json::from_str(&json_str).unwrap();
+
+        assert_eq!(v["roomType"]["name"], "Deluxe Room");
+        assert_eq!(v["boardType"], "HB");
+        assert_eq!(v["boardName"], "Half Board");
+        assert_eq!(v["adults"], 2);
+        assert_eq!(v["children"], 1);
+        assert_eq!(v["amount"], 200.50);
+        assert_eq!(v["currency"], "USD");
+        assert_eq!(v["firstName"], "John");
+        assert_eq!(v["lastName"], "Doe");
+        assert_eq!(v["mappedRoomId"], "R123");
+    }
+
+    #[test]
+    fn test_deserialize_booked_room() {
+        let data = json!({
+            "roomType": { "name": "Deluxe Room" },
+            "boardType": "HB",
+            "boardName": "Half Board",
+            "adults": 2,
+            "children": 1,
+            "amount": 200.50,
+            "currency": "USD",
+            "firstName": "John",
+            "lastName": "Doe",
+            "mappedRoomId": "R123"
+        });
+
+        let room: LiteApiBookedRoom = serde_json::from_value(data).unwrap();
+
+        assert_eq!(room.room_type.name, "Deluxe Room");
+        assert_eq!(room.board_type, "HB");
+        assert_eq!(room.board_name, "Half Board");
+        assert_eq!(room.adults, 2);
+        assert_eq!(room.children, 1);
+        assert_eq!(room.flattened_rate.amount, 200.50);
+        assert_eq!(room.flattened_rate.currency, "USD");
+        assert_eq!(room.first_name, "John");
+        assert_eq!(room.last_name, "Doe");
+        assert_eq!(room.mapped_room_id, Some("R123".to_string()));
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

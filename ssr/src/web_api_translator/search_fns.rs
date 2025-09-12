@@ -48,11 +48,11 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             // destination_country_code: destination.country_code,
             // destination_country_name: destination.country_name,
             guest_nationality: "US".into(), // Hardcoded for now, can be dynamic based on user profile or selection
-            destination_latitude: Some(destination.location.latitude),
-            destination_longitude: Some(destination.location.longitude),
+            // destination_latitude: Some(destination.location.latitude),
+            // destination_longitude: Some(destination.location.longitude),
             place_id,
             pagination,
-            ..Default::default()
+            // ..Default::default()
         };
 
         log!("HotelSearchRequest: {request:?}");

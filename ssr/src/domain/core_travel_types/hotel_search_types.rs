@@ -8,10 +8,11 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, PartialEq)]
 pub struct DomainDestination {
     // todo (liteapi) - should to be int?
-    pub city_id: Option<u32>,
-    pub city_name: Option<String>,
-    pub country_code: Option<String>,
-    pub country_name: Option<String>,
+    pub place_id: String,
+    // pub city_id: Option<u32>,
+    // pub city_name: Option<String>,
+    // pub country_code: Option<String>,
+    // pub country_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -52,12 +53,12 @@ pub struct DomainPaginationMeta {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainHotelSearchCriteria {
     // <!-- Destination information -->
-    pub destination_city_id: Option<u32>, // Provab city ID
-    pub destination_city_name: Option<String>,
-    pub destination_country_code: Option<String>,
-    pub destination_country_name: Option<String>,
-    pub destination_latitude: Option<f64>,
-    pub destination_longitude: Option<f64>,
+    // pub destination_city_id: Option<u32>, // Provab city ID
+    // pub destination_city_name: Option<String>,
+    // pub destination_country_code: Option<String>,
+    // pub destination_country_name: Option<String>,
+    // pub destination_latitude: Option<f64>,
+    // pub destination_longitude: Option<f64>,
     pub place_id: String,
 
     // <!-- Date information -->
@@ -245,12 +246,12 @@ pub struct DomainHotelDetails {
 impl Default for DomainHotelSearchCriteria {
     fn default() -> Self {
         Self {
-            destination_city_id: None, // <!-- Default to Mumbai -->
-            destination_country_code: None,
-            destination_latitude: Some(19.07),
-            destination_longitude: Some(72.87),
-            destination_city_name: None,
-            destination_country_name: None,
+            // destination_city_id: None, // <!-- Default to Mumbai -->
+            // destination_country_code: None,
+            // destination_latitude: Some(19.07),
+            // destination_longitude: Some(72.87),
+            // destination_city_name: None,
+            // destination_country_name: None,
             check_in_date: (2025, 11, 12),
             check_out_date: (2025, 11, 12),
             no_of_nights: 1,
@@ -263,7 +264,6 @@ impl Default for DomainHotelSearchCriteria {
             }],
             place_id: "ChIJOwg_06VPwokRYv534QaPC8g".into(),
             pagination: None, // <!-- Default to no pagination (first page) -->
-                              // ..Default::default()
         }
     }
 }
