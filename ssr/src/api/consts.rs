@@ -20,12 +20,14 @@ pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3002/";
 // const LOCALHOST_APP_URL: &str = "https://louse-musical-hideously.ngrok-free.app";
-const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
+const STAGING_APP_URL: &str = "https://pr-111-estate.fly.dev";
+// const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
 const PROD_APP_URL: &str = "https://nofeebooking.com";
 
 // common consts
 const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
 
+const BASE_URL: &str = crate::canister::APP_URL;
 // const for local environment
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
@@ -69,12 +71,12 @@ cfg_if! {
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
     }
     else if #[cfg(feature = "prod-consts")] {
-        pub static APP_URL: Lazy<String> = Lazy::new(||  env_w_default("APP_URL", PROD_APP_URL).unwrap().to_string());
+        pub static APP_URL: Lazy<String> = Lazy::new(||   env_w_default("APP_URL", PROD_APP_URL).unwrap().to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else {
-        pub static APP_URL: Lazy<String> = Lazy::new(||  env_w_default("APP_URL", STAGING_APP_URL).unwrap().to_string());
+        pub static APP_URL: Lazy<String> = Lazy::new(|| BASE_URL.to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }

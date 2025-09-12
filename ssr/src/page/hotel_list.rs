@@ -2,7 +2,7 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 // use crate::api::get_room;
-use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::component::{
     Destination, GuestSelection, Navbar, PaginationControls, PaginationInfo, SkeletonCards,
 };
@@ -28,7 +28,8 @@ use crate::{
 //  this is only for this page to track if the bar changes.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PreviousSearchContext {
-    pub destination: Option<Destination>,
+    pub place: Option<Place>,
+    pub place_details: Option<PlaceData>,
     pub date_range: Option<SelectedDateRange>,
     pub adults: u32,
     pub children: u32,
@@ -43,7 +44,8 @@ impl PreviousSearchContext {
     pub fn update(new_ctx: UISearchCtx) {
         let mut this: Self = expect_context();
         // let mut this = Self::get();
-        this.destination = new_ctx.destination.get_untracked();
+        this.place = new_ctx.place.get_untracked();
+        this.place_details = new_ctx.place_details.get_untracked();
         this.rooms = new_ctx.guests.rooms.get_untracked();
         this.children = new_ctx.guests.children.get_untracked();
         this.adults = new_ctx.guests.adults.get_untracked();
@@ -104,7 +106,7 @@ pub fn HotelListPage() -> impl IntoView {
     let hotel_search_resource = create_resource(
         move || {
             // Track search context changes reactively
-            let destination = search_ctx_for_resource.destination.get();
+            let place = search_ctx_for_resource.place.get();
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
             let children = search_ctx_for_resource.guests.children.get();
@@ -126,22 +128,22 @@ pub fn HotelListPage() -> impl IntoView {
 
             // log!("[hotel_search_resource] previous_search_ctx: {:?}", previous_search_ctx);
 
-            let previous_destination = previous_search_ctx.destination.clone();
+            let previous_place = previous_search_ctx.place.clone();
             let previous_adults = previous_search_ctx.adults;
             let previous_children = previous_search_ctx.children;
             let previous_rooms = previous_search_ctx.rooms;
 
-            let is_same_destination = destination == previous_destination;
+            let is_same_place = place == previous_place;
             let is_same_adults = adults == previous_adults;
             let is_same_children = children == previous_children;
             let is_same_rooms = rooms == previous_rooms;
             let is_same_search_criteria =
-                is_same_destination && is_same_adults && is_same_children && is_same_rooms;
+                is_same_place && is_same_adults && is_same_children && is_same_rooms;
 
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
-            let has_valid_search_data = destination.is_some() && adults > 0 && rooms > 0;
+            let has_valid_search_data = place.is_some() && adults > 0 && rooms > 0;
             let is_first_load =
-                previous_destination.is_none() && previous_adults == 0 && previous_rooms == 0;
+                previous_place.is_none() && previous_adults == 0 && previous_rooms == 0;
 
             // Reset pagination to first page when search criteria change
             if !is_same_search_criteria && !is_first_load {

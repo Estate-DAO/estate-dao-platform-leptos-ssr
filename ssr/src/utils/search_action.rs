@@ -2,6 +2,7 @@ use leptos::*;
 use leptos_router::use_navigate;
 
 use crate::{
+    api::client_side_api::ClientSideApiClient,
     app::AppRoutes,
     log,
     page::{HotelListParams, PreviousSearchContext},
@@ -66,8 +67,33 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
             disabled_signal.set(true);
         }
 
+        let api_client = ClientSideApiClient::new();
+
         async move {
             log!("Search action async execution started");
+
+            let place_id = search_ctx
+                .place
+                .get_untracked()
+                .as_ref()
+                .and_then(|p| Some(p.place_id.clone()));
+
+            let place_details = if let Some(place_id) = place_id {
+                api_client.get_place_details_by_id(place_id).await
+            } else {
+                return;
+            };
+
+            let place_details = if let Err(e) = place_details {
+                log!("Error fetching place details: {:?}", e);
+                // Handle error (e.g., show notification to user)
+                UISearchCtx::set_place_details(None);
+                return;
+            } else {
+                place_details.unwrap()
+            };
+
+            UISearchCtx::set_place_details(Some(place_details.clone()));
 
             let hotel_list_url = if config.navigate_with_params {
                 // Generate URL with query params (recommended approach)

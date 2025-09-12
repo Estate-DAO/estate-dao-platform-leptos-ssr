@@ -161,9 +161,20 @@ pub trait ApiClient: Clone + Debug + Default {
         Req: ApiRequestMeta + ApiRequest + Serialize + Send + 'static,
         Req::Response: Send + 'static,
     {
-        let full_url = join_base_and_path_url(self.base_url().as_str(), Req::path_suffix())
-            .expect("Failed to join base and path URL");
+        let full_url = req.full_path();
         let reqb = self.request_builder(Req::METHOD, full_url);
+        //  /*  join_base_and_path_url(self.base_url().as_str(), Req::path_suffix())
+        //     .expect("Failed to join base and path URL") */;
+        // let reqb = if Req::METHOD == Method::GET {
+        //     match Req::DATA {
+        //         RequestData::QueryParams => self.request_builder(Req::METHOD, full_url).query(&req),
+        //         RequestData::PathParam(param) => {
+        //             self.request_builder(Req::METHOD, format!("{}/{}", full_url, param))
+        //         }
+        //     }
+        // } else {
+        //     self.request_builder(Req::METHOD, full_url).json(&req)
+        // };
         self.send_json_request(req, reqb).await
     }
 
@@ -438,10 +449,15 @@ pub trait ApiClient: Clone + Debug + Default {
     }
 }
 
+pub enum RequestData {
+    QueryParams,
+    PathParam(String),
+}
 /// Trait for request metadata (similar to your ProvabReqMeta)
 pub trait ApiRequestMeta: Sized + Send {
     const METHOD: Method;
     const GZIP: bool = false;
+    const DATA: RequestData = RequestData::QueryParams;
 
     #[cfg(feature = "mock-provab")]
     type Response: DeserializeOwned + Debug + MockableResponse + Send;
@@ -507,6 +523,10 @@ pub trait ApiRequest: ApiRequestMeta + Debug {
     fn path() -> String {
         join_base_and_path_url(Self::base_path().as_str(), Self::path_suffix())
             .expect("Failed to join base and path URL")
+    }
+
+    fn full_path(&self) -> String {
+        Self::path()
     }
 
     /// The path suffix for this request (without the base URL)
