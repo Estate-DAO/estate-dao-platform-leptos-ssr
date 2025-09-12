@@ -1,4 +1,4 @@
-use crate::api::consts::APP_URL;
+use crate::api::consts::{get_host, APP_URL};
 use crate::api::payments::domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse};
 use crate::api::payments::ports::GetPaymentStatusResponse;
 use crate::canister::backend::{Booking, PaymentDetails};
@@ -212,7 +212,8 @@ impl ClientSideApiClient {
     }
 
     fn build_api_url(endpoint: &str) -> String {
-        join_base_and_path_url(APP_URL.as_str(), endpoint).unwrap_or_else(|e| {
+        let host = get_host();
+        join_base_and_path_url(&host, endpoint).unwrap_or_else(|e| {
             log!("Failed to build URL: {}", e);
             format!("{}/{}", APP_URL.as_str(), endpoint)
         })
