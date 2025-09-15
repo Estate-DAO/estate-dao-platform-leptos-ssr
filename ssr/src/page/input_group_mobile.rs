@@ -13,7 +13,7 @@ pub fn InputGroupMobile() -> impl IntoView {
         search_ctx
             .place
             .get()
-            .map(|d| format!("{}", d.formatted_address))
+            .map(|d| format!("{}, {}", d.display_name, d.formatted_address))
             .unwrap_or_else(|| "Where to?".to_string())
     };
 

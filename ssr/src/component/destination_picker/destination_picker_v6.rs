@@ -43,7 +43,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
         if let Some(place) = search_ctx.place.get() {
             if !is_open.get() {
                 set_search_text.set(format!(
-                    "{}\n{}",
+                    "{}, {}",
                     place.display_name, place.formatted_address
                 ));
             }
@@ -354,7 +354,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                                         set_active_index.set(i);
                                                     }
                                                 >
-                                                {highlight_match(&format!("{}\n{}", dest_clone.display_name, dest_clone.formatted_address), &search_text.get())}
+                                                {highlight_match(&format!("{}, {}", dest_clone.display_name, dest_clone.formatted_address), &search_text.get())}
                                                 </div>
                                             }
                                         }).collect::<Vec<_>>().into_view()
