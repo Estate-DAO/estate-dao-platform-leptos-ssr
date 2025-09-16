@@ -4,8 +4,8 @@ use leptos_router::use_navigate;
 // use crate::api::get_room;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::component::{
-    Destination, GuestSelection, Navbar, PaginationControls, PaginationInfo, SkeletonCards,
-    StarRatingFilter,
+    format_price_range_value, Destination, GuestSelection, Navbar, PaginationControls,
+    PaginationInfo, PriceRangeFilter, SkeletonCards, StarRatingFilter,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -263,6 +263,7 @@ pub fn HotelListPage() -> impl IntoView {
             .collect_view()
     };
 
+    let price_filter_selection = create_rw_signal::<Option<f64>>(None);
     let star_filter_selection = create_rw_signal::<Option<u8>>(None);
 
     view! {
@@ -280,6 +281,7 @@ pub fn HotelListPage() -> impl IntoView {
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
                     <aside class="w-full lg:w-64 shrink-0">
                         <div class="sticky top-24 space-y-4">
+                            <PriceRangeFilter selection=price_filter_selection />
                             <StarRatingFilter selection=star_filter_selection />
                         </div>
                     </aside>
@@ -317,11 +319,25 @@ pub fn HotelListPage() -> impl IntoView {
                                     });
 
                                     let min_rating_filter = star_filter_selection.get();
+                                    let max_price_filter = price_filter_selection.get();
                                     let filtered_hotels: Vec<_> = sorted_hotels
                                         .into_iter()
                                         .filter(|hotel_result| {
-                                            min_rating_filter
-                                                .map_or(true, |min| hotel_result.star_rating >= min)
+                                            let matches_rating = min_rating_filter
+                                                .map_or(true, |min| hotel_result.star_rating >= min);
+
+                                            let matches_price = max_price_filter
+                                                .map_or(true, |max_price| {
+                                                    hotel_result
+                                                        .price
+                                                        .as_ref()
+                                                        .map(|price| price.room_price as f64)
+                                                        .filter(|room_price| *room_price > 0.0)
+                                                        .map(|room_price| room_price <= max_price)
+                                                        .unwrap_or(false)
+                                                });
+
+                                            matches_rating && matches_price
                                         })
                                         .collect();
 
@@ -357,23 +373,59 @@ pub fn HotelListPage() -> impl IntoView {
                                         }
                                             .into_view()
                                     } else if filtered_hotels.is_empty() {
-                                        if let Some(min_rating) = min_rating_filter {
+                                        if min_rating_filter.is_some() || max_price_filter.is_some() {
+                                            let filter_message = match (min_rating_filter, max_price_filter) {
+                                                (Some(min_rating), Some(max_price)) => format!(
+                                                    "No hotels match a {min_rating}+ star rating under {} per night on this page.",
+                                                    format_price_range_value(max_price)
+                                                ),
+                                                (Some(min_rating), None) => format!(
+                                                    "No hotels match the {min_rating}+ star filter on this page."
+                                                ),
+                                                (None, Some(max_price)) => {
+                                                    format!(
+                                                        "No hotels priced at or below {} per night on this page.",
+                                                        format_price_range_value(max_price)
+                                                    )
+                                                }
+                                                (None, None) => String::new(),
+                                            };
+
                                             view! {
-                                                <div class="col-span-full flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
+                                                <div class="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
                                                     <p class="text-sm text-slate-600">
-                                                        {format!(
-                                                            "No hotels match the {min_rating}+ star filter on this page."
-                                                        )}
+                                                        {filter_message}
                                                     </p>
-                                                    <button
-                                                        type="button"
-                                                        class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                                        on:click=move |_| {
-                                                            star_filter_selection.set(None);
-                                                        }
-                                                    >
-                                                        "Clear star filter"
-                                                    </button>
+                                                    <div class="flex flex-wrap items-center justify-center gap-2">
+                                                        <Show
+                                                            when=move || min_rating_filter.is_some()
+                                                            fallback=move || view! { <></> }
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                                on:click=move |_| {
+                                                                    star_filter_selection.set(None);
+                                                                }
+                                                            >
+                                                                "Clear star filter"
+                                                            </button>
+                                                        </Show>
+                                                        <Show
+                                                            when=move || max_price_filter.is_some()
+                                                            fallback=move || view! { <></> }
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                                on:click=move |_| {
+                                                                    price_filter_selection.set(None);
+                                                                }
+                                                            >
+                                                                "Clear price filter"
+                                                            </button>
+                                                        </Show>
+                                                    </div>
                                                 </div>
                                             }
                                                 .into_view()
