@@ -1,3 +1,4 @@
+use leptos::html::Input;
 use leptos::*;
 
 const MIN_PRICE: f64 = 0.0;
@@ -43,8 +44,17 @@ pub fn PriceRangeFilter(
     let on_select_for_clear = on_select.clone();
     let on_select_for_input = on_select.clone();
 
+    let slider_ref = create_node_ref::<Input>();
+
+    create_effect(move |_| {
+        if let Some(input) = slider_ref.get() {
+            let target = value().unwrap_or(MAX_PRICE);
+            input.set_value(&format!("{:.0}", target));
+        }
+    });
+
     view! {
-        <div class="bg-white">
+        <div>
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-medium text-gray-900">
                     "Price Range"
@@ -68,11 +78,12 @@ pub fn PriceRangeFilter(
                     <span>{format_price_range_value(MAX_PRICE)}</span>
                 </div>
                 <input
+                    node_ref=slider_ref
                     type="range"
                     min=MIN_PRICE
                     max=MAX_PRICE
                     step=SLIDER_STEP
-                    value=move || format!("{:.0}", slider_value())
+                    prop:value=move || format!("{:.0}", slider_value())
                     class="w-full h-2 rounded-lg bg-gray-200 accent-blue-600"
                     on:input=move |ev| {
                         if let Ok(value) = event_target_value(&ev).parse::<f64>() {
