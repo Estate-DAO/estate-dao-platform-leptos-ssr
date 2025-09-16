@@ -66,17 +66,28 @@ pub fn StarRatingFilter(
                         let is_selected = Signal::derive(move || {
                             current_value().map_or(false, |selected| selected == rating)
                         });
+                        let is_selected_for_label = is_selected.clone();
+                        let label_class = Signal::derive(move || {
+                            if is_selected_for_label.get() {
+                                "text-sm font-semibold transition-colors duration-150 text-white"
+                            } else {
+                                "text-sm font-semibold transition-colors duration-150 text-gray-700"
+                            }
+                        });
+                        // <!-- Create a single signal for button class combining all conditional classes -->
+                        let button_class = Signal::derive(move || {
+                            let base_classes = "group relative flex items-center gap-1.5 rounded-lg border px-3 py-2 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2";
+                            if is_selected.get() {
+                                format!("{} border-blue-600 bg-blue-600 text-white shadow-sm", base_classes)
+                            } else {
+                                format!("{} border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50", base_classes)
+                            }
+                        });
 
                         view! {
                             <button
                                 type="button"
-                                class="group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                class=("border-blue-500 bg-blue-50", move || {
-                                    is_selected.get()
-                                })
-                                class=("border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50", move || {
-                                    !is_selected.get()
-                                })
+                                class={move || button_class.get()}
                                 aria-pressed=move || is_selected.get()
                                 on:click=move |_| {
                                     let next = if current_value() == Some(rating) {
@@ -87,17 +98,17 @@ pub fn StarRatingFilter(
                                     leptos::Callable::call(&on_select, next);
                                 }
                             >
-                                <span
-                                    class="text-sm font-medium"
-                                    class=("text-blue-700", move || is_selected.get())
-                                    class=("text-gray-700", move || !is_selected.get())
-                                >
+                                <span class={move || label_class.get()}>
                                     {rating}
+                                {move || {
+                                    if is_selected.get() {
+                                        view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-white" /> }
+                                    } else {
+                                        view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-yellow-400" /> }
+                                    }
+                                }}
                                 </span>
-                                <Icon
-                                    icon=icondata::BiStarSolid
-                                    class="h-4 w-4 text-yellow-400"
-                                />
+
                             </button>
                         }
                     })

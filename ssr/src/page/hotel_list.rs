@@ -3,6 +3,7 @@ use leptos_router::use_navigate;
 
 // use crate::api::get_room;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
+use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
     format_price_range_value, Destination, GuestSelection, Navbar, PaginationControls,
     PaginationInfo, PriceRangeFilter, SkeletonCards, StarRatingFilter,
@@ -273,6 +274,10 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = filters_signal;
         Signal::derive(move || filters_signal.get().min_star_rating)
     };
+    let has_active_filters = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || filters_signal.get().has_filters())
+    };
 
     let star_filter_on_select = {
         let filters_signal = filters_signal;
@@ -296,6 +301,13 @@ pub fn HotelListPage() -> impl IntoView {
         })
     };
 
+    let clear_filters = {
+        let filters_signal = filters_signal;
+        Callback::new(move |_| {
+            filters_signal.set(UISearchFilters::default());
+        })
+    };
+
     view! {
         <section class="relative min-h-screen bg-slate-50">
             <Navbar />
@@ -312,6 +324,20 @@ pub fn HotelListPage() -> impl IntoView {
                     <aside class="w-full lg:w-64 shrink-0">
                         <div class="sticky top-24">
                             <div class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                                        "Filters"
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
+                                        disabled=move || !has_active_filters.get()
+                                        on:click=clear_filters.clone()
+                                    >
+                                        "Clear filters"
+                                    </button>
+                                </div>
+                                <div class="border-t border-slate-100"></div>
                                 <PriceRangeFilter
                                     value=price_filter_value
                                     on_select=price_filter_on_select.clone()
