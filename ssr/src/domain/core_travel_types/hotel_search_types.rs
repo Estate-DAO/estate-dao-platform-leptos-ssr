@@ -8,10 +8,11 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, PartialEq)]
 pub struct DomainDestination {
     // todo (liteapi) - should to be int?
-    pub city_id: u32,
-    pub city_name: String,
-    pub country_code: String,
-    pub country_name: String,
+    pub place_id: String,
+    // pub city_id: Option<u32>,
+    // pub city_name: Option<String>,
+    // pub country_code: Option<String>,
+    // pub country_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +33,7 @@ pub struct DomainRoomGuest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainPaginationParams {
     pub page: Option<u32>,      // 1-based page number
-    pub page_size: Option<u32>, // Results per page (default: 200, max: 5000)
+    pub page_size: Option<u32>, // Results per page (default: 200, max: 1000)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -52,12 +53,13 @@ pub struct DomainPaginationMeta {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainHotelSearchCriteria {
     // <!-- Destination information -->
-    pub destination_city_id: u32,
-    pub destination_city_name: String,
-    pub destination_country_code: String,
-    pub destination_country_name: String,
-    pub destination_latitude: Option<f64>,
-    pub destination_longitude: Option<f64>,
+    // pub destination_city_id: Option<u32>, // Provab city ID
+    // pub destination_city_name: Option<String>,
+    // pub destination_country_code: Option<String>,
+    // pub destination_country_name: Option<String>,
+    // pub destination_latitude: Option<f64>,
+    // pub destination_longitude: Option<f64>,
+    pub place_id: String,
 
     // <!-- Date information -->
     pub check_in_date: (u32, u32, u32),  // YYYY-MM-DD
@@ -71,6 +73,67 @@ pub struct DomainHotelSearchCriteria {
 
     // <!-- Pagination information -->
     pub pagination: Option<DomainPaginationParams>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainPlacesSearchPayload {
+    pub text_query: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainPlaceDetailsPayload {
+    pub place_id: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainPlaceDetails {
+    pub data: DomainPlaceData,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainPlaceData {
+    pub address_components: Vec<DomainAddressComponent>,
+    pub location: DomainLocation,
+    pub viewport: DomainViewport,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainAddressComponent {
+    pub language_code: String,
+    pub long_text: String,
+    pub short_text: String,
+    pub types: Vec<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainLocation {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainViewport {
+    pub high: DomainHigh,
+    pub low: DomainLow,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainHigh {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainLow {
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -183,14 +246,14 @@ pub struct DomainHotelDetails {
 impl Default for DomainHotelSearchCriteria {
     fn default() -> Self {
         Self {
-            destination_city_id: 1254, // <!-- Default to Mumbai -->
-            destination_country_code: "IN".into(),
-            destination_latitude: Some(19.07),
-            destination_longitude: Some(72.87),
+            // destination_city_id: None, // <!-- Default to Mumbai -->
+            // destination_country_code: None,
+            // destination_latitude: Some(19.07),
+            // destination_longitude: Some(72.87),
+            // destination_city_name: None,
+            // destination_country_name: None,
             check_in_date: (2025, 11, 12),
             check_out_date: (2025, 11, 12),
-            destination_city_name: "Mumbai".into(),
-            destination_country_name: "India".into(),
             no_of_nights: 1,
             guest_nationality: "IN".into(),
             no_of_rooms: 1,
@@ -199,6 +262,7 @@ impl Default for DomainHotelSearchCriteria {
                 no_of_children: 0,
                 children_ages: None,
             }],
+            place_id: "ChIJOwg_06VPwokRYv534QaPC8g".into(),
             pagination: None, // <!-- Default to no pagination (first page) -->
         }
     }

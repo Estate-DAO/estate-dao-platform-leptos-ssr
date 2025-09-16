@@ -384,24 +384,24 @@ impl From<AppReferenceBookingId> for backend::BookingId {
 
 // Domain to Backend conversions
 
-impl From<DomainDestination> for backend::Destination {
-    fn from(domain: DomainDestination) -> Self {
-        Self {
-            city_id: domain.city_id.to_string(),
-            city: domain.city_name,
-            country_code: domain.country_code,
-            country_name: domain.country_name,
-        }
-    }
-}
+// impl From<DomainDestination> for backend::Destination {
+//     fn from(domain: DomainDestination) -> Self {
+//         Self {
+//             city_id: domain.city_id,
+//             city: domain.city_name,
+//             country_code: domain.country_code,
+//             country_name: domain.country_name,
+//         }
+//     }
+// }
 
 impl From<backend::Destination> for DomainDestination {
     fn from(backend: backend::Destination) -> Self {
         Self {
-            city_id: backend.city_id.parse().unwrap_or_default(),
-            city_name: backend.city,
-            country_code: backend.country_code,
-            country_name: backend.country_name,
+            place_id: String::new(),
+            // city_name: Some(backend.city),
+            // country_code: Some(backend.country_code),
+            // country_name: Some(backend.country_name),
         }
     }
 }
@@ -511,7 +511,7 @@ impl HotelRoomDetails {
         requested_payment_amount: f64,
     ) -> Self {
         Self {
-            destination: destination.map(|d| d.into()),
+            destination: None, /* destination.map(|d| d.into()) */
             date_range: date_range.into(),
             room_details: room_details.into_iter().map(|r| r.into()).collect(),
             hotel_details: HotelDetails {

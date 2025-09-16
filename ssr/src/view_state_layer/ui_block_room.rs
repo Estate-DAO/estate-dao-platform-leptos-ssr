@@ -374,7 +374,7 @@ impl BlockRoomUIState {
 
     pub fn get_block_room_called() -> bool {
         let this: Self = expect_context();
-        this.block_room_called.get()
+        this.block_room_called.get_untracked()
     }
 
     pub fn get_adults() -> Vec<AdultDetail> {

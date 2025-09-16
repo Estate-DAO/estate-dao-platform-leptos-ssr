@@ -104,14 +104,16 @@ impl LiteApiHotelSearchResponse {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiHotelSearchRequest {
-    #[serde(rename = "aiSearch")]
-    pub ai_search: String,
+    // #[serde(rename = "aiSearch")]
+    // pub ai_search: String,
+    #[serde(rename = "placeId")]
+    pub place_id: String,
     // #[serde(rename = "countryCode")]
     // pub country_code: String,
     // #[serde(rename = "cityName")]
     // pub city_name: String,
-    // pub offset: i32,
-    // pub limit: i32,
+    pub offset: i32,
+    pub limit: i32,
     // #[serde(skip_serializing, rename = "latitude")]
     // pub destination_latitude: Option<f64>,
     // #[serde(skip_serializing, rename = "longitude")]
@@ -119,31 +121,37 @@ pub struct LiteApiHotelSearchRequest {
     // // radius in meters, min 1000
     // #[serde(skip_serializing, rename = "radius")]
     // pub radius: Option<u32>,
+    pub distance: u32,
 }
 
 impl Default for LiteApiHotelSearchRequest {
     fn default() -> Self {
         Self {
-            ai_search: "New York".into(),
+            // ai_search: "New York".into(),
             // country_code: "US".into(),
             // city_name: "New York".into(),
-            // offset: 0,
-            // limit: 10,
+            offset: 0,
+            limit: 1000,
             // destination_latitude: Some(40.7),
             // destination_longitude: Some(-74.0),
+            place_id: "ChIJOwg_06VPwokRYv534QaPC8g".into(),
+            distance: 100000,
             // radius: Some(1000),
         }
     }
 }
 
 impl LiteApiHotelSearchRequest {
-    pub fn new(destination: &Destination) -> Self {
+    pub fn new(place_id: String) -> Self {
         Self {
-            ai_search: destination.city.clone(),
+            place_id,
+
+            distance: 100000,
+            // ai_search: destination.city.clone(),
             // country_code: destination.country_code.clone(),
             // city_name: destination.city.clone(),
-            // offset: 0,
-            // limit: 50,
+            offset: 0,
+            limit: 1000,
             // destination_latitude: destination.latitude,
             // destination_longitude: destination.longitude,
             // radius: Some(1000),
@@ -185,10 +193,10 @@ pub async fn liteapi_hotel_search(
 }
 
 // #[cfg(feature = "ssr")]
-pub async fn search_hotels_from_destination(
-    destination: Destination,
+pub async fn search_hotels_from_place_id(
+    place_id: String,
 ) -> Result<LiteApiHotelSearchResponse, crate::api::ApiError> {
-    let request = LiteApiHotelSearchRequest::new(&destination);
+    let request = LiteApiHotelSearchRequest::new(place_id);
     liteapi_hotel_search(request).await
 }
 

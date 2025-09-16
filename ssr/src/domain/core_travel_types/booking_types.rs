@@ -59,6 +59,19 @@ pub struct DomainPaymentInfo {
     pub method: DomainPaymentMethod,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainPlace {
+    pub place_id: String,
+    pub display_name: String,
+    pub formatted_address: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DomainPlacesResponse {
+    pub data: Vec<DomainPlace>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum DomainPaymentMethod {
     AccCreditCard,

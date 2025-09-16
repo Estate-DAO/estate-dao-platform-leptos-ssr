@@ -222,17 +222,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
-            let destination = ui_search_ctx.destination.get();
+            let place_details = ui_search_ctx.place_details.get();
             let date_range = ui_search_ctx.date_range.get();
             let has_hotel_code = !hotel_code.is_empty();
-            let has_destination = destination.is_some();
+            let has_place_details = place_details.is_some();
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
             // Return true when ready to call API
-            let is_ready = has_hotel_code && has_destination && has_valid_dates;
+            let is_ready = has_hotel_code && has_place_details && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, destination={}, dates={}, ready={}", 
-                has_hotel_code, has_destination, has_valid_dates, is_ready);
+            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}", 
+                has_hotel_code, has_place_details, has_valid_dates, is_ready);
 
             is_ready
         },
@@ -261,11 +261,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria from UI context
                 // This will work whether data came from direct navigation or URL query params
-                let destination = ui_search_ctx.destination.get_untracked();
+                let place_details = ui_search_ctx.place_details.get_untracked();
+                let place = ui_search_ctx.place.get_untracked();
                 let date_range = ui_search_ctx.date_range.get_untracked();
                 let guests = &guests_clone;
 
-                if destination.is_none() {
+                if place_details.is_none() {
                     HotelDetailsUIState::set_error(Some(
                         "Search criteria not available".to_string(),
                     ));
@@ -273,7 +274,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     return None;
                 }
 
-                let destination = destination.unwrap();
+                if place.is_none() {
+                    HotelDetailsUIState::set_error(Some(
+                        "Search criteria not available".to_string(),
+                    ));
+                    HotelDetailsUIState::set_loading(false);
+                    return None;
+                }
+
+                let place_details = place_details.unwrap();
+                let place = place.unwrap();
 
                 // Create room guests
                 let room_guests = vec![DomainRoomGuest {
@@ -295,12 +305,13 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria
                 let search_criteria = DomainHotelSearchCriteria {
-                    destination_city_id: destination.city_id.parse().unwrap_or(0),
-                    destination_city_name: destination.city.clone(),
-                    destination_country_code: destination.country_code.clone(),
-                    destination_country_name: destination.country_name.clone(),
-                    destination_latitude: destination.latitude,
-                    destination_longitude: destination.longitude,
+                    // destination_city_id: destination.city_id.parse().unwrap_or(0),
+                    // destination_city_name: destination.city.clone(),
+                    // destination_country_code: destination.country_code.clone(),
+                    // destination_country_name: destination.country_name.clone(),
+                    // destination_latitude: Some(place.location.latitude),
+                    // destination_longitude: Some(place.location.longitude),
+                    place_id: place.place_id.clone(),
                     check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
                     check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
                     no_of_nights: date_range.no_of_nights(),
@@ -308,15 +319,18 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     room_guests,
                     guest_nationality: "US".to_string(), // Default for now
                     pagination: None,                    // No pagination for hotel details
+                    ..Default::default()
                 };
 
-                log!("Using search criteria for hotel details API: destination={}, dates={:?}-{:?}, guests={}+{}+{}", 
-                    search_criteria.destination_city_name,
+                log!(
+                    "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
+                    // search_criteria.destination_city_name,
                     search_criteria.check_in_date,
                     search_criteria.check_out_date,
                     search_criteria.room_guests[0].no_of_adults,
                     search_criteria.room_guests[0].no_of_children,
-                    search_criteria.no_of_rooms);
+                    search_criteria.no_of_rooms
+                );
 
                 // Create hotel info criteria
                 let criteria = DomainHotelInfoCriteria {

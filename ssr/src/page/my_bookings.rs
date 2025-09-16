@@ -84,7 +84,7 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
                         "Please login to view your booking history"
                     </p>
                 </div>
-                <div class="w-full">
+                <div class="w-full flex justify-center">
                     <YralAuthProvider />
                 </div>
             </div>
