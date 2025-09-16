@@ -49,22 +49,19 @@ pub fn StarRatingFilter(
     let selection = selection.unwrap_or_else(|| create_rw_signal(None));
 
     view! {
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="">
             <div class="flex flex-col gap-1">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-800">
-                    "Star Rating"
+                <h3 class="text-base font-medium text-gray-900">
+                    "Rating"
                 </h3>
-                <p class="text-xs text-slate-500">
-                    "Select a minimum hotel rating. Tap the same rating again to clear."
-                </p>
             </div>
 
             <div
-                class="mt-4 flex flex-col gap-2"
+                class="mt-4 flex flex-row flex-wrap gap-2"
                 role="group"
                 aria-label="Filter hotels by minimum star rating"
             >
-                {((1..=MAX_STARS).rev())
+                {(1..=MAX_STARS)
                     .map(|rating| {
                         let selection_for_state = selection.clone();
                         let selection_for_click = selection.clone();
@@ -74,22 +71,17 @@ pub fn StarRatingFilter(
                                 .get()
                                 .map_or(false, |value| value == rating)
                         });
-                        let label_text = format!(
-                            "{rating}+ star{}",
-                            if rating > 1 { "s" } else { "" }
-                        );
 
                         view! {
                             <button
                                 type="button"
-                                class="group w-full rounded-lg border px-3 py-2 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                                class=("border-blue-600 bg-blue-600 text-white shadow-sm", move || {
+                                class="group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                class=("border-blue-500 bg-blue-50", move || {
                                     is_selected.get()
                                 })
-                                class=(
-                                    "border-slate-200 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50",
-                                    move || !is_selected.get()
-                                )
+                                class=("border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50", move || {
+                                    !is_selected.get()
+                                })
                                 aria-pressed=move || is_selected.get()
                                 on:click=move |_| {
                                     let next = {
@@ -106,82 +98,23 @@ pub fn StarRatingFilter(
                                     }
                                 }
                             >
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex items-center gap-1">
-                                            {(1..=MAX_STARS)
-                                                .map(|position| {
-                                                    let icon = if position <= rating {
-                                                        icondata::BiStarSolid
-                                                    } else {
-                                                        icondata::BiStarRegular
-                                                    };
-                                                    let is_selected_signal = is_selected.clone();
-                                                    view! {
-                                                        <span
-                                                            class="inline-flex h-4 w-4 items-center justify-center transition-colors duration-150"
-                                                            class=(
-                                                                "text-white",
-                                                                move || {
-                                                                    is_selected_signal.get()
-                                                                        && position <= rating
-                                                                },
-                                                            )
-                                                            class=(
-                                                                "text-blue-200",
-                                                                move || {
-                                                                    is_selected_signal.get()
-                                                                        && position > rating
-                                                                },
-                                                            )
-                                                            class=(
-                                                                "text-blue-500 group-hover:text-blue-600",
-                                                                move || {
-                                                                    !is_selected_signal.get()
-                                                                        && position <= rating
-                                                                },
-                                                            )
-                                                            class=(
-                                                                "text-slate-300 group-hover:text-blue-400",
-                                                                move || {
-                                                                    !is_selected_signal.get()
-                                                                        && position > rating
-                                                                },
-                                                            )
-                                                        >
-                                                            <Icon icon=icon class="h-4 w-4" />
-                                                        </span>
-                                                    }
-                                                })
-                                                .collect::<Vec<_>>()
-                                            }
-                                        </div>
-                                        <span class="text-sm font-medium">{label_text}</span>
-                                    </div>
-                                    <span class="text-xs uppercase tracking-wide text-slate-400">
-                                        "Minimum"
-                                    </span>
-                                </div>
+                                <span
+                                    class="text-sm font-medium"
+                                    class=("text-blue-700", move || is_selected.get())
+                                    class=("text-gray-700", move || !is_selected.get())
+                                >
+                                    {rating}
+                                </span>
+                                <Icon
+                                    icon=icondata::BiStarSolid
+                                    class="h-4 w-4 text-yellow-400"
+                                />
                             </button>
                         }
                     })
                     .collect::<Vec<_>>()
                 }
             </div>
-
-            <p
-                class="mt-3 text-xs transition-colors duration-150"
-                class=("text-blue-600 font-semibold", move || selection.get().is_some())
-                class=("text-slate-400", move || selection.get().is_none())
-            >
-                {move || match selection.get() {
-                    Some(rating) => format!(
-                        "Filtering by {rating}+ star{}",
-                        if rating > 1 { "s" } else { "" }
-                    ),
-                    None => "No rating filter applied".to_string(),
-                }}
-            </p>
         </div>
     }
 }
