@@ -3,6 +3,7 @@ use crate::{
         self,
         client_side_api::{ClientSideApiClient, Place, PlaceData},
     },
+    application_services::filter_types::UISearchFilters,
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     utils::query_params::{update_url_with_state, FilterMap, QueryParamsSync, SortDirection},
     view_state_layer::ui_search_state::UISearchCtx,
@@ -120,6 +121,8 @@ impl HotelListParams {
         let rooms = Some(guests.rooms.get_untracked());
         let children_ages = guests.children_ages.get_untracked().into();
 
+        let filters_map = search_ctx.filters.get_untracked().to_filter_map();
+
         Self {
             place_details,
             place,
@@ -129,7 +132,7 @@ impl HotelListParams {
             children,
             rooms,
             children_ages,
-            filters: HashMap::new(),
+            filters: filters_map,
             sort: Vec::new(),
             page: Some(1),
             per_page: Some(20),
@@ -264,6 +267,14 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
             .set_ages(self.children_ages.clone());
 
         UISearchCtx::set_guests(guest_selection);
+
+        let filters = if self.filters.is_empty() {
+            UISearchFilters::default()
+        } else {
+            UISearchFilters::from_filter_map(&self.filters)
+        };
+
+        UISearchCtx::set_filters(filters);
     }
 }
 

@@ -43,11 +43,9 @@ where
 
 #[component]
 pub fn StarRatingFilter(
-    #[prop(optional)] selection: Option<RwSignal<Option<u8>>>,
-    #[prop(optional)] on_select: Option<Callback<Option<u8>>>,
+    #[prop(into)] value: Signal<Option<u8>>,
+    on_select: Callback<Option<u8>>,
 ) -> impl IntoView {
-    let selection = selection.unwrap_or_else(|| create_rw_signal(None));
-
     view! {
         <div class="">
             <div class="flex flex-col gap-1">
@@ -63,13 +61,10 @@ pub fn StarRatingFilter(
             >
                 {(1..=MAX_STARS)
                     .map(|rating| {
-                        let selection_for_state = selection.clone();
-                        let selection_for_click = selection.clone();
                         let on_select = on_select.clone();
+                        let current_value = value.clone();
                         let is_selected = Signal::derive(move || {
-                            selection_for_state
-                                .get()
-                                .map_or(false, |value| value == rating)
+                            current_value().map_or(false, |selected| selected == rating)
                         });
 
                         view! {
@@ -84,18 +79,12 @@ pub fn StarRatingFilter(
                                 })
                                 aria-pressed=move || is_selected.get()
                                 on:click=move |_| {
-                                    let next = {
-                                        let current = selection_for_click.get_untracked();
-                                        if current == Some(rating) {
-                                            None
-                                        } else {
-                                            Some(rating)
-                                        }
+                                    let next = if current_value() == Some(rating) {
+                                        None
+                                    } else {
+                                        Some(rating)
                                     };
-                                    selection_for_click.set(next);
-                                    if let Some(cb) = on_select.clone() {
-                                        leptos::Callable::call(&cb, next);
-                                    }
+                                    leptos::Callable::call(&on_select, next);
                                 }
                             >
                                 <span

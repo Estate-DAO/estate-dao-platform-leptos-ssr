@@ -1,4 +1,12 @@
+use crate::{
+    domain::DomainHotelAfterSearch,
+    utils::query_params::{ComparisonOp, FilterMap},
+};
 use serde::{Deserialize, Serialize};
+
+const FILTER_KEY_MIN_STAR_RATING: &str = "min_star_rating";
+const FILTER_KEY_MAX_PRICE: &str = "max_price_per_night";
+const FILTER_KEY_MIN_PRICE: &str = "min_price_per_night";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UISearchFilters {
@@ -52,6 +60,111 @@ impl UISearchFilters {
     // <!-- Helper method to get property types as Vec<String> -->
     pub fn get_property_types(&self) -> Vec<String> {
         self.property_types.clone().unwrap_or_default()
+    }
+
+    pub fn matches_hotel(&self, hotel: &DomainHotelAfterSearch) -> bool {
+        let meets_rating = self
+            .min_star_rating
+            .map_or(true, |min_rating| hotel.star_rating >= min_rating);
+
+        let room_price = hotel
+            .price
+            .as_ref()
+            .map(|price| price.room_price)
+            .filter(|value| value.is_finite() && *value > 0.0);
+
+        let meets_max_price = self.max_price_per_night.map_or(true, |max_price| {
+            room_price.map_or(false, |price| price <= max_price)
+        });
+
+        let meets_min_price = self.min_price_per_night.map_or(true, |min_price| {
+            room_price.map_or(false, |price| price >= min_price)
+        });
+
+        meets_rating && meets_min_price && meets_max_price
+    }
+
+    pub fn apply_filters(&self, hotels: &[DomainHotelAfterSearch]) -> Vec<DomainHotelAfterSearch> {
+        let mut sorted_hotels: Vec<_> = hotels.to_vec();
+        sorted_hotels.sort_by_key(|hotel| {
+            match hotel.price.as_ref().map(|price| price.room_price) {
+                Some(price) if price > 0.0 => 0,
+                _ => 1,
+            }
+        });
+
+        sorted_hotels
+            .into_iter()
+            .filter(|hotel| self.matches_hotel(hotel))
+            .collect()
+    }
+
+    pub fn to_filter_map(&self) -> FilterMap {
+        let mut map = FilterMap::new();
+
+        if let Some(min_rating) = self.min_star_rating {
+            map.insert(
+                FILTER_KEY_MIN_STAR_RATING.to_string(),
+                ComparisonOp::Gte(min_rating as f64),
+            );
+        }
+
+        if let Some(max_price) = self.max_price_per_night {
+            map.insert(
+                FILTER_KEY_MAX_PRICE.to_string(),
+                ComparisonOp::Lte(max_price),
+            );
+        }
+
+        if let Some(min_price) = self.min_price_per_night {
+            map.insert(
+                FILTER_KEY_MIN_PRICE.to_string(),
+                ComparisonOp::Gte(min_price),
+            );
+        }
+
+        // TODO: Map amenities, property types, and hotel name search when backend supports them
+
+        map
+    }
+
+    pub fn from_filter_map(map: &FilterMap) -> Self {
+        let mut filters = UISearchFilters::default();
+
+        if let Some(op) = map.get(FILTER_KEY_MIN_STAR_RATING) {
+            let min_rating = match op {
+                ComparisonOp::Eq(value) => value.parse::<u8>().ok(),
+                ComparisonOp::Gte(value) | ComparisonOp::Gt(value) => Some((*value).round() as u8),
+                _ => None,
+            };
+            filters.min_star_rating = min_rating;
+        }
+
+        if let Some(op) = map.get(FILTER_KEY_MAX_PRICE) {
+            let max_price = match op {
+                ComparisonOp::Eq(value) => value.parse::<f64>().ok(),
+                ComparisonOp::Lte(value)
+                | ComparisonOp::Lt(value)
+                | ComparisonOp::Gte(value)
+                | ComparisonOp::Gt(value) => Some(*value),
+                _ => None,
+            };
+            filters.max_price_per_night = max_price;
+        }
+
+        if let Some(op) = map.get(FILTER_KEY_MIN_PRICE) {
+            let min_price = match op {
+                ComparisonOp::Eq(value) => value.parse::<f64>().ok(),
+                ComparisonOp::Gte(value)
+                | ComparisonOp::Gt(value)
+                | ComparisonOp::Lte(value)
+                | ComparisonOp::Lt(value) => Some(*value),
+                _ => None,
+            };
+            filters.min_price_per_night = min_price;
+        }
+
+        filters
     }
 }
 
