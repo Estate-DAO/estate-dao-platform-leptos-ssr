@@ -4,15 +4,25 @@ use leptos::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
 #[component]
-pub fn Navbar() -> impl IntoView {
+pub fn Navbar(#[prop(optional)] blue_header: bool) -> impl IntoView {
+    let class = if blue_header {
+        "bg-blue-600 flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8"
+    } else {
+        "flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8"
+    };
+    let logo = if blue_header {
+        "/img/logo_white.svg"
+    } else {
+        "/img/nofeebooking.webp"
+    };
     view! {
         // <!-- Improved mobile navbar with better padding and icon sizing -->
-        <nav class="flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8">
+        <nav class=class>
             <div class="flex items-center text-xl">
                 // <Icon icon=EstateDaoIcon />
                 <a href="/" class="flex items-center">
                     <img
-                        src="/img/nofeebooking.webp"
+                        src=logo
                         alt="NoFeeBooking Logo"
                         class="h-8 w-24 sm:h-10 sm:w-32 md:h-12 md:w-48 object-contain"
                     />
