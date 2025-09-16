@@ -313,7 +313,7 @@ pub fn HotelListPage() -> impl IntoView {
             <Navbar />
             <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
                 <div class="flex flex-col items-center mt-2 sm:mt-6">
-                    <div class="w-full rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="w-full rounded-2xl shadow-sm">
                         <div class="p-2 sm:p-4">
                             <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
                         </div>

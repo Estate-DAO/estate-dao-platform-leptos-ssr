@@ -98,15 +98,18 @@ pub fn StarRatingFilter(
                                     leptos::Callable::call(&on_select, next);
                                 }
                             >
-                                <span class={move || label_class.get()}>
+                                <span class={move || {
+                                    let base_span_classes = "inline-flex items-center gap-1";
+                                    format!("{} {}", base_span_classes, label_class.get())
+                                }}>
                                     {rating}
-                                {move || {
-                                    if is_selected.get() {
-                                        view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-white" /> }
-                                    } else {
-                                        view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-yellow-400" /> }
-                                    }
-                                }}
+                                    {move || {
+                                        if is_selected.get() {
+                                            view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-white" /> }
+                                        } else {
+                                            view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-yellow-400" /> }
+                                        }
+                                    }}
                                 </span>
 
                             </button>
