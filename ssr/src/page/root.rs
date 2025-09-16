@@ -69,7 +69,7 @@ pub fn HeroSection() -> impl IntoView {
         <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] min-h-screen">
             <Navbar />
             // <!-- Improved mobile spacing and padding -->
-            <div class="mt-16 md:mt-40 px-4 md:px-0">
+            <div class="mt-16 md:mt-32 px-4 md:px-0">
                 <div class="flex flex-col items-center justify-center h-full">
                     // <!-- Enhanced mobile typography with better line height -->
                     <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight">
