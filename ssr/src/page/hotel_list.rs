@@ -266,7 +266,7 @@ pub fn HotelListPage() -> impl IntoView {
         <div class="bg-blue-600 relative h-40 sm:h-40 md:h-36 lg:h-32">
             <Navbar blue_header=true />
 
-            <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full max-w-5xl px-4">
+            <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full flex flex-col items-center max-w-5xl px-4">
                 <InputGroupContainer
                     default_expanded=false
                     given_disabled=disabled_input_group
