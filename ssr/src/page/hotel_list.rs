@@ -5,6 +5,7 @@ use leptos_router::use_navigate;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::component::{
     Destination, GuestSelection, Navbar, PaginationControls, PaginationInfo, SkeletonCards,
+    StarRatingFilter,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -262,134 +263,175 @@ pub fn HotelListPage() -> impl IntoView {
             .collect_view()
     };
 
+    let star_filter_selection = create_rw_signal::<Option<u8>>(None);
+
     view! {
-        <div class="bg-blue-600 relative h-40 sm:h-40 md:h-36 lg:h-32">
-            <Navbar blue_header=true />
-
-            <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full flex flex-col items-center max-w-5xl px-4">
-                <InputGroupContainer
-                    default_expanded=false
-                    given_disabled=disabled_input_group
-                    allow_outside_click_collapse=true
-                />
-            </div>
-        </div>
-
-
-
-
-
-        <section class="relative h-screen my-12">
-            <div class="w-full max-w-xl sm:max-w-4xl mx-auto">
-                // Use resource pattern with Suspense for automatic loading states
-                <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
-                    {move || {
-                        // Trigger the resource loading but don't render anything
-                        let _ = hotel_search_resource.get();
-                        view! { <></> }
-                    }}
-                </Suspense>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-
-                    <Show
-                        when=move || search_list_page.search_result.get().is_some()
-                        fallback=move || view! { <></> }
-                    >
-
-                        {move || {
-                            let hotel_results = search_list_page
-                                .search_result
-                                .get()
-                                .unwrap()
-                                .hotel_list();
-                            let mut sorted_hotels = hotel_results.clone();
-
-                            sorted_hotels.sort_by_key(|hotel_result| {
-                                match hotel_result.price.as_ref().map(|p| p.room_price) {
-                                    Some(price) if price > 0.0 => 0, // valid prices come first
-                                    _ => 1, // None or 0.0 go to the end
-                                }
-                            });
-
-                            if hotel_results.is_empty() {
-                                let current_page = pagination_state.current_page.get();
-
-                                if current_page > 1 {
-                                    // Show "Go to first page" button when on page > 1 with no results
-                                    view! {
-                                        <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
-                                            <p class="text-center mb-4 text-gray-600">
-                                                No hotels found on page {current_page}.
-                                            </p>
-                                            <button
-                                                class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                                                on:click=move |_| {
-                                                    UIPaginationState::set_current_page(1);
-                                                }
-                                            >
-                                                Go to First Page
-                                            </button>
-                                        </div>
-                                    }
-                                } else {
-                                    // Show regular "No hotels found" message on page 1
-                                    view! {
-                                        <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
-                                            <p class="text-center">
-                                                No hotels found for your search criteria.
-                                            </p>
-                                        </div>
-                                    }
-                                }
-                                    .into_view()
-                            } else {
-                                sorted_hotels
-                                    .iter()
-                                    .map(|hotel_result| {
-                                        let mut price = hotel_result.price.clone().map(|p| p.room_price);
-                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                        if is_disabled {
-                                            price = None; // Hide price if invalid
-                                        }
-                                        let img = if hotel_result.hotel_picture.is_empty() {
-                                            "https://via.placeholder.com/300x200?text=No+Image".into()
-                                        } else {
-                                            hotel_result.hotel_picture.clone()
-                                        };
-                                        view! {
-                                            <HotelCard
-                                                img
-                                                rating=hotel_result.star_rating
-                                                hotel_name=hotel_result.hotel_name.clone()
-                                                price
-                                                hotel_code=hotel_result.hotel_code.clone()
-                                                class=format!(
-                                                        "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
-                                                        if is_disabled { "grayscale" } else { "" },
-                                                        if is_disabled { "pointer-events-none opacity-50" } else { "" },
-                                                    )
-                                            />
-                                        }
-                                    })
-                                    .collect_view()
-                            }
-                        }}
-                    </Show>
-
-                    // Pagination controls - only show when we have results
-                    <Show
-                        when=move || {
-                            search_list_page.search_result.get()
-                                .map_or(false, |result| !result.hotel_list().is_empty())
-                        }
-                        fallback=move || view! { <></> }
-                    >
-                        <div class="col-span-full">
-                            // <PaginationInfo />
-                            <PaginationControls />
+        <section class="relative min-h-screen bg-slate-50">
+            <Navbar />
+            <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
+                <div class="flex flex-col items-center mt-2 sm:mt-6">
+                    <div class="w-full rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div class="p-2 sm:p-4">
+                            <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
                         </div>
-                    </Show>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col gap-6 lg:flex-row">
+                    <aside class="w-full lg:w-64 shrink-0">
+                        <div class="sticky top-24 space-y-4">
+                            <StarRatingFilter selection=star_filter_selection />
+                        </div>
+                    </aside>
+
+                    <div class="flex-1 min-w-0">
+                        // Use resource pattern with Suspense for automatic loading states
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
+                            {move || {
+                                // Trigger the resource loading but don't render anything
+                                let _ = hotel_search_resource.get();
+                                view! { <></> }
+                            }}
+                        </Suspense>
+
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+
+                            <Show
+                                when=move || search_list_page.search_result.get().is_some()
+                                fallback=move || view! { <></> }
+                            >
+
+                                {move || {
+                                    let hotel_results = search_list_page
+                                        .search_result
+                                        .get()
+                                        .unwrap()
+                                        .hotel_list();
+                                    let mut sorted_hotels = hotel_results.clone();
+
+                                    sorted_hotels.sort_by_key(|hotel_result| {
+                                        match hotel_result.price.as_ref().map(|p| p.room_price) {
+                                            Some(price) if price > 0.0 => 0, // valid prices come first
+                                            _ => 1, // None or 0.0 go to the end
+                                        }
+                                    });
+
+                                    let min_rating_filter = star_filter_selection.get();
+                                    let filtered_hotels: Vec<_> = sorted_hotels
+                                        .into_iter()
+                                        .filter(|hotel_result| {
+                                            min_rating_filter
+                                                .map_or(true, |min| hotel_result.star_rating >= min)
+                                        })
+                                        .collect();
+
+                                    if hotel_results.is_empty() {
+                                        let current_page = pagination_state.current_page.get();
+
+                                        if current_page > 1 {
+                                            // Show "Go to first page" button when on page > 1 with no results
+                                            view! {
+                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
+                                                    <p class="text-center mb-4 text-gray-600">
+                                                        No hotels found on page {current_page}.
+                                                    </p>
+                                                    <button
+                                                        class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                                                        on:click=move |_| {
+                                                            UIPaginationState::set_current_page(1);
+                                                        }
+                                                    >
+                                                        Go to First Page
+                                                    </button>
+                                                </div>
+                                            }
+                                        } else {
+                                            // Show regular "No hotels found" message on page 1
+                                            view! {
+                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
+                                                    <p class="text-center">
+                                                        No hotels found for your search criteria.
+                                                    </p>
+                                                </div>
+                                            }
+                                        }
+                                            .into_view()
+                                    } else if filtered_hotels.is_empty() {
+                                        if let Some(min_rating) = min_rating_filter {
+                                            view! {
+                                                <div class="col-span-full flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
+                                                    <p class="text-sm text-slate-600">
+                                                        {format!(
+                                                            "No hotels match the {min_rating}+ star filter on this page."
+                                                        )}
+                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                        on:click=move |_| {
+                                                            star_filter_selection.set(None);
+                                                        }
+                                                    >
+                                                        "Clear star filter"
+                                                    </button>
+                                                </div>
+                                            }
+                                                .into_view()
+                                        } else {
+                                            view! { <></> }.into_view()
+                                        }
+                                    } else {
+                                        filtered_hotels
+                                            .iter()
+                                            .map(|hotel_result| {
+                                                let mut price = hotel_result
+                                                    .price
+                                                    .clone()
+                                                    .map(|p| p.room_price);
+                                                let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                                if is_disabled {
+                                                    price = None; // Hide price if invalid
+                                                }
+                                                let img = if hotel_result.hotel_picture.is_empty() {
+                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
+                                                } else {
+                                                    hotel_result.hotel_picture.clone()
+                                                };
+                                                view! {
+                                                    <HotelCard
+                                                        img
+                                                        rating=hotel_result.star_rating
+                                                        hotel_name=hotel_result.hotel_name.clone()
+                                                        price
+                                                        hotel_code=hotel_result.hotel_code.clone()
+                                                        class=format!(
+                                                                "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
+                                                                if is_disabled { "grayscale" } else { "" },
+                                                                if is_disabled { "pointer-events-none opacity-50" } else { "" },
+                                                            )
+                                                    />
+                                                }
+                                            })
+                                            .collect_view()
+                                    }
+                                }}
+                            </Show>
+
+                            // Pagination controls - only show when we have results
+                            <Show
+                                when=move || {
+                                    search_list_page.search_result.get()
+                                        .map_or(false, |result| !result.hotel_list().is_empty())
+                                }
+                                fallback=move || view! { <></> }
+                            >
+                                <div class="col-span-full">
+                                    // <PaginationInfo />
+                                    <PaginationControls />
+                                </div>
+                            </Show>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
