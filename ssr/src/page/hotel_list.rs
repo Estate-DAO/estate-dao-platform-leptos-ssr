@@ -263,8 +263,38 @@ pub fn HotelListPage() -> impl IntoView {
             .collect_view()
     };
 
-    let price_filter_selection = create_rw_signal::<Option<f64>>(None);
-    let star_filter_selection = create_rw_signal::<Option<u8>>(None);
+    let filters_signal = search_ctx.filters;
+
+    let price_filter_value = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || filters_signal.get().max_price_per_night)
+    };
+    let star_filter_value = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || filters_signal.get().min_star_rating)
+    };
+
+    let star_filter_on_select = {
+        let filters_signal = filters_signal;
+        Callback::new(move |next: Option<u8>| {
+            filters_signal.update(|filters| {
+                if filters.min_star_rating != next {
+                    filters.min_star_rating = next;
+                }
+            });
+        })
+    };
+
+    let price_filter_on_select = {
+        let filters_signal = filters_signal;
+        Callback::new(move |next: Option<f64>| {
+            filters_signal.update(|filters| {
+                if filters.max_price_per_night != next {
+                    filters.max_price_per_night = next;
+                }
+            });
+        })
+    };
 
     view! {
         <section class="relative min-h-screen bg-slate-50">
@@ -281,8 +311,14 @@ pub fn HotelListPage() -> impl IntoView {
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
                     <aside class="w-full lg:w-64 shrink-0">
                         <div class="sticky top-24 space-y-4">
-                            <PriceRangeFilter selection=price_filter_selection />
-                            <StarRatingFilter selection=star_filter_selection />
+                            <PriceRangeFilter
+                                value=price_filter_value
+                                on_select=price_filter_on_select.clone()
+                            />
+                            <StarRatingFilter
+                                value=star_filter_value
+                                on_select=star_filter_on_select.clone()
+                            />
                         </div>
                     </aside>
 
@@ -309,37 +345,10 @@ pub fn HotelListPage() -> impl IntoView {
                                         .get()
                                         .unwrap()
                                         .hotel_list();
-                                    let mut sorted_hotels = hotel_results.clone();
-
-                                    sorted_hotels.sort_by_key(|hotel_result| {
-                                        match hotel_result.price.as_ref().map(|p| p.room_price) {
-                                            Some(price) if price > 0.0 => 0, // valid prices come first
-                                            _ => 1, // None or 0.0 go to the end
-                                        }
-                                    });
-
-                                    let min_rating_filter = star_filter_selection.get();
-                                    let max_price_filter = price_filter_selection.get();
-                                    let filtered_hotels: Vec<_> = sorted_hotels
-                                        .into_iter()
-                                        .filter(|hotel_result| {
-                                            let matches_rating = min_rating_filter
-                                                .map_or(true, |min| hotel_result.star_rating >= min);
-
-                                            let matches_price = max_price_filter
-                                                .map_or(true, |max_price| {
-                                                    hotel_result
-                                                        .price
-                                                        .as_ref()
-                                                        .map(|price| price.room_price as f64)
-                                                        .filter(|room_price| *room_price > 0.0)
-                                                        .map(|room_price| room_price <= max_price)
-                                                        .unwrap_or(false)
-                                                });
-
-                                            matches_rating && matches_price
-                                        })
-                                        .collect();
+                                    let filters = filters_signal.get();
+                                    let filtered_hotels = filters.apply_filters(&hotel_results);
+                                    let min_rating_filter = filters.min_star_rating;
+                                    let max_price_filter = filters.max_price_per_night;
 
                                     if hotel_results.is_empty() {
                                         let current_page = pagination_state.current_page.get();
@@ -405,7 +414,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 type="button"
                                                                 class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                                                 on:click=move |_| {
-                                                                    star_filter_selection.set(None);
+                                                                    filters_signal.update(|filters| {
+                                                                        filters.min_star_rating = None;
+                                                                    });
                                                                 }
                                                             >
                                                                 "Clear star filter"
@@ -419,7 +430,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 type="button"
                                                                 class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                                                 on:click=move |_| {
-                                                                    price_filter_selection.set(None);
+                                                                    filters_signal.update(|filters| {
+                                                                        filters.max_price_per_night = None;
+                                                                    });
                                                                 }
                                                             >
                                                                 "Clear price filter"
