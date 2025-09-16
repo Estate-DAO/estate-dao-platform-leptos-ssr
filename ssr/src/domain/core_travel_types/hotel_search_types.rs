@@ -33,7 +33,7 @@ pub struct DomainRoomGuest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainPaginationParams {
     pub page: Option<u32>,      // 1-based page number
-    pub page_size: Option<u32>, // Results per page (default: 200, max: 5000)
+    pub page_size: Option<u32>, // Results per page (default: 200, max: 1000)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

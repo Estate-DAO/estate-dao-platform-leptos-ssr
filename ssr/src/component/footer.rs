@@ -1,6 +1,8 @@
 use leptos::*;
 use leptos_icons::*;
 
+use crate::app::AppRoutes;
+
 #[component]
 pub fn Footer() -> impl IntoView {
     view! {
@@ -30,7 +32,7 @@ pub fn Footer() -> impl IntoView {
                         <h3 class="text-white font-semibold">"Company"</h3>
                         <ul class="space-y-2 text-sm">
                             <li><a href="/about" class="hover:text-white">"About Us"</a></li>
-                            <li><a href="/trips" class="hover:text-white">"My Trips"</a></li>
+                            <li><a href=AppRoutes::MyBookings.to_string() class="hover:text-white">"My Trips"</a></li>
                         </ul>
                     </div>
 

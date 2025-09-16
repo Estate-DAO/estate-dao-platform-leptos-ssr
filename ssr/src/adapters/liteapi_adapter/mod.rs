@@ -181,11 +181,11 @@ impl LiteApiAdapter {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(20).min(5000).max(1);
+                let page_size = params.page_size.unwrap_or(20).min(1000).max(1);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 5000), // Default: first page, 5000 results
+            None => (0, 1000), // Default: first page, 1000 results
         }
     }
 
@@ -305,11 +305,12 @@ impl LiteApiAdapter {
 
         LiteApiHotelSearchRequest {
             place_id: domain_criteria.place_id.clone(),
+            distance: 100000,
             // ai_search: domain_criteria.destination_city_name.clone(),
             // country_code: domain_criteria.destination_country_code.clone(),
             // city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
-            // offset,
-            // limit,
+            offset,
+            limit,
             // destination_latitude: domain_criteria.destination_latitude,
             // destination_longitude: domain_criteria.destination_longitude,
             // // todo(hotel_search): default search radius is 10km in liteapi for now.
