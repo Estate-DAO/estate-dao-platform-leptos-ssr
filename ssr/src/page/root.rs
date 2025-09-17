@@ -69,7 +69,7 @@ pub fn HeroSection() -> impl IntoView {
         <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] min-h-screen">
             <Navbar />
             // <!-- Improved mobile spacing and padding -->
-            <div class="mt-16 md:mt-40 px-4 md:px-0">
+            <div class="mt-16 md:mt-32 px-4 md:px-0">
                 <div class="flex flex-col items-center justify-center h-full">
                     // <!-- Enhanced mobile typography with better line height -->
                     <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight">
@@ -201,7 +201,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             // <!-- Destination input -->
             // <!-- Improved mobile styling with better rounded corners and spacing -->
             // <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-            <div class="relative flex-1 border-0 md:border-0 rounded-lg md:rounded-none">
+            <div class="relative flex-1 min-w-0 border-0 md:border-0 rounded-lg md:rounded-none">
                 <div class="flex items-center h-[56px] px-6">
                     <Show when=move || !disabled.get()>
                         <div class="absolute inset-0">
@@ -210,15 +210,19 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     </Show>
 
                     <Show when=move || disabled.get()>
-                        <div class="text-xl flex items-center">
+                        <div class="text-xl flex items-center flex-shrink-0">
                             <Icon icon=icondata::BsMap class="text-black" />
                         </div>
+
                         <button
-                            // <!-- Improved text styling and alignment -->
-                            class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal"
+                            // NOTE: min-w-0 here + truncate span inside
+                            class="flex-1 ml-3 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal min-w-0"
                             disabled=disabled.get()
                         >
-                            {move || place_display.get()}
+                            // span carries the truncation rules
+                            <span class="truncate block w-full">
+                                {move || place_display.get()}
+                            </span>
                         </button>
                     </Show>
                 </div>

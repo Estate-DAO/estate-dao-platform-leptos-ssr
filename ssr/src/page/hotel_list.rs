@@ -263,14 +263,24 @@ pub fn HotelListPage() -> impl IntoView {
     };
 
     view! {
-        <section class="relative h-screen">
-            <Navbar />
-            <div class="w-full max-w-xl sm:max-w-4xl mx-auto">
-                <div class="flex flex-col items-center mt-2 sm:mt-6 p-2 sm:p-4">
-                    <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
-                    // <FilterAndSortBy />
-                </div>
+        <div class="bg-blue-600 relative h-40 sm:h-40 md:h-36 lg:h-32">
+            <Navbar blue_header=true />
 
+            <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full flex flex-col items-center max-w-5xl px-4">
+                <InputGroupContainer
+                    default_expanded=false
+                    given_disabled=disabled_input_group
+                    allow_outside_click_collapse=true
+                />
+            </div>
+        </div>
+
+
+
+
+
+        <section class="relative h-screen my-12">
+            <div class="w-full max-w-xl sm:max-w-4xl mx-auto">
                 // Use resource pattern with Suspense for automatic loading states
                 <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
                     {move || {
