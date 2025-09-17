@@ -1,0 +1,4072 @@
+[
+    {
+        "facility_id": 2263,
+        "facility": "Farming classes",
+        "sort": 0
+    },
+    {
+        "facility_id": 1390,
+        "facility": "Accessible bus station shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 2266,
+        "facility": "Annual carbon offsets",
+        "sort": 0
+    },
+    {
+        "facility_id": 2411,
+        "facility": "Sustainability/community reinvestment (10% revenue or more)",
+        "sort": 0
+    },
+    {
+        "facility_id": 2010,
+        "facility": "Arcade/game room",
+        "sort": 0
+    },
+    {
+        "facility_id": 2190,
+        "facility": "Area rugs in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 1869,
+        "facility": "Area shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 1145,
+        "facility": "Stairwell handrail height (inches) - 354",
+        "sort": 0
+    },
+    {
+        "facility_id": 9017,
+        "facility": "Stairwell handrail height (inches) - 22",
+        "sort": 0
+    },
+    {
+        "facility_id": 11221,
+        "facility": "Stairwell handrail height (inches) - 16",
+        "sort": 0
+    },
+    {
+        "facility_id": 9026,
+        "facility": "Stairwell handrail height (centimeters) - 60",
+        "sort": 0
+    },
+    {
+        "facility_id": 11214,
+        "facility": "Stairwell handrail height (centimeters) - 330",
+        "sort": 0
+    },
+    {
+        "facility_id": 1732,
+        "facility": "Sportsbook",
+        "sort": 0
+    },
+    {
+        "facility_id": 9021,
+        "facility": "Registration desk height (centimeters) - 86",
+        "sort": 0
+    },
+    {
+        "facility_id": 2330,
+        "facility": "Birdwatching nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1833,
+        "facility": "Proposal/romance packages available",
+        "sort": 0
+    },
+    {
+        "facility_id": 8994,
+        "facility": "Birdwatching on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 2128,
+        "facility": "Boat and paddles on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 2107,
+        "facility": "Boat on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1389,
+        "facility": "Boat tours nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 2405,
+        "facility": "Boat tours on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1239,
+        "facility": "Bodyboard on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 2052,
+        "facility": "Books",
+        "sort": 0
+    },
+    {
+        "facility_id": 2293,
+        "facility": "Pet-sitting services",
+        "sort": 0
+    },
+    {
+        "facility_id": 2455,
+        "facility": "Pet grooming services",
+        "sort": 0
+    },
+    {
+        "facility_id": 2009,
+        "facility": "Carport",
+        "sort": 0
+    },
+    {
+        "facility_id": 2678,
+        "facility": "Parasailing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1862,
+        "facility": "Parasailing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 6700,
+        "facility": "Padel court on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1729,
+        "facility": "Paddleboard on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 2649,
+        "facility": "Pachinko",
+        "sort": 0
+    },
+    {
+        "facility_id": 9115,
+        "facility": "Outdoor tennis courts - 12",
+        "sort": 0
+    },
+    {
+        "facility_id": 2083,
+        "facility": "Offsite parking discounted rates available",
+        "sort": 0
+    },
+    {
+        "facility_id": 9100,
+        "facility": "Number of VIP gaming rooms - 3",
+        "sort": 0
+    },
+    {
+        "facility_id": 2359,
+        "facility": "Clubhouse",
+        "sort": 0
+    },
+    {
+        "facility_id": 1505,
+        "facility": "Number of VIP gaming rooms - 3",
+        "sort": 0
+    },
+    {
+        "facility_id": 2736,
+        "facility": "Cobblestone flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 11566,
+        "facility": "Number of VIP gaming rooms - 15",
+        "sort": 0
+    },
+    {
+        "facility_id": 11519,
+        "facility": "Number of swim-up bars - 2",
+        "sort": 0
+    },
+    {
+        "facility_id": 9209,
+        "facility": "Number of swim-up bars - 2",
+        "sort": 0
+    },
+    {
+        "facility_id": 1956,
+        "facility": "Number of swim-up bars - 2",
+        "sort": 0
+    },
+    {
+        "facility_id": 2050,
+        "facility": "Comprehensive recycling policy",
+        "sort": 0
+    },
+    {
+        "facility_id": 9043,
+        "facility": "Number of stairs to reach property - 60",
+        "sort": 0
+    },
+    {
+        "facility_id": 1267,
+        "facility": "Number of stairs to reach property - 60",
+        "sort": 0
+    },
+    {
+        "facility_id": 11234,
+        "facility": "Number of stairs to reach property - 32",
+        "sort": 0
+    },
+    {
+        "facility_id": 12111,
+        "facility": "Number of spa tubs - 10",
+        "sort": 0
+    },
+    {
+        "facility_id": 9231,
+        "facility": "Number of spa tubs - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 11211,
+        "facility": "Conference space size (feet) - 107639",
+        "sort": 0
+    },
+    {
+        "facility_id": 1106,
+        "facility": "Conference space size (feet) - 2496",
+        "sort": 0
+    },
+    {
+        "facility_id": 8996,
+        "facility": "Conference space size (feet) - 7642",
+        "sort": 0
+    },
+    {
+        "facility_id": 1092,
+        "facility": "Number of spa tubs - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 11201,
+        "facility": "Conference space size (meters) - 11148",
+        "sort": 0
+    },
+    {
+        "facility_id": 9008,
+        "facility": "Conference space size (meters) - 17",
+        "sort": 0
+    },
+    {
+        "facility_id": 9129,
+        "facility": "Number of slot machines - 20",
+        "sort": 0
+    },
+    {
+        "facility_id": 1268,
+        "facility": "Number of slot machines - 1860",
+        "sort": 0
+    },
+    {
+        "facility_id": 11443,
+        "facility": "Number of restaurants - 19",
+        "sort": 0
+    },
+    {
+        "facility_id": 11222,
+        "facility": "Number of poolside bars - 10",
+        "sort": 0
+    },
+    {
+        "facility_id": 9565,
+        "facility": "Number of poolside bars - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 1123,
+        "facility": "Number of poolside bars - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 11469,
+        "facility": "Number of outdoor pools - 14",
+        "sort": 0
+    },
+    {
+        "facility_id": 9020,
+        "facility": "Number of outdoor pools - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 1097,
+        "facility": "Number of outdoor pools - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 11198,
+        "facility": "Number of meeting rooms - 32998888",
+        "sort": 0
+    },
+    {
+        "facility_id": 9024,
+        "facility": "Number of meeting rooms - 18",
+        "sort": 0
+    },
+    {
+        "facility_id": 1146,
+        "facility": "Number of meeting rooms - 18",
+        "sort": 0
+    },
+    {
+        "facility_id": 1178,
+        "facility": "Distance from property (ft) - 699",
+        "sort": 0
+    },
+    {
+        "facility_id": 11209,
+        "facility": "Distance from property (ft) - 801",
+        "sort": 0
+    },
+    {
+        "facility_id": 8995,
+        "facility": "Number of indoor pools - 4",
+        "sort": 0
+    },
+    {
+        "facility_id": 9189,
+        "facility": "Distance from property (km) - 0.3",
+        "sort": 0
+    },
+    {
+        "facility_id": 11233,
+        "facility": "Distance from property (km) - 13",
+        "sort": 0
+    },
+    {
+        "facility_id": 1253,
+        "facility": "Number of indoor pools - 4",
+        "sort": 0
+    },
+    {
+        "facility_id": 11242,
+        "facility": "Distance from property (meters) - 119",
+        "sort": 0
+    },
+    {
+        "facility_id": 9030,
+        "facility": "Distance from property (meters) - 5",
+        "sort": 0
+    },
+    {
+        "facility_id": 11199,
+        "facility": "Number of indoor pools - 12",
+        "sort": 0
+    },
+    {
+        "facility_id": 9187,
+        "facility": "Distance from property (miles) - 0.2",
+        "sort": 0
+    },
+    {
+        "facility_id": 11377,
+        "facility": "Distance from property (miles) - 2.5",
+        "sort": 0
+    },
+    {
+        "facility_id": 1225,
+        "facility": "Number of gaming tables - 5",
+        "sort": 0
+    },
+    {
+        "facility_id": 9065,
+        "facility": "Number of gaming tables - 17",
+        "sort": 0
+    },
+    {
+        "facility_id": 11309,
+        "facility": "Number of gaming tables - 1000",
+        "sort": 0
+    },
+    {
+        "facility_id": 11422,
+        "facility": "Number of coffee shops/cafes - 9",
+        "sort": 0
+    },
+    {
+        "facility_id": 9034,
+        "facility": "Number of coffee shops/cafes - 9",
+        "sort": 0
+    },
+    {
+        "facility_id": 1417,
+        "facility": "Number of coffee shops/cafes - 0",
+        "sort": 0
+    },
+    {
+        "facility_id": 9062,
+        "facility": "Number of beach bars - 7",
+        "sort": 0
+    },
+    {
+        "facility_id": 1221,
+        "facility": "Number of beach bars - 7",
+        "sort": 0
+    },
+    {
+        "facility_id": 11442,
+        "facility": "Number of beach bars - 20",
+        "sort": 0
+    },
+    {
+        "facility_id": 11265,
+        "facility": "Number of bars/lounges - 9",
+        "sort": 0
+    },
+    {
+        "facility_id": 9031,
+        "facility": "Number of bars/lounges - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 1130,
+        "facility": "Number of bars/lounges - 1",
+        "sort": 0
+    },
+    {
+        "facility_id": 2413,
+        "facility": "Electric bicycle charging station",
+        "sort": 0
+    },
+    {
+        "facility_id": 2253,
+        "facility": "No single-use plastic water bottles",
+        "sort": 0
+    },
+    {
+        "facility_id": 2014,
+        "facility": "Electric car charging station",
+        "sort": 0
+    },
+    {
+        "facility_id": 2020,
+        "facility": "No single-use plastic straws",
+        "sort": 0
+    },
+    {
+        "facility_id": 2247,
+        "facility": "No single-use plastic stirrers",
+        "sort": 0
+    },
+    {
+        "facility_id": 8998,
+        "facility": "Elevator door width (centimeters) - 121",
+        "sort": 0
+    },
+    {
+        "facility_id": 1187,
+        "facility": "Elevator door width (centimeters) - 2261",
+        "sort": 0
+    },
+    {
+        "facility_id": 11206,
+        "facility": "Elevator door width (centimeters) - 55",
+        "sort": 0
+    },
+    {
+        "facility_id": 2259,
+        "facility": "No single-use plastic soda bottles",
+        "sort": 0
+    },
+    {
+        "facility_id": 1174,
+        "facility": "Elevator door width (inches) - 101",
+        "sort": 0
+    },
+    {
+        "facility_id": 9003,
+        "facility": "Elevator door width (inches) - 669",
+        "sort": 0
+    },
+    {
+        "facility_id": 11203,
+        "facility": "Elevator door width (inches) - 95",
+        "sort": 0
+    },
+    {
+        "facility_id": 2170,
+        "facility": "Nightclub",
+        "sort": 0
+    },
+    {
+        "facility_id": 1847,
+        "facility": "Newspapers in lobby (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 1797,
+        "facility": "Nature reserve",
+        "sort": 0
+    },
+    {
+        "facility_id": 1842,
+        "facility": "Express check-out",
+        "sort": 0
+    },
+    {
+        "facility_id": 1091,
+        "facility": "Meeting rooms",
+        "sort": 0
+    },
+    {
+        "facility_id": 1978,
+        "facility": "Firepit",
+        "sort": 0
+    },
+    {
+        "facility_id": 1979,
+        "facility": "Fireplace in lobby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1817,
+        "facility": "Firewood (free)",
+        "sort": 0
+    },
+    {
+        "facility_id": 9534,
+        "facility": "Lot hours - start time - 8:00 AM",
+        "sort": 0
+    },
+    {
+        "facility_id": 2132,
+        "facility": "Fish cleaning table",
+        "sort": 0
+    },
+    {
+        "facility_id": 1265,
+        "facility": "Lot hours - start time - 8:00 AM",
+        "sort": 0
+    },
+    {
+        "facility_id": 11811,
+        "facility": "Lot hours - start time - 2:00 PM",
+        "sort": 0
+    },
+    {
+        "facility_id": 1223,
+        "facility": "Lot hours - end time - noon",
+        "sort": 0
+    },
+    {
+        "facility_id": 1725,
+        "facility": "Fitness facilities",
+        "sort": 0
+    },
+    {
+        "facility_id": 11602,
+        "facility": "Lot hours - end time - 5:30 PM",
+        "sort": 0
+    },
+    {
+        "facility_id": 6848,
+        "facility": "Fitness facilities (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 9530,
+        "facility": "Lot hours - end time - 1:30 AM",
+        "sort": 0
+    },
+    {
+        "facility_id": 1984,
+        "facility": "Lot hours - 24 hours",
+        "sort": 0
+    },
+    {
+        "facility_id": 2493,
+        "facility": "Long-term parking (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 2742,
+        "facility": "Long-term parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 1134,
+        "facility": "Free beach cabanas",
+        "sort": 0
+    },
+    {
+        "facility_id": 2271,
+        "facility": "Free beach club nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1980,
+        "facility": "Free beach club on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1886,
+        "facility": "Free beach shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 1855,
+        "facility": "Free bicycles nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1971,
+        "facility": "Free bicycles on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1154,
+        "facility": "Inflatable boat on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1054,
+        "facility": "Free breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 2034,
+        "facility": "Hot springs nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1814,
+        "facility": "Health or beauty spa nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 2066,
+        "facility": "Health club",
+        "sort": 0
+    },
+    {
+        "facility_id": 2216,
+        "facility": "Hardwood flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 1367,
+        "facility": "Hallway handrail height (inches) - 60",
+        "sort": 0
+    },
+    {
+        "facility_id": 11303,
+        "facility": "Hallway handrail height (inches) - 50",
+        "sort": 0
+    },
+    {
+        "facility_id": 1249,
+        "facility": "Hallway handrail height (centimeters) - 80",
+        "sort": 0
+    },
+    {
+        "facility_id": 11261,
+        "facility": "Hallway handrail height (centimeters) - 130",
+        "sort": 0
+    },
+    {
+        "facility_id": 2261,
+        "facility": "Guest education on local ecosystems and culture",
+        "sort": 0
+    },
+    {
+        "facility_id": 1102,
+        "facility": "Full-service spa",
+        "sort": 0
+    },
+    {
+        "facility_id": 1803,
+        "facility": "Front entrance ramp",
+        "sort": 0
+    },
+    {
+        "facility_id": 47,
+        "facility": "WiFi available",
+        "sort": 1
+    },
+    {
+        "facility_id": 107,
+        "facility": "Free WiFi",
+        "sort": 2
+    },
+    {
+        "facility_id": 2,
+        "facility": "Parking",
+        "sort": 3
+    },
+    {
+        "facility_id": 46,
+        "facility": "Free Parking",
+        "sort": 4
+    },
+    {
+        "facility_id": 16,
+        "facility": "Non-smoking rooms",
+        "sort": 5
+    },
+    {
+        "facility_id": 109,
+        "facility": "Air conditioning",
+        "sort": 6
+    },
+    {
+        "facility_id": 11,
+        "facility": "Fitness center",
+        "sort": 7
+    },
+    {
+        "facility_id": 301,
+        "facility": "Swimming pool",
+        "sort": 8
+    },
+    {
+        "facility_id": 8,
+        "facility": "24-hour front desk",
+        "sort": 9
+    },
+    {
+        "facility_id": 3,
+        "facility": "Restaurant",
+        "sort": 10
+    },
+    {
+        "facility_id": 5,
+        "facility": "Room service",
+        "sort": 11
+    },
+    {
+        "facility_id": 20,
+        "facility": "Business center",
+        "sort": 12
+    },
+    {
+        "facility_id": 80,
+        "facility": "Heating",
+        "sort": 13
+    },
+    {
+        "facility_id": 15,
+        "facility": "Terrace",
+        "sort": 14
+    },
+    {
+        "facility_id": 28,
+        "facility": "Family rooms",
+        "sort": 15
+    },
+    {
+        "facility_id": 14,
+        "facility": "Garden",
+        "sort": 16
+    },
+    {
+        "facility_id": 4,
+        "facility": "Pets allowed",
+        "sort": 17
+    },
+    {
+        "facility_id": 70,
+        "facility": "Hiking",
+        "sort": 18
+    },
+    {
+        "facility_id": 72,
+        "facility": "BBQ facilities",
+        "sort": 19
+    },
+    {
+        "facility_id": 48,
+        "facility": "Lift / Elevator",
+        "sort": 20
+    },
+    {
+        "facility_id": 22,
+        "facility": "Laundry",
+        "sort": 21
+    },
+    {
+        "facility_id": 91,
+        "facility": "Luggage storage",
+        "sort": 22
+    },
+    {
+        "facility_id": 19,
+        "facility": "Fishing",
+        "sort": 23
+    },
+    {
+        "facility_id": 49,
+        "facility": "Express check-in/check-out",
+        "sort": 24
+    },
+    {
+        "facility_id": 76,
+        "facility": "Cycling",
+        "sort": 25
+    },
+    {
+        "facility_id": 17,
+        "facility": "Airport shuttle",
+        "sort": 26
+    },
+    {
+        "facility_id": 51,
+        "facility": "Safety deposit box",
+        "sort": 27
+    },
+    {
+        "facility_id": 7,
+        "facility": "Bar",
+        "sort": 28
+    },
+    {
+        "facility_id": 81,
+        "facility": "Fax/photocopying",
+        "sort": 29
+    },
+    {
+        "facility_id": 78,
+        "facility": "Tour desk",
+        "sort": 30
+    },
+    {
+        "facility_id": 86,
+        "facility": "Horse riding",
+        "sort": 31
+    },
+    {
+        "facility_id": 12,
+        "facility": "Golf course",
+        "sort": 32
+    },
+    {
+        "facility_id": 64,
+        "facility": "Soundproof rooms",
+        "sort": 33
+    },
+    {
+        "facility_id": 25,
+        "facility": "Facilities for disabled guests",
+        "sort": 34
+    },
+    {
+        "facility_id": 44,
+        "facility": "Ironing service",
+        "sort": 35
+    },
+    {
+        "facility_id": 6,
+        "facility": "Meeting/banquet facilities",
+        "sort": 36
+    },
+    {
+        "facility_id": 9,
+        "facility": "Tennis court",
+        "sort": 37
+    },
+    {
+        "facility_id": 63,
+        "facility": "Hot tub/Jacuzzi",
+        "sort": 38
+    },
+    {
+        "facility_id": 75,
+        "facility": "Car hire",
+        "sort": 39
+    },
+    {
+        "facility_id": 56,
+        "facility": "Children's playground",
+        "sort": 40
+    },
+    {
+        "facility_id": 69,
+        "facility": "Canoeing",
+        "sort": 41
+    },
+    {
+        "facility_id": 10,
+        "facility": "Sauna",
+        "sort": 42
+    },
+    {
+        "facility_id": 23,
+        "facility": "Dry cleaning",
+        "sort": 43
+    },
+    {
+        "facility_id": 26,
+        "facility": "Skiing",
+        "sort": 44
+    },
+    {
+        "facility_id": 43,
+        "facility": "Breakfast in the room",
+        "sort": 45
+    },
+    {
+        "facility_id": 82,
+        "facility": "Diving",
+        "sort": 46
+    },
+    {
+        "facility_id": 55,
+        "facility": "Massage services",
+        "sort": 47
+    },
+    {
+        "facility_id": 61,
+        "facility": "Windsurfing",
+        "sort": 48
+    },
+    {
+        "facility_id": 73,
+        "facility": "Packed lunches",
+        "sort": 49
+    },
+    {
+        "facility_id": 29,
+        "facility": "Games room",
+        "sort": 50
+    },
+    {
+        "facility_id": 90,
+        "facility": "Snorkelling",
+        "sort": 51
+    },
+    {
+        "facility_id": 54,
+        "facility": "Spa/wellness center",
+        "sort": 52
+    },
+    {
+        "facility_id": 27,
+        "facility": "Barber/beauty shop",
+        "sort": 53
+    },
+    {
+        "facility_id": 58,
+        "facility": "Table tennis",
+        "sort": 54
+    },
+    {
+        "facility_id": 99,
+        "facility": "Ski storage",
+        "sort": 55
+    },
+    {
+        "facility_id": 53,
+        "facility": "Currency exchange",
+        "sort": 56
+    },
+    {
+        "facility_id": 77,
+        "facility": "Bowling",
+        "sort": 57
+    },
+    {
+        "facility_id": 97,
+        "facility": "Mini golf",
+        "sort": 58
+    },
+    {
+        "facility_id": 21,
+        "facility": "Babysitting/child services",
+        "sort": 59
+    },
+    {
+        "facility_id": 57,
+        "facility": "Billiards",
+        "sort": 60
+    },
+    {
+        "facility_id": 52,
+        "facility": "Valet parking",
+        "sort": 61
+    },
+    {
+        "facility_id": 50,
+        "facility": "Solarium",
+        "sort": 62
+    },
+    {
+        "facility_id": 62,
+        "facility": "Darts",
+        "sort": 63
+    },
+    {
+        "facility_id": 71,
+        "facility": "Chapel/shrine",
+        "sort": 64
+    },
+    {
+        "facility_id": 79,
+        "facility": "Hammam",
+        "sort": 65
+    },
+    {
+        "facility_id": 59,
+        "facility": "Karaoke",
+        "sort": 66
+    },
+    {
+        "facility_id": 87,
+        "facility": "Squash",
+        "sort": 67
+    },
+    {
+        "facility_id": 30,
+        "facility": "Casino",
+        "sort": 68
+    },
+    {
+        "facility_id": 24,
+        "facility": "Continental breakfast",
+        "sort": 69
+    },
+    {
+        "facility_id": 108,
+        "facility": "Non-smoking throughout",
+        "sort": 70
+    },
+    {
+        "facility_id": 161,
+        "facility": "Private parking",
+        "sort": 71
+    },
+    {
+        "facility_id": 104,
+        "facility": "Outdoor pool",
+        "sort": 72
+    },
+    {
+        "facility_id": 118,
+        "facility": "Sun terrace",
+        "sort": 73
+    },
+    {
+        "facility_id": 127,
+        "facility": "Private check-in/check-out",
+        "sort": 74
+    },
+    {
+        "facility_id": 158,
+        "facility": "Daily housekeeping",
+        "sort": 75
+    },
+    {
+        "facility_id": 110,
+        "facility": "Designated smoking area",
+        "sort": 76
+    },
+    {
+        "facility_id": 184,
+        "facility": "Accessible parking",
+        "sort": 77
+    },
+    {
+        "facility_id": 180,
+        "facility": "Street parking",
+        "sort": 78
+    },
+    {
+        "facility_id": 140,
+        "facility": "Airport shuttle (additional charge)",
+        "sort": 79
+    },
+    {
+        "facility_id": 143,
+        "facility": "Shared lounge/TV area",
+        "sort": 80
+    },
+    {
+        "facility_id": 170,
+        "facility": "Board games/puzzles",
+        "sort": 81
+    },
+    {
+        "facility_id": 181,
+        "facility": "Parking garage",
+        "sort": 82
+    },
+    {
+        "facility_id": 129,
+        "facility": "Shuttle service (additional charge)",
+        "sort": 83
+    },
+    {
+        "facility_id": 146,
+        "facility": "Beachfront",
+        "sort": 84
+    },
+    {
+        "facility_id": 145,
+        "facility": "Minimarket on site",
+        "sort": 85
+    },
+    {
+        "facility_id": 124,
+        "facility": "Concierge service",
+        "sort": 86
+    },
+    {
+        "facility_id": 133,
+        "facility": "Special diet menus - on request",
+        "sort": 87
+    },
+    {
+        "facility_id": 159,
+        "facility": "Grocery deliveries",
+        "sort": 88
+    },
+    {
+        "facility_id": 185,
+        "facility": "Wheelchair accessible",
+        "sort": 89
+    },
+    {
+        "facility_id": 101,
+        "facility": "Allergy-free room",
+        "sort": 90
+    },
+    {
+        "facility_id": 120,
+        "facility": "Outdoor pool - seasonal",
+        "sort": 91
+    },
+    {
+        "facility_id": 176,
+        "facility": "Kid meals",
+        "sort": 92
+    },
+    {
+        "facility_id": 141,
+        "facility": "Shared kitchen",
+        "sort": 93
+    },
+    {
+        "facility_id": 117,
+        "facility": "Snack bar",
+        "sort": 94
+    },
+    {
+        "facility_id": 173,
+        "facility": "Kids' outdoor play equipment",
+        "sort": 95
+    },
+    {
+        "facility_id": 148,
+        "facility": "Water park",
+        "sort": 96
+    },
+    {
+        "facility_id": 111,
+        "facility": "ATM/cash machine on site",
+        "sort": 97
+    },
+    {
+        "facility_id": 142,
+        "facility": "Lockers",
+        "sort": 98
+    },
+    {
+        "facility_id": 194,
+        "facility": "Pool with view",
+        "sort": 99
+    },
+    {
+        "facility_id": 195,
+        "facility": "Heated pool",
+        "sort": 100
+    },
+    {
+        "facility_id": 182,
+        "facility": "Electric vehicle charging station",
+        "sort": 101
+    },
+    {
+        "facility_id": 135,
+        "facility": "Vending machine - drinks",
+        "sort": 102
+    },
+    {
+        "facility_id": 137,
+        "facility": "Water sport facilities on site",
+        "sort": 103
+    },
+    {
+        "facility_id": 103,
+        "facility": "Indoor pool",
+        "sort": 104
+    },
+    {
+        "facility_id": 186,
+        "facility": "Toilet with grab rails",
+        "sort": 105
+    },
+    {
+        "facility_id": 172,
+        "facility": "Indoor play area",
+        "sort": 106
+    },
+    {
+        "facility_id": 183,
+        "facility": "Public transport tickets",
+        "sort": 107
+    },
+    {
+        "facility_id": 114,
+        "facility": "Private beach area",
+        "sort": 108
+    },
+    {
+        "facility_id": 136,
+        "facility": "Vending machine - snacks",
+        "sort": 109
+    },
+    {
+        "facility_id": 177,
+        "facility": "Kid-friendly buffet",
+        "sort": 110
+    },
+    {
+        "facility_id": 147,
+        "facility": "Evening entertainment",
+        "sort": 111
+    },
+    {
+        "facility_id": 174,
+        "facility": "Baby safety gates",
+        "sort": 112
+    },
+    {
+        "facility_id": 149,
+        "facility": "Adult only",
+        "sort": 113
+    },
+    {
+        "facility_id": 166,
+        "facility": "Open-air bath",
+        "sort": 114
+    },
+    {
+        "facility_id": 188,
+        "facility": "Lower bathroom sink",
+        "sort": 115
+    },
+    {
+        "facility_id": 167,
+        "facility": "Public Bath",
+        "sort": 116
+    },
+    {
+        "facility_id": 187,
+        "facility": "Higher level toilet",
+        "sort": 117
+    },
+    {
+        "facility_id": 100,
+        "facility": "Ski school",
+        "sort": 118
+    },
+    {
+        "facility_id": 199,
+        "facility": "Pool bar",
+        "sort": 119
+    },
+    {
+        "facility_id": 197,
+        "facility": "Plunge pool",
+        "sort": 120
+    },
+    {
+        "facility_id": 193,
+        "facility": "Infinity pool",
+        "sort": 121
+    },
+    {
+        "facility_id": 169,
+        "facility": "Swimming pool toys",
+        "sort": 122
+    },
+    {
+        "facility_id": 196,
+        "facility": "Salt-water pool",
+        "sort": 123
+    },
+    {
+        "facility_id": 144,
+        "facility": "Kids' club",
+        "sort": 124
+    },
+    {
+        "facility_id": 189,
+        "facility": "Emergency cord in bathroom",
+        "sort": 125
+    },
+    {
+        "facility_id": 126,
+        "facility": "Nightclub/DJ",
+        "sort": 126
+    },
+    {
+        "facility_id": 128,
+        "facility": "Shuttle service (free)",
+        "sort": 127
+    },
+    {
+        "facility_id": 130,
+        "facility": "Ski equipment hire on site",
+        "sort": 128
+    },
+    {
+        "facility_id": 132,
+        "facility": "Ski-to-door access",
+        "sort": 129
+    },
+    {
+        "facility_id": 192,
+        "facility": "Rooftop pool",
+        "sort": 130
+    },
+    {
+        "facility_id": 131,
+        "facility": "Ski pass vendor",
+        "sort": 131
+    },
+    {
+        "facility_id": 125,
+        "facility": "Entertainment staff",
+        "sort": 132
+    },
+    {
+        "facility_id": 164,
+        "facility": "Paid WiFi",
+        "sort": 133
+    },
+    {
+        "facility_id": 168,
+        "facility": "Water slide",
+        "sort": 134
+    },
+    {
+        "facility_id": 139,
+        "facility": "Airport shuttle (free)",
+        "sort": 135
+    },
+    {
+        "facility_id": 138,
+        "facility": "Hot spring bath",
+        "sort": 136
+    },
+    {
+        "facility_id": 122,
+        "facility": "Indoor pool - seasonal",
+        "sort": 137
+    },
+    {
+        "facility_id": 162,
+        "facility": "Misc parking",
+        "sort": 138
+    },
+    {
+        "facility_id": 222,
+        "facility": "Outdoor furniture",
+        "sort": 139
+    },
+    {
+        "facility_id": 220,
+        "facility": "Sun loungers or beach chairs",
+        "sort": 140
+    },
+    {
+        "facility_id": 224,
+        "facility": "Picnic area",
+        "sort": 141
+    },
+    {
+        "facility_id": 203,
+        "facility": "Wine/champagne",
+        "sort": 142
+    },
+    {
+        "facility_id": 221,
+        "facility": "Sun umbrellas",
+        "sort": 143
+    },
+    {
+        "facility_id": 210,
+        "facility": "Airport drop off",
+        "sort": 144
+    },
+    {
+        "facility_id": 209,
+        "facility": "Airport pick up",
+        "sort": 145
+    },
+    {
+        "facility_id": 219,
+        "facility": "Coffee Shop on site",
+        "sort": 146
+    },
+    {
+        "facility_id": 205,
+        "facility": "Fruits",
+        "sort": 147
+    },
+    {
+        "facility_id": 225,
+        "facility": "Outdoor fireplace",
+        "sort": 148
+    },
+    {
+        "facility_id": 200,
+        "facility": "Shallow end",
+        "sort": 149
+    },
+    {
+        "facility_id": 218,
+        "facility": "Pet bowls",
+        "sort": 150
+    },
+    {
+        "facility_id": 236,
+        "facility": "Spa/wellness center services",
+        "sort": 151
+    },
+    {
+        "facility_id": 258,
+        "facility": "Kids' pool",
+        "sort": 152
+    },
+    {
+        "facility_id": 223,
+        "facility": "Fence around pool",
+        "sort": 153
+    },
+    {
+        "facility_id": 244,
+        "facility": "Spa/wellness center services",
+        "sort": 154
+    },
+    {
+        "facility_id": 241,
+        "facility": "Steam room",
+        "sort": 155
+    },
+    {
+        "facility_id": 226,
+        "facility": "Beauty Services",
+        "sort": 156
+    },
+    {
+        "facility_id": 216,
+        "facility": "Badminton equipment",
+        "sort": 157
+    },
+    {
+        "facility_id": 257,
+        "facility": "Fitness/spa locker rooms",
+        "sort": 158
+    },
+    {
+        "facility_id": 254,
+        "facility": "Yoga classes",
+        "sort": 159
+    },
+    {
+        "facility_id": 215,
+        "facility": "Tennis equipment",
+        "sort": 160
+    },
+    {
+        "facility_id": 217,
+        "facility": "Pet basket",
+        "sort": 161
+    },
+    {
+        "facility_id": 231,
+        "facility": "Manicure",
+        "sort": 163
+    },
+    {
+        "facility_id": 232,
+        "facility": "Pedicure",
+        "sort": 164
+    },
+    {
+        "facility_id": 201,
+        "facility": "Pool cover",
+        "sort": 165
+    },
+    {
+        "facility_id": 214,
+        "facility": "Strollers",
+        "sort": 166
+    },
+    {
+        "facility_id": 255,
+        "facility": "Fitness classes",
+        "sort": 167
+    },
+    {
+        "facility_id": 256,
+        "facility": "Personal trainer",
+        "sort": 169
+    },
+    {
+        "facility_id": 230,
+        "facility": "Hair Salon Services",
+        "sort": 171
+    },
+    {
+        "facility_id": 211,
+        "facility": "Visual aids: Braille",
+        "sort": 172
+    },
+    {
+        "facility_id": 213,
+        "facility": "Auditory guidance",
+        "sort": 174
+    },
+    {
+        "facility_id": 302,
+        "facility": "Beach",
+        "sort": 175
+    },
+    {
+        "facility_id": 304,
+        "facility": "Shuttle service",
+        "sort": 176
+    },
+    {
+        "facility_id": 306,
+        "facility": "Game drives",
+        "sort": 177
+    },
+    {
+        "facility_id": 455,
+        "facility": "Staff adhere to local safety protocols",
+        "sort": 178
+    },
+    {
+        "facility_id": 450,
+        "facility": "Laundry washed per local authority guidelines",
+        "sort": 179
+    },
+    {
+        "facility_id": 451,
+        "facility": "Guest rooms disinfected between stays",
+        "sort": 180
+    },
+    {
+        "facility_id": 449,
+        "facility": "Cleaning standards that are effective against Coronavirus",
+        "sort": 181
+    },
+    {
+        "facility_id": 462,
+        "facility": "Physical distancing rules followed",
+        "sort": 182
+    },
+    {
+        "facility_id": 457,
+        "facility": "Hand sanitizer in guest room and key areas",
+        "sort": 183
+    },
+    {
+        "facility_id": 461,
+        "facility": "Cashless payment available",
+        "sort": 184
+    },
+    {
+        "facility_id": 425,
+        "facility": "Fire extinguishers",
+        "sort": 185
+    },
+    {
+        "facility_id": 459,
+        "facility": "First aid kit available",
+        "sort": 186
+    },
+    {
+        "facility_id": 467,
+        "facility": "Sanitized tableware & silverware",
+        "sort": 187
+    },
+    {
+        "facility_id": 460,
+        "facility": "Contactless check-in/check-out",
+        "sort": 188
+    },
+    {
+        "facility_id": 465,
+        "facility": "Invoice provided",
+        "sort": 189
+    },
+    {
+        "facility_id": 468,
+        "facility": "Guests can opt-out any cleaning services during stay",
+        "sort": 190
+    },
+    {
+        "facility_id": 422,
+        "facility": "Smoke alarms",
+        "sort": 191
+    },
+    {
+        "facility_id": 456,
+        "facility": "Shared stationery like menus, pens are removed",
+        "sort": 192
+    },
+    {
+        "facility_id": 452,
+        "facility": "Guest room sealed after cleaning",
+        "sort": 193
+    },
+    {
+        "facility_id": 466,
+        "facility": "Property cleaned by professional cleaning companies",
+        "sort": 194
+    },
+    {
+        "facility_id": 453,
+        "facility": "Physical distancing in dining areas",
+        "sort": 195
+    },
+    {
+        "facility_id": 419,
+        "facility": "Key access",
+        "sort": 196
+    },
+    {
+        "facility_id": 454,
+        "facility": "Food delivered to guest room",
+        "sort": 197
+    },
+    {
+        "facility_id": 424,
+        "facility": "CCTV outside property",
+        "sort": 198
+    },
+    {
+        "facility_id": 423,
+        "facility": "CCTV in common areas",
+        "sort": 199
+    },
+    {
+        "facility_id": 458,
+        "facility": "Process in place to check health of guests",
+        "sort": 200
+    },
+    {
+        "facility_id": 486,
+        "facility": "Access to health care professionals",
+        "sort": 201
+    },
+    {
+        "facility_id": 464,
+        "facility": "Screens / Barriers between staff and guests for safety",
+        "sort": 202
+    },
+    {
+        "facility_id": 488,
+        "facility": "Face masks for guests available",
+        "sort": 203
+    },
+    {
+        "facility_id": 418,
+        "facility": "24-hour security",
+        "sort": 204
+    },
+    {
+        "facility_id": 485,
+        "facility": "Delivered food - securely covered",
+        "sort": 205
+    },
+    {
+        "facility_id": 421,
+        "facility": "Security alarm",
+        "sort": 206
+    },
+    {
+        "facility_id": 487,
+        "facility": "Thermometers for guests provided by property",
+        "sort": 207
+    },
+    {
+        "facility_id": 447,
+        "facility": "Bicycle rental",
+        "sort": 208
+    },
+    {
+        "facility_id": 404,
+        "facility": "Walking tours",
+        "sort": 209
+    },
+    {
+        "facility_id": 484,
+        "facility": "Breakfast takeaway containers",
+        "sort": 210
+    },
+    {
+        "facility_id": 420,
+        "facility": "Key card access",
+        "sort": 211
+    },
+    {
+        "facility_id": 405,
+        "facility": "Bike tours",
+        "sort": 212
+    },
+    {
+        "facility_id": 408,
+        "facility": "Tour/class on local culture",
+        "sort": 213
+    },
+    {
+        "facility_id": 463,
+        "facility": "Mobile app for room service",
+        "sort": 214
+    },
+    {
+        "facility_id": 410,
+        "facility": "Live music/performance",
+        "sort": 215
+    },
+    {
+        "facility_id": 406,
+        "facility": "Themed dinner nights",
+        "sort": 216
+    },
+    {
+        "facility_id": 411,
+        "facility": "Broadcast Live sport events",
+        "sort": 217
+    },
+    {
+        "facility_id": 400,
+        "facility": "Temporary art galleries",
+        "sort": 218
+    },
+    {
+        "facility_id": 401,
+        "facility": "Pub crawls",
+        "sort": 219
+    },
+    {
+        "facility_id": 407,
+        "facility": "Happy hour",
+        "sort": 220
+    },
+    {
+        "facility_id": 409,
+        "facility": "Cooking class",
+        "sort": 221
+    },
+    {
+        "facility_id": 403,
+        "facility": "Movie nights",
+        "sort": 222
+    },
+    {
+        "facility_id": 413,
+        "facility": "Aerobics",
+        "sort": 223
+    },
+    {
+        "facility_id": 412,
+        "facility": "Archery",
+        "sort": 224
+    },
+    {
+        "facility_id": 402,
+        "facility": "Stand-up comedy",
+        "sort": 225
+    },
+    {
+        "facility_id": 414,
+        "facility": "Bingo",
+        "sort": 226
+    },
+    {
+        "facility_id": 431,
+        "facility": "Bath/Hot spring",
+        "sort": 227
+    },
+    {
+        "facility_id": 432,
+        "facility": "Private bath",
+        "sort": 228
+    },
+    {
+        "facility_id": 115,
+        "facility": "Restaurant - ala carte",
+        "sort": 229
+    },
+    {
+        "facility_id": 116,
+        "facility": "Restaurant - buffet",
+        "sort": 230
+    },
+    {
+        "facility_id": 824,
+        "facility": "Hunting on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 905,
+        "facility": "Ice skating nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 646,
+        "facility": "Ice skating on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 832,
+        "facility": "Indoor/outdoor pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 872,
+        "facility": "Free bus station shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 730,
+        "facility": "Free buffet breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 756,
+        "facility": "Free breakfast to go",
+        "sort": 0
+    },
+    {
+        "facility_id": 624,
+        "facility": "Indoor tennis courts -",
+        "sort": 0
+    },
+    {
+        "facility_id": 770,
+        "facility": "Infant/toddler toys",
+        "sort": 0
+    },
+    {
+        "facility_id": 780,
+        "facility": "Free breakfast (local cuisine)",
+        "sort": 0
+    },
+    {
+        "facility_id": 906,
+        "facility": "Inflatable boat on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 529,
+        "facility": "Free breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 591,
+        "facility": "In-room accessibility (in select rooms)",
+        "sort": 0
+    },
+    {
+        "facility_id": 761,
+        "facility": "Internet access",
+        "sort": 0
+    },
+    {
+        "facility_id": 558,
+        "facility": "Internet access in public areas - high speed",
+        "sort": 0
+    },
+    {
+        "facility_id": 512,
+        "facility": "Internet access in public areas - surcharge",
+        "sort": 0
+    },
+    {
+        "facility_id": 629,
+        "facility": "Free bicycles on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 856,
+        "facility": "Japanese garden",
+        "sort": 0
+    },
+    {
+        "facility_id": 875,
+        "facility": "Kaiseki meal",
+        "sort": 0
+    },
+    {
+        "facility_id": 636,
+        "facility": "Free bicycles nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 514,
+        "facility": "Kayaking nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 908,
+        "facility": "Kayak on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 705,
+        "facility": "Free beach shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 927,
+        "facility": "Free beach club on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 928,
+        "facility": "Free beach club nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 709,
+        "facility": "Free beach cabanas",
+        "sort": 0
+    },
+    {
+        "facility_id": 594,
+        "facility": "Free area shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 689,
+        "facility": "Free airport transportation - pickup",
+        "sort": 0
+    },
+    {
+        "facility_id": 606,
+        "facility": "Lazy river",
+        "sort": 0
+    },
+    {
+        "facility_id": 847,
+        "facility": "LED light bulbs",
+        "sort": 0
+    },
+    {
+        "facility_id": 526,
+        "facility": "Library",
+        "sort": 0
+    },
+    {
+        "facility_id": 968,
+        "facility": "Lifeguard on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 690,
+        "facility": "Free airport transportation - drop-off",
+        "sort": 0
+    },
+    {
+        "facility_id": 545,
+        "facility": "Limo or town car service available",
+        "sort": 0
+    },
+    {
+        "facility_id": 955,
+        "facility": "Litter box",
+        "sort": 0
+    },
+    {
+        "facility_id": 850,
+        "facility": "Living plant wall",
+        "sort": 0
+    },
+    {
+        "facility_id": 992,
+        "facility": "Locally-owned & organized tours & activities",
+        "sort": 0
+    },
+    {
+        "facility_id": 997,
+        "facility": "Locally-sourced food on site (80% or more)",
+        "sort": 0
+    },
+    {
+        "facility_id": 493,
+        "facility": "Free airport transportation",
+        "sort": 0
+    },
+    {
+        "facility_id": 605,
+        "facility": "Long-term parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 773,
+        "facility": "Foosball",
+        "sort": 0
+    },
+    {
+        "facility_id": 716,
+        "facility": "Long-term parking (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 870,
+        "facility": "Lot hours - 24 hours",
+        "sort": 0
+    },
+    {
+        "facility_id": 954,
+        "facility": "Food and water bowls",
+        "sort": 0
+    },
+    {
+        "facility_id": 871,
+        "facility": "Lot hours - end time",
+        "sort": 0
+    },
+    {
+        "facility_id": 757,
+        "facility": "Fitness facilities (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 492,
+        "facility": "Fitness facilities",
+        "sort": 0
+    },
+    {
+        "facility_id": 877,
+        "facility": "Lot hours - start time",
+        "sort": 0
+    },
+    {
+        "facility_id": 899,
+        "facility": "Fishing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 898,
+        "facility": "Fish cleaning table",
+        "sort": 0
+    },
+    {
+        "facility_id": 841,
+        "facility": "Firewood (free)",
+        "sort": 0
+    },
+    {
+        "facility_id": 813,
+        "facility": "Luxury tents",
+        "sort": 0
+    },
+    {
+        "facility_id": 909,
+        "facility": "Marina nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 559,
+        "facility": "Marina on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 509,
+        "facility": "Fireplace in lobby",
+        "sort": 0
+    },
+    {
+        "facility_id": 785,
+        "facility": "Firepit",
+        "sort": 0
+    },
+    {
+        "facility_id": 561,
+        "facility": "Meeting rooms",
+        "sort": 0
+    },
+    {
+        "facility_id": 640,
+        "facility": "Miniature golf on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 617,
+        "facility": "Ferry terminal shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 815,
+        "facility": "Farming classes",
+        "sort": 0
+    },
+    {
+        "facility_id": 791,
+        "facility": "Mosquito nets",
+        "sort": 0
+    },
+    {
+        "facility_id": 895,
+        "facility": "Motor boating nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 648,
+        "facility": "Motor boating on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 812,
+        "facility": "Motorcycle parking only",
+        "sort": 0
+    },
+    {
+        "facility_id": 551,
+        "facility": "Mountain biking nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 649,
+        "facility": "Mountain biking on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 910,
+        "facility": "Mountain climbing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 535,
+        "facility": "Multilingual staff",
+        "sort": 0
+    },
+    {
+        "facility_id": 772,
+        "facility": "Music library",
+        "sort": 0
+    },
+    {
+        "facility_id": 830,
+        "facility": "Natural pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 814,
+        "facility": "Nature reserve",
+        "sort": 0
+    },
+    {
+        "facility_id": 543,
+        "facility": "Express check-out",
+        "sort": 0
+    },
+    {
+        "facility_id": 759,
+        "facility": "Newspapers in lobby (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 568,
+        "facility": "Express check-in",
+        "sort": 0
+    },
+    {
+        "facility_id": 531,
+        "facility": "Nightclub",
+        "sort": 0
+    },
+    {
+        "facility_id": 571,
+        "facility": "Expedia Local Expert concierge",
+        "sort": 0
+    },
+    {
+        "facility_id": 835,
+        "facility": "Exercise/lap pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 1024,
+        "facility": "No accessible airport shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 1026,
+        "facility": "No accessible bus station shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 1022,
+        "facility": "No accessible shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 1028,
+        "facility": "No accessible train station shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 972,
+        "facility": "No elevator (single level property)",
+        "sort": 0
+    },
+    {
+        "facility_id": 788,
+        "facility": "Engawa (sitting area)",
+        "sort": 0
+    },
+    {
+        "facility_id": 998,
+        "facility": "Energy-saving switches",
+        "sort": 0
+    },
+    {
+        "facility_id": 1006,
+        "facility": "No single-use plastic soda bottles",
+        "sort": 0
+    },
+    {
+        "facility_id": 1042,
+        "facility": "Elevator door width (inches) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 1007,
+        "facility": "No single-use plastic stirrers",
+        "sort": 0
+    },
+    {
+        "facility_id": 1043,
+        "facility": "Elevator door width (centimeters) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 1009,
+        "facility": "No single-use plastic straws",
+        "sort": 0
+    },
+    {
+        "facility_id": 491,
+        "facility": "Elevator",
+        "sort": 0
+    },
+    {
+        "facility_id": 1011,
+        "facility": "No single-use plastic water bottles",
+        "sort": 0
+    },
+    {
+        "facility_id": 765,
+        "facility": "Electric car charging station",
+        "sort": 0
+    },
+    {
+        "facility_id": 680,
+        "facility": "Number of bars/lounges -",
+        "sort": 0
+    },
+    {
+        "facility_id": 967,
+        "facility": "Electric bicycle charging station",
+        "sort": 0
+    },
+    {
+        "facility_id": 637,
+        "facility": "Ecotours on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 575,
+        "facility": "Ecotours nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 682,
+        "facility": "Number of beach bars -",
+        "sort": 0
+    },
+    {
+        "facility_id": 846,
+        "facility": "Eco-friendly toiletries",
+        "sort": 0
+    },
+    {
+        "facility_id": 854,
+        "facility": "Eco-friendly cleaning products used",
+        "sort": 0
+    },
+    {
+        "facility_id": 845,
+        "facility": "Eco-friendly cleaning products provided",
+        "sort": 0
+    },
+    {
+        "facility_id": 686,
+        "facility": "Number of coffee shops/cafes -",
+        "sort": 0
+    },
+    {
+        "facility_id": 1019,
+        "facility": "Duty-free shopping",
+        "sort": 0
+    },
+    {
+        "facility_id": 662,
+        "facility": "Downhill skiing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 506,
+        "facility": "Downhill skiing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 793,
+        "facility": "Number of gaming tables -",
+        "sort": 0
+    },
+    {
+        "facility_id": 996,
+        "facility": "Double-glazing on all windows",
+        "sort": 0
+    },
+    {
+        "facility_id": 956,
+        "facility": "Dog exercise area",
+        "sort": 0
+    },
+    {
+        "facility_id": 840,
+        "facility": "Dock",
+        "sort": 0
+    },
+    {
+        "facility_id": 609,
+        "facility": "Number of indoor pools -",
+        "sort": 0
+    },
+    {
+        "facility_id": 869,
+        "facility": "Distance from property (miles)",
+        "sort": 0
+    },
+    {
+        "facility_id": 868,
+        "facility": "Distance from property (meters)",
+        "sort": 0
+    },
+    {
+        "facility_id": 867,
+        "facility": "Distance from property (km)",
+        "sort": 0
+    },
+    {
+        "facility_id": 600,
+        "facility": "Number of meeting rooms -",
+        "sort": 0
+    },
+    {
+        "facility_id": 866,
+        "facility": "Distance from property (ft)",
+        "sort": 0
+    },
+    {
+        "facility_id": 707,
+        "facility": "Direct access to private beach",
+        "sort": 0
+    },
+    {
+        "facility_id": 804,
+        "facility": "Designer stores on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 610,
+        "facility": "Number of outdoor pools -",
+        "sort": 0
+    },
+    {
+        "facility_id": 615,
+        "facility": "Cruise terminal shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 661,
+        "facility": "Cross-country skiing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 681,
+        "facility": "Number of poolside bars -",
+        "sort": 0
+    },
+    {
+        "facility_id": 507,
+        "facility": "Cross-country skiing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 971,
+        "facility": "Coworking spaces",
+        "sort": 0
+    },
+    {
+        "facility_id": 857,
+        "facility": "Covered parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 596,
+        "facility": "Number of restaurants -",
+        "sort": 0
+    },
+    {
+        "facility_id": 802,
+        "facility": "Couples/private dining",
+        "sort": 0
+    },
+    {
+        "facility_id": 792,
+        "facility": "Number of slot machines -",
+        "sort": 0
+    },
+    {
+        "facility_id": 611,
+        "facility": "Number of spa tubs -",
+        "sort": 0
+    },
+    {
+        "facility_id": 599,
+        "facility": "Conference space size (meters) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 598,
+        "facility": "Conference space size (feet) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 502,
+        "facility": "Conference space",
+        "sort": 0
+    },
+    {
+        "facility_id": 1031,
+        "facility": "Number of stairs to reach property",
+        "sort": 0
+    },
+    {
+        "facility_id": 623,
+        "facility": "Conference center",
+        "sort": 0
+    },
+    {
+        "facility_id": 789,
+        "facility": "Concerts/live shows",
+        "sort": 0
+    },
+    {
+        "facility_id": 678,
+        "facility": "Computer station",
+        "sort": 0
+    },
+    {
+        "facility_id": 683,
+        "facility": "Number of swim-up bars -",
+        "sort": 0
+    },
+    {
+        "facility_id": 1004,
+        "facility": "Comprehensive recycling policy",
+        "sort": 0
+    },
+    {
+        "facility_id": 1001,
+        "facility": "Comprehensive food waste policy",
+        "sort": 0
+    },
+    {
+        "facility_id": 844,
+        "facility": "Composting",
+        "sort": 0
+    },
+    {
+        "facility_id": 794,
+        "facility": "Number of VIP gaming rooms -",
+        "sort": 0
+    },
+    {
+        "facility_id": 920,
+        "facility": "Coin laundry on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1037,
+        "facility": "Cobblestone flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 800,
+        "facility": "Clubhouse",
+        "sort": 0
+    },
+    {
+        "facility_id": 720,
+        "facility": "Offsite parking discounted rates available",
+        "sort": 0
+    },
+    {
+        "facility_id": 721,
+        "facility": "Offsite parking reservations required",
+        "sort": 0
+    },
+    {
+        "facility_id": 547,
+        "facility": "On private beach",
+        "sort": 0
+    },
+    {
+        "facility_id": 891,
+        "facility": "Children's toys",
+        "sort": 0
+    },
+    {
+        "facility_id": 884,
+        "facility": "Optional golf privileges",
+        "sort": 0
+    },
+    {
+        "facility_id": 914,
+        "facility": "Optional ski privileges",
+        "sort": 0
+    },
+    {
+        "facility_id": 988,
+        "facility": "Organic food",
+        "sort": 0
+    },
+    {
+        "facility_id": 885,
+        "facility": "Outdoor entertainment area",
+        "sort": 0
+    },
+    {
+        "facility_id": 890,
+        "facility": "Children's games",
+        "sort": 0
+    },
+    {
+        "facility_id": 737,
+        "facility": "Children's club (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 570,
+        "facility": "Children's club",
+        "sort": 0
+    },
+    {
+        "facility_id": 984,
+        "facility": "Charcoal grill",
+        "sort": 0
+    },
+    {
+        "facility_id": 969,
+        "facility": "Change of towels (on request)",
+        "sort": 0
+    },
+    {
+        "facility_id": 795,
+        "facility": "Pachinko",
+        "sort": 0
+    },
+    {
+        "facility_id": 970,
+        "facility": "Change of bed sheets (on request)",
+        "sort": 0
+    },
+    {
+        "facility_id": 985,
+        "facility": "Paddleboard on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 1020,
+        "facility": "Paddle boating nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 752,
+        "facility": "Cave exploring/spelunking nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 613,
+        "facility": "Casino shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 549,
+        "facility": "Parasailing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 900,
+        "facility": "Casino nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 650,
+        "facility": "Parasailing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 879,
+        "facility": "Carport",
+        "sort": 0
+    },
+    {
+        "facility_id": 873,
+        "facility": "Bus station shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 628,
+        "facility": "Parking (limited spaces)",
+        "sort": 0
+    },
+    {
+        "facility_id": 911,
+        "facility": "Pedal boat on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 524,
+        "facility": "Personal motorized watercraft on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 907,
+        "facility": "Personal motor watercraft nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1005,
+        "facility": "Bulk dispenser for toiletries",
+        "sort": 0
+    },
+    {
+        "facility_id": 958,
+        "facility": "Pet grooming services",
+        "sort": 0
+    },
+    {
+        "facility_id": 957,
+        "facility": "Pet-sitting services",
+        "sort": 0
+    },
+    {
+        "facility_id": 519,
+        "facility": "Breakfast available (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 593,
+        "facility": "Braille or raised signage",
+        "sort": 0
+    },
+    {
+        "facility_id": 651,
+        "facility": "Pilates classes on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 652,
+        "facility": "Playground on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 767,
+        "facility": "Books",
+        "sort": 0
+    },
+    {
+        "facility_id": 979,
+        "facility": "Pool access ramp on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 986,
+        "facility": "Bodyboard on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 711,
+        "facility": "Pool cabanas (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 978,
+        "facility": "Pool hoist on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 714,
+        "facility": "Pool sun loungers",
+        "sort": 0
+    },
+    {
+        "facility_id": 1018,
+        "facility": "Pool toys",
+        "sort": 0
+    },
+    {
+        "facility_id": 573,
+        "facility": "Pool umbrellas",
+        "sort": 0
+    },
+    {
+        "facility_id": 833,
+        "facility": "Pool waterfall",
+        "sort": 0
+    },
+    {
+        "facility_id": 727,
+        "facility": "Boat tours on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 977,
+        "facility": "Portable hoist available",
+        "sort": 0
+    },
+    {
+        "facility_id": 542,
+        "facility": "Porter/bellhop",
+        "sort": 0
+    },
+    {
+        "facility_id": 726,
+        "facility": "Boat tours nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 742,
+        "facility": "Private beach nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 893,
+        "facility": "Boat on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 894,
+        "facility": "Boat and paddles on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 803,
+        "facility": "Private picnics",
+        "sort": 0
+    },
+    {
+        "facility_id": 810,
+        "facility": "Private winery tours",
+        "sort": 0
+    },
+    {
+        "facility_id": 822,
+        "facility": "Proposal/romance packages available",
+        "sort": 0
+    },
+    {
+        "facility_id": 817,
+        "facility": "Birdwatching on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 799,
+        "facility": "Pro shop",
+        "sort": 0
+    },
+    {
+        "facility_id": 818,
+        "facility": "Birdwatching nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 1008,
+        "facility": "Biodegradable/compostable stirrers",
+        "sort": 0
+    },
+    {
+        "facility_id": 811,
+        "facility": "Public winery tours",
+        "sort": 0
+    },
+    {
+        "facility_id": 653,
+        "facility": "Racquetball/squash on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 528,
+        "facility": "Rafting nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 654,
+        "facility": "Rafting on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 828,
+        "facility": "Reception hall",
+        "sort": 0
+    },
+    {
+        "facility_id": 848,
+        "facility": "Recycling",
+        "sort": 0
+    },
+    {
+        "facility_id": 852,
+        "facility": "Renewable energy source - geothermal",
+        "sort": 0
+    },
+    {
+        "facility_id": 851,
+        "facility": "Renewable energy source - solar",
+        "sort": 0
+    },
+    {
+        "facility_id": 853,
+        "facility": "Renewable energy source - wind",
+        "sort": 0
+    },
+    {
+        "facility_id": 579,
+        "facility": "Billiards or pool table",
+        "sort": 0
+    },
+    {
+        "facility_id": 849,
+        "facility": "Reusable coffee/tea filters",
+        "sort": 0
+    },
+    {
+        "facility_id": 1012,
+        "facility": "Reusable cups only",
+        "sort": 0
+    },
+    {
+        "facility_id": 1013,
+        "facility": "Reusable tableware only",
+        "sort": 0
+    },
+    {
+        "facility_id": 750,
+        "facility": "Rock climbing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 751,
+        "facility": "Rock climbing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 589,
+        "facility": "Roll-in shower (in select rooms)",
+        "sort": 0
+    },
+    {
+        "facility_id": 989,
+        "facility": "Rooftop garden",
+        "sort": 0
+    },
+    {
+        "facility_id": 679,
+        "facility": "Rooftop terrace",
+        "sort": 0
+    },
+    {
+        "facility_id": 963,
+        "facility": "Bicycle repair station",
+        "sort": 0
+    },
+    {
+        "facility_id": 825,
+        "facility": "Ropes course on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 655,
+        "facility": "Rowing or canoeing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 604,
+        "facility": "RV, bus, truck parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 718,
+        "facility": "RV, bus, truck parking (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 748,
+        "facility": "Safari nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 747,
+        "facility": "Safari on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 533,
+        "facility": "Safe-deposit box at front desk",
+        "sort": 0
+    },
+    {
+        "facility_id": 508,
+        "facility": "Bicycle rentals nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 912,
+        "facility": "Sailboat on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 515,
+        "facility": "Sailing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 656,
+        "facility": "Sailing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 960,
+        "facility": "Bicycle parking available",
+        "sort": 0
+    },
+    {
+        "facility_id": 525,
+        "facility": "Scooter/moped rentals nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 657,
+        "facility": "Scooter/moped rentals on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 516,
+        "facility": "Scuba diving nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 658,
+        "facility": "Scuba diving on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 959,
+        "facility": "Secured bicycle storage",
+        "sort": 0
+    },
+    {
+        "facility_id": 859,
+        "facility": "Secured parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 685,
+        "facility": "Segway rental/tour nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 684,
+        "facility": "Segway rental/tour on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 675,
+        "facility": "Self parking (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 966,
+        "facility": "Bicycle-friendly property",
+        "sort": 0
+    },
+    {
+        "facility_id": 837,
+        "facility": "Shared/communal pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 965,
+        "facility": "Bicycle equipment shop on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 964,
+        "facility": "Bicycle cleaning area",
+        "sort": 0
+    },
+    {
+        "facility_id": 778,
+        "facility": "Shared microwave",
+        "sort": 0
+    },
+    {
+        "facility_id": 779,
+        "facility": "Shared refrigerator",
+        "sort": 0
+    },
+    {
+        "facility_id": 787,
+        "facility": "Shoji (room divider)",
+        "sort": 0
+    },
+    {
+        "facility_id": 619,
+        "facility": "Shopping center shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 805,
+        "facility": "Shopping mall on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 500,
+        "facility": "Shopping on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 993,
+        "facility": "Showcase for local artists",
+        "sort": 0
+    },
+    {
+        "facility_id": 962,
+        "facility": "Shuttle for bicycles available",
+        "sort": 0
+    },
+    {
+        "facility_id": 725,
+        "facility": "Beach yoga on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 947,
+        "facility": "Sign language-capable staff",
+        "sort": 0
+    },
+    {
+        "facility_id": 1030,
+        "facility": "Single-level property",
+        "sort": 0
+    },
+    {
+        "facility_id": 724,
+        "facility": "Beach volleyball on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 577,
+        "facility": "Ski equipment rental shops nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 659,
+        "facility": "Ski equipment rentals on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 708,
+        "facility": "Beach umbrellas",
+        "sort": 0
+    },
+    {
+        "facility_id": 548,
+        "facility": "Ski-in/ski-out access",
+        "sort": 0
+    },
+    {
+        "facility_id": 576,
+        "facility": "Ski lessons available nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 660,
+        "facility": "Ski lessons on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 913,
+        "facility": "Ski lift privileges",
+        "sort": 0
+    },
+    {
+        "facility_id": 704,
+        "facility": "Ski passes available",
+        "sort": 0
+    },
+    {
+        "facility_id": 981,
+        "facility": "Beach toys",
+        "sort": 0
+    },
+    {
+        "facility_id": 722,
+        "facility": "Beach towels",
+        "sort": 0
+    },
+    {
+        "facility_id": 703,
+        "facility": "Ski shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 713,
+        "facility": "Beach sun loungers",
+        "sort": 0
+    },
+    {
+        "facility_id": 517,
+        "facility": "Ski storage",
+        "sort": 0
+    },
+    {
+        "facility_id": 706,
+        "facility": "Beach shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 553,
+        "facility": "Skydiving nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 663,
+        "facility": "Skydiving on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 699,
+        "facility": "Sledding nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 698,
+        "facility": "Sledding on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 564,
+        "facility": "Smoke-free property",
+        "sort": 0
+    },
+    {
+        "facility_id": 1032,
+        "facility": "Smooth flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 929,
+        "facility": "Beach club on site (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 626,
+        "facility": "Snack bar/deli",
+        "sort": 0
+    },
+    {
+        "facility_id": 504,
+        "facility": "Snorkeling nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 664,
+        "facility": "Snorkeling on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 930,
+        "facility": "Beach club nearby (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 566,
+        "facility": "Snowboarding nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 665,
+        "facility": "Snowboarding on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 550,
+        "facility": "Snowmobiling nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 666,
+        "facility": "Snowmobiling on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 552,
+        "facility": "Snowshoeing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 667,
+        "facility": "Snowshoeing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 915,
+        "facility": "Snow sports gear",
+        "sort": 0
+    },
+    {
+        "facility_id": 701,
+        "facility": "Snow tubing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 700,
+        "facility": "Snow tubing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 710,
+        "facility": "Beach cabanas (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 758,
+        "facility": "Spa tub (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 633,
+        "facility": "Basketball on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 597,
+        "facility": "24-hour business center",
+        "sort": 0
+    },
+    {
+        "facility_id": 892,
+        "facility": "Basketball nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 922,
+        "facility": "Sportsbook",
+        "sort": 0
+    },
+    {
+        "facility_id": 827,
+        "facility": "Banquet hall",
+        "sort": 0
+    },
+    {
+        "facility_id": 826,
+        "facility": "Ballroom",
+        "sort": 0
+    },
+    {
+        "facility_id": 975,
+        "facility": "Stair-free path to entrance",
+        "sort": 0
+    },
+    {
+        "facility_id": 1047,
+        "facility": "Stairwell handrail height (centimeters) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 1046,
+        "facility": "Stairwell handrail height (inches) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 497,
+        "facility": "ATM/banking",
+        "sort": 0
+    },
+    {
+        "facility_id": 999,
+        "facility": "At least 80% of all lighting comes from LEDs",
+        "sort": 0
+    },
+    {
+        "facility_id": 935,
+        "facility": "Assistive listening devices in meeting rooms",
+        "sort": 0
+    },
+    {
+        "facility_id": 766,
+        "facility": "Stereo",
+        "sort": 0
+    },
+    {
+        "facility_id": 592,
+        "facility": "Assistive listening devices available",
+        "sort": 0
+    },
+    {
+        "facility_id": 806,
+        "facility": "Art gallery on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 595,
+        "facility": "Area shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 495,
+        "facility": "Supervised childcare/activities",
+        "sort": 0
+    },
+    {
+        "facility_id": 505,
+        "facility": "Surfing/bodyboarding nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 668,
+        "facility": "Surfing/bodyboarding on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 953,
+        "facility": "Surf lessons - nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 952,
+        "facility": "Surf lessons - onsite",
+        "sort": 0
+    },
+    {
+        "facility_id": 994,
+        "facility": "Sustainability/community reinvestment (10% revenue or more)",
+        "sort": 0
+    },
+    {
+        "facility_id": 522,
+        "facility": "Arcade/game room",
+        "sort": 0
+    },
+    {
+        "facility_id": 916,
+        "facility": "Swimming nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 990,
+        "facility": "Annual carbon offsets",
+        "sort": 0
+    },
+    {
+        "facility_id": 1000,
+        "facility": "All property's electricity comes from renewable sources",
+        "sort": 0
+    },
+    {
+        "facility_id": 691,
+        "facility": "Airport transportation - pickup (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 808,
+        "facility": "Tasting room",
+        "sort": 0
+    },
+    {
+        "facility_id": 874,
+        "facility": "Tea service",
+        "sort": 0
+    },
+    {
+        "facility_id": 888,
+        "facility": "Telescope",
+        "sort": 0
+    },
+    {
+        "facility_id": 521,
+        "facility": "Television in common areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 692,
+        "facility": "Airport transportation - drop-off (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 669,
+        "facility": "Tennis lessons on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 878,
+        "facility": "Air hockey",
+        "sort": 0
+    },
+    {
+        "facility_id": 621,
+        "facility": "Theme park shuttle (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 1033,
+        "facility": "Thin carpet in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 1034,
+        "facility": "Tile flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 631,
+        "facility": "Access to nearby outdoor pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 581,
+        "facility": "Tours/ticket assistance",
+        "sort": 0
+    },
+    {
+        "facility_id": 764,
+        "facility": "Train station drop-off (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 693,
+        "facility": "Train station pickup (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 839,
+        "facility": "Trampoline",
+        "sort": 0
+    },
+    {
+        "facility_id": 627,
+        "facility": "Turkish bath/Hammam",
+        "sort": 0
+    },
+    {
+        "facility_id": 973,
+        "facility": "Upper floors accessible by stairs only",
+        "sort": 0
+    },
+    {
+        "facility_id": 569,
+        "facility": "Use of nearby fitness center (discount)",
+        "sort": 0
+    },
+    {
+        "facility_id": 937,
+        "facility": "Valet for wheelchair-equipped vehicle",
+        "sort": 0
+    },
+    {
+        "facility_id": 630,
+        "facility": "Access to nearby indoor pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 1002,
+        "facility": "Vegan menu options available",
+        "sort": 0
+    },
+    {
+        "facility_id": 816,
+        "facility": "Vegetable garden",
+        "sort": 0
+    },
+    {
+        "facility_id": 987,
+        "facility": "Vegetarian breakfast available",
+        "sort": 0
+    },
+    {
+        "facility_id": 1003,
+        "facility": "Vegetarian menu options available",
+        "sort": 0
+    },
+    {
+        "facility_id": 1027,
+        "facility": "Accessible train station shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 769,
+        "facility": "Video library",
+        "sort": 0
+    },
+    {
+        "facility_id": 807,
+        "facility": "Vineyard",
+        "sort": 0
+    },
+    {
+        "facility_id": 946,
+        "facility": "Visual alarms in hallways",
+        "sort": 0
+    },
+    {
+        "facility_id": 670,
+        "facility": "Volleyball on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 889,
+        "facility": "Walkway to water",
+        "sort": 0
+    },
+    {
+        "facility_id": 782,
+        "facility": "Water dispenser",
+        "sort": 0
+    },
+    {
+        "facility_id": 1014,
+        "facility": "Water-efficient showers only",
+        "sort": 0
+    },
+    {
+        "facility_id": 1021,
+        "facility": "Accessible shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 697,
+        "facility": "Water park access (surcharge)",
+        "sort": 0
+    },
+    {
+        "facility_id": 518,
+        "facility": "Water skiing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 671,
+        "facility": "Water skiing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 607,
+        "facility": "Waterslide",
+        "sort": 0
+    },
+    {
+        "facility_id": 588,
+        "facility": "Accessible bathroom (in select rooms)",
+        "sort": 0
+    },
+    {
+        "facility_id": 1023,
+        "facility": "Accessible airport shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 917,
+        "facility": "Water sports equipment",
+        "sort": 0
+    },
+    {
+        "facility_id": 918,
+        "facility": "Water tubing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 567,
+        "facility": "Wedding services",
+        "sort": 0
+    },
+    {
+        "facility_id": 974,
+        "facility": "Well-lit path to entrance",
+        "sort": 0
+    },
+    {
+        "facility_id": 942,
+        "facility": "Wheelchair-accessible fitness center",
+        "sort": 0
+    },
+    {
+        "facility_id": 944,
+        "facility": "Wheelchair-accessible on-site restaurant",
+        "sort": 0
+    },
+    {
+        "facility_id": 590,
+        "facility": "Wheelchair accessible parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 941,
+        "facility": "Wheelchair-accessible pool",
+        "sort": 0
+    },
+    {
+        "facility_id": 933,
+        "facility": "Wheelchair-accessible public washroom",
+        "sort": 0
+    },
+    {
+        "facility_id": 940,
+        "facility": "Wheelchair-accessible spa",
+        "sort": 0
+    },
+    {
+        "facility_id": 936,
+        "facility": "Wheelchair-accessible van parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 781,
+        "facility": "24-hour pool access",
+        "sort": 0
+    },
+    {
+        "facility_id": 749,
+        "facility": "24-hour health club",
+        "sort": 0
+    },
+    {
+        "facility_id": 723,
+        "facility": "24-hour fitness facilities",
+        "sort": 0
+    },
+    {
+        "facility_id": 809,
+        "facility": "Wine release events",
+        "sort": 0
+    },
+    {
+        "facility_id": 694,
+        "facility": "Winery attached",
+        "sort": 0
+    },
+    {
+        "facility_id": 527,
+        "facility": "Wood stove",
+        "sort": 0
+    },
+    {
+        "facility_id": 754,
+        "facility": "Ziplining nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 696,
+        "facility": "Free water park access",
+        "sort": 0
+    },
+    {
+        "facility_id": 755,
+        "facility": "Ziplining on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 676,
+        "facility": "Free valet parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 775,
+        "facility": "Free WiFi (limited) duration",
+        "sort": 0
+    },
+    {
+        "facility_id": 584,
+        "facility": "Free wired internet",
+        "sort": 0
+    },
+    {
+        "facility_id": 540,
+        "facility": "Front desk (limited hours)",
+        "sort": 0
+    },
+    {
+        "facility_id": 537,
+        "facility": "Free use of nearby fitness center",
+        "sort": 0
+    },
+    {
+        "facility_id": 586,
+        "facility": "Free train station pickup",
+        "sort": 0
+    },
+    {
+        "facility_id": 557,
+        "facility": "Full-service spa",
+        "sort": 0
+    },
+    {
+        "facility_id": 763,
+        "facility": "Free train station drop-off",
+        "sort": 0
+    },
+    {
+        "facility_id": 842,
+        "facility": "Fully fenced",
+        "sort": 0
+    },
+    {
+        "facility_id": 746,
+        "facility": "Game drive nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 768,
+        "facility": "Games",
+        "sort": 0
+    },
+    {
+        "facility_id": 620,
+        "facility": "Free theme park shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 744,
+        "facility": "Game viewing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 743,
+        "facility": "Game viewing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 821,
+        "facility": "Game/wildlife walks nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 820,
+        "facility": "Game/wildlife walks on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 880,
+        "facility": "Garage",
+        "sort": 0
+    },
+    {
+        "facility_id": 925,
+        "facility": "Free Taiwanese breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 983,
+        "facility": "Gas grill",
+        "sort": 0
+    },
+    {
+        "facility_id": 881,
+        "facility": "Gated community",
+        "sort": 0
+    },
+    {
+        "facility_id": 876,
+        "facility": "Genkan (entryway)",
+        "sort": 0
+    },
+    {
+        "facility_id": 499,
+        "facility": "Gift shops or newsstand",
+        "sort": 0
+    },
+    {
+        "facility_id": 801,
+        "facility": "Golf caddy",
+        "sort": 0
+    },
+    {
+        "facility_id": 882,
+        "facility": "Golf cart",
+        "sort": 0
+    },
+    {
+        "facility_id": 883,
+        "facility": "Golf clubs (equipment)",
+        "sort": 0
+    },
+    {
+        "facility_id": 702,
+        "facility": "Free ski shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 639,
+        "facility": "Golf driving range on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 503,
+        "facility": "Golfing nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 642,
+        "facility": "Golfing on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 578,
+        "facility": "Golf lessons available nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 641,
+        "facility": "Golf lessons on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 798,
+        "facility": "Golf lessons with a pro",
+        "sort": 0
+    },
+    {
+        "facility_id": 1036,
+        "facility": "Gravel flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 855,
+        "facility": "Grey water recycling system",
+        "sort": 0
+    },
+    {
+        "facility_id": 580,
+        "facility": "Grocery/convenience store",
+        "sort": 0
+    },
+    {
+        "facility_id": 618,
+        "facility": "Free shopping center shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 995,
+        "facility": "Guest education on local ecosystems and culture",
+        "sort": 0
+    },
+    {
+        "facility_id": 674,
+        "facility": "Free self parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 1045,
+        "facility": "Hallway handrail height (centimeters) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 717,
+        "facility": "Free RV, bus, truck parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 601,
+        "facility": "Free reception",
+        "sort": 0
+    },
+    {
+        "facility_id": 1044,
+        "facility": "Hallway handrail height (inches) -",
+        "sort": 0
+    },
+    {
+        "facility_id": 712,
+        "facility": "Free pool cabanas",
+        "sort": 0
+    },
+    {
+        "facility_id": 536,
+        "facility": "Free newspapers in lobby",
+        "sort": 0
+    },
+    {
+        "facility_id": 715,
+        "facility": "Free long-term parking",
+        "sort": 0
+    },
+    {
+        "facility_id": 948,
+        "facility": "Handrails in hallways",
+        "sort": 0
+    },
+    {
+        "facility_id": 949,
+        "facility": "Handrails in stairways",
+        "sort": 0
+    },
+    {
+        "facility_id": 1035,
+        "facility": "Hardwood flooring in public areas",
+        "sort": 0
+    },
+    {
+        "facility_id": 923,
+        "facility": "Free Korean breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 530,
+        "facility": "Health club",
+        "sort": 0
+    },
+    {
+        "facility_id": 924,
+        "facility": "Free Japanese breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 901,
+        "facility": "Health or beauty spa nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 695,
+        "facility": "Free grocery shopping service",
+        "sort": 0
+    },
+    {
+        "facility_id": 733,
+        "facility": "Free full breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 616,
+        "facility": "Free ferry terminal shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 643,
+        "facility": "Helicopter/airplane tours on site",
+        "sort": 0
+    },
+    {
+        "facility_id": 732,
+        "facility": "Free English breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 614,
+        "facility": "Free cruise terminal shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 513,
+        "facility": "Hiking/biking trails nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 731,
+        "facility": "Free cooked-to-order breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 903,
+        "facility": "Horse riding nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 976,
+        "facility": "Hospital bed available",
+        "sort": 0
+    },
+    {
+        "facility_id": 931,
+        "facility": "Hosted evening meal",
+        "sort": 0
+    },
+    {
+        "facility_id": 932,
+        "facility": "Hosted evening meal (reserve)",
+        "sort": 0
+    },
+    {
+        "facility_id": 729,
+        "facility": "Free continental breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 741,
+        "facility": "Hot springs nearby",
+        "sort": 0
+    },
+    {
+        "facility_id": 612,
+        "facility": "Free casino shuttle",
+        "sort": 0
+    },
+    {
+        "facility_id": 926,
+        "facility": "Free Cantonese breakfast",
+        "sort": 0
+    },
+    {
+        "facility_id": 784,
+        "facility": "Housekeeping on request",
+        "sort": 0
+    },
+    {
+        "facility_id": 991,
+        "facility": "Humane animal treatment",
+        "sort": 0
+    },
+    {
+        "facility_id": 904,
+        "facility": "Hunting nearby",
+        "sort": 0
+    }
+]
