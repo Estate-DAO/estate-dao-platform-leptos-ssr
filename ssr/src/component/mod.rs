@@ -106,6 +106,12 @@ pub use gtag::*;
 pub mod data_table_3;
 pub use data_table_3::*;
 
+pub mod my_account_tabs;
+pub use my_account_tabs::*;
+
+pub mod doc_view;
+pub use doc_view::*;
+
 // pub mod auth;
 pub mod profile_component;
 pub mod profile_dropdown;

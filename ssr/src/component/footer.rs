@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_icons::*;
 
-use crate::app::AppRoutes;
+use crate::{app::AppRoutes, page::AccountTabs};
 
 #[component]
 pub fn Footer() -> impl IntoView {
@@ -39,10 +39,10 @@ pub fn Footer() -> impl IntoView {
                     <div class="space-y-3">
                         <h3 class="text-white font-semibold">"Support"</h3>
                         <ul class="space-y-2 text-sm">
-                            <li><a href="/help" class="hover:text-white">"Help Centre"</a></li>
-                            <li><a href="/faq" class="hover:text-white">"FAQ"</a></li>
-                            <li><a href="/privacy" class="hover:text-white">"Privacy Policy"</a></li>
-                            <li><a href="/terms" class="hover:text-white">"Terms & Conditions"</a></li>
+                            <li><a href=AccountTabs::Support.as_route() class="hover:text-white">"Help Centre"</a></li>
+                            <li><a href=AccountTabs::Support.as_route() class="hover:text-white">"FAQ"</a></li>
+                            <li><a href=AccountTabs::Privacy.as_route() class="hover:text-white">"Privacy Policy"</a></li>
+                            <li><a href=AccountTabs::Terms.as_route() class="hover:text-white">"Terms & Conditions"</a></li>
                         </ul>
 
                         <div class="flex space-x-4 pt-2">
