@@ -94,4 +94,5 @@ jobs:
             .empty
             target/release/hash.txt
             city.json
+            facilities.json
             city.parquet

@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod facilities;
 pub mod app_reference;
 pub mod backend_default_impl;
 pub mod backend_integration_helpers;

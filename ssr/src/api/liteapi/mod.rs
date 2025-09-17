@@ -12,7 +12,6 @@ cfg_if::cfg_if! {
         pub mod traits;
         pub use traits::*;
 
-
         pub use l00_hotel_search::search_hotels_from_place_id;
 
         pub mod l00_hotel_search;

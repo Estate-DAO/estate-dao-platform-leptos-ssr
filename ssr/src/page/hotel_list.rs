@@ -8,6 +8,7 @@ use crate::component::{
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
+use crate::utils::facilities::{self, Facilities};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -75,7 +76,7 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx: UISearchCtx = expect_context();
     let navigate = use_navigate();
     let query_map = leptos_router::use_query_map();
-
+    let facilities = Facilities::get_by_facility_id(223);
     let search_ctx2: UISearchCtx = expect_context();
 
     // Initialize pagination state
@@ -487,6 +488,134 @@ pub fn HotelCard(
                                 "View details"
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn HotelListTileCard(
+    img: String,
+    rating: f32,                // example: 7.1
+    reviews_count: u32,         // example: 100
+    price: Option<f64>,         // example: 100.0
+    hotel_code: String,
+    hotel_name: String,
+    location: String,           // example: "South Goa, India"
+    tags: Vec<String>,          // ["Pet Friendly", "Breakfast Included"]
+    free_cancellation: bool,    // true/false
+    class: String,
+) -> impl IntoView {
+    let price = create_rw_signal(price);
+
+    let search_list_page: SearchListResults = expect_context();
+    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    let navigate = use_navigate();
+
+    // ✅ Compute review text dynamically
+    let review_text = {
+        if rating >= 9.0 {
+            "Excellent"
+        } else if rating >= 7.0 {
+            "Good"
+        } else if rating >= 5.0 {
+            "Fair"
+        } else if rating > 0.0 {
+            "Poor"
+        } else {
+            "Unrated"
+        }
+    };
+
+    // ---- Navigation Handler ----
+    let on_navigate = {
+        let hotel_code_cloned = hotel_code.clone();
+        let navigate = navigate.clone();
+        let price = price.clone();
+
+        move || {
+            if !price.get_untracked().map(|f| f > 0.0).unwrap_or(false) {
+                log!("Navigation blocked: no valid price for {}", hotel_code_cloned);
+                return;
+            }
+
+            hotel_view_info_ctx.hotel_code.set(hotel_code_cloned.clone());
+            HotelDetailsUIState::reset();
+
+            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
+            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
+                target_url = hotel_params.to_shareable_url();
+            }
+
+            if let Some(window) = web_sys::window() {
+                let _ = window.open_with_url_and_target(&target_url, "_blank");
+            }
+
+            InputGroupState::toggle_dialog(OpenDialogComponent::None);
+        }
+    };
+
+    // ---- UI ----
+    view! {
+        <div
+            on:click=move |ev| {
+                ev.prevent_default();
+                ev.stop_propagation();
+                on_navigate();
+            }
+        >
+            <div class={class}>
+                <div class="flex bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition w-full">
+                    
+                    <div class="relative w-48 h-40 flex-shrink-0">
+                        <img class="w-full h-full object-cover" src=img alt=hotel_name.clone() />
+                        <div class="absolute top-2 left-2 bg-white p-2 rounded-full shadow-sm">
+                            "❤️"
+                        </div>
+                    </div>
+
+                    <div class="flex-1 p-4 flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-semibold text-lg">{hotel_name.clone()}</h3>
+                            <p class="text-gray-600 text-sm flex items-center mt-1">
+                                <span class="text-blue-600 mr-1">"📍"</span>{location.clone()}
+                            </p>
+
+                            {free_cancellation.then(|| view! {
+                                <p class="text-green-600 text-sm mt-1">"Free Cancellation Available"</p>
+                            })}
+
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                {tags.into_iter().map(|tag| view! {
+                                    <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md">{tag}</span>
+                                }).collect_view()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col justify-between items-end p-4 w-48">
+                        <div class="flex items-center space-x-2">
+                            <div class="text-right">
+                                <p class="text-sm font-semibold text-gray-700">{review_text}</p>
+                                <p class="text-xs text-gray-500">({reviews_count} " Reviews")</p>
+                            </div>
+                            <span class="bg-yellow-400 text-white font-bold px-2 py-1 rounded-md text-sm">{rating}</span>
+                        </div>
+
+                        <div class="text-right">
+                            {move || price.get().map(|p| view! {
+                                <p class="text-lg font-bold">${p} <span class="text-sm font-normal">"/ night"</span></p>
+                            })}
+                            <p class="text-xs text-gray-500">"4 Nights, 1 room including taxes"</p>
+                        </div>
+
+                        <button
+                            class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 text-sm"
+                        >
+                            "See Availability"
+                        </button>
                     </div>
                 </div>
             </div>

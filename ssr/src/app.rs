@@ -1,4 +1,5 @@
 use crate::api::auth::auth_state::AuthStateSignal;
+use crate::utils::facilities::Facilities;
 use crate::{
     api::{
         consts::{EnvVarConfig, APP_URL},
@@ -153,6 +154,8 @@ pub fn App() -> impl IntoView {
     // provide_context(get_yral_oauth_client());
 
     let _ = AuthStateSignal::init();
+
+    let _ = Facilities::init();
 
     provide_context(InputGroupState::default());
 

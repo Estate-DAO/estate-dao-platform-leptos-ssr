@@ -17,6 +17,7 @@ RUN chmod +x ./estate-fe
 COPY target/release/hash.txt .
 COPY target/site ./site
 COPY city.json ./city.json
+COPY facilities.json ./facilities.json
 COPY city.parquet ./city.parquet
 
 ENV LEPTOS_ENV="production"
