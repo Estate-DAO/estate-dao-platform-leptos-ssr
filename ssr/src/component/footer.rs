@@ -54,7 +54,10 @@ pub fn Footer() -> impl IntoView {
 }
 
 #[component]
-pub fn SocialLinks(#[prop(optional, into)] class: String, #[prop(optional, into)] icon_class: String) -> impl IntoView {
+pub fn SocialLinks(
+    #[prop(optional, into)] class: String,
+    #[prop(optional, into)] icon_class: String,
+) -> impl IntoView {
     view! {
         <div clone:icon_class class=format!("{} flex space-x-4", class) >
             <a href="https://x.com/estatedao_icp?s=11" target="_blank" class=icon_class.clone()>
