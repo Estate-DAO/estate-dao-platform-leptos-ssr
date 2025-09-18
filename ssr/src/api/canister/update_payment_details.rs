@@ -1,11 +1,11 @@
-use crate::canister::backend::{self, Booking, BookingId, PaymentDetails, Result1, Result3};
+use crate::canister::backend::*;
 use crate::utils::admin::admin_canister;
 use leptos::logging::log;
 use leptos::*;
 
 #[server(GreetBackend)]
 pub async fn update_payment_details_backend(
-    booking_id: backend::BookingId,
+    booking_id: BookingId,
     payment_details: String,
 ) -> Result<Booking, ServerFnError> {
     let payment_details_struct = serde_json::from_str::<PaymentDetails>(&payment_details)
@@ -17,7 +17,7 @@ pub async fn update_payment_details_backend(
 }
 
 pub async fn call_update_payment_details_backend(
-    booking_id: backend::BookingId,
+    booking_id: BookingId,
     payment_details_struct: PaymentDetails,
 ) -> Result<Booking, String> {
     let adm_cans = admin_canister();
@@ -33,7 +33,7 @@ pub async fn call_update_payment_details_backend(
     log!("call_update_payment_details_backend - result - {result:#?}");
 
     match result {
-        Result3::Ok(booking) => Ok(booking),
-        Result3::Err(e) => Err(e),
+        Result4::Ok(booking) => Ok(booking),
+        Result4::Err(e) => Err(e),
     }
 }

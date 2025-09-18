@@ -77,35 +77,31 @@ pub fn FaqView() -> impl IntoView {
             <div >
                 <FaqItem
                     question="How do I select the cryptocurrency payment option during the booking process?"
-                    answer="Once you’ve selected your desired hotel and entered the necessary personal details,
-                            you’ll be presented with 300+ cryptocurrency and 75+ fiat payment options.
-                            Simply select the cryptocurrency from the dropdown or choose one of our integrated partners.
-                            Once the payment is confirmed on the blockchain, your booking will be completed and you’ll receive a confirmation email with reservation details."
+                    answer="Once you’ve selected your desired hotel and entered the necessary personal details, you’ll be presented with 300+ cryptocurrency and 75+ fiat payment options.\nSimply select the cryptocurrency you wish to use from the dropdown list, or choose to pay with crypto via one of our integrated partners. Once the payment is confirmed on the blockchain, your booking will be completed, and you’ll receive a confirmation email with all reservation details."
                     initially_open=false
                 />
 
                 <FaqItem
                     question="Which cryptocurrencies are accepted as payment on NoFeeBooking?"
-                    answer="NoFeeBooking accepts 300+ cryptocurrencies including Bitcoin, Ethereum,
-                            stablecoins, and many others via our integrated payment partners."
+                    answer="We accept 300+ leading cryptocurrencies. You can view the full list of supported currencies during checkout."
                     initially_open=false
                 />
 
                 <FaqItem
                     question="How many payment options does NoFeeBooking currently accept?"
-                    answer="Currently, we support 300+ crypto options and over 75 fiat payment methods."
+                    answer="NoFeeBooking allows 300+ cryptocurrencies and 75+ fiat currencies, alongside credit/debit cards and popular payment partners. This combination of crypto and traditional methods gives travellers the freedom to book however they prefer."
                     initially_open=false
                 />
 
                 <FaqItem
                     question="Are there any loyalty programs or rewards for using cryptocurrencies for bookings?"
-                    answer="Yes—we offer rewards and special promotions for users who choose to pay with cryptocurrency. Details are shown during checkout and in promotional emails."
+                    answer="We are currently working on launching our loyalty and rewards program, designed to provide exclusive benefits for travellers who choose NoFeeBooking. Stay tuned for more details on how you can unlock savings, rewards, and special perks through our upcoming program."
                     initially_open=false
                 />
 
                 <FaqItem
                     question="What customer support options are available if I encounter issues during my booking process?"
-                    answer="You can reach our support team via live chat, email at support@nofeebooking.com, or through the Help Center in your dashboard."
+                    answer="Our 24/7 customer support team is always available to assist with any questions or issues you may face. You can contact us directly via email, and our team will ensure your booking experience is smooth and reliable."
                     initially_open=false
                 />
             </div>

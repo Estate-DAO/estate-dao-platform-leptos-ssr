@@ -15,9 +15,7 @@ use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusRespo
 use crate::api::payments::service::PaymentServiceImpl;
 use crate::api::payments::NowPayments;
 use crate::canister::backend::Booking;
-use crate::canister::backend::{
-    BackendPaymentStatus, BePaymentApiResponse, BookingId, PaymentDetails, Result2, Result3,
-};
+use crate::canister::backend::*;
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::{admin_canister, AdminCanisters};
@@ -559,13 +557,13 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
 
         // Verify that payment status is correctly set to Paid
         match updated_booking {
-            Result3::Ok(booking) => {
+            Result4::Ok(booking) => {
                 info!(
                     "Payment details updated successfully. Payment status: {:?}",
                     booking.payment_details.payment_status
                 );
             }
-            Result3::Err(e) => {
+            Result4::Err(e) => {
                 return Err(format!("Failed to update payment details: {}", e));
             }
         }
@@ -1048,7 +1046,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
         // Verify that payment status is correctly set and log entire booking
         match updated_booking {
-            Result3::Ok(booking) => {
+            Result4::Ok(booking) => {
                 info!(
                     "Backend update SUCCESS - returned booking payment status: {:?}",
                     booking.payment_details.payment_status
@@ -1075,7 +1073,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                     );
                 }
             }
-            Result3::Err(e) => {
+            Result4::Err(e) => {
                 error!("Backend update FAILED: {}", e);
                 return Err(format!("Failed to update payment details: {}", e));
             }
