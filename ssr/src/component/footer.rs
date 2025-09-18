@@ -22,7 +22,7 @@ pub fn Footer() -> impl IntoView {
                     <img src="/img/icp.svg" alt="Internet Computer Logo" class="h-6 w-auto" />
 
                     <p class="text-xs text-gray-400">
-                        "Copyright © 2024 EstateDao. All Rights Reserved."
+                        "Copyright © 2025 EstateDao. All Rights Reserved."
                     </p>
                 </div>
 
@@ -45,20 +45,27 @@ pub fn Footer() -> impl IntoView {
                             <li><a href=AccountTabs::Terms.as_route() class="hover:text-white">"Terms & Conditions"</a></li>
                         </ul>
 
-                        <div class="flex space-x-4 pt-2">
-                            <a href="https://x.com/estatedao_icp?s=11" target="_blank" class="text-blue-400 hover:text-white">
-                                <Icon icon=icondata::BiTwitter />
-                            </a>
-                            <a href="https://www.facebook.com/profile.php?id=61576590939204" target="_blank" class="text-blue-400 hover:text-white">
-                                <Icon icon=icondata::BiFacebook />
-                            </a>
-                            <a href="https://www.instagram.com/estatedao_/" target="_blank" class="text-blue-400 hover:text-white">
-                                <Icon icon=icondata::IoLogoInstagram />
-                            </a>
-                        </div>
+                        <SocialLinks class="pt-2" icon_class="text-blue-400 hover:text-white" />
                     </div>
                 </div>
             </div>
         </footer>
+    }
+}
+
+#[component]
+pub fn SocialLinks(#[prop(optional, into)] class: String, #[prop(optional, into)] icon_class: String) -> impl IntoView {
+    view! {
+        <div clone:icon_class class=format!("{} flex space-x-4", class) >
+            <a href="https://x.com/estatedao_icp?s=11" target="_blank" class=icon_class.clone()>
+                <Icon icon=icondata::BiTwitter />
+            </a>
+            <a clone:icon_class href="https://www.facebook.com/profile.php?id=61576590939204" target="_blank" class=icon_class.clone()>
+                <Icon icon=icondata::BiFacebook />
+            </a>
+            <a clone:icon_class href="https://www.instagram.com/estatedao_/" target="_blank" class=icon_class>
+                <Icon icon=icondata::IoLogoInstagram />
+            </a>
+        </div>
     }
 }

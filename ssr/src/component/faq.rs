@@ -12,7 +12,7 @@ fn FaqItem(
     // button classes adapt to `open`
     let btn_class = move || {
         format!(
-            "w-full flex items-start justify-between gap-4 p-5 text-left focus:outline-none transition-colors rounded-lg {}",
+            "w-full flex items-start justify-between gap-4 p-2 text-left focus:outline-none transition-colors rounded-lg {}",
             if open.get() { "bg-[#F9F9F9]" } else { "bg-[#F9F9F9]" }
         )
     };
@@ -55,10 +55,10 @@ fn FaqItem(
                 </button>
 
                 <div class=panel_class>
-                    <div class="px-6 pb-6 pt-3">
-                        <p class="text-[#45556C] text-sm leading-relaxed">
+                    <div class="px-6 pb-2">
+                        <span class="text-[#45556C] text-sm leading-relaxed">
                             {answer}
-                        </p>
+                        </span>
                     </div>
                 </div>
             </div>
