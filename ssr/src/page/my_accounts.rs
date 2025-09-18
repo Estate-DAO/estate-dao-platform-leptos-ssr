@@ -4,7 +4,7 @@ use leptos_router::*;
 use crate::{
     api::auth::auth_state::AuthStateSignal,
     app::AppRoutes,
-    component::{my_account_tabs::*, Navbar},
+    component::{my_account_tabs::*, FaqView, Navbar},
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -15,6 +15,7 @@ pub enum AccountTabs {
     Support,
     Terms,
     Privacy,
+    Faq,
 }
 
 impl AccountTabs {
@@ -25,6 +26,7 @@ impl AccountTabs {
             "support" => AccountTabs::Support,
             "tnc" => AccountTabs::Terms,
             "privacy_policy" => AccountTabs::Privacy,
+            "faq" => AccountTabs::Faq,
             _ => AccountTabs::PersonalInfo,
         }
     }
@@ -37,6 +39,7 @@ impl AccountTabs {
             AccountTabs::Support => "support",
             AccountTabs::Terms => "tnc",
             AccountTabs::Privacy => "privacy_policy",
+            AccountTabs::Faq => "faq",
         }
     }
 
@@ -66,6 +69,7 @@ impl AccountTabs {
             AccountTabs::Support => "Support",
             AccountTabs::Terms => "Terms & Conditions",
             AccountTabs::Privacy => "Privacy Policy",
+            AccountTabs::Faq => "FAQ's",
         }
     }
 }
@@ -145,6 +149,7 @@ pub fn MyAccountPage() -> impl IntoView {
                                 AccountTabs::Support,
                                 AccountTabs::Terms,
                                 AccountTabs::Privacy,
+                                AccountTabs::Faq,
                             ]
                                 .into_iter()
                                 .map(|tab| {
@@ -202,6 +207,7 @@ pub fn MyAccountPage() -> impl IntoView {
                         AccountTabs::Support => view! { <SupportView/> }.into_view(),
                         AccountTabs::Terms => view! { <TermsView/> }.into_view(),
                         AccountTabs::Privacy => view! { <PrivacyView/> }.into_view(),
+                        AccountTabs::Faq => view! { <FaqView/> }.into_view(),
                     }}
                 </section>
             </main>

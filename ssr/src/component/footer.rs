@@ -40,7 +40,7 @@ pub fn Footer() -> impl IntoView {
                         <h3 class="text-white font-semibold">"Support"</h3>
                         <ul class="space-y-2 text-sm">
                             <li><a href=AccountTabs::Support.as_route() class="hover:text-white">"Help Centre"</a></li>
-                            <li><a href=AccountTabs::Support.as_route() class="hover:text-white">"FAQ"</a></li>
+                            <li><a href=AccountTabs::Faq.as_route() class="hover:text-white">"FAQ"</a></li>
                             <li><a href=AccountTabs::Privacy.as_route() class="hover:text-white">"Privacy Policy"</a></li>
                             <li><a href=AccountTabs::Terms.as_route() class="hover:text-white">"Terms & Conditions"</a></li>
                         </ul>

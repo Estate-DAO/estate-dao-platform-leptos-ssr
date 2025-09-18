@@ -112,6 +112,9 @@ pub use my_account_tabs::*;
 pub mod doc_view;
 pub use doc_view::*;
 
+pub mod faq;
+pub use faq::*;
+
 // pub mod auth;
 pub mod profile_component;
 pub mod profile_dropdown;
