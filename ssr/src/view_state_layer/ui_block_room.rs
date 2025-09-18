@@ -216,7 +216,7 @@ impl BlockRoomUIState {
         let child_list = this.children.get_untracked();
 
         // Validate primary adult
-        let primary_adult_valid = adult_list.first().map_or(false, |adult| {
+        let primary_adult_valid = adult_list.first().is_some_and(|adult| {
             !adult.first_name.trim().is_empty()
                 && adult
                     .email

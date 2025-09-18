@@ -11,7 +11,7 @@ use estate_fe::{
         },
         payments::ports::{GetPaymentStatusRequest, GetPaymentStatusResponse},
     },
-    canister::backend::{Booking, BookingId, PaymentDetails, Result3},
+    canister::backend::*,
     ssr_booking::payment_handler::nowpayments_get_payment_status,
     utils::admin::{admin_canister, AdminCanisters},
     view_state_layer::AppState,
@@ -155,11 +155,11 @@ pub async fn update_payment_details(
         .update_payment_details(booking_id, request.payment_details)
         .await
     {
-        Ok(Result3::Ok(_booking)) => {
+        Ok(Result4::Ok(_booking)) => {
             info!("Payment details updated successfully");
             Json("Payment details updated successfully".to_string()).into_response()
         }
-        Ok(Result3::Err(e)) => {
+        Ok(Result4::Err(e)) => {
             error!("Backend error updating payment details: {}", e);
             (
                 StatusCode::BAD_REQUEST,

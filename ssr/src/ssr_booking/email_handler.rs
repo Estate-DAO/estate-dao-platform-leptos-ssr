@@ -445,7 +445,7 @@ impl SendEmailAfterSuccessfullBooking {
     ) -> Result<ServerSideBookingEvent, String> {
         let config = EnvVarConfig::try_from_env();
         let email_client = EmailClient::new(config.email_client_config);
-        let _ = email_client.send_email_gmail(&event).await?;
+        email_client.send_email_gmail(&event).await?;
         update_email_sent_status_in_canister(&event).await?;
 
         // --- EMIT CUSTOM EVENT: EmailSent ---

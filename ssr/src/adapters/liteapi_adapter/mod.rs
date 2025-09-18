@@ -54,7 +54,7 @@ impl LiteApiAdapter {
             && hotel_details
                 .thumbnail
                 .as_ref()
-                .map_or(true, |t| t.trim().is_empty());
+                .is_none_or(|t| t.trim().is_empty());
 
         // <!-- Commented out image-based filtering -->
         // let is_empty = name_empty || (description_empty && address_empty && no_images);
@@ -70,7 +70,7 @@ impl LiteApiAdapter {
                 no_images = %no_images,
                 main_photo_empty = %hotel_details.main_photo.trim().is_empty(),
                 hotel_images_count = %hotel_details.hotel_images.len(),
-                thumbnail_empty = %hotel_details.thumbnail.as_ref().map_or(true, |t| t.trim().is_empty()),
+                thumbnail_empty = %hotel_details.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty()),
                 "Hotel details considered empty"
             );
         } else {
@@ -82,7 +82,7 @@ impl LiteApiAdapter {
                 no_images = %no_images,
                 main_photo_empty = %hotel_details.main_photo.trim().is_empty(),
                 hotel_images_count = %hotel_details.hotel_images.len(),
-                thumbnail_empty = %hotel_details.thumbnail.as_ref().map_or(true, |t| t.trim().is_empty()),
+                thumbnail_empty = %hotel_details.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty()),
                 "Hotel details validation passed"
             );
         }
@@ -181,7 +181,7 @@ impl LiteApiAdapter {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(20).min(1000).max(1);
+                let page_size = params.page_size.unwrap_or(20).clamp(1, 1000);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
@@ -349,7 +349,7 @@ impl LiteApiAdapter {
         DomainHotelListAfterSearch {
             hotel_results: valid_hotels
                 .into_iter()
-                .map(|hotel| Self::map_liteapi_hotel_to_domain(hotel))
+                .map(Self::map_liteapi_hotel_to_domain)
                 .collect(),
             pagination: None, // Will be set by calling function if needed
         }
@@ -564,10 +564,7 @@ impl LiteApiAdapter {
         let description_empty = hotel.hotel_description.trim().is_empty();
         let address_empty = hotel.address.trim().is_empty();
         let no_main_photo = hotel.main_photo.trim().is_empty();
-        let no_thumbnail = hotel
-            .thumbnail
-            .as_ref()
-            .map_or(true, |t| t.trim().is_empty());
+        let no_thumbnail = hotel.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty());
         let no_images = no_main_photo && no_thumbnail;
 
         // Consider hotel details empty if:
@@ -615,11 +612,7 @@ impl LiteApiAdapter {
                 if hotel.main_photo.trim().is_empty() {
                     reasons.push("empty main_photo");
                 }
-                if hotel
-                    .thumbnail
-                    .as_ref()
-                    .map_or(true, |t| t.trim().is_empty())
-                {
+                if hotel.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty()) {
                     reasons.push("empty thumbnail");
                 }
 
@@ -667,9 +660,8 @@ impl LiteApiAdapter {
             .collect();
 
         // Format dates as YYYY-MM-DD
-        let checkin = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_in_date.clone());
-        let checkout =
-            utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_out_date.clone());
+        let checkin = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_in_date);
+        let checkout = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_out_date);
 
         // Get hotel IDs - use provided hotel_ids or fall back to token
         let hotel_ids = if !domain_criteria.hotel_ids.is_empty() {
@@ -737,7 +729,7 @@ impl LiteApiAdapter {
         if liteapi_rates_response
             .data
             .as_deref()
-            .map_or(true, |d| d.is_empty())
+            .is_none_or(|d| d.is_empty())
         {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
@@ -1006,8 +998,8 @@ impl LiteApiAdapter {
             } else {
                 crate::log!("Using enhanced defaults with basic hotel info");
                 // Enhanced fallback with basic hotel information
-                let hotel_name = format!("Hotel",);
-                let description = format!("A quality hotel located. This property offers comfortable accommodations and excellent service for your stay.");
+                let hotel_name = "Hotel".to_string();
+                let description = "A quality hotel located. This property offers comfortable accommodations and excellent service for your stay.".to_string();
                 let address = String::new();
 
                 // Add some default images - these could be placeholder images

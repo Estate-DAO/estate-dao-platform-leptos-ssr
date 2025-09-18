@@ -36,7 +36,7 @@ pub fn YralAuthProvider() -> impl IntoView {
                 return Some(auth);
             }
 
-            let app_url = get_app_url_server().await.ok()?;
+            let app_url = APP_URL.clone();
             let url = format!("{app_url}api/user-info");
             match reqwest::get(&url).await {
                 Ok(response) => {

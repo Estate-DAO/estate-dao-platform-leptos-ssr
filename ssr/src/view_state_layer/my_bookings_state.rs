@@ -22,8 +22,9 @@ impl std::fmt::Display for BookingStatus {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum BookingTab {
+    #[default]
     Upcoming,
     Completed,
     Cancelled,
@@ -271,10 +272,4 @@ impl MyBookingsState {
     //     log!("[MyBookingsState] Created {} dummy bookings", dummy_data.len());
     //     dummy_data
     // }
-}
-
-impl Default for BookingTab {
-    fn default() -> Self {
-        BookingTab::Upcoming
-    }
 }

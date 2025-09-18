@@ -46,3 +46,6 @@ pub use admin_edit_panel::*;
 
 mod my_bookings;
 pub use my_bookings::*;
+
+mod my_accounts;
+pub use my_accounts::*;

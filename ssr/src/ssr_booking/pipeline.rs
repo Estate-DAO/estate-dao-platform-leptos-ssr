@@ -49,7 +49,7 @@ pub async fn process_pipeline(
 
     // Generate a correlation_id for this pipeline run.
     let correlation_id = uuidv7::create();
-    tracing::Span::current().record("correlation_id", &correlation_id.as_str());
+    tracing::Span::current().record("correlation_id", correlation_id.as_str());
     info!("process_pipeline started");
 
     // 1. Notify pipeline start

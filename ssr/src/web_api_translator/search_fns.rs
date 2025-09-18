@@ -63,7 +63,7 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
 
 impl From<GuestSelection> for DomainRoomGuest {
     fn from(guest_selection: GuestSelection) -> Self {
-        let ages_u32: Vec<u32> = guest_selection.children_ages.get_untracked().into();
+        let ages_u32: Vec<u32> = guest_selection.children_ages.get_untracked();
         let children_ages_converted: Option<Vec<String>> = if ages_u32.is_empty() {
             None
         } else {

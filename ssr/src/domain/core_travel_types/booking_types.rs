@@ -72,18 +72,11 @@ pub struct DomainPlacesResponse {
     pub data: Vec<DomainPlace>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Default, Deserialize)]
 pub enum DomainPaymentMethod {
+    #[default]
     AccCreditCard,
     Wallet,
-}
-
-impl DomainPaymentMethod {
-    /// Returns the default payment method for the application
-    /// Centralized location to change the default payment method across the entire codebase
-    pub fn default() -> Self {
-        DomainPaymentMethod::AccCreditCard
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

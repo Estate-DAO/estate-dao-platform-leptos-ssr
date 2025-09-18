@@ -39,21 +39,18 @@ impl InputGroupState {
     }
 
     pub fn is_destination_open() -> bool {
-        let is_open = Self::get().open_dialog.get().is_destination_open();
+        Self::get().open_dialog.get().is_destination_open()
         // log!("Checking if destination is open: {}", is_open);
-        is_open
     }
 
     pub fn is_date_open() -> bool {
-        let is_open = Self::get().open_dialog.get().is_date_open();
+        Self::get().open_dialog.get().is_date_open()
         // log!("Checking if date is open: {}", is_open);
-        is_open
     }
 
     pub fn is_guest_open() -> bool {
-        let is_open = Self::get().open_dialog.get().is_guest_open();
+        Self::get().open_dialog.get().is_guest_open()
         // log!("Checking if guest is open: {}", is_open);
-        is_open
     }
 
     pub fn toggle_dialog(dialog: OpenDialogComponent) {
@@ -71,9 +68,8 @@ impl InputGroupState {
     }
 
     pub fn is_open_show_full_input() -> bool {
-        let is_open = Self::get().show_full_input.get();
+        Self::get().show_full_input.get()
         // log!("Checking if show_full_input is open: {}", is_open);
-        is_open
     }
 
     pub fn set_show_full_input(show_full_input: bool) {
