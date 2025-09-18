@@ -144,8 +144,6 @@ impl ConfirmationPageUIState {
         }
     }
 
-    /// **Phase 4: Additional setters for backend workflow integration**
-
     /// **Set display info directly**
     pub fn set_display_info(display_info: Option<BookingDisplayInfo>) {
         Self::get().display_info.set(display_info);

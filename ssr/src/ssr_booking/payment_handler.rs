@@ -174,12 +174,16 @@ pub fn create_payment_api_response_from_booking(
         order_description,
 
         // Invoice and purchase IDs - use existing if available
-        invoice_id: (existing_payment_response.invoice_id != 0)
-            .then_some(existing_payment_response.invoice_id)
-            .unwrap_or(0),
-        purchase_id: (existing_payment_response.purchase_id != 0)
-            .then_some(existing_payment_response.purchase_id)
-            .unwrap_or(0),
+        invoice_id: if existing_payment_response.invoice_id != 0 {
+            existing_payment_response.invoice_id
+        } else {
+            0
+        },
+        purchase_id: if existing_payment_response.purchase_id != 0 {
+            existing_payment_response.purchase_id
+        } else {
+            0
+        },
     })
 }
 
@@ -809,7 +813,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                 extracted_order_id
             );
 
-            let booking_id = FrontendBookingId::from_order_id(&extracted_order_id)
+            let booking_id = FrontendBookingId::from_order_id(extracted_order_id)
                 .ok_or_else(|| "Failed to extract booking_id from order_id".to_string())?;
 
             // Update event with extracted order_id
@@ -825,7 +829,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
             // Now load booking from backend using extracted order_id
             let booking =
-                Self::load_booking_from_backend(&extracted_order_id, &booking_id.email).await?;
+                Self::load_booking_from_backend(extracted_order_id, &booking_id.email).await?;
 
             info!(
                 "Loaded booking from backend using extracted order_id: {}",

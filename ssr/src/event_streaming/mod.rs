@@ -88,7 +88,7 @@ pub fn send_event_ssr_spawn(event_name: String, params: String) {
 
 #[cfg(feature = "ga4")]
 pub fn send_user_id(user_id: String) {
-    let gtag_measurement_id = GTAG_MEASUREMENT_ID.as_ref();
+    let gtag_measurement_id = &GTAG_MEASUREMENT_ID;
 
     gtag(
         "config",
@@ -129,7 +129,7 @@ pub async fn send_event_ga4(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use reqwest::Client;
 
-    let measurement_id: &str = GTAG_MEASUREMENT_ID.as_ref();
+    let measurement_id: &str = &GTAG_MEASUREMENT_ID;
     let api_secret = env::var("GA4_API_SECRET")?;
 
     let client = Client::new();

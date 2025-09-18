@@ -9,12 +9,7 @@ pub fn ImageLightbox(
 ) -> impl IntoView {
     let (current_index, set_current_index) = create_signal(initial_index);
     let image_len = images.len();
-    let current_image = move || {
-        images
-            .get(current_index.get())
-            .map(|f| f.clone())
-            .unwrap_or_default()
-    };
+    let current_image = move || images.get(current_index.get()).cloned();
 
     // Move to next image
     let next = move |_| {
