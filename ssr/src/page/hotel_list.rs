@@ -6,7 +6,7 @@ use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
     format_price_range_value, Destination, GuestSelection, Navbar, PaginationControls,
-    PaginationInfo, PriceRangeFilter, SkeletonCards, StarRatingFilter,
+    PaginationInfo, PriceRangeFilter, SkeletonCards, StarRatingFilter, MAX_PRICE, MIN_PRICE,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -268,7 +268,13 @@ pub fn HotelListPage() -> impl IntoView {
 
     let price_filter_value = {
         let filters_signal = filters_signal;
-        Signal::derive(move || filters_signal.get().max_price_per_night)
+        Signal::derive(move || {
+            let f = filters_signal.get();
+            match (f.min_price_per_night, f.max_price_per_night) {
+                (None, None) => None,
+                (min, max) => Some((min.unwrap_or(MIN_PRICE), max.unwrap_or(MAX_PRICE))),
+            }
+        })
     };
     let star_filter_value = {
         let filters_signal = filters_signal;
@@ -292,10 +298,26 @@ pub fn HotelListPage() -> impl IntoView {
 
     let price_filter_on_select = {
         let filters_signal = filters_signal;
-        Callback::new(move |next: Option<f64>| {
+        Callback::new(move |next: Option<(f64, f64)>| {
             filters_signal.update(|filters| {
-                if filters.max_price_per_night != next {
-                    filters.max_price_per_night = next;
+                match next {
+                    None => {
+                        filters.min_price_per_night = None;
+                        filters.max_price_per_night = None;
+                    }
+                    Some((lo, hi)) => {
+                        // Store None when at default bounds to avoid noisy filters
+                        filters.min_price_per_night = if (lo - MIN_PRICE).abs() < f64::EPSILON {
+                            None
+                        } else {
+                            Some(lo)
+                        };
+                        filters.max_price_per_night = if (hi - MAX_PRICE).abs() < f64::EPSILON {
+                            None
+                        } else {
+                            Some(hi)
+                        };
+                    }
                 }
             });
         })
@@ -377,6 +399,7 @@ pub fn HotelListPage() -> impl IntoView {
                                     let filters = filters_signal.get();
                                     let filtered_hotels = filters.apply_filters(&hotel_results);
                                     let min_rating_filter = filters.min_star_rating;
+                                    let min_price_filter = filters.min_price_per_night;
                                     let max_price_filter = filters.max_price_per_night;
 
                                     if hotel_results.is_empty() {
@@ -411,22 +434,45 @@ pub fn HotelListPage() -> impl IntoView {
                                         }
                                             .into_view()
                                     } else if filtered_hotels.is_empty() {
-                                        if min_rating_filter.is_some() || max_price_filter.is_some() {
-                                            let filter_message = match (min_rating_filter, max_price_filter) {
-                                                (Some(min_rating), Some(max_price)) => format!(
-                                                    "No hotels match a {min_rating}+ star rating under {} per night on this page.",
+                                        if min_rating_filter.is_some()
+                                            || min_price_filter.is_some()
+                                            || max_price_filter.is_some()
+                                        {
+                                            let filter_message = match (
+                                                min_rating_filter,
+                                                min_price_filter,
+                                                max_price_filter,
+                                            ) {
+                                                (Some(min_rating), Some(min_price), Some(max_price)) => format!(
+                                                    "No hotels match a {min_rating}+ star rating priced between {} and {} per night on this page.",
+                                                    format_price_range_value(min_price),
                                                     format_price_range_value(max_price)
                                                 ),
-                                                (Some(min_rating), None) => format!(
+                                                (Some(min_rating), None, Some(max_price)) => format!(
+                                                    "No hotels match a {min_rating}+ star rating at or below {} per night on this page.",
+                                                    format_price_range_value(max_price)
+                                                ),
+                                                (Some(min_rating), Some(min_price), None) => format!(
+                                                    "No hotels match a {min_rating}+ star rating at or above {} per night on this page.",
+                                                    format_price_range_value(min_price)
+                                                ),
+                                                (Some(min_rating), None, None) => format!(
                                                     "No hotels match the {min_rating}+ star filter on this page."
                                                 ),
-                                                (None, Some(max_price)) => {
-                                                    format!(
-                                                        "No hotels priced at or below {} per night on this page.",
-                                                        format_price_range_value(max_price)
-                                                    )
-                                                }
-                                                (None, None) => String::new(),
+                                                (None, Some(min_price), Some(max_price)) => format!(
+                                                    "No hotels priced between {} and {} per night on this page.",
+                                                    format_price_range_value(min_price),
+                                                    format_price_range_value(max_price)
+                                                ),
+                                                (None, None, Some(max_price)) => format!(
+                                                    "No hotels priced at or below {} per night on this page.",
+                                                    format_price_range_value(max_price)
+                                                ),
+                                                (None, Some(min_price), None) => format!(
+                                                    "No hotels priced at or above {} per night on this page.",
+                                                    format_price_range_value(min_price)
+                                                ),
+                                                (None, None, None) => String::new(),
                                             };
 
                                             view! {
@@ -452,7 +498,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                             </button>
                                                         </Show>
                                                         <Show
-                                                            when=move || max_price_filter.is_some()
+                                                            when=move || min_price_filter.is_some() || max_price_filter.is_some()
                                                             fallback=move || view! { <></> }
                                                         >
                                                             <button
@@ -460,6 +506,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                                                                 on:click=move |_| {
                                                                     filters_signal.update(|filters| {
+                                                                        filters.min_price_per_night = None;
                                                                         filters.max_price_per_night = None;
                                                                     });
                                                                 }
