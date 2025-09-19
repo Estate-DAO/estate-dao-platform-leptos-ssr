@@ -86,6 +86,27 @@ pub fn PriceRangeFilter(
 
     view! {
         <div>
+            <style>
+                "/* Dual range slider styles */
+                .range-slider-min {
+                    pointer-events: none;
+                }
+                .range-slider-min::-webkit-slider-thumb {
+                    pointer-events: auto;
+                }
+                .range-slider-min::-moz-range-thumb {
+                    pointer-events: auto;
+                }
+                .range-slider-max {
+                    pointer-events: none;
+                }
+                .range-slider-max::-webkit-slider-thumb {
+                    pointer-events: auto;
+                }
+                .range-slider-max::-moz-range-thumb {
+                    pointer-events: auto;
+                }"
+            </style>
             <div class="flex items-center justify-between">
                 <h3 class="text-base font-medium text-gray-900">
                     "Price Range"
@@ -120,7 +141,7 @@ pub fn PriceRangeFilter(
                         style:width=move || format!("{:.6}%", selection_width_pct())
                     ></div>
 
-                    // Min handle
+                    // Min handle - uses CSS to make only the thumb clickable
                     <input
                         node_ref=min_slider_ref
                         type="range"
@@ -128,7 +149,7 @@ pub fn PriceRangeFilter(
                         max=MAX_PRICE
                         step=SLIDER_STEP
                         prop:value=move || format!("{:.0}", min_value())
-                        class="absolute top-0 left-0 w-full h-8 appearance-none bg-transparent accent-blue-600 z-20"
+                        class="range-slider-min absolute top-0 left-0 w-full h-8 appearance-none bg-transparent accent-blue-600 z-20"
                         on:input=move |ev| {
                             if let Ok(raw) = event_target_value(&ev).parse::<f64>() {
                                 let current_max = max_value();
@@ -139,7 +160,7 @@ pub fn PriceRangeFilter(
                         }
                     />
 
-                    // Max handle
+                    // Max handle - uses CSS to make only the thumb clickable
                     <input
                         node_ref=max_slider_ref
                         type="range"
@@ -147,7 +168,7 @@ pub fn PriceRangeFilter(
                         max=MAX_PRICE
                         step=SLIDER_STEP
                         prop:value=move || format!("{:.0}", max_value())
-                        class="absolute top-0 left-0 w-full h-8 appearance-none bg-transparent accent-blue-600 z-10"
+                        class="range-slider-max absolute top-0 left-0 w-full h-8 appearance-none bg-transparent accent-blue-600 z-20"
                         on:input=move |ev| {
                             if let Ok(raw) = event_target_value(&ev).parse::<f64>() {
                                 let current_min = min_value();
