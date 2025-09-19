@@ -1,8 +1,9 @@
 use leptos::html::Input;
 use leptos::*;
 
-const MIN_PRICE: f64 = 0.0;
-const MAX_PRICE: f64 = 10_000.0;
+// Expose these so consuming pages can reuse defaults
+pub const MIN_PRICE: f64 = 0.0;
+pub const MAX_PRICE: f64 = 2_000.0;
 const SLIDER_STEP: f64 = 50.0;
 
 fn format_with_commas(value: i64) -> String {
@@ -30,27 +31,57 @@ pub fn format_price_range_value(value: f64) -> String {
 
 #[component]
 pub fn PriceRangeFilter(
-    #[prop(into)] value: Signal<Option<f64>>,
-    on_select: Callback<Option<f64>>,
+    #[prop(into)] value: Signal<Option<(f64, f64)>>,
+    on_select: Callback<Option<(f64, f64)>>,
 ) -> impl IntoView {
-    let slider_value = Signal::derive(move || value().unwrap_or(MAX_PRICE));
-    let formatted_value = Signal::derive(move || {
-        value()
-            .map(|current| format!("Up to {}", format_price_range_value(current)))
-            .unwrap_or_else(|| "Any price".to_string())
+    let min_value = Signal::derive(move || value().map(|(lo, _)| lo).unwrap_or(MIN_PRICE));
+    let max_value = Signal::derive(move || value().map(|(_, hi)| hi).unwrap_or(MAX_PRICE));
+
+    let formatted_value = Signal::derive(move || match value() {
+        None => "Any price".to_string(),
+        Some((lo, hi)) => {
+            let at_min = (lo - MIN_PRICE).abs() < f64::EPSILON;
+            let at_max = (hi - MAX_PRICE).abs() < f64::EPSILON;
+            match (at_min, at_max) {
+                (true, true) => "Any price".to_string(),
+                (true, false) => format!("Up to {}", format_price_range_value(hi)),
+                (false, true) => format!("From {}", format_price_range_value(lo)),
+                (false, false) => format!(
+                    "{} - {}",
+                    format_price_range_value(lo),
+                    format_price_range_value(hi)
+                ),
+            }
+        }
     });
-    let formatted_slider_value = Signal::derive(move || format_price_range_value(slider_value()));
 
     let on_select_for_clear = on_select.clone();
-    let on_select_for_input = on_select.clone();
+    let on_select_for_min = on_select.clone();
+    let on_select_for_max = on_select.clone();
 
-    let slider_ref = create_node_ref::<Input>();
+    let min_slider_ref = create_node_ref::<Input>();
+    let max_slider_ref = create_node_ref::<Input>();
 
+    // Keep DOM inputs in sync with external value changes
     create_effect(move |_| {
-        if let Some(input) = slider_ref.get() {
-            let target = value().unwrap_or(MAX_PRICE);
+        if let Some(input) = min_slider_ref.get() {
+            let target = min_value();
             input.set_value(&format!("{:.0}", target));
         }
+    });
+    create_effect(move |_| {
+        if let Some(input) = max_slider_ref.get() {
+            let target = max_value();
+            input.set_value(&format!("{:.0}", target));
+        }
+    });
+
+    // Precompute percentages for the selection bar
+    let selection_left_pct = Signal::derive(move || {
+        ((min_value() - MIN_PRICE) / (MAX_PRICE - MIN_PRICE) * 100.0).clamp(0.0, 100.0)
+    });
+    let selection_width_pct = Signal::derive(move || {
+        ((max_value() - min_value()) / (MAX_PRICE - MIN_PRICE) * 100.0).clamp(0.0, 100.0)
     });
 
     view! {
@@ -74,24 +105,60 @@ pub fn PriceRangeFilter(
             <div class="mt-4 flex flex-col gap-2">
                 <div class="flex items-center justify-between text-xs text-gray-500">
                     <span>{format_price_range_value(MIN_PRICE)}</span>
-                    <span>{move || formatted_slider_value() }</span>
+                    <span>{move || formatted_value() }</span>
                     <span>{format_price_range_value(MAX_PRICE)}</span>
                 </div>
-                <input
-                    node_ref=slider_ref
-                    type="range"
-                    min=MIN_PRICE
-                    max=MAX_PRICE
-                    step=SLIDER_STEP
-                    prop:value=move || format!("{:.0}", slider_value())
-                    class="w-full h-2 rounded-lg bg-gray-200 accent-blue-600"
-                    on:input=move |ev| {
-                        if let Ok(value) = event_target_value(&ev).parse::<f64>() {
-                            let clamped = value.clamp(MIN_PRICE, MAX_PRICE);
-                            leptos::Callable::call(&on_select_for_input, Some(clamped));
+
+                // Slider wrapper with custom selection bar
+                <div class="relative h-8">
+                    // Base track
+                    <div class="absolute top-1/2 -translate-y-1/2 w-full h-2 rounded-lg bg-gray-200"></div>
+                    // Selected range bar
+                    <div
+                        class="absolute top-1/2 -translate-y-1/2 h-2 rounded-lg bg-blue-500"
+                        style:left=move || format!("{:.6}%", selection_left_pct())
+                        style:width=move || format!("{:.6}%", selection_width_pct())
+                    ></div>
+
+                    // Min handle
+                    <input
+                        node_ref=min_slider_ref
+                        type="range"
+                        min=MIN_PRICE
+                        max=MAX_PRICE
+                        step=SLIDER_STEP
+                        prop:value=move || format!("{:.0}", min_value())
+                        class="absolute top-0 left-0 w-full h-8 appearance-none bg-transparent accent-blue-600 z-20"
+                        on:input=move |ev| {
+                            if let Ok(raw) = event_target_value(&ev).parse::<f64>() {
+                                let current_max = max_value();
+                                let clamped = raw.clamp(MIN_PRICE, current_max);
+                                let next = Some((clamped, current_max));
+                                leptos::Callable::call(&on_select_for_min, next);
+                            }
                         }
-                    }
-                />
+                    />
+
+                    // Max handle
+                    <input
+                        node_ref=max_slider_ref
+                        type="range"
+                        min=MIN_PRICE
+                        max=MAX_PRICE
+                        step=SLIDER_STEP
+                        prop:value=move || format!("{:.0}", max_value())
+                        class="absolute top-0 left-0 w-full h-8 appearance-none bg-transparent accent-blue-600 z-10"
+                        on:input=move |ev| {
+                            if let Ok(raw) = event_target_value(&ev).parse::<f64>() {
+                                let current_min = min_value();
+                                let clamped = raw.clamp(current_min, MAX_PRICE);
+                                let next = Some((current_min, clamped));
+                                leptos::Callable::call(&on_select_for_max, next);
+                            }
+                        }
+                    />
+                </div>
+
                 <p class="text-sm text-gray-600">
                     {move || formatted_value()}
                     <span class="ml-1 text-xs text-gray-500">"per night"</span>
