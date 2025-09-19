@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 const FILTER_KEY_MIN_STAR_RATING: &str = "min_star_rating";
 const FILTER_KEY_MAX_PRICE: &str = "max_price_per_night";
 const FILTER_KEY_MIN_PRICE: &str = "min_price_per_night";
+const FILTER_KEY_AMENITIES: &str = "amenities";
+const FILTER_KEY_PROPERTY_TYPES: &str = "property_types";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UISearchFilters {
@@ -81,7 +83,29 @@ impl UISearchFilters {
             room_price.map_or(false, |price| price >= min_price)
         });
 
-        meets_rating && meets_min_price && meets_max_price
+        let meets_amenities = self.amenities.as_ref().map_or(true, |wanted| {
+            if wanted.is_empty() {
+                return true;
+            }
+            let wanted_lc: Vec<String> = wanted.iter().map(|s| s.to_lowercase()).collect();
+            let hotel_lc: Vec<String> = hotel.amenities.iter().map(|s| s.to_lowercase()).collect();
+            wanted_lc.iter().any(|w| hotel_lc.iter().any(|h| h == w))
+        });
+
+        let meets_property_type = self.property_types.as_ref().map_or(true, |wanted_types| {
+            if wanted_types.is_empty() {
+                return true;
+            }
+            match &hotel.property_type {
+                Some(pt) => {
+                    let pt_lc = pt.to_lowercase();
+                    wanted_types.iter().any(|t| t.to_lowercase() == pt_lc)
+                }
+                None => false,
+            }
+        });
+
+        meets_rating && meets_min_price && meets_max_price && meets_amenities && meets_property_type
     }
 
     pub fn apply_filters(&self, hotels: &[DomainHotelAfterSearch]) -> Vec<DomainHotelAfterSearch> {
@@ -123,7 +147,25 @@ impl UISearchFilters {
             );
         }
 
-        // TODO: Map amenities, property types, and hotel name search when backend supports them
+        if let Some(amenities) = &self.amenities {
+            if !amenities.is_empty() {
+                map.insert(
+                    FILTER_KEY_AMENITIES.to_string(),
+                    ComparisonOp::In(amenities.clone()),
+                );
+            }
+        }
+
+        if let Some(property_types) = &self.property_types {
+            if !property_types.is_empty() {
+                map.insert(
+                    FILTER_KEY_PROPERTY_TYPES.to_string(),
+                    ComparisonOp::In(property_types.clone()),
+                );
+            }
+        }
+
+        // TODO: Map hotel_name_search when supported
 
         map
     }
@@ -162,6 +204,22 @@ impl UISearchFilters {
                 _ => None,
             };
             filters.min_price_per_night = min_price;
+        }
+
+        if let Some(op) = map.get(FILTER_KEY_AMENITIES) {
+            let values = match op {
+                ComparisonOp::In(v) | ComparisonOp::All(v) => Some(v.clone()),
+                _ => None,
+            };
+            filters.amenities = values;
+        }
+
+        if let Some(op) = map.get(FILTER_KEY_PROPERTY_TYPES) {
+            let values = match op {
+                ComparisonOp::In(v) | ComparisonOp::All(v) => Some(v.clone()),
+                _ => None,
+            };
+            filters.property_types = values;
         }
 
         filters
