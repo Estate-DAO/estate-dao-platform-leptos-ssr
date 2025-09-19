@@ -20,6 +20,8 @@ pub struct ProviderErrorDetails {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProviderSteps {
+    PlaceSearch,
+    PlaceDetails,
     HotelSearch,
     HotelDetails,
     HotelBlockRoom,

@@ -52,39 +52,31 @@ impl NowPayments {
         &self,
         req: Req,
     ) -> anyhow::Result<Req::PaymentGatewayResponse> {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "mock-provab")] {
-                let resp: Req::PaymentGatewayResponse = Faker.fake();
-                log!("Faker Response {:?}", resp);
-                Ok(resp)
-            } else {
-                let url = req.build_url(&self.api_host)?;
-                log!("nowpayments url = {url:#?}");
+        let url = req.build_url(&self.api_host)?;
+        log!("nowpayments url = {url:#?}");
 
-                let response = self
-                    .client
-                    .clone()
-                    .request(Req::METHOD, url)
-                    .header("x-api-key", &self.api_key)
-                    .json(&req)
-                    .send()
-                    .await?;
+        let response = self
+            .client
+            .clone()
+            .request(Req::METHOD, url)
+            .header("x-api-key", &self.api_key)
+            .json(&req)
+            .send()
+            .await?;
 
-                let body_string = response.text().await?;
-                log!("nowpayments reponse = {:#?}", body_string);
+        let body_string = response.text().await?;
+        log!("nowpayments reponse = {:#?}", body_string);
 
-                let jd = &mut serde_json::Deserializer::from_str(&body_string);
-                let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
-                    .map_err(|e| {
-                        let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
-                        error!("deserialize_response- JsonParseFailed: {:?}", total_error);
-                        e
-                    })?;
+        let jd = &mut serde_json::Deserializer::from_str(&body_string);
+        let response_struct: Req::PaymentGatewayResponse = serde_path_to_error::deserialize(jd)
+            .map_err(|e| {
+                let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
+                error!("deserialize_response- JsonParseFailed: {:?}", total_error);
+                e
+            })?;
 
-                log!("nowpayments reponse = {response_struct:#?}");
-                Ok(response_struct)
-            }
-        }
+        log!("nowpayments reponse = {response_struct:#?}");
+        Ok(response_struct)
     }
 }
 

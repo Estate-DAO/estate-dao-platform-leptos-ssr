@@ -1,4 +1,3 @@
-mod destination_picker_v5;
 mod destination_picker_v6;
 // pub use destination_picker_v5::DestinationPickerV5;
 pub use destination_picker_v6::DestinationPickerV6;
@@ -9,7 +8,7 @@ use leptos_use::on_click_outside;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    component::{Divider, HSettingIcon, LiveSelect},
+    component::{Divider, HSettingIcon},
     view_state_layer::{
         input_group_state::{InputGroupState, OpenDialogComponent},
         // search_state::SearchCtx,

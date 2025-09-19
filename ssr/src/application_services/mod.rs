@@ -1,7 +1,9 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         pub mod hotel_service;
+        pub mod places_service;
         pub use hotel_service::HotelService;
+        pub use places_service::PlaceService;
     }
 }
 

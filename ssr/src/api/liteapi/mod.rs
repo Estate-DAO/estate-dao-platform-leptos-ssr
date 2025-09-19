@@ -3,11 +3,17 @@ cfg_if::cfg_if! {
         pub mod client;
         pub use client::*;
 
+        pub mod places;
+        pub use places::*;
+
+        pub mod place;
+        pub use place::*;
+
         pub mod traits;
         pub use traits::*;
 
 
-        pub use l00_hotel_search::search_hotels_from_destination;
+        pub use l00_hotel_search::search_hotels_from_place_id;
 
         pub mod l00_hotel_search;
         pub use l00_hotel_search::{

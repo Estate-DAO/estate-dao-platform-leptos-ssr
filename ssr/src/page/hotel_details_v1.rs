@@ -4,6 +4,7 @@ use leptos_router::{use_navigate, use_query_map};
 
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
+use crate::component::ImageLightbox;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
 use crate::domain::{DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest};
 use crate::log;
@@ -221,17 +222,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
-            let destination = ui_search_ctx.destination.get();
+            let place_details = ui_search_ctx.place_details.get();
             let date_range = ui_search_ctx.date_range.get();
             let has_hotel_code = !hotel_code.is_empty();
-            let has_destination = destination.is_some();
+            let has_place_details = place_details.is_some();
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
             // Return true when ready to call API
-            let is_ready = has_hotel_code && has_destination && has_valid_dates;
+            let is_ready = has_hotel_code && has_place_details && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, destination={}, dates={}, ready={}", 
-                has_hotel_code, has_destination, has_valid_dates, is_ready);
+            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}", 
+                has_hotel_code, has_place_details, has_valid_dates, is_ready);
 
             is_ready
         },
@@ -260,11 +261,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria from UI context
                 // This will work whether data came from direct navigation or URL query params
-                let destination = ui_search_ctx.destination.get_untracked();
+                let place_details = ui_search_ctx.place_details.get_untracked();
+                let place = ui_search_ctx.place.get_untracked();
                 let date_range = ui_search_ctx.date_range.get_untracked();
                 let guests = &guests_clone;
 
-                if destination.is_none() {
+                if place_details.is_none() {
                     HotelDetailsUIState::set_error(Some(
                         "Search criteria not available".to_string(),
                     ));
@@ -272,7 +274,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     return None;
                 }
 
-                let destination = destination.unwrap();
+                if place.is_none() {
+                    HotelDetailsUIState::set_error(Some(
+                        "Search criteria not available".to_string(),
+                    ));
+                    HotelDetailsUIState::set_loading(false);
+                    return None;
+                }
+
+                let place_details = place_details.unwrap();
+                let place = place.unwrap();
 
                 // Create room guests
                 let room_guests = vec![DomainRoomGuest {
@@ -294,12 +305,13 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria
                 let search_criteria = DomainHotelSearchCriteria {
-                    destination_city_id: destination.city_id.parse().unwrap_or(0),
-                    destination_city_name: destination.city.clone(),
-                    destination_country_code: destination.country_code.clone(),
-                    destination_country_name: destination.country_name.clone(),
-                    destination_latitude: destination.latitude,
-                    destination_longitude: destination.longitude,
+                    // destination_city_id: destination.city_id.parse().unwrap_or(0),
+                    // destination_city_name: destination.city.clone(),
+                    // destination_country_code: destination.country_code.clone(),
+                    // destination_country_name: destination.country_name.clone(),
+                    // destination_latitude: Some(place.location.latitude),
+                    // destination_longitude: Some(place.location.longitude),
+                    place_id: place.place_id.clone(),
                     check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
                     check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
                     no_of_nights: date_range.no_of_nights(),
@@ -307,15 +319,18 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     room_guests,
                     guest_nationality: "US".to_string(), // Default for now
                     pagination: None,                    // No pagination for hotel details
+                    ..Default::default()
                 };
 
-                log!("Using search criteria for hotel details API: destination={}, dates={:?}-{:?}, guests={}+{}+{}", 
-                    search_criteria.destination_city_name,
+                log!(
+                    "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
+                    // search_criteria.destination_city_name,
                     search_criteria.check_in_date,
                     search_criteria.check_out_date,
                     search_criteria.room_guests[0].no_of_adults,
                     search_criteria.room_guests[0].no_of_children,
-                    search_criteria.no_of_rooms);
+                    search_criteria.no_of_rooms
+                );
 
                 // Create hotel info criteria
                 let criteria = DomainHotelInfoCriteria {
@@ -403,12 +418,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         }
     };
 
+    let open_image_viewer = RwSignal::new(false);
+
     view! {
         <section class="relative min-h-screen bg-gray-50">
             <Navbar />
-            <div class="flex flex-col items-center mt-6 p-4">
-                <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
-            </div>
+            <Show when=move || !open_image_viewer.get()>
+                <div class="flex flex-col items-center mt-6 p-4">
+                    <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
+                </div>
+            </Show>
 
             // <!-- Use resource pattern like prebook_resource in block_room_v1.rs -->
             // <!-- The resource automatically triggers data loading when dependencies change -->
@@ -476,7 +495,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                             </div>
 
                             <div class="mt-4 md:mt-6">
-                                <HotelImages />
+                                <HotelImages open_image_viewer/>
                             </div>
 
                             <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
@@ -541,12 +560,15 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 }
 
 #[component]
-pub fn HotelImages() -> impl IntoView {
+pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    let images_signal = move || {
+    // let (show_viewer, set_show_viewer) = create_signal(false);
+    let (selected_index, set_selected_index) = create_signal(0);
+
+    let images_signal = create_memo(move |_| {
         if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
-            let mut images = hotel_details.images;
+            let mut images = hotel_details.images.clone();
             if images.len() < 6 {
                 let repeat_count = 6 - images.len();
                 let repeated_images = images.clone();
@@ -556,7 +578,7 @@ pub fn HotelImages() -> impl IntoView {
         } else {
             vec![]
         }
-    };
+    });
 
     move || {
         if images_signal().is_empty() {
@@ -568,7 +590,11 @@ pub fn HotelImages() -> impl IntoView {
                         <img
                             src=move || images_signal()[0].clone()
                             alt="Hotel"
-                            class="w-full h-64 rounded-xl object-cover"
+                            class="w-full h-64 rounded-xl object-cover cursor-pointer"
+                            on:click=move |_| {
+                                set_selected_index(0);
+                                open_image_viewer.set(true);
+                            }
                         />
                     </div>
                     <div class="hidden sm:flex flex-col space-y-3">
@@ -576,18 +602,30 @@ pub fn HotelImages() -> impl IntoView {
                             <img
                                 src=move || images_signal()[0].clone()
                                 alt="Hotel"
-                                class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover"
+                                class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| {
+                                    set_selected_index(0);
+                                    open_image_viewer.set(true);
+                                }
                             />
                             <div class="flex flex-row sm:flex-col space-x-3 sm:space-x-0 sm:space-y-3 w-full sm:w-2/5">
                                 <img
                                     src=move || images_signal().get(1).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                     alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill"
+                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
+                                    on:click=move |_| {
+                                        set_selected_index(1);
+                                        open_image_viewer.set(true);
+                                    }
                                 />
                                 <img
                                     src=move || images_signal().get(2).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                     alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill"
+                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
+                                    on:click=move |_| {
+                                        set_selected_index(2);
+                                        open_image_viewer.set(true);
+                                    }
                                 />
                             </div>
                         </div>
@@ -595,22 +633,45 @@ pub fn HotelImages() -> impl IntoView {
                             <img
                                 src=move || images_signal().get(3).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                 alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover"
+                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| {
+                                    set_selected_index(3);
+                                    open_image_viewer.set(true);
+                                }
                             />
                             <img
                                 src=move || images_signal().get(4).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                 alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover"
+                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| {
+                                    set_selected_index(4);
+                                    open_image_viewer.set(true);
+                                }
                             />
                             <div class="relative w-72 h-48 rounded-xl">
                                 <img
                                     src=move || images_signal().get(5).cloned().unwrap_or_else(|| images_signal()[0].clone())
                                     alt="Hotel"
-                                    class="object-cover h-full w-full rounded-xl"
+                                    class="object-cover h-full w-full rounded-xl cursor-pointer"
+                                    on:click=move |_| {
+                                        set_selected_index(5);
+                                        open_image_viewer.set(true);
+                                    }
                                 />
                             </div>
                         </div>
                     </div>
+
+                    {move || open_image_viewer.get().then(|| {
+                        view! {
+                            <ImageLightbox
+                                images=images_signal()
+                                initial_index=selected_index.get()
+                                loop_images=true
+                                on_close=Callback::new(move |_| open_image_viewer.set(false))
+                            />
+                        }
+                    })}
                 </div>
             }
         }

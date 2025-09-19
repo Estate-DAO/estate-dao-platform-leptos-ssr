@@ -4,6 +4,8 @@ use crate::{
     //     BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
     //     HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     // },
+    api::client_side_api::{Place, PlaceData},
+    application_services::filter_types::UISearchFilters,
     canister::backend,
     component::{Destination, GuestSelection, SelectedDateRange},
     domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams},
@@ -19,11 +21,27 @@ use super::{view_state::HotelInfoCtx, GlobalStateForLeptos};
 
 //  ==================================================================
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct UISearchCtx {
+    pub place: RwSignal<Option<Place>>,
+    pub place_details: RwSignal<Option<PlaceData>>,
     pub destination: RwSignal<Option<Destination>>,
     pub date_range: RwSignal<SelectedDateRange>,
     pub guests: GuestSelection,
+    pub filters: RwSignal<UISearchFilters>,
+}
+
+impl Default for UISearchCtx {
+    fn default() -> Self {
+        Self {
+            place: RwSignal::new(None),
+            place_details: RwSignal::new(None),
+            destination: RwSignal::new(None),
+            date_range: RwSignal::new(SelectedDateRange::default()),
+            guests: GuestSelection::default(),
+            filters: RwSignal::new(UISearchFilters::default()),
+        }
+    }
 }
 
 impl UISearchCtx {
@@ -31,6 +49,20 @@ impl UISearchCtx {
         let this: Self = expect_context();
 
         this.destination.set(Some(destination));
+    }
+
+    pub fn set_place(place: Place) {
+        let this: Self = expect_context();
+        this.place.set(Some(place));
+    }
+
+    pub fn set_place_details(place_details: Option<PlaceData>) {
+        let this: Self = expect_context();
+        if this.place.get_untracked().is_none() {
+            log::warn!("UISearchCtx::set_place_details called but place is None. This may indicate inconsistent state.");
+            return;
+        }
+        this.place_details.set(place_details);
     }
 
     pub fn set_date_range(date_range: SelectedDateRange) {
@@ -48,6 +80,16 @@ impl UISearchCtx {
         this.guests
             .children_ages
             .set_vec(guests.children_ages.get_untracked());
+    }
+
+    pub fn set_filters(filters: UISearchFilters) {
+        let this: Self = expect_context();
+        this.filters.set(filters);
+    }
+
+    pub fn update_filters(f: impl FnOnce(&mut UISearchFilters)) {
+        let this: Self = expect_context();
+        this.filters.update(|filters| f(filters));
     }
 
     pub fn log_state() {

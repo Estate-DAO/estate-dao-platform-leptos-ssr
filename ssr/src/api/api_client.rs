@@ -1,11 +1,131 @@
 #[cfg(feature = "mock-provab")]
-use crate::api::mock::mock_utils::MockableResponse;
+use crate::api::MockableResponse;
 
 use crate::api::{ApiClientResult, ApiError};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
-        use crate::api::{DeserializableInput, ProvabReq, ProvabReqMeta};
+
+        pub trait ProvabReqMeta: Sized + Send {
+        const METHOD: Method;
+        const GZIP: bool = true;
+
+        #[cfg(feature = "mock-provab")]
+        type Response: DeserializeOwned + Debug + MockableResponse + Send;
+
+        #[cfg(not(feature = "mock-provab"))]
+        type Response: DeserializeOwned + Debug + Send;
+
+        /// Deserialize the response from the API
+        /// The default implementation that assumes the response is JSON encoded [crate::CfSuccessRes]
+        /// and extracts the `result` field
+        fn deserialize_response(
+            response_bytes_or_string: DeserializableInput,
+        ) -> ApiClientResult<Self::Response> {
+            log!(
+                "{}",
+                format!(
+                    "gzip = {} , response_bytes_or_string : {}\n\n\n",
+                    Self::GZIP,
+                    &(response_bytes_or_string.clone().to_string())[..500]
+                )
+                .bright_yellow()
+                .bold()
+            );
+
+            let decompressed_body = match response_bytes_or_string {
+                DeserializableInput::Bytes(body_bytes) => {
+                    // use flate2::read::GzDecoder;
+
+                    // let mut d = GzDecoder::new(&body_bytes[..]);
+
+                    // let mut s = String::new();
+                    // d.read_to_string(&mut s).map_err(|e| {
+                    //     log!("\n\ndeserialize_response- DecompressionFailed: {e:?}\n\n");
+                    //     report!(ApiError::DecompressionFailed(e.to_string()))
+                    // })?;
+                    // s
+                    String::from_utf8(body_bytes).map_err(|e| {
+                        ApiError::DecompressionFailed(String::from(
+                            "Could not convert from bytes to string",
+                        ))
+                    })?
+                }
+                DeserializableInput::Text(body_string) => body_string,
+            };
+
+            let jd = &mut serde_json::Deserializer::from_str(&decompressed_body);
+            let res: Self::Response = serde_path_to_error::deserialize(jd).map_err(|e| {
+                let total_error = format!("path: {} - inner: {} ", e.path().to_string(), e.inner());
+                log!("deserialize_response- JsonParseFailed: {:?}", total_error);
+                ApiError::JsonParseFailed(total_error)
+            })?;
+
+            // log!("\n\ndeserialize_response- Ok : {res:?}\n\n\n");
+
+            Ok(res)
+        }
+    }
+
+    pub trait ProvabReq: ProvabReqMeta + Debug {
+        fn base_path() -> String {
+            let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
+
+            env_var_config.provab_base_url
+        }
+
+        fn path() -> String {
+            format!("{}/{}", Self::base_path(), Self::path_suffix())
+        }
+
+        fn path_suffix() -> &'static str;
+
+        fn headers() -> HeaderMap {
+            let env_var_config = EnvVarConfig::expect_context_or_try_from_env();
+
+            env_var_config.get_headers()
+        }
+
+        fn custom_headers() -> HeaderMap {
+            Self::headers()
+        }
+    }
+
+
+        #[derive(Debug, Clone)]
+        pub enum DeserializableInput {
+            Text(String),
+            Bytes(Vec<u8>),
+        }
+
+        impl DeserializableInput {
+            pub fn take(self, num: usize) -> Self {
+                match self {
+                    Self::Text(body_string) => Self::Text(body_string.chars().take(num).collect()),
+                    Self::Bytes(body_bytes) => Self::Bytes(body_bytes.into_iter().take(num).collect()),
+                }
+            }
+
+            pub fn to_string(self) -> String {
+                match self {
+                    Self::Text(body_string) => body_string,
+                    Self::Bytes(body_bytes) => {
+                        match String::from_utf8(body_bytes) {
+                            Ok(string) => {
+                                // log!("DeserializableInput - Bytes(Vec<u8>): \n{}", string);
+                                string
+                            }
+                            Err(e) => {
+                                log!("DeserializableInput - Bytes - could not convert - : {}", e);
+                                // return empty string for now. since this is debug only.
+                                String::new()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
 
@@ -41,9 +161,20 @@ pub trait ApiClient: Clone + Debug + Default {
         Req: ApiRequestMeta + ApiRequest + Serialize + Send + 'static,
         Req::Response: Send + 'static,
     {
-        let full_url = join_base_and_path_url(self.base_url().as_str(), Req::path_suffix())
-            .expect("Failed to join base and path URL");
+        let full_url = req.full_path();
         let reqb = self.request_builder(Req::METHOD, full_url);
+        //  /*  join_base_and_path_url(self.base_url().as_str(), Req::path_suffix())
+        //     .expect("Failed to join base and path URL") */;
+        // let reqb = if Req::METHOD == Method::GET {
+        //     match Req::DATA {
+        //         RequestData::QueryParams => self.request_builder(Req::METHOD, full_url).query(&req),
+        //         RequestData::PathParam(param) => {
+        //             self.request_builder(Req::METHOD, format!("{}/{}", full_url, param))
+        //         }
+        //     }
+        // } else {
+        //     self.request_builder(Req::METHOD, full_url).json(&req)
+        // };
         self.send_json_request(req, reqb).await
     }
 
@@ -318,10 +449,15 @@ pub trait ApiClient: Clone + Debug + Default {
     }
 }
 
+pub enum RequestData {
+    QueryParams,
+    PathParam(String),
+}
 /// Trait for request metadata (similar to your ProvabReqMeta)
 pub trait ApiRequestMeta: Sized + Send {
     const METHOD: Method;
     const GZIP: bool = false;
+    const DATA: RequestData = RequestData::QueryParams;
 
     #[cfg(feature = "mock-provab")]
     type Response: DeserializeOwned + Debug + MockableResponse + Send;
@@ -387,6 +523,10 @@ pub trait ApiRequest: ApiRequestMeta + Debug {
     fn path() -> String {
         join_base_and_path_url(Self::base_path().as_str(), Self::path_suffix())
             .expect("Failed to join base and path URL")
+    }
+
+    fn full_path(&self) -> String {
+        Self::path()
     }
 
     /// The path suffix for this request (without the base URL)

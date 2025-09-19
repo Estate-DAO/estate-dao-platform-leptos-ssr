@@ -1,4 +1,9 @@
 use crate::{
+    api::{
+        self,
+        client_side_api::{ClientSideApiClient, Place, PlaceData},
+    },
+    application_services::filter_types::UISearchFilters,
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     utils::query_params::{update_url_with_state, FilterMap, QueryParamsSync, SortDirection},
     view_state_layer::ui_search_state::UISearchCtx,
@@ -8,20 +13,29 @@ use leptos::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[server(LookupDestinationById)]
-pub async fn lookup_destination_by_id(city: String) -> Result<Destination, ServerFnError> {
-    use std::io::BufReader;
+// #[server(LookupDestinationById)]
+// pub async fn lookup_destination_by_id(city: String) -> Result<Destination, ServerFnError> {
+//     use std::io::BufReader;
 
-    let res =
-        duck_searcher::search_city_by_name(&city).map_err(|e| ServerFnError::new(e.to_string()))?;
-    Ok(Destination {
-        city_id: res.city_code,
-        city: res.city_name,
-        country_name: res.country_name,
-        country_code: res.country_code,
-        latitude: Some(res.latitude),
-        longitude: Some(res.longitude),
-    })
+//     let res =
+//         duck_searcher::search_city_by_name(&city).map_err(|e| ServerFnError::new(e.to_string()))?;
+//     Ok(Destination {
+//         city_id: res.city_code,
+//         city: res.city_name,
+//         country_name: res.country_name,
+//         country_code: res.country_code,
+//         latitude: Some(res.latitude),
+//         longitude: Some(res.longitude),
+//     })
+// }
+
+pub async fn lookup_place_by_id(place_id: String) -> Result<PlaceData, ServerFnError> {
+    let api_client = ClientSideApiClient::new();
+    let place = api_client
+        .get_place_details_by_id(place_id)
+        .await
+        .map_err(|e| ServerFnError::new(e.to_string()))?;
+    Ok(place)
 }
 
 /// Hotel List page state that can be encoded in URL via base64
@@ -47,7 +61,8 @@ pub struct HotelListParams {
 
     // Destination
     // destination - city name
-    pub destination: Option<String>,
+    pub place_details: Option<PlaceData>,
+    pub place: Option<Place>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
 }
@@ -55,7 +70,8 @@ pub struct HotelListParams {
 impl Default for HotelListParams {
     fn default() -> Self {
         Self {
-            destination: None,
+            place_details: None,
+            place: None,
             checkin: None,
             checkout: None,
             adults: Some(2),
@@ -75,22 +91,13 @@ impl Default for HotelListParams {
 impl HotelListParams {
     /// Create from current search context state
     pub fn from_search_context(search_ctx: &UISearchCtx) -> Self {
-        let destination = search_ctx
-            .destination
-            .get_untracked()
-            .map(|d| d.city.clone());
+        let place_details = search_ctx.place_details.get_untracked();
 
-        let latitude = search_ctx
-            .destination
-            .get_untracked()
-            .map(|d| d.latitude.clone())
-            .flatten();
+        let place = search_ctx.place.get_untracked();
 
-        let longitude = search_ctx
-            .destination
-            .get_untracked()
-            .map(|d| d.longitude.clone())
-            .flatten();
+        let latitude = place_details.as_ref().map(|f| f.location.latitude);
+
+        let longitude = place_details.as_ref().map(|f| f.location.longitude);
 
         let date_range = search_ctx.date_range.get_untracked();
         let (checkin, checkout) = if date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0) {
@@ -114,15 +121,18 @@ impl HotelListParams {
         let rooms = Some(guests.rooms.get_untracked());
         let children_ages = guests.children_ages.get_untracked().into();
 
+        let filters_map = search_ctx.filters.get_untracked().to_filter_map();
+
         Self {
-            destination,
+            place_details,
+            place,
             checkin,
             checkout,
             adults,
             children,
             rooms,
             children_ages,
-            filters: HashMap::new(),
+            filters: filters_map,
             sort: Vec::new(),
             page: Some(1),
             per_page: Some(20),
@@ -209,26 +219,19 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
         let search_ctx: UISearchCtx = expect_context();
 
         // Set destination if available
-        if let Some(city) = &self.destination {
-            // Spawn async lookup task
-            let city = city.clone();
-            spawn_local(async move {
-                if let Ok(destination) = lookup_destination_by_id(city.clone()).await {
-                    UISearchCtx::set_destination(destination);
-                } else {
-                    // Fallback to placeholder if lookup fails
-                    let destination = Destination {
-                        city_id: city.clone(),
-                        city: "Unknown".to_string(),
-                        country_name: "Unknown".to_string(),
-                        country_code: "XX".to_string(),
-                        latitude: None,
-                        longitude: None,
-                    };
-                    UISearchCtx::set_destination(destination);
-                }
-            });
+        if let Some(place) = &self.place {
+            UISearchCtx::set_place(place.clone());
+            UISearchCtx::set_place_details(self.place_details.clone());
         }
+        // if let Some(place) = &self.place.clone().map(|p| p.place_id) {
+        //     // Spawn async lookup task
+        //     let place = place.clone();
+        //     spawn_local(async move {
+        //         if let Ok(place) = lookup_place_by_id(place.clone()).await {
+        //             UISearchCtx::set_place_details(Some(place));
+        //         }
+        //     });
+        // }
 
         // Set date range if available
         if let (Some(checkin), Some(checkout)) = (&self.checkin, &self.checkout) {
@@ -264,6 +267,14 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
             .set_ages(self.children_ages.clone());
 
         UISearchCtx::set_guests(guest_selection);
+
+        let filters = if self.filters.is_empty() {
+            UISearchFilters::default()
+        } else {
+            UISearchFilters::from_filter_map(&self.filters)
+        };
+
+        UISearchCtx::set_filters(filters);
     }
 }
 
@@ -275,7 +286,11 @@ mod tests {
     #[test]
     fn test_hotel_list_params_serialization() {
         let mut params = HotelListParams::default();
-        params.destination = Some("1254".to_string());
+        params.place = Some(Place {
+            place_id: "1254".to_string(),
+            display_name: "Test Place".to_string(),
+            formatted_address: "123 Test St, Test City, TC 12345".to_string(),
+        });
         params.checkin = Some("2025-01-15".to_string());
         params.checkout = Some("2025-01-20".to_string());
         params.adults = Some(2);
@@ -293,7 +308,11 @@ mod tests {
     #[test]
     fn test_from_url_params() {
         let params = HotelListParams {
-            destination: Some("NYC".to_string()),
+            place: Some(Place {
+                place_id: "NYC".to_string(),
+                display_name: "New York City".to_string(),
+                formatted_address: "New York, NY 10001".to_string(),
+            }),
             adults: Some(2),
             ..Default::default()
         };

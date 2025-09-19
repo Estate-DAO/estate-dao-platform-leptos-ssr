@@ -17,9 +17,8 @@ use crate::{
     api::canister::greet_call::greet_backend,
     app::AppRoutes,
     component::{
-        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy,
-        FullScreenBannerForMobileModeNotReady, GuestQuantity, GuestSelection, HSettingIcon,
-        SelectedDateRange,
+        DateTimeRangePickerCustom, EstateDaoIcon, FilterAndSortBy, GuestQuantity, GuestSelection,
+        HSettingIcon, SelectedDateRange,
     },
     page::HotelListParams,
     utils::query_params::QueryParamsSync,
@@ -164,11 +163,11 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
     let search_ctx: UISearchCtx = expect_context();
 
-    let destination_display = create_memo(move |_| {
+    let place_display = create_memo(move |_| {
         search_ctx
-            .destination
+            .place
             .get()
-            .map(|d| format!("{}, {}", d.city, d.country_name))
+            .map(|d| format!("{}, {}", d.display_name, d.formatted_address))
             .unwrap_or_else(|| "".to_string())
     });
 
@@ -219,7 +218,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                             class="flex-1 ml-3 text-gray-800 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal"
                             disabled=disabled.get()
                         >
-                            {move || destination_display.get()}
+                            {move || place_display.get()}
                         </button>
                     </Show>
                 </div>

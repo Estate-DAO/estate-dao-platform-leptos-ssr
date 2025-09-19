@@ -5,13 +5,12 @@ use crate::{
         payments::ports::GetPaymentStatusResponse,
     },
     component::{
-        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample,
-        NotificationState,
+        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationState,
     },
     error_template::{AppError, ErrorTemplate},
     page::{
         AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
-        ConfirmationPageV1, ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
+        /* ConfirmationPageV1, */ ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
         HotelListPage, MyBookingsPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
     },
     view_state_layer::{

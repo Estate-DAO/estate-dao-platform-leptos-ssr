@@ -8,7 +8,7 @@ use axum::{
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
     adapters::LiteApiAdapter,
-    adapters::ProvabAdapter,
+    // adapters::ProvabAdapter,
     api::{
         canister::add_booking::call_add_booking_backend,
         liteapi::LiteApiHTTPClient,
@@ -51,6 +51,7 @@ mod integrated_block_room;
 mod process_confirmation;
 pub mod search_cities;
 mod search_hotel;
+mod search_places;
 mod update_email_principal_mapping;
 
 pub use block_room::block_room_api_server_fn_route;
@@ -65,7 +66,10 @@ pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
-use crate::server_functions_impl_custom_routes::search_cities::search_city_by_name_api_server_fn_route;
+use crate::server_functions_impl_custom_routes::{
+    search_cities::search_city_by_name_api_server_fn_route,
+    search_places::{search_places_api_server_fn_route, search_places_details_api_server_fn_route},
+};
 
 // Common helper functions and types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,6 +202,14 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/search_city_api",
             post(search_city_by_name_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/search_place_api",
+            post(search_places_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/get_place_details_api",
+            post(search_places_details_api_server_fn_route).options(handle_options),
         )
         .route(
             "/block_room_api",
