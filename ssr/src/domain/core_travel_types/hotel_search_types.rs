@@ -154,6 +154,9 @@ pub struct DomainHotelAfterSearch {
     pub star_rating: u8,
     pub price: Option<DomainPrice>,
     pub hotel_picture: String,
+    // Derived from provider result where available
+    pub amenities: Vec<String>,
+    pub property_type: Option<String>,
     // todo (liteapi) how does liteapi propagate tokens?
     pub result_token: String,
     // <!-- Additional fields can be added later -->

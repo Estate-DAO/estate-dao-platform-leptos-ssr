@@ -5,8 +5,9 @@ use leptos_router::use_navigate;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
-    format_price_range_value, Destination, GuestSelection, Navbar, PaginationControls,
-    PaginationInfo, PriceRangeFilter, SkeletonCards, StarRatingFilter, MAX_PRICE, MIN_PRICE,
+    format_price_range_value, AmenitiesFilter, Destination, GuestSelection, Navbar,
+    PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards,
+    StarRatingFilter, MAX_PRICE, MIN_PRICE,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -285,6 +286,117 @@ pub fn HotelListPage() -> impl IntoView {
         Signal::derive(move || filters_signal.get().has_filters())
     };
 
+    // Derived filter options and selections
+    let amenities_options_signal: Signal<Vec<String>> = {
+        let search_list_page = search_list_page.clone();
+        Signal::derive(move || {
+            let mut freq: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+            if let Some(res) = search_list_page.search_result.get() {
+                for h in res.hotel_list() {
+                    for a in h.amenities.iter() {
+                        let label = a.trim();
+                        if label.is_empty() {
+                            continue;
+                        }
+                        let lower = label.to_lowercase();
+                        if lower.starts_with("facility ") || lower == "facility" {
+                            continue;
+                        }
+                        *freq.entry(label.to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
+            let mut items: Vec<(String, u32)> = freq.into_iter().collect();
+            items.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+            items.into_iter().map(|(k, _)| k).take(5).collect()
+        })
+    };
+
+    let property_type_options_signal: Signal<Vec<String>> = {
+        let search_list_page = search_list_page.clone();
+        Signal::derive(move || {
+            let mut freq: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+            if let Some(res) = search_list_page.search_result.get() {
+                for h in res.hotel_list() {
+                    if let Some(pt) = &h.property_type {
+                        let label = pt.trim();
+                        if label.is_empty() {
+                            continue;
+                        }
+                        *freq.entry(label.to_string()).or_insert(0) += 1;
+                    }
+                }
+            }
+            let mut items: Vec<(String, u32)> = freq.into_iter().collect();
+            items.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+            items.into_iter().map(|(k, _)| k).take(5).collect()
+        })
+    };
+
+    let amenities_selected_signal: Signal<Vec<String>> = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || filters_signal.get().amenities.clone().unwrap_or_default())
+    };
+
+    let property_types_selected_signal: Signal<Vec<String>> = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || {
+            filters_signal
+                .get()
+                .property_types
+                .clone()
+                .unwrap_or_default()
+        })
+    };
+
+    let amenities_on_toggle = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |label: String| {
+            filters_signal.update(|f| {
+                let list = f.amenities.get_or_insert_with(Vec::new);
+                if let Some(pos) = list.iter().position(|v| v.eq_ignore_ascii_case(&label)) {
+                    list.remove(pos);
+                    if list.is_empty() {
+                        f.amenities = None;
+                    }
+                } else {
+                    list.push(label.clone());
+                }
+            });
+        })
+    };
+
+    let amenities_on_clear = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |_| {
+            filters_signal.update(|f| f.amenities = None);
+        })
+    };
+
+    let property_type_on_toggle = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |label: String| {
+            filters_signal.update(|f| {
+                let list = f.property_types.get_or_insert_with(Vec::new);
+                if let Some(pos) = list.iter().position(|v| v.eq_ignore_ascii_case(&label)) {
+                    list.remove(pos);
+                    if list.is_empty() {
+                        f.property_types = None;
+                    }
+                } else {
+                    list.push(label.clone());
+                }
+            });
+        })
+    };
+
+    let property_type_on_clear = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |_| {
+            filters_signal.update(|f| f.property_types = None);
+        })
+    };
+
     let star_filter_on_select = {
         let filters_signal = filters_signal;
         Callback::new(move |next: Option<u8>| {
@@ -368,6 +480,20 @@ pub fn HotelListPage() -> impl IntoView {
                                 <StarRatingFilter
                                     value=star_filter_value
                                     on_select=star_filter_on_select.clone()
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <AmenitiesFilter
+                                    options=amenities_options_signal
+                                    selected=amenities_selected_signal
+                                    on_toggle=amenities_on_toggle
+                                    on_clear=amenities_on_clear
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <PropertyTypeFilter
+                                    options=property_type_options_signal
+                                    selected=property_types_selected_signal
+                                    on_toggle=property_type_on_toggle
+                                    on_clear=property_type_on_clear
                                 />
                             </div>
                         </div>
