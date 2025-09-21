@@ -1,4 +1,6 @@
 use leptos::*;
+
+use crate::api::auth::auth_state::AuthStateSignal;
 /// A single document section: heading (without numeric prefix),
 /// one-or-more description paragraphs, and optional bullets.
 #[derive(Clone)]
@@ -55,7 +57,7 @@ pub fn DocView(doc: Doc) -> impl IntoView {
                         // bullets
                         { if !section.bullets.is_empty() {
                             view! {
-                                <ul class="list-disc list-inside ml-4 space-y-1 text-sm sm:text-base lg:text-lg font-normal leading-relaxed text-[#45556C]">
+                                <ul class="list-disc ml-4 space-y-1 text-sm sm:text-base lg:text-lg font-normal leading-relaxed text-[#45556C]">
                                     { section.bullets.into_iter().map(|b| view! {
                                         <li>{highlight_email(&b)}</li>
                                     }).collect_view() }
@@ -91,8 +93,17 @@ fn highlight_email(text: &str) -> impl IntoView {
         // push highlighted email
         views.push({
             let mail = m.as_str().to_string();
+            let is_logged_in = move || AuthStateSignal::get().get().is_authenticated();
+            let mailto = if is_logged_in() {
+                format!(
+                    "https://mail.google.com/mail/?view=cm&fs=1&to={}",
+                    mail.trim()
+                )
+            } else {
+                format!("mailto:{}", mail.trim())
+            };
             view! {
-                <span><a href={format!("mailto:{}", mail.trim())}
+                <span><a target="_blank" href={mailto}
                    class="text-blue-600 underline font-medium">
                     {mail}
                 </a>

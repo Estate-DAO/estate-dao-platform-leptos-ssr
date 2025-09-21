@@ -19,6 +19,15 @@ pub enum AccountTabs {
 }
 
 impl AccountTabs {
+    const TABS: [AccountTabs; 6] = [
+        AccountTabs::PersonalInfo,
+        AccountTabs::Wallet,
+        AccountTabs::Support,
+        AccountTabs::Terms,
+        AccountTabs::Privacy,
+        AccountTabs::Faq,
+    ];
+
     pub fn from_str(s: &String) -> Self {
         match s.as_str() {
             "wallet" => AccountTabs::Wallet,
@@ -70,6 +79,18 @@ impl AccountTabs {
             AccountTabs::Terms => "Terms & Conditions",
             AccountTabs::Privacy => "Privacy Policy",
             AccountTabs::Faq => "FAQ's",
+        }
+    }
+
+    pub fn icon_src(&self) -> &'static str {
+        match self {
+            AccountTabs::PersonalInfo => "/icons/profile.svg",
+            AccountTabs::Wishlist => "/icons/profile.svg",
+            AccountTabs::Wallet => "/icons/wallet1.svg",
+            AccountTabs::Support => "/icons/support.svg",
+            AccountTabs::Terms => "/icons/tnc.svg",
+            AccountTabs::Privacy => "/icons/privacy.svg",
+            AccountTabs::Faq => "/icons/faq.svg",
         }
     }
 }
@@ -142,21 +163,19 @@ pub fn MyAccountPage() -> impl IntoView {
                         </Show>
 
                         <nav class="flex flex-col space-y-4 w-full text-gray-700">
-                            {[
-                                AccountTabs::PersonalInfo,
-                                AccountTabs::Wallet,
-                                AccountTabs::Wishlist,
-                                AccountTabs::Support,
-                                AccountTabs::Terms,
-                                AccountTabs::Privacy,
-                                AccountTabs::Faq,
-                            ]
+                            {AccountTabs::TABS
                                 .into_iter()
                                 .map(|tab| {
                                     let is_active = move || active_tab() == tab;
+                                    let class = if is_active() {
+                                            "w-5 h-5 fill-current"
+                                            } else {
+                                                "w-5 h-5"
+                                            };
                                     if tab.disabled() {
                                         view! {
                                             <span class="flex items-center gap-2 px-2 py-1 rounded-md cursor-not-allowed opacity-50">
+                                                <img src={tab.icon_src()} class={class} />
                                                 {tab.label()}
                                             </span>
                                         }.into_view()
@@ -167,7 +186,7 @@ pub fn MyAccountPage() -> impl IntoView {
                                                 href=tab.as_route()
                                                 class=move || {
                                                     format!(
-                                                        "flex items-center gap-2 px-2 py-1 rounded-md {}",
+                                                        "flex items-center gap-2 px-2 py-1 rounded-md transition-colors {}",
                                                         if is_active() {
                                                             "text-blue-600 font-medium bg-blue-50"
                                                         } else {
@@ -176,6 +195,7 @@ pub fn MyAccountPage() -> impl IntoView {
                                                     )
                                                 }
                                             >
+                                                <img src={tab.icon_src()} class={class} />
                                                 {tab.label()}
                                             </A>
                                         }.into_view()

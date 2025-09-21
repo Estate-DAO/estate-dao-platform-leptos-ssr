@@ -62,7 +62,7 @@ pub async fn google_auth(
     let csrf_cookie = Cookie::build((CSRF_COOKIE, csrf.secret().to_string()))
         .path("/")
         .http_only(true)
-        .finish();
+        .build();
 
     let jar = jar.add(csrf_cookie);
 
@@ -73,7 +73,7 @@ pub async fn google_auth(
     ))
     .path("/")
     .http_only(true)
-    .finish();
+    .build();
 
     let jar = jar.add(pkce_cookie);
 
