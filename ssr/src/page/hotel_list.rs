@@ -762,40 +762,39 @@ pub fn HotelCard(
     };
 
     // ---- UI ----
+    let container_class = class;
+
     view! {
         <div
+            class=container_class
             on:click=move |ev| {
                 ev.prevent_default();
                 ev.stop_propagation();
                 on_navigate();
             }
         >
-            <div class={class}>
-                <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
-                    <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
+            <div class="mx-auto w-full max-w-[16.5rem] rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
+                <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
 
-                    <div class="h-24">
-                        <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
-                            <p class="text-sm sm:text-base font-medium">
-                                {if hotel_name.len() > 10 {
-                                    format!("{}...", hotel_name.chars().take(10).collect::<String>())
-                                } else {
-                                    hotel_name.clone()
-                                }}
-                            </p>
-                            <StarRating rating=move || rating />
-                        </div>
+                <div class="h-24">
+                    <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
+                        <p class="text-sm sm:text-base font-medium">
+                            {if hotel_name.len() > 10 {
+                                format!("{}...", hotel_name.chars().take(10).collect::<String>())
+                            } else {
+                                hotel_name.clone()
+                            }}
+                        </p>
+                        <StarRating rating=move || rating />
+                    </div>
 
-                        <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
-                            {move || price.get().map(|p| view! {
-                                <PriceDisplay price=p />
-                            })}
-                            <button
-                                class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm"
-                            >
-                                "View details"
-                            </button>
-                        </div>
+                    <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
+                        {move || price.get().map(|p| view! {
+                            <PriceDisplay price=p />
+                        })}
+                        <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
+                            "View details"
+                        </button>
                     </div>
                 </div>
             </div>
