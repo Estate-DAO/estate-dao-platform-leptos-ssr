@@ -445,7 +445,7 @@ pub fn HotelListPage() -> impl IntoView {
     view! {
         <section class="relative min-h-screen bg-slate-50">
             <Navbar />
-            <div class="w-full mx-auto px-2 sm:px-4 pb-10">
+            <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
                 <div class="flex flex-col items-center mt-2 sm:mt-6">
                     <div class="w-full rounded-2xl shadow-sm">
                         <div class="p-2 sm:p-4">
@@ -455,8 +455,8 @@ pub fn HotelListPage() -> impl IntoView {
                 </div>
 
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
-                    <aside class="w-full lg:w-80 shrink-0 lg:sticky lg:top-24">
-                        <div class="lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2">
+                    <aside class="w-full lg:w-64 shrink-0">
+                        <div class="sticky top-24">
                             <div class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                                 <div class="flex items-center justify-between">
                                     <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">
@@ -501,7 +501,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                     <div class="flex-1 min-w-0">
                         // Use resource pattern with Suspense for automatic loading states
-                        <Suspense fallback=move || view! { <div class="flex flex-wrap gap-4 sm:gap-5 justify-start">{fallback()}</div> }>
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
                             {move || {
                                 // Trigger the resource loading but don't render anything
                                 let _ = hotel_search_resource.get();
@@ -509,7 +509,7 @@ pub fn HotelListPage() -> impl IntoView {
                             }}
                         </Suspense>
 
-                        <div class="mt-4 flex flex-wrap gap-4 sm:gap-5 justify-start">
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
                             <Show
                                 when=move || search_list_page.search_result.get().is_some()
@@ -534,7 +534,7 @@ pub fn HotelListPage() -> impl IntoView {
                                         if current_page > 1 {
                                             // Show "Go to first page" button when on page > 1 with no results
                                             view! {
-                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 w-full min-h-[200px]">
+                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
                                                     <p class="text-center mb-4 text-gray-600">
                                                         No hotels found on page {current_page}.
                                                     </p>
@@ -551,7 +551,7 @@ pub fn HotelListPage() -> impl IntoView {
                                         } else {
                                             // Show regular "No hotels found" message on page 1
                                             view! {
-                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 w-full min-h-[200px]">
+                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
                                                     <p class="text-center">
                                                         No hotels found for your search criteria.
                                                     </p>
@@ -602,7 +602,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             };
 
                                             view! {
-                                                <div class="w-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
+                                                <div class="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
                                                     <p class="text-sm text-slate-600">
                                                         {filter_message}
                                                     </p>
@@ -672,7 +672,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                         price
                                                         hotel_code=hotel_result.hotel_code.clone()
                                                         class=format!(
-                                                                "px-2 sm:px-0 basis-[16.5rem] flex-shrink-0 flex-grow-0 {} {}",
+                                                                "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
                                                                 if is_disabled { "grayscale" } else { "" },
                                                                 if is_disabled { "pointer-events-none opacity-50" } else { "" },
                                                             )
@@ -692,7 +692,7 @@ pub fn HotelListPage() -> impl IntoView {
                                 }
                                 fallback=move || view! { <></> }
                             >
-                                <div class="w-full">
+                                <div class="col-span-full">
                                     // <PaginationInfo />
                                     <PaginationControls />
                                 </div>
