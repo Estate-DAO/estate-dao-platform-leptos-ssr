@@ -36,11 +36,10 @@ pub fn YralAuthProvider() -> impl IntoView {
                 return Some(auth);
             }
 
-            let app_url = APP_URL.clone();
-            let url = format!("{app_url}api/user-info");
-            match reqwest::get(&url).await {
+            let url = format!("/api/user-info");
+            match gloo_net::http::Request::get(&url).send().await {
                 Ok(response) => {
-                    if response.status().is_success() {
+                    if response.status() == 200 {
                         if let Ok(user_data) = response.json::<AuthState>().await {
                             AuthStateSignal::set(user_data);
                         }
