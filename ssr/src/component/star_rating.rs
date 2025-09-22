@@ -49,7 +49,7 @@ pub fn StarRatingFilter(
     view! {
         <div class="">
             <div class="flex flex-col gap-1">
-                <h3 class="text-base font-medium text-gray-900">
+                <h3 class="text-sm font-medium text-gray-900">
                     "Rating"
                 </h3>
             </div>
@@ -69,14 +69,14 @@ pub fn StarRatingFilter(
                         let is_selected_for_label = is_selected.clone();
                         let label_class = Signal::derive(move || {
                             if is_selected_for_label.get() {
-                                "text-sm font-semibold transition-colors duration-150 text-white"
+                                "text-xs font-semibold transition-colors duration-150 text-white"
                             } else {
-                                "text-sm font-semibold transition-colors duration-150 text-gray-700"
+                                "text-xs font-semibold transition-colors duration-150 text-gray-700"
                             }
                         });
                         // <!-- Create a single signal for button class combining all conditional classes -->
                         let button_class = Signal::derive(move || {
-                            let base_classes = "group relative flex items-center gap-1.5 rounded-lg border px-3 py-2 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2";
+                            let base_classes = "group relative flex items-center gap-1 rounded-lg border px-2.5 py-1.5 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2";
                             if is_selected.get() {
                                 format!("{} border-blue-600 bg-blue-600 text-white shadow-sm", base_classes)
                             } else {
@@ -105,9 +105,9 @@ pub fn StarRatingFilter(
                                     {rating}
                                     {move || {
                                         if is_selected.get() {
-                                            view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-white" /> }
+                                            view! { <Icon icon=icondata::BiStarSolid class="h-3 w-3 transition-colors duration-150 text-white" /> }
                                         } else {
-                                            view! { <Icon icon=icondata::BiStarSolid class="h-4 w-4 transition-colors duration-150 text-yellow-400" /> }
+                                            view! { <Icon icon=icondata::BiStarSolid class="h-3 w-3 transition-colors duration-150 text-yellow-400" /> }
                                         }
                                     }}
                                 </span>
