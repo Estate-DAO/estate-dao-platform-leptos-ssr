@@ -192,7 +192,7 @@ impl UIPaginationState {
 
     pub fn set_page_size(size: u32) {
         let this: Self = expect_context();
-        this.page_size.set(size.max(1).min(200)); // Enforce reasonable limits
+        this.page_size.set(size.clamp(1, 200)); // Enforce reasonable limits
     }
 
     pub fn set_pagination_meta(meta: Option<DomainPaginationMeta>) {
@@ -251,7 +251,7 @@ impl UIPaginationState {
         let meta_option = this.pagination_meta.get(); // Make reactive!
         let is_disabled = meta_option
             .as_ref()
-            .map_or(true, |meta| !meta.has_previous_page);
+            .is_none_or(|meta| !meta.has_previous_page);
 
         // Debug logging for button states
         // crate::log!(
@@ -265,9 +265,7 @@ impl UIPaginationState {
     pub fn is_next_button_disabled() -> bool {
         let this: Self = expect_context();
         let meta_option = this.pagination_meta.get(); // Make reactive!
-        let is_disabled = meta_option
-            .as_ref()
-            .map_or(true, |meta| !meta.has_next_page);
+        let is_disabled = meta_option.as_ref().is_none_or(|meta| !meta.has_next_page);
 
         // Debug logging for button states
         // crate::log!(

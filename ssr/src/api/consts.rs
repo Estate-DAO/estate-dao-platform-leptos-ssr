@@ -20,7 +20,7 @@ pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3002/";
 // const LOCALHOST_APP_URL: &str = "https://louse-musical-hideously.ngrok-free.app";
-const STAGING_APP_URL: &str = "https://pr-111-estate.fly.dev";
+// const STAGING_APP_URL: &str = "https://pr-111-estate.fly.dev";
 // const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
 const PROD_APP_URL: &str = "https://nofeebooking.com";
 

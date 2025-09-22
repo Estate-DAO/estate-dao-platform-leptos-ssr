@@ -1,4 +1,8 @@
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse},
+    Json,
+};
 use axum_extra::extract::cookie::{Cookie, SignedCookieJar};
 use codee::string::JsonSerdeCodec;
 use http::StatusCode;
@@ -62,7 +66,7 @@ pub async fn google_auth(
     let csrf_cookie = Cookie::build((CSRF_COOKIE, csrf.secret().to_string()))
         .path("/")
         .http_only(true)
-        .finish();
+        .build();
 
     let jar = jar.add(csrf_cookie);
 
@@ -73,7 +77,7 @@ pub async fn google_auth(
     ))
     .path("/")
     .http_only(true)
-    .finish();
+    .build();
 
     let jar = jar.add(pkce_cookie);
 
@@ -162,7 +166,7 @@ pub async fn google_callback(
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
         // Optional: set max age for session persistence
         // .max_age(time::Duration::days(7))
-        .finish();
+        .build();
 
     let jar = jar
         // Remove CSRF cookie with same attributes as when set
@@ -170,19 +174,27 @@ pub async fn google_callback(
             Cookie::build((CSRF_COOKIE, ""))
                 .path("/")
                 .http_only(true)
-                .finish(),
+                .build(),
         )
         // Remove PKCE cookie with same attributes as when set
         .remove(
             Cookie::build((pkce_key.clone(), ""))
                 .path("/")
                 .http_only(true)
-                .finish(),
+                .build(),
         )
         .add(session_cookie);
+    let script = Html(
+        r#"
+                    <script>
+                    window.opener.postMessage("oauth-success", window.location.origin);
+                    window.close();
+                    </script>
+                    "#,
+    );
 
     // Redirect to home or dashboard
-    (jar, axum::response::Redirect::to("/")).into_response()
+    (jar, script).into_response()
 }
 
 /// POST /auth/logout

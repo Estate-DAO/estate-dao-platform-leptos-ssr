@@ -15,9 +15,7 @@ use crate::api::payments::ports::{GetPaymentStatusRequest, GetPaymentStatusRespo
 use crate::api::payments::service::PaymentServiceImpl;
 use crate::api::payments::NowPayments;
 use crate::canister::backend::Booking;
-use crate::canister::backend::{
-    BackendPaymentStatus, BePaymentApiResponse, BookingId, PaymentDetails, Result2, Result3,
-};
+use crate::canister::backend::*;
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::{admin_canister, AdminCanisters};
@@ -174,12 +172,16 @@ pub fn create_payment_api_response_from_booking(
         order_description,
 
         // Invoice and purchase IDs - use existing if available
-        invoice_id: (existing_payment_response.invoice_id != 0)
-            .then_some(existing_payment_response.invoice_id)
-            .unwrap_or(0),
-        purchase_id: (existing_payment_response.purchase_id != 0)
-            .then_some(existing_payment_response.purchase_id)
-            .unwrap_or(0),
+        invoice_id: if existing_payment_response.invoice_id != 0 {
+            existing_payment_response.invoice_id
+        } else {
+            0
+        },
+        purchase_id: if existing_payment_response.purchase_id != 0 {
+            existing_payment_response.purchase_id
+        } else {
+            0
+        },
     })
 }
 
@@ -555,13 +557,13 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProvider {
 
         // Verify that payment status is correctly set to Paid
         match updated_booking {
-            Result3::Ok(booking) => {
+            Result4::Ok(booking) => {
                 info!(
                     "Payment details updated successfully. Payment status: {:?}",
                     booking.payment_details.payment_status
                 );
             }
-            Result3::Err(e) => {
+            Result4::Err(e) => {
                 return Err(format!("Failed to update payment details: {}", e));
             }
         }
@@ -809,7 +811,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                 extracted_order_id
             );
 
-            let booking_id = FrontendBookingId::from_order_id(&extracted_order_id)
+            let booking_id = FrontendBookingId::from_order_id(extracted_order_id)
                 .ok_or_else(|| "Failed to extract booking_id from order_id".to_string())?;
 
             // Update event with extracted order_id
@@ -825,7 +827,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
             // Now load booking from backend using extracted order_id
             let booking =
-                Self::load_booking_from_backend(&extracted_order_id, &booking_id.email).await?;
+                Self::load_booking_from_backend(extracted_order_id, &booking_id.email).await?;
 
             info!(
                 "Loaded booking from backend using extracted order_id: {}",
@@ -1044,7 +1046,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
 
         // Verify that payment status is correctly set and log entire booking
         match updated_booking {
-            Result3::Ok(booking) => {
+            Result4::Ok(booking) => {
                 info!(
                     "Backend update SUCCESS - returned booking payment status: {:?}",
                     booking.payment_details.payment_status
@@ -1071,7 +1073,7 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                     );
                 }
             }
-            Result3::Err(e) => {
+            Result4::Err(e) => {
                 error!("Backend update FAILED: {}", e);
                 return Err(format!("Failed to update payment details: {}", e));
             }

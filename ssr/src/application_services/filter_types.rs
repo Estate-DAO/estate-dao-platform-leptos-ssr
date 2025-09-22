@@ -36,15 +36,12 @@ impl UISearchFilters {
         self.min_star_rating.is_some()
             || self.max_price_per_night.is_some()
             || self.min_price_per_night.is_some()
-            || self.amenities.as_ref().map_or(false, |a| !a.is_empty())
-            || self
-                .property_types
-                .as_ref()
-                .map_or(false, |p| !p.is_empty())
+            || self.amenities.as_ref().is_some_and(|a| !a.is_empty())
+            || self.property_types.as_ref().is_some_and(|p| !p.is_empty())
             || self
                 .hotel_name_search
                 .as_ref()
-                .map_or(false, |s| !s.is_empty())
+                .is_some_and(|s| !s.is_empty())
     }
 
     // <!-- Helper method to get amenities as Vec<String> -->
