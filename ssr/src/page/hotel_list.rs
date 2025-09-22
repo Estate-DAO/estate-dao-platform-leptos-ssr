@@ -445,7 +445,7 @@ pub fn HotelListPage() -> impl IntoView {
     view! {
         <section class="relative min-h-screen bg-slate-50">
             <Navbar />
-            <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
+            <div class="w-full mx-auto px-2 sm:px-4 pb-10">
                 <div class="flex flex-col items-center mt-2 sm:mt-6">
                     <div class="w-full rounded-2xl shadow-sm">
                         <div class="p-2 sm:p-4">
@@ -501,7 +501,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                     <div class="flex-1 min-w-0">
                         // Use resource pattern with Suspense for automatic loading states
-                        <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
+                        <Suspense fallback=move || view! { <div class="flex flex-wrap gap-4 sm:gap-5 justify-start">{fallback()}</div> }>
                             {move || {
                                 // Trigger the resource loading but don't render anything
                                 let _ = hotel_search_resource.get();
@@ -509,7 +509,7 @@ pub fn HotelListPage() -> impl IntoView {
                             }}
                         </Suspense>
 
-                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <div class="mt-4 flex flex-wrap gap-4 sm:gap-5 justify-start">
 
                             <Show
                                 when=move || search_list_page.search_result.get().is_some()
@@ -534,7 +534,7 @@ pub fn HotelListPage() -> impl IntoView {
                                         if current_page > 1 {
                                             // Show "Go to first page" button when on page > 1 with no results
                                             view! {
-                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
+                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 w-full min-h-[200px]">
                                                     <p class="text-center mb-4 text-gray-600">
                                                         No hotels found on page {current_page}.
                                                     </p>
@@ -551,7 +551,7 @@ pub fn HotelListPage() -> impl IntoView {
                                         } else {
                                             // Show regular "No hotels found" message on page 1
                                             view! {
-                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
+                                                <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 w-full min-h-[200px]">
                                                     <p class="text-center">
                                                         No hotels found for your search criteria.
                                                     </p>
@@ -602,7 +602,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             };
 
                                             view! {
-                                                <div class="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
+                                                <div class="w-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
                                                     <p class="text-sm text-slate-600">
                                                         {filter_message}
                                                     </p>
@@ -672,7 +672,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                         price
                                                         hotel_code=hotel_result.hotel_code.clone()
                                                         class=format!(
-                                                                "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
+                                                                "px-2 sm:px-0 basis-[16.5rem] flex-shrink-0 flex-grow-0 {} {}",
                                                                 if is_disabled { "grayscale" } else { "" },
                                                                 if is_disabled { "pointer-events-none opacity-50" } else { "" },
                                                             )
@@ -692,7 +692,7 @@ pub fn HotelListPage() -> impl IntoView {
                                 }
                                 fallback=move || view! { <></> }
                             >
-                                <div class="col-span-full">
+                                <div class="w-full">
                                     // <PaginationInfo />
                                     <PaginationControls />
                                 </div>
@@ -762,40 +762,39 @@ pub fn HotelCard(
     };
 
     // ---- UI ----
+    let container_class = class;
+
     view! {
         <div
+            class=container_class
             on:click=move |ev| {
                 ev.prevent_default();
                 ev.stop_propagation();
                 on_navigate();
             }
         >
-            <div class={class}>
-                <div class="w-full sm:w-72 max-w-full sm:max-w-xs rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
-                    <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
+            <div class="mx-auto w-full max-w-[16.5rem] rounded-lg overflow-hidden shadow-sm border border-gray-300 bg-white">
+                <img class="w-full h-40 sm:h-64 object-cover" src=img alt=hotel_name.clone() />
 
-                    <div class="h-24">
-                        <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
-                            <p class="text-sm sm:text-base font-medium">
-                                {if hotel_name.len() > 10 {
-                                    format!("{}...", hotel_name.chars().take(10).collect::<String>())
-                                } else {
-                                    hotel_name.clone()
-                                }}
-                            </p>
-                            <StarRating rating=move || rating />
-                        </div>
+                <div class="h-24">
+                    <div class="flex items-center justify-between px-3 sm:px-6 pt-2 sm:pt-4">
+                        <p class="text-sm sm:text-base font-medium">
+                            {if hotel_name.len() > 10 {
+                                format!("{}...", hotel_name.chars().take(10).collect::<String>())
+                            } else {
+                                hotel_name.clone()
+                            }}
+                        </p>
+                        <StarRating rating=move || rating />
+                    </div>
 
-                        <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
-                            {move || price.get().map(|p| view! {
-                                <PriceDisplay price=p />
-                            })}
-                            <button
-                                class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm"
-                            >
-                                "View details"
-                            </button>
-                        </div>
+                    <div class="flex items-center justify-between px-3 sm:px-6 pt-1 sm:pt-2">
+                        {move || price.get().map(|p| view! {
+                            <PriceDisplay price=p />
+                        })}
+                        <button class="font-semibold underline underline-offset-2 decoration-solid text-xs sm:text-sm">
+                            "View details"
+                        </button>
                     </div>
                 </div>
             </div>
