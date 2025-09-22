@@ -14,8 +14,14 @@ pub use filter_and_sort_by::*;
 mod filter;
 pub use filter::*;
 
+mod price_range_filter;
+pub use price_range_filter::*;
+
 mod star_rating;
 pub use star_rating::*;
+
+mod filters_for_listing;
+pub use filters_for_listing::*;
 
 mod pagination_controls;
 pub use pagination_controls::*;
