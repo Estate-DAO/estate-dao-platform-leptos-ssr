@@ -1,6 +1,8 @@
 use leptos::*;
 use leptos_icons::*;
 
+use crate::{app::AppRoutes, page::AccountTabs};
+
 #[component]
 pub fn Footer() -> impl IntoView {
     view! {
@@ -20,7 +22,7 @@ pub fn Footer() -> impl IntoView {
                     <img src="/img/icp.svg" alt="Internet Computer Logo" class="h-6 w-auto" />
 
                     <p class="text-xs text-gray-400">
-                        "Copyright © 2024 EstateDao. All Rights Reserved."
+                        "Copyright © 2025 EstateDao. All Rights Reserved."
                     </p>
                 </div>
 
@@ -30,33 +32,43 @@ pub fn Footer() -> impl IntoView {
                         <h3 class="text-white font-semibold">"Company"</h3>
                         <ul class="space-y-2 text-sm">
                             <li><a href="/about" class="hover:text-white">"About Us"</a></li>
-                            <li><a href="/trips" class="hover:text-white">"My Trips"</a></li>
+                            <li><a href=AppRoutes::MyBookings.to_string() class="hover:text-white">"My Trips"</a></li>
                         </ul>
                     </div>
 
                     <div class="space-y-3">
                         <h3 class="text-white font-semibold">"Support"</h3>
                         <ul class="space-y-2 text-sm">
-                            <li><a href="/help" class="hover:text-white">"Help Centre"</a></li>
-                            <li><a href="/faq" class="hover:text-white">"FAQ"</a></li>
-                            <li><a href="/privacy" class="hover:text-white">"Privacy Policy"</a></li>
-                            <li><a href="/terms" class="hover:text-white">"Terms & Conditions"</a></li>
+                            <li><a href=AccountTabs::Support.as_route() class="hover:text-white">"Help Centre"</a></li>
+                            <li><a href=AccountTabs::Faq.as_route() class="hover:text-white">"FAQ"</a></li>
+                            <li><a href=AccountTabs::Privacy.as_route() class="hover:text-white">"Privacy Policy"</a></li>
+                            <li><a href=AccountTabs::Terms.as_route() class="hover:text-white">"Terms & Conditions"</a></li>
                         </ul>
 
-                        <div class="flex space-x-4 pt-2">
-                            <a href="https://twitter.com" target="_blank" class="text-blue-400 hover:text-white">
-                                <Icon icon=icondata::BiTwitter />
-                            </a>
-                            <a href="https://facebook.com" target="_blank" class="text-blue-400 hover:text-white">
-                                <Icon icon=icondata::BiFacebook />
-                            </a>
-                            <a href="https://instagram.com" target="_blank" class="text-blue-400 hover:text-white">
-                                <Icon icon=icondata::IoLogoInstagram />
-                            </a>
-                        </div>
+                        <SocialLinks class="pt-2" icon_class="text-blue-400 hover:text-white" />
                     </div>
                 </div>
             </div>
         </footer>
+    }
+}
+
+#[component]
+pub fn SocialLinks(
+    #[prop(optional, into)] class: String,
+    #[prop(optional, into)] icon_class: String,
+) -> impl IntoView {
+    view! {
+        <div clone:icon_class class=format!("{} flex space-x-4", class) >
+            <a href="https://x.com/estatedao_icp?s=11" target="_blank" class=icon_class.clone()>
+                <Icon icon=icondata::BiTwitter />
+            </a>
+            <a clone:icon_class href="https://www.facebook.com/profile.php?id=61576590939204" target="_blank" class=icon_class.clone()>
+                <Icon icon=icondata::BiFacebook />
+            </a>
+            <a clone:icon_class href="https://www.instagram.com/estatedao_/" target="_blank" class=icon_class>
+                <Icon icon=icondata::IoLogoInstagram />
+            </a>
+        </div>
     }
 }

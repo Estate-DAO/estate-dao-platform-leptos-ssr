@@ -38,10 +38,9 @@ impl SelectedDateRange {
             return "Check in - Check out".to_string();
         }
 
-        // Ensure we're displaying dates in the correct order
+        // Ensure dates are in correct order
         let (start_date, end_date) = if self.start != (0, 0, 0) && self.end != (0, 0, 0) {
             if self.start > self.end {
-                // If dates are in wrong order, swap them in the display
                 (self.end, self.start)
             } else {
                 (self.start, self.end)
@@ -50,22 +49,78 @@ impl SelectedDateRange {
             (self.start, self.end)
         };
 
-        let start_str = if start_date == (0, 0, 0) {
-            "Check in".to_string()
-        } else {
-            format!(
-                "{:04}-{:02}-{:02}",
-                start_date.0, start_date.1, start_date.2
-            )
+        let format_date = |(y, m, d): (u32, u32, u32)| -> String {
+            if (y, m, d) == (0, 0, 0) {
+                return "".to_string();
+            }
+            let suffix = match d {
+                1 | 21 | 31 => "st",
+                2 | 22 => "nd",
+                3 | 23 => "rd",
+                _ => "th",
+            };
+            let month = match m {
+                1 => "January",
+                2 => "February",
+                3 => "March",
+                4 => "April",
+                5 => "May",
+                6 => "June",
+                7 => "July",
+                8 => "August",
+                9 => "September",
+                10 => "October",
+                11 => "November",
+                12 => "December",
+                _ => "",
+            };
+            format!("{d}{suffix} {month} {y}")
         };
 
-        let end_str = if end_date == (0, 0, 0) {
-            "Check out".to_string()
-        } else {
-            format!("{:04}-{:02}-{:02}", end_date.0, end_date.1, end_date.2)
-        };
+        if start_date == (0, 0, 0) {
+            return format!("Check in - {}", format_date(end_date));
+        }
+        if end_date == (0, 0, 0) {
+            return format!("{} - Check out", format_date(start_date));
+        }
 
-        format!("{} - {}", start_str, end_str)
+        let (sy, sm, sd) = start_date;
+        let (ey, em, ed) = end_date;
+
+        // Case: same month & year → "14th-18th July 2025"
+        if sy == ey && sm == em {
+            let suffix_start = match sd {
+                1 | 21 | 31 => "st",
+                2 | 22 => "nd",
+                3 | 23 => "rd",
+                _ => "th",
+            };
+            let suffix_end = match ed {
+                1 | 21 | 31 => "st",
+                2 | 22 => "nd",
+                3 | 23 => "rd",
+                _ => "th",
+            };
+            let month = match sm {
+                1 => "January",
+                2 => "February",
+                3 => "March",
+                4 => "April",
+                5 => "May",
+                6 => "June",
+                7 => "July",
+                8 => "August",
+                9 => "September",
+                10 => "October",
+                11 => "November",
+                12 => "December",
+                _ => "",
+            };
+            return format!("{sd}{suffix_start}-{ed}{suffix_end} {month} {sy}");
+        }
+
+        // Otherwise → fallback to full dates
+        format!("{} - {}", format_date(start_date), format_date(end_date))
     }
 
     pub fn no_of_nights(&self) -> u32 {

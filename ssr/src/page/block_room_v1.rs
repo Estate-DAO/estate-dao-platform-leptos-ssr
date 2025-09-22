@@ -18,6 +18,7 @@ use crate::domain::{
     DomainRoomGuest, DomainSelectedDateRange, DomainSelectedRoomWithQuantity, DomainUserDetails,
 };
 use crate::log;
+use crate::utils::app_reference::generate_app_reference;
 use crate::utils::{app_reference::BookingId, BackendIntegrationHelper};
 use crate::view_state_layer::booking_id_state::BookingIdState;
 use crate::view_state_layer::email_verification_state::EmailVerificationState;
@@ -1095,6 +1096,9 @@ pub fn ConfirmButton(
                 // Show email verification step first
                 EmailVerificationState::start_verification_flow();
             } else {
+                if let Some(email) = AuthStateSignal::auth_state().get_untracked().email {
+                    generate_app_reference(email.clone());
+                }
                 // Email already verified, proceed with booking
                 BlockRoomUIState::set_show_payment_modal(true);
                 prebook_action.dispatch(());

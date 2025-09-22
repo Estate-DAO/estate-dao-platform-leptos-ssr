@@ -14,8 +14,14 @@ pub use filter_and_sort_by::*;
 mod filter;
 pub use filter::*;
 
+mod price_range_filter;
+pub use price_range_filter::*;
+
 mod star_rating;
 pub use star_rating::*;
+
+mod filters_for_listing;
+pub use filters_for_listing::*;
 
 mod pagination_controls;
 pub use pagination_controls::*;
@@ -73,6 +79,9 @@ pub use destination_section::*;
 mod navbar;
 pub use navbar::*;
 
+mod image_lightbox;
+pub use image_lightbox::*;
+
 pub mod code_print;
 
 pub mod api_error_popup_component;
@@ -81,9 +90,6 @@ pub mod modal;
 pub mod overlay;
 
 pub mod outside_click_detector;
-
-pub mod full_screen_mobile_banner;
-pub use full_screen_mobile_banner::*;
 
 pub mod notification_listener;
 pub use notification_listener::*;
@@ -105,6 +111,15 @@ pub use gtag::*;
 
 pub mod data_table_3;
 pub use data_table_3::*;
+
+pub mod my_account_tabs;
+pub use my_account_tabs::*;
+
+pub mod doc_view;
+pub use doc_view::*;
+
+pub mod faq;
+pub use faq::*;
 
 // pub mod auth;
 pub mod profile_component;

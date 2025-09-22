@@ -1,30 +1,3 @@
-pub mod yral_auth {
-    #[cfg(feature = "ssr")]
-    use jsonwebtoken::DecodingKey;
-    use std::{sync::LazyLock, time::Duration};
-
-    pub const YRAL_AUTH_AUTHORIZATION_URL: &str = "https://auth.yral.com/oauth/auth";
-    pub const YRAL_AUTH_TOKEN_URL: &str = "https://auth.yral.com/oauth/token";
-    pub const YRAL_AUTH_ISSUER_URL: &str = "https://auth.yral.com";
-
-    #[cfg(feature = "ssr")]
-    pub static YRAL_AUTH_TRUSTED_KEY: LazyLock<DecodingKey> = LazyLock::new(|| {
-        let pem = "-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoqN3/0RNfrnrnYGxKBgy/qHnmITr
-+6ucjxStx7tjA30QJZlWzo0atxmY8y9dUR+eKQI0SnbQds4xLEU8+JGm8Q==
------END PUBLIC KEY-----";
-        DecodingKey::from_ec_pem(pem.as_bytes()).unwrap()
-    });
-
-    pub const YRAL_AUTH_CLIENT_ID_ENV: &str = "YRAL_AUTH_CLIENT_ID";
-    pub const USERNAME_MAX_LEN: usize = 15;
-    pub const REFRESH_MAX_AGE: Duration = Duration::from_secs(60 * 60 * 24 * 29);
-    pub const REFRESH_TOKEN_COOKIE: &str = "user-identity";
-    pub const ACCOUNT_CONNECTED_STORE: &str = "account-connected-1";
-    pub const USER_PRINCIPAL_STORE: &str = "user-principal";
-    pub const AUTH_UTIL_COOKIES_MAX_AGE_MS: i64 = 400 * 24 * 60 * 60 * 1000; // 400 days
-}
-
 // CONST FOR LOCAL STORAGE
 pub const PAYMENT_ID: &str = "estatedao_payment_id";
 pub const PAYMENT_STATUS: &str = "estatedao_payment_status";
@@ -47,12 +20,14 @@ pub const PROVAB_PROD_ESTATEFLY_PROXY: &str =
 // APP_URL
 const LOCALHOST_APP_URL: &str = "http://localhost:3002/";
 // const LOCALHOST_APP_URL: &str = "https://louse-musical-hideously.ngrok-free.app";
-const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
+// const STAGING_APP_URL: &str = "https://pr-111-estate.fly.dev";
+// const STAGING_APP_URL: &str = "https://estatefe.fly.dev";
 const PROD_APP_URL: &str = "https://nofeebooking.com";
 
 // common consts
 const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
 
+const BASE_URL: &str = crate::canister::APP_URL;
 // const for local environment
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
@@ -96,12 +71,12 @@ cfg_if! {
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
     }
     else if #[cfg(feature = "prod-consts")] {
-        pub static APP_URL: Lazy<String> = Lazy::new(||  env_w_default("APP_URL", PROD_APP_URL).unwrap().to_string());
+        pub static APP_URL: Lazy<String> = Lazy::new(||   env_w_default("APP_URL", PROD_APP_URL).unwrap().to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else {
-        pub static APP_URL: Lazy<String> = Lazy::new(||  env_w_default("APP_URL", STAGING_APP_URL).unwrap().to_string());
+        pub static APP_URL: Lazy<String> = Lazy::new(|| BASE_URL.to_string());
         pub const AGENT_URL: &str = AGENT_URL_REMOTE;
         pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }

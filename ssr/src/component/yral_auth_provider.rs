@@ -36,7 +36,7 @@ pub fn YralAuthProvider() -> impl IntoView {
                 return Some(auth);
             }
 
-            let app_url = get_app_url_server().await.ok()?;
+            let app_url = APP_URL.clone();
             let url = format!("{app_url}api/user-info");
             match reqwest::get(&url).await {
                 Ok(response) => {
@@ -79,19 +79,44 @@ pub fn YralAuthProvider() -> impl IntoView {
 /// Login button component (shown when not authenticated)
 #[component]
 fn LoginButton() -> impl IntoView {
+    // Setup listener ONCE
+    let _ = use_event_listener(
+        use_window(),
+        ev::message,
+        move |msg: web_sys::MessageEvent| {
+            if let Some(data) = msg.data().as_string() {
+                log::warn!("received message: {:?}", data);
+                wasm_bindgen_futures::spawn_local(async move {
+                    let url = format!("/api/user-info");
+                    match gloo_net::http::Request::get(&url).send().await {
+                        Ok(resp) if resp.status() == 200 => {
+                            if let Ok(user_data) = resp.json::<AuthState>().await {
+                                AuthStateSignal::set(user_data);
+                            }
+                        }
+                        _ => {
+                            logging::log!("Failed to fetch user info");
+                        }
+                    }
+                });
+            }
+        },
+    );
+
     view! {
         <button
             class="flex gap-2 justify-center items-center px-4 py-3 sm:px-6 sm:py-3 md:gap-3 font-medium text-sm md:text-base text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
             on:click=move |ev| {
                 ev.prevent_default();
-                let window = web_sys::window().expect("no global window exists");
-                let _ = window.location().set_href("/auth/google");
+                let window = web_sys::window().unwrap();
+                let _ = window.open_with_url_and_target(
+                    &format!("auth/google"),
+                    "oauthPopup"
+                );
             }
         >
             <img class="w-5 h-5 md:w-5 md:h-5" src="/img/google.svg" alt="Google logo" />
-            <span>
-                "Login with Google"
-            </span>
+            <span>"Login with Google"</span>
         </button>
     }
 }

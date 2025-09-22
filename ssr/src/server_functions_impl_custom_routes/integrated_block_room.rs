@@ -224,10 +224,11 @@ fn extract_destination_from_request(request: &IntegratedBlockRoomRequest) -> Dom
         .search_criteria;
 
     DomainDestination {
-        city_id: search_criteria.destination_city_id,
-        city_name: search_criteria.destination_city_name.clone(),
-        country_code: search_criteria.destination_country_code.clone(),
-        country_name: search_criteria.destination_country_name.clone(),
+        place_id: search_criteria.place_id.clone(),
+        // city_id: search_criteria.destination_city_id,
+        // city_name: search_criteria.destination_city_name.clone(),
+        // country_code: search_criteria.destination_country_code.clone(),
+        // country_name: search_criteria.destination_country_name.clone(),
     }
 }
 

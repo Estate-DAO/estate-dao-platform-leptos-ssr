@@ -1,5 +1,5 @@
 use super::*;
-use crate::api::client_side_api::{CitySearchResult, ClientSideApiClient};
+use crate::api::client_side_api::{CitySearchResult, ClientSideApiClient, Place};
 
 use crate::log;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
@@ -28,7 +28,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     let (search_text, set_search_text) = create_signal(String::new());
     let (is_open, set_is_open) = create_signal(false);
     let (active_index, set_active_index) = create_signal(0);
-    let (search_results, set_search_results) = create_signal(Vec::<Destination>::new());
+    let (search_results, set_search_results) = create_signal(Vec::<Place>::new());
     let (is_loading, set_is_loading) = create_signal(false);
 
     // DOM refs
@@ -40,9 +40,12 @@ pub fn DestinationPickerV6() -> impl IntoView {
 
     // Initialize search text with current selection
     create_effect(move |_| {
-        if let Some(dest) = search_ctx.destination.get() {
+        if let Some(place) = search_ctx.place.get() {
             if !is_open.get() {
-                set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+                set_search_text.set(format!(
+                    "{}, {}",
+                    place.display_name, place.formatted_address
+                ));
             }
         } else if !is_open.get() {
             set_search_text.set(String::new());
@@ -77,11 +80,8 @@ pub fn DestinationPickerV6() -> impl IntoView {
                 return Vec::new();
             }
 
-            match api_client.search_cities(prefix).await {
-                Ok(cities) => cities
-                    .into_iter()
-                    .map(city_search_result_to_destination)
-                    .collect(),
+            match api_client.search_places(prefix).await {
+                Ok(cities) => cities,
                 Err(e) => {
                     log!("City search error: {}", e);
                     Vec::new()
@@ -134,10 +134,17 @@ pub fn DestinationPickerV6() -> impl IntoView {
         set_is_open.set(true); // Always open on click for debugging
     };
 
-    let select_option = move |dest: Destination| {
-        log!("Selecting option: {}, {}", dest.city, dest.country_name);
-        let _ = UISearchCtx::set_destination(dest.clone());
-        set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
+    let select_option = move |place: Place| {
+        log!(
+            "Selecting option: {}, {}",
+            place.display_name,
+            place.formatted_address
+        );
+        let _ = UISearchCtx::set_place(place.clone());
+        set_search_text.set(format!(
+            "{}\n{}",
+            place.display_name, place.formatted_address
+        ));
         set_is_open.set(false);
         log!(
             "Dropdown should be closed now, is_open: {}",
@@ -347,7 +354,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                                         set_active_index.set(i);
                                                     }
                                                 >
-                                                {highlight_match(&format!("{}, {}", dest_clone.city, dest_clone.country_name), &search_text.get())}
+                                                {highlight_match(&format!("{}, {}", dest_clone.display_name, dest_clone.formatted_address), &search_text.get())}
                                                 </div>
                                             }
                                         }).collect::<Vec<_>>().into_view()

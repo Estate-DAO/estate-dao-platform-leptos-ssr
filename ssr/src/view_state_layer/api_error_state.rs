@@ -3,11 +3,14 @@ use crate::api::ApiError;
 use crate::log;
 use crate::ports::hotel_provider_port::{ProviderError, ProviderSteps};
 use crate::view_state_layer::GlobalStateForLeptos;
+use base64::write;
 use leptos::*;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApiErrorType {
+    PlaceSearch,
+    PlaceDetails,
     BlockRoom,
     BookRoom,
     HotelSearch,
@@ -26,6 +29,8 @@ impl From<ProviderError> for ApiErrorType {
             ProviderSteps::HotelBlockRoom => ApiErrorType::BlockRoom,
             ProviderSteps::HotelBookRoom => ApiErrorType::BookRoom,
             ProviderSteps::GetBookingDetails => ApiErrorType::GetBookingDetails,
+            ProviderSteps::PlaceSearch => ApiErrorType::PlaceSearch,
+            ProviderSteps::PlaceDetails => ApiErrorType::PlaceDetails,
         }
     }
 }
@@ -41,6 +46,8 @@ impl fmt::Display for ApiErrorType {
             ApiErrorType::Payment => write!(f, "Payment"),
             ApiErrorType::GetBookingDetails => write!(f, "Get Booking Details"),
             ApiErrorType::Generic => write!(f, "API"),
+            ApiErrorType::PlaceSearch => write!(f, "Place Search"),
+            ApiErrorType::PlaceDetails => write!(f, "Place Details"),
         }
     }
 }

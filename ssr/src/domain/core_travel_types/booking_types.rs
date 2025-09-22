@@ -59,18 +59,24 @@ pub struct DomainPaymentInfo {
     pub method: DomainPaymentMethod,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum DomainPaymentMethod {
-    AccCreditCard,
-    Wallet,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct DomainPlace {
+    pub place_id: String,
+    pub display_name: String,
+    pub formatted_address: String,
 }
 
-impl DomainPaymentMethod {
-    /// Returns the default payment method for the application
-    /// Centralized location to change the default payment method across the entire codebase
-    pub fn default() -> Self {
-        DomainPaymentMethod::AccCreditCard
-    }
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DomainPlacesResponse {
+    pub data: Vec<DomainPlace>,
+}
+
+#[derive(Clone, Debug, Serialize, Default, Deserialize)]
+pub enum DomainPaymentMethod {
+    #[default]
+    AccCreditCard,
+    Wallet,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -1,17 +1,17 @@
 use crate::api::auth::auth_state::AuthStateSignal;
+use crate::page::MyAccountPage;
 use crate::{
     api::{
         consts::{EnvVarConfig, APP_URL},
         payments::ports::GetPaymentStatusResponse,
     },
     component::{
-        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationExample,
-        NotificationState,
+        DataTableCtx, ErrorPopup, GA4ScriptAsync, GoogleTagManagerIFrame, NotificationState,
     },
     error_template::{AppError, ErrorTemplate},
     page::{
         AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
-        ConfirmationPageV1, ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
+        /* ConfirmationPageV1, */ ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
         HotelListPage, MyBookingsPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
     },
     view_state_layer::{
@@ -68,7 +68,7 @@ pub enum AppRoutes {
     AdminPanel,
     AdminEditPanel,
     MyBookings,
-    // Notifications
+    MyAccount, // Notifications
 }
 
 impl AppRoutes {
@@ -84,6 +84,7 @@ impl AppRoutes {
             AppRoutes::AdminPanel => "/admin-panel",
             AppRoutes::AdminEditPanel => "/admin-edit-panel",
             AppRoutes::MyBookings => "/my-bookings",
+            AppRoutes::MyAccount => "/account",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -238,6 +239,7 @@ pub fn App() -> impl IntoView {
                         <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
                         <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
                         <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
+                        <Route path=AppRoutes::MyAccount.to_string() view=MyAccountPage />
                         // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                         // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>

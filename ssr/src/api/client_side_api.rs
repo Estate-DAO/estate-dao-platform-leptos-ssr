@@ -104,6 +104,80 @@ pub struct SearchCitiesRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchPlacesRequest {
+    pub text_query: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SearchPlacesResponse {
+    pub data: Vec<Place>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Place {
+    pub place_id: String,
+    pub display_name: String,
+    pub formatted_address: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PlaceDetailsRequest {
+    pub place_id: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaceDetailsResponse {
+    pub data: PlaceData,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaceData {
+    pub address_components: Vec<AddressComponent>,
+    pub location: Location,
+    pub viewport: Viewport,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddressComponent {
+    pub language_code: String,
+    pub long_text: String,
+    pub short_text: String,
+    pub types: Vec<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Location {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Viewport {
+    pub high: High,
+    pub low: Low,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct High {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Low {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCitiesResponse {
     pub cities: Vec<CitySearchResult>,
 }
@@ -377,6 +451,25 @@ impl ClientSideApiClient {
             Self::api_call_with_error(request, "server_fn_api/search_cities_api", "search cities")
                 .await?;
         Ok(response.cities)
+    }
+
+    pub async fn search_places(&self, query: String) -> Result<Vec<Place>, String> {
+        let request = SearchPlacesRequest { text_query: query };
+        let response: SearchPlacesResponse =
+            Self::api_call_with_error(request, "server_fn_api/search_place_api", "search places")
+                .await?;
+        Ok(response.data)
+    }
+
+    pub async fn get_place_details_by_id(&self, place_id: String) -> Result<PlaceData, String> {
+        let request = PlaceDetailsRequest { place_id };
+        let response: PlaceDetailsResponse = Self::api_call_with_error(
+            request,
+            "server_fn_api/get_place_details_api",
+            "get place details",
+        )
+        .await?;
+        Ok(response.data)
     }
 
     pub async fn get_hotel_info(

@@ -216,7 +216,7 @@ impl BlockRoomUIState {
         let child_list = this.children.get_untracked();
 
         // Validate primary adult
-        let primary_adult_valid = adult_list.first().map_or(false, |adult| {
+        let primary_adult_valid = adult_list.first().is_some_and(|adult| {
             !adult.first_name.trim().is_empty()
                 && adult
                     .email
@@ -374,7 +374,7 @@ impl BlockRoomUIState {
 
     pub fn get_block_room_called() -> bool {
         let this: Self = expect_context();
-        this.block_room_called.get()
+        this.block_room_called.get_untracked()
     }
 
     pub fn get_adults() -> Vec<AdultDetail> {

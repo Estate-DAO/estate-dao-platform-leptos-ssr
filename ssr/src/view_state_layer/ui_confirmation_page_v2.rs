@@ -19,19 +19,14 @@ use chrono::{DateTime, Utc};
 /// - Centralized error handling
 /// - Single source of truth for workflow status
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum ConfirmationStep {
+    #[default]
     Initializing,
     PaymentConfirmation,
     BookingProcessing,
     EmailSending,
     Completed,
-}
-
-impl Default for ConfirmationStep {
-    fn default() -> Self {
-        ConfirmationStep::Initializing
-    }
 }
 
 impl ConfirmationStep {

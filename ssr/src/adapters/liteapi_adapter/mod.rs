@@ -1,6 +1,7 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         pub mod impl_hotel_provider_trait;
+        pub mod impl_place_provider_trait;
     }
 }
 
@@ -9,7 +10,8 @@ use std::sync::Arc;
 use crate::api::api_client::ApiClient;
 use crate::api::liteapi::{
     liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook,
-    LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiHTTPClient,
+    LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiGetPlaceRequest,
+    LiteApiGetPlaceResponse, LiteApiGetPlacesRequest, LiteApiGetPlacesResponse, LiteApiHTTPClient,
     LiteApiHotelImage, LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiHotelResult,
     LiteApiHotelSearchRequest, LiteApiHotelSearchResponse, LiteApiOccupancy, LiteApiPrebookRequest,
     LiteApiPrebookResponse, LiteApiSingleHotelDetailData, LiteApiSingleHotelDetailRequest,
@@ -22,13 +24,7 @@ use tracing::instrument;
 
 use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
-use crate::domain::{
-    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainBookingHolder,
-    DomainDetailedPrice, DomainFirstRoomDetails, DomainGetBookingRequest, DomainGetBookingResponse,
-    DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPaginationMeta,
-    DomainPaginationParams, DomainPrice, DomainRoomData, DomainRoomOccupancy, DomainRoomOption,
-};
+use crate::domain::*;
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
 use crate::utils::date::date_tuple_to_dd_mm_yyyy;
@@ -58,7 +54,7 @@ impl LiteApiAdapter {
             && hotel_details
                 .thumbnail
                 .as_ref()
-                .map_or(true, |t| t.trim().is_empty());
+                .is_none_or(|t| t.trim().is_empty());
 
         // <!-- Commented out image-based filtering -->
         // let is_empty = name_empty || (description_empty && address_empty && no_images);
@@ -74,7 +70,7 @@ impl LiteApiAdapter {
                 no_images = %no_images,
                 main_photo_empty = %hotel_details.main_photo.trim().is_empty(),
                 hotel_images_count = %hotel_details.hotel_images.len(),
-                thumbnail_empty = %hotel_details.thumbnail.as_ref().map_or(true, |t| t.trim().is_empty()),
+                thumbnail_empty = %hotel_details.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty()),
                 "Hotel details considered empty"
             );
         } else {
@@ -86,7 +82,7 @@ impl LiteApiAdapter {
                 no_images = %no_images,
                 main_photo_empty = %hotel_details.main_photo.trim().is_empty(),
                 hotel_images_count = %hotel_details.hotel_images.len(),
-                thumbnail_empty = %hotel_details.thumbnail.as_ref().map_or(true, |t| t.trim().is_empty()),
+                thumbnail_empty = %hotel_details.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty()),
                 "Hotel details validation passed"
             );
         }
@@ -185,11 +181,11 @@ impl LiteApiAdapter {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(20).min(5000).max(1);
+                let page_size = params.page_size.unwrap_or(20).clamp(1, 1000);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 5000), // Default: first page, 5000 results
+            None => (0, 1000), // Default: first page, 1000 results
         }
     }
 
@@ -228,6 +224,71 @@ impl LiteApiAdapter {
     }
 
     // --- Mapping functions ---
+
+    fn map_places_domain_to_liteapi(payload: DomainPlacesSearchPayload) -> LiteApiGetPlacesRequest {
+        LiteApiGetPlacesRequest {
+            text_query: payload.text_query,
+        }
+    }
+
+    fn map_places_id_domain_to_liteapi(
+        payload: DomainPlaceDetailsPayload,
+    ) -> LiteApiGetPlaceRequest {
+        LiteApiGetPlaceRequest {
+            place_id: payload.place_id,
+        }
+    }
+
+    fn map_liteapi_places_response_to_domain(
+        payload: LiteApiGetPlacesResponse,
+    ) -> DomainPlacesResponse {
+        DomainPlacesResponse {
+            data: payload
+                .data
+                .into_iter()
+                .map(|place| DomainPlace {
+                    place_id: place.place_id,
+                    display_name: place.display_name,
+                    formatted_address: place.formatted_address,
+                })
+                .collect(),
+        }
+    }
+
+    fn map_liteapi_place_details_response_to_domain(
+        payload: LiteApiGetPlaceResponse,
+    ) -> DomainPlaceDetails {
+        DomainPlaceDetails {
+            data: DomainPlaceData {
+                address_components: payload
+                    .data
+                    .address_components
+                    .into_iter()
+                    .map(|ac| DomainAddressComponent {
+                        language_code: ac.language_code,
+                        long_text: ac.long_text,
+                        short_text: ac.short_text,
+                        types: ac.types,
+                    })
+                    .collect(),
+                location: DomainLocation {
+                    latitude: payload.data.location.latitude,
+                    longitude: payload.data.location.longitude,
+                },
+                viewport: DomainViewport {
+                    high: DomainHigh {
+                        latitude: payload.data.viewport.high.latitude,
+                        longitude: payload.data.viewport.high.longitude,
+                    },
+                    low: DomainLow {
+                        latitude: payload.data.viewport.low.latitude,
+                        longitude: payload.data.viewport.low.longitude,
+                    },
+                },
+            },
+        }
+    }
+
     fn map_domain_search_to_liteapi(
         domain_criteria: &DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
@@ -243,11 +304,13 @@ impl LiteApiAdapter {
         );
 
         LiteApiHotelSearchRequest {
-            ai_search: domain_criteria.destination_city_name.clone(),
+            place_id: domain_criteria.place_id.clone(),
+            distance: 100000,
+            // ai_search: domain_criteria.destination_city_name.clone(),
             // country_code: domain_criteria.destination_country_code.clone(),
             // city_name: domain_criteria.destination_city_name.clone(), // Assuming this field exists
-            // offset,
-            // limit,
+            offset,
+            limit,
             // destination_latitude: domain_criteria.destination_latitude,
             // destination_longitude: domain_criteria.destination_longitude,
             // // todo(hotel_search): default search radius is 10km in liteapi for now.
@@ -286,7 +349,7 @@ impl LiteApiAdapter {
         DomainHotelListAfterSearch {
             hotel_results: valid_hotels
                 .into_iter()
-                .map(|hotel| Self::map_liteapi_hotel_to_domain(hotel))
+                .map(Self::map_liteapi_hotel_to_domain)
                 .collect(),
             pagination: None, // Will be set by calling function if needed
         }
@@ -294,6 +357,17 @@ impl LiteApiAdapter {
 
     fn map_liteapi_hotel_to_domain(liteapi_hotel: LiteApiHotelResult) -> DomainHotelAfterSearch {
         let hotel_id = liteapi_hotel.id.clone();
+        let property_type = liteapi_hotel
+            .hotel_type_id
+            .map(|id| Self::map_hotel_type_id_to_label(id));
+
+        // Map facility IDs to human-readable amenities
+        let amenities: Vec<String> = liteapi_hotel
+            .facility_ids
+            .iter()
+            .map(|&id| Self::map_facility_id_to_name(id))
+            .collect();
+
         DomainHotelAfterSearch {
             hotel_code: hotel_id.clone(),
             hotel_name: liteapi_hotel.name,
@@ -304,6 +378,8 @@ impl LiteApiAdapter {
                 currency_code: liteapi_hotel.currency,
             }),
             hotel_picture: liteapi_hotel.main_photo,
+            amenities,
+            property_type,
             result_token: hotel_id,
         }
     }
@@ -501,10 +577,7 @@ impl LiteApiAdapter {
         let description_empty = hotel.hotel_description.trim().is_empty();
         let address_empty = hotel.address.trim().is_empty();
         let no_main_photo = hotel.main_photo.trim().is_empty();
-        let no_thumbnail = hotel
-            .thumbnail
-            .as_ref()
-            .map_or(true, |t| t.trim().is_empty());
+        let no_thumbnail = hotel.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty());
         let no_images = no_main_photo && no_thumbnail;
 
         // Consider hotel details empty if:
@@ -552,11 +625,7 @@ impl LiteApiAdapter {
                 if hotel.main_photo.trim().is_empty() {
                     reasons.push("empty main_photo");
                 }
-                if hotel
-                    .thumbnail
-                    .as_ref()
-                    .map_or(true, |t| t.trim().is_empty())
-                {
+                if hotel.thumbnail.as_ref().is_none_or(|t| t.trim().is_empty()) {
                     reasons.push("empty thumbnail");
                 }
 
@@ -604,9 +673,8 @@ impl LiteApiAdapter {
             .collect();
 
         // Format dates as YYYY-MM-DD
-        let checkin = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_in_date.clone());
-        let checkout =
-            utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_out_date.clone());
+        let checkin = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_in_date);
+        let checkout = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_out_date);
 
         // Get hotel IDs - use provided hotel_ids or fall back to token
         let hotel_ids = if !domain_criteria.hotel_ids.is_empty() {
@@ -662,6 +730,66 @@ impl LiteApiAdapter {
         }
     }
 
+    // Map hotel type ID to a human-readable label.
+    // If we don't have a concrete mapping, fall back to a generic label.
+    fn map_hotel_type_id_to_label(type_id: i32) -> String {
+        match type_id {
+            0 => "Not Available".to_string(),
+            201 => "Apartments".to_string(),
+            203 => "Hostels".to_string(),
+            204 => "Hotels".to_string(),
+            205 => "Motels".to_string(),
+            206 => "Resorts".to_string(),
+            207 => "Residences".to_string(),
+            208 => "Bed and breakfasts".to_string(),
+            209 => "Ryokans".to_string(),
+            210 => "Farm stays".to_string(),
+            212 => "Holiday parks".to_string(),
+            213 => "Villas".to_string(),
+            214 => "Campsites".to_string(),
+            215 => "Boats".to_string(),
+            216 => "Guest houses".to_string(),
+            218 => "Inns".to_string(),
+            219 => "Aparthotels".to_string(),
+            220 => "Holiday homes".to_string(),
+            221 => "Lodges".to_string(),
+            222 => "Homestays".to_string(),
+            223 => "Country houses".to_string(),
+            224 => "Luxury tents".to_string(),
+            225 => "Capsule hotels".to_string(),
+            226 => "Love hotels".to_string(),
+            227 => "Riads".to_string(),
+            228 => "Chalets".to_string(),
+            229 => "Condos".to_string(),
+            230 => "Cottages".to_string(),
+            231 => "Economy hotels".to_string(),
+            232 => "Gites".to_string(),
+            233 => "Health resorts".to_string(),
+            234 => "Cruises".to_string(),
+            235 => "Student accommodation".to_string(),
+            243 => "Tree house property".to_string(),
+            247 => "Pension".to_string(),
+            250 => "Private vacation home".to_string(),
+            251 => "Pousada".to_string(),
+            252 => "Country house".to_string(),
+            254 => "Campsite".to_string(),
+            257 => "Cabin".to_string(),
+            258 => "Holiday park".to_string(),
+            262 => "Affittacamere".to_string(),
+            264 => "Hostel/Backpacker accommodation".to_string(),
+            265 => "Houseboat".to_string(),
+            268 => "Ranch".to_string(),
+            271 => "Agritourism property".to_string(),
+            272 => "Mobile home".to_string(),
+            273 => "Safari/Tentalow".to_string(),
+            274 => "All-inclusive property".to_string(),
+            276 => "Castle".to_string(),
+            277 => "Property".to_string(),
+            278 => "Palace".to_string(),
+            _ => format!("Type {}", type_id),
+        }
+    }
+
     // #[tracing::instrument]
     // Map LiteAPI rates response and hotel details to domain hotel details
     fn map_liteapi_rates_and_details_to_domain(
@@ -674,7 +802,7 @@ impl LiteApiAdapter {
         if liteapi_rates_response
             .data
             .as_deref()
-            .map_or(true, |d| d.is_empty())
+            .is_none_or(|d| d.is_empty())
         {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
@@ -943,13 +1071,9 @@ impl LiteApiAdapter {
             } else {
                 crate::log!("Using enhanced defaults with basic hotel info");
                 // Enhanced fallback with basic hotel information
-                let hotel_name = format!("Hotel in {}", search_criteria.destination_city_name);
-                let description = format!("A quality hotel located in {}, {}. This property offers comfortable accommodations and excellent service for your stay.", 
-                    search_criteria.destination_city_name, search_criteria.destination_country_name);
-                let address = format!(
-                    "{}, {}",
-                    search_criteria.destination_city_name, search_criteria.destination_country_name
-                );
+                let hotel_name = "Hotel".to_string();
+                let description = "A quality hotel located. This property offers comfortable accommodations and excellent service for your stay.".to_string();
+                let address = String::new();
 
                 // Add some default images - these could be placeholder images
                 let images = vec![
@@ -1583,8 +1707,8 @@ impl LiteApiAdapter {
                 rate: DomainBookedRoomRate {
                     retail_rate: DomainBookedRetailRate {
                         total: DomainBookedPrice {
-                            amount: room.rate.retail_rate.total.amount,
-                            currency: room.rate.retail_rate.total.currency,
+                            amount: room.flattened_rate.amount,
+                            currency: room.flattened_rate.currency,
                         },
                     },
                 },

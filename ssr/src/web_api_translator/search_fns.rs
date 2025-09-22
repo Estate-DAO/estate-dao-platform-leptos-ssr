@@ -1,6 +1,6 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
-        use crate::adapters::ProvabAdapter;
+        // use crate::adapters::ProvabAdapter;
     }
 }
 // use crate::application_services::HotelService;
@@ -21,7 +21,12 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
         let no_of_nights = ctx.date_range.get_untracked().no_of_nights();
 
         // todo (better hanlding)
-        let destination: Destination = ctx.destination.get_untracked().unwrap_or_default();
+        let place_id = ctx
+            .place
+            .get_untracked()
+            .map(|f| f.place_id)
+            .unwrap_or_default();
+        let destination = ctx.place_details.get_untracked().unwrap_or_default();
 
         // Get pagination parameters from UI state if available
         let pagination = UIPaginationState::get_pagination_params();
@@ -38,12 +43,16 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             no_of_nights,
             no_of_rooms: ctx.guests.rooms.get_untracked(),
             room_guests: vec![ctx.guests.into()],
-            destination_city_id: destination.city_id.parse().unwrap_or_default(),
-            destination_city_name: destination.city,
-            destination_country_code: destination.country_code,
-            destination_country_name: destination.country_name,
+            // destination_city_id: destination.city_id.parse().unwrap_or_default(),
+            // destination_city_name: destination.city,
+            // destination_country_code: destination.country_code,
+            // destination_country_name: destination.country_name,
+            guest_nationality: "US".into(), // Hardcoded for now, can be dynamic based on user profile or selection
+            // destination_latitude: Some(destination.location.latitude),
+            // destination_longitude: Some(destination.location.longitude),
+            place_id,
             pagination,
-            ..Default::default()
+            // ..Default::default()
         };
 
         log!("HotelSearchRequest: {request:?}");
@@ -54,7 +63,7 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
 
 impl From<GuestSelection> for DomainRoomGuest {
     fn from(guest_selection: GuestSelection) -> Self {
-        let ages_u32: Vec<u32> = guest_selection.children_ages.get_untracked().into();
+        let ages_u32: Vec<u32> = guest_selection.children_ages.get_untracked();
         let children_ages_converted: Option<Vec<String>> = if ages_u32.is_empty() {
             None
         } else {

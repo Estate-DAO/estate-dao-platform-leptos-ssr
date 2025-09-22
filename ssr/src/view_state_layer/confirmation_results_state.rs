@@ -109,11 +109,11 @@ impl ConfirmationResultsState {
         Self::get().booking_details.get().is_some()
     }
     pub fn payment_status_from_backend_is_finished_check() -> bool {
-        Self::get_payment_status().map_or(false, |status| status == "finished")
+        Self::get_payment_status().is_some_and(|status| status == "finished")
     }
 
     pub fn payment_status_from_api_is_finished_check() -> bool {
-        Self::payment_status_response_from_api().map_or(false, |status| status.is_finished())
+        Self::payment_status_response_from_api().is_some_and(|status| status.is_finished())
     }
 
     pub fn payment_status_response_from_api() -> Option<GetPaymentStatusResponse> {

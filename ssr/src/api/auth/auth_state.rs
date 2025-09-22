@@ -8,13 +8,7 @@ use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
 use crate::{
     api::{
         auth::types::OidcUser,
-        consts::{
-            yral_auth::{
-                ACCOUNT_CONNECTED_STORE, AUTH_UTIL_COOKIES_MAX_AGE_MS, REFRESH_MAX_AGE,
-                USER_PRINCIPAL_STORE,
-            },
-            USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY,
-        },
+        consts::{USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY},
     },
     send_wrap,
     utils::parent_resource::{MockPartialEq, ParentResource},

@@ -18,7 +18,7 @@ pub async fn search_hotel_api_server_fn_route(
 ) -> Result<Response, Response> {
     // <!-- Parse input string to struct -->
     let request: DomainHotelSearchCriteria = parse_json_request(&body)?;
-
+    tracing::error!("Hotel search request: {:?}", request);
     // <!-- Create the hotel service with LiteApiAdapter -->
     let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
     let hotel_service = HotelService::new(liteapi_adapter);

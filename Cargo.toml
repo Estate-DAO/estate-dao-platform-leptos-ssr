@@ -1,5 +1,5 @@
 [workspace]
-members = ["ssr", "telemetry_axum","bg-ractor", "duck-searcher"]
+members = ["ssr", "telemetry_axum"]
 resolver = "2"
 
 [workspace.package]
@@ -55,6 +55,6 @@ tokio = { version = "1", features = ["rt-multi-thread", "time"] }
 
 base64ct = {version = "1.6.0"}
 telemetry_axum = {path = "./telemetry_axum"}
-duck-searcher = {path = "./duck-searcher"}
-bg-ractor = {path = "./bg-ractor"}
+# duck-searcher = {path = "./duck-searcher"}
+# bg-ractor = {path = "./bg-ractor"}
 

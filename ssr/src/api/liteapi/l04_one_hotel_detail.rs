@@ -109,8 +109,8 @@ pub struct LiteApiRoom {
     pub max_occupancy: i32,
     // #[serde(rename = "bedTypes")]
     // pub bed_types: Vec<String>,
-    // #[serde(rename = "roomAmenities")]
-    // pub room_amenities: Vec<LiteApiRoomAmenity>,
+    #[serde(rename = "roomAmenities")]
+    pub room_amenities: Vec<LiteApiRoomAmenity>,
     pub photos: Vec<LiteApiRoomPhoto>,
     pub views: Vec<LiteApiRoomView>,
     // #[serde(rename = "bedRelation")]
