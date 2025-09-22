@@ -846,7 +846,11 @@ pub fn HotelCardTile(
     let navigate = use_navigate();
 
     let displayed_score = guest_score.or_else(|| {
-        if rating > 0 { Some((rating as f32) * 2.0) } else { None }
+        if rating > 0 {
+            Some((rating as f32) * 2.0)
+        } else {
+            None
+        }
     });
 
     let review_text = match displayed_score {
@@ -912,7 +916,7 @@ pub fn HotelCardTile(
                 ev.prevent_default();
                 ev.stop_propagation();
                 on_navigate();
-            } 
+            }
             class=format!("flex flex-col md:flex-row bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
             <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
