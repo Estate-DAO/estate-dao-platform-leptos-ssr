@@ -680,10 +680,11 @@ pub fn HotelListPage() -> impl IntoView {
                                                         property_type=hotel_result.property_type.clone()
                                                         class=format!(
                                                                 "w-full mb-4 {} {}",
-                                                                if is_disabled { "grayscale pointer-events-none opacity-60" } else { "" },
+                                                                if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
                                                                 ""
                                                             )
                                                         hotel_address
+                                                        disabled=is_disabled
                                                     />
                                                     // <HotelCard
                                                     //     img
@@ -835,6 +836,7 @@ pub fn HotelCardTile(
     property_type: Option<String>,
     hotel_address: Option<String>,
     #[prop(into)] class: String,
+    disabled: bool,
 ) -> impl IntoView {
     let price_copy = price.clone();
 
@@ -878,13 +880,13 @@ pub fn HotelCardTile(
 
         move || {
             // ✅ 1. Block navigation if no price or price is zero
-            if !price.get_untracked().map(|f| f > 0.0).unwrap_or(false) {
-                log!(
-                    "Navigation blocked: no valid price for {}",
-                    hotel_code_cloned
-                );
-                return;
-            }
+            // if !price.get_untracked().map(|f| f > 0.0).unwrap_or(false) {
+            //     log!(
+            //         "Navigation blocked: no valid price for {}",
+            //         hotel_code_cloned
+            //     );
+            //     return;
+            // }
 
             // ✅ 2. Set context for Hotel Info
             hotel_view_info_ctx
@@ -917,7 +919,7 @@ pub fn HotelCardTile(
                 ev.stop_propagation();
                 on_navigate();
             }
-            class=format!("flex flex-col md:flex-row bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
+            class=format!("flex flex-col md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
             <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
                 <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
@@ -967,28 +969,47 @@ pub fn HotelCardTile(
                         //     <p class="text-sm text-gray-500">{pt}</p>
                         // })}
                     </div>
-                    <div class="text-right">
-                        {move || {
-                            if let Some(p) = price_copy {
-                                view! {
-                                    <p class="text-xl font-bold">
-                                        ${format!("{:.0}", p)} <span class="text-sm font-normal text-gray-500">"/ night"</span>
-                                    </p>
+                    <Show when=move || !disabled fallback=|| view!{
+                        <div class="flex items-center justify-end text-red-600 gap-2">
+                            // Info Icon
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 flex-shrink-0"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+
+                            <p>
+                                This property is not available.
+                            </p>
+                        </div>
+                    }>
+                        <div class="text-right">
+                            {move || {
+                                if let Some(p) = price_copy {
+                                    view! {
+                                        <p class="text-xl font-bold">
+                                            ${format!("{:.0}", p)} <span class="text-sm font-normal text-gray-500">"/ night"</span>
+                                        </p>
+                                    }
+                                } else {
+                                    view! { <p class="text-xl font-bold">"Check Availability"</p> }
                                 }
-                            } else {
-                                view! { <p class="text-xl font-bold">"Check Availability"</p> }
-                            }
-                        }}
-                        <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
+                            }}
+                            // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
 
-                        {discount_percent.map(|d| view! {
-                            <p class="text-xs font-semibold text-green-600 mt-1">{format!("{d}% OFF")}</p>
-                        })}
+                            {discount_percent.map(|d| view! {
+                                <p class="text-xs font-semibold text-green-600 mt-1">{format!("{d}% OFF")}</p>
+                            })}
 
-                        <button class="mt-3 inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 text-sm w-full sm:w-auto">
-                            "See Availability"
-                        </button>
-                    </div>
+                            <button class="mt-3 inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 text-sm w-full sm:w-auto">
+                                "See Availability"
+                            </button>
+                        </div>
+                    </Show>
                 </div>
             </div>
         </div>
