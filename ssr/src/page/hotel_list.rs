@@ -923,11 +923,11 @@ pub fn HotelCardTile(
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
             <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
                 <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
-                <button class="absolute top-3 left-3 bg-white p-2 rounded-full shadow-sm border border-gray-100" aria-label="Add to wishlist">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 7.8c0-2.6 2.1-4.6 4.7-4.6 1.6 0 3.1.8 4 2.1 0.9-1.3 2.4-2.1 4-2.1 2.6 0 4.7 2 4.7 4.6 0 5.3-8.7 9.6-8.7 9.6s-8.7-4.3-8.7-9.6z" />
-                    </svg>
-                </button>
+                // <button class="absolute top-3 left-3 bg-white p-2 rounded-full shadow-sm border border-gray-100" aria-label="Add to wishlist">
+                //     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                //         <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 7.8c0-2.6 2.1-4.6 4.7-4.6 1.6 0 3.1.8 4 2.1 0.9-1.3 2.4-2.1 4-2.1 2.6 0 4.7 2 4.7 4.6 0 5.3-8.7 9.6-8.7 9.6s-8.7-4.3-8.7-9.6z" />
+                //     </svg>
+                // </button>
             </div>
 
             // RIGHT CONTENT
