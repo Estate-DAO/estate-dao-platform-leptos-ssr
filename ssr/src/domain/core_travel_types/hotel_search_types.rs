@@ -161,7 +161,7 @@ pub struct DomainHotelAfterSearch {
     pub result_token: String,
     // <!-- Additional fields can be added later -->
     // pub hotel_description: Option<String>,
-    // pub hotel_address: Option<String>,
+    pub hotel_address: Option<String>,
     // pub amenities: Option<Vec<String>>,
 }
 
