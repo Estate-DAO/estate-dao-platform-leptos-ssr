@@ -501,7 +501,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                     <div class="flex-1 min-w-0">
                         // Use resource pattern with Suspense for automatic loading states
-                        <Suspense fallback=move || view! { <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{fallback()}</div> }>
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
                             {move || {
                                 // Trigger the resource loading but don't render anything
                                 let _ = hotel_search_resource.get();
@@ -509,7 +509,7 @@ pub fn HotelListPage() -> impl IntoView {
                             }}
                         </Suspense>
 
-                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <div class="mt-4">
 
                             <Show
                                 when=move || search_list_page.search_result.get().is_some()
@@ -664,19 +664,40 @@ pub fn HotelListPage() -> impl IntoView {
                                                 } else {
                                                     hotel_result.hotel_picture.clone()
                                                 };
+                                                let res = hotel_result.clone();
+                                                let hotel_address = hotel_result.hotel_address.clone();
+                                                let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
                                                 view! {
-                                                    <HotelCard
+                                                    <HotelCardTile
                                                         img
+                                                        guest_score=None
                                                         rating=hotel_result.star_rating
                                                         hotel_name=hotel_result.hotel_name.clone()
-                                                        price
                                                         hotel_code=hotel_result.hotel_code.clone()
+                                                        price=price
+                                                        discount_percent=None
+                                                        amenities=amenities.get()
+                                                        property_type=hotel_result.property_type.clone()
                                                         class=format!(
-                                                                "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
-                                                                if is_disabled { "grayscale" } else { "" },
-                                                                if is_disabled { "pointer-events-none opacity-50" } else { "" },
+                                                                "w-full mb-4 {} {}",
+                                                                if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
+                                                                ""
                                                             )
+                                                        hotel_address
+                                                        disabled=is_disabled
                                                     />
+                                                    // <HotelCard
+                                                    //     img
+                                                    //     rating=hotel_result.star_rating
+                                                    //     hotel_name=hotel_result.hotel_name.clone()
+                                                    //     price
+                                                    //     hotel_code=hotel_result.hotel_code.clone()
+                                                    //     class=format!(
+                                                    //             "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
+                                                    //             if is_disabled { "grayscale" } else { "" },
+                                                    //             if is_disabled { "pointer-events-none opacity-50" } else { "" },
+                                                    //         )
+                                                    // />
                                                 }
                                             })
                                             .collect_view()
@@ -796,6 +817,199 @@ pub fn HotelCard(
                             "View details"
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn HotelCardTile(
+    img: String,
+    rating: u8,
+    guest_score: Option<f32>,
+    hotel_name: String,
+    hotel_code: String,
+    price: Option<f64>,
+    discount_percent: Option<u8>,
+    amenities: Vec<String>,
+    property_type: Option<String>,
+    hotel_address: Option<String>,
+    #[prop(into)] class: String,
+    disabled: bool,
+) -> impl IntoView {
+    let price_copy = price.clone();
+
+    let price = create_rw_signal(price);
+
+    let search_list_page: SearchListResults = expect_context();
+    let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+
+    let navigate = use_navigate();
+
+    let displayed_score = guest_score.or_else(|| {
+        if rating > 0 {
+            Some((rating as f32) * 2.0)
+        } else {
+            None
+        }
+    });
+
+    let review_text = match displayed_score {
+        Some(s) if s >= 9.0 => "Excellent",
+        Some(s) if s >= 8.0 => "Very Good",
+        Some(s) if s >= 7.0 => "Good",
+        Some(s) if s >= 5.0 => "Fair",
+        Some(_) => "Very Bad",
+        None => "Unrated",
+    };
+
+    let rating_badge_class = match displayed_score {
+        Some(s) if s >= 9.0 => "bg-emerald-700 text-white",
+        Some(s) if s >= 8.0 => "bg-emerald-500 text-white",
+        Some(s) if s >= 7.0 => "bg-amber-400 text-white",
+        Some(s) if s >= 5.0 => "bg-amber-300 text-white",
+        Some(_) => "bg-rose-500 text-white",
+        None => "bg-gray-200 text-gray-700",
+    };
+
+    let on_navigate = {
+        let hotel_code_cloned = hotel_code.clone();
+        let navigate = navigate.clone();
+        let price = price.clone();
+
+        move || {
+            // ✅ 1. Block navigation if no price or price is zero
+            // if !price.get_untracked().map(|f| f > 0.0).unwrap_or(false) {
+            //     log!(
+            //         "Navigation blocked: no valid price for {}",
+            //         hotel_code_cloned
+            //     );
+            //     return;
+            // }
+
+            // ✅ 2. Set context for Hotel Info
+            hotel_view_info_ctx
+                .hotel_code
+                .set(hotel_code_cloned.clone());
+            HotelDetailsUIState::reset();
+            log!("Hotel code set: {}", hotel_code_cloned);
+
+            // ✅ 3. Try to build query params
+            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
+            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
+                target_url = hotel_params.to_shareable_url();
+            }
+            log!("Opening in new tab: {}", target_url);
+
+            // ✅ 4. Open in new tab
+            if let Some(window) = web_sys::window() {
+                let _ = window.open_with_url_and_target(&target_url, "_blank");
+            }
+
+            // ✅ 4. Close dialogs after navigation
+            InputGroupState::toggle_dialog(OpenDialogComponent::None);
+        }
+    };
+
+    view! {
+        // keep overflow-hidden for rounded corners but allow children to expand naturally
+        <div on:click=move |ev| {
+                ev.prevent_default();
+                ev.stop_propagation();
+                on_navigate();
+            }
+            class=format!("flex flex-col md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
+            // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
+            <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
+                <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
+                // <button class="absolute top-3 left-3 bg-white p-2 rounded-full shadow-sm border border-gray-100" aria-label="Add to wishlist">
+                //     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                //         <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 7.8c0-2.6 2.1-4.6 4.7-4.6 1.6 0 3.1.8 4 2.1 0.9-1.3 2.4-2.1 4-2.1 2.6 0 4.7 2 4.7 4.6 0 5.3-8.7 9.6-8.7 9.6s-8.7-4.3-8.7-9.6z" />
+                //     </svg>
+                // </button>
+            </div>
+
+            // RIGHT CONTENT
+            // added min-w-0 so child truncation/wrapping behaves correctly inside flexbox
+            <div class="flex-1 min-w-0 flex flex-col justify-between p-4 md:p-6">
+                // title + reviews row
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        // allow wrapping (no truncate). whitespace-normal and break-words let the long hotel name wrap lines
+                        <h3 class="text-lg font-semibold leading-snug whitespace-normal break-words">{hotel_name.clone()}</h3>
+                        <p class="text-sm text-gray-600 mt-1 leading-snug whitespace-normal break-words">{hotel_address.clone().unwrap_or_default()}</p>
+
+                        // amenities
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {amenities.iter().map(|a| view! {
+                                <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a}</span>
+                            }).collect_view()}
+                        </div>
+                    </div>
+
+                    // review block
+                    // on small screens it becomes full width (so it won't force overflow); on md it becomes a small right column
+                    <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
+                        <div class="flex-1 space-x-1 flex items-center">
+                            <p class="text-sm font-medium text-gray-700">{review_text}</p>
+                            <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
+                                {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
+                            </div>
+                            // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
+                        </div>
+                    </div>
+                </div>
+
+                // price + CTA
+                // stack on mobile, row on sm+, button full width on mobile
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mt-4">
+                    <div>
+                        // {property_type.clone().map(|pt| view! {
+                        //     <p class="text-sm text-gray-500">{pt}</p>
+                        // })}
+                    </div>
+                    <Show when=move || !disabled fallback=|| view!{
+                        <div class="flex items-center justify-end text-red-600 gap-2">
+                            // Info Icon
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 flex-shrink-0"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+
+                            <p>
+                                This property is not available.
+                            </p>
+                        </div>
+                    }>
+                        <div class="text-right">
+                            {move || {
+                                if let Some(p) = price_copy {
+                                    view! {
+                                        <p class="text-xl font-bold">
+                                            ${format!("{:.0}", p)} <span class="text-sm font-normal text-gray-500">"/ night"</span>
+                                        </p>
+                                    }
+                                } else {
+                                    view! { <p class="text-xl font-bold">"Check Availability"</p> }
+                                }
+                            }}
+                            // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
+
+                            {discount_percent.map(|d| view! {
+                                <p class="text-xs font-semibold text-green-600 mt-1">{format!("{d}% OFF")}</p>
+                            })}
+
+                            <button class="mt-3 inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 text-sm w-full sm:w-auto">
+                                "See Availability"
+                            </button>
+                        </div>
+                    </Show>
                 </div>
             </div>
         </div>

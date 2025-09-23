@@ -371,6 +371,7 @@ impl LiteApiAdapter {
         DomainHotelAfterSearch {
             hotel_code: hotel_id.clone(),
             hotel_name: liteapi_hotel.name,
+            hotel_address: Some(liteapi_hotel.address),
             hotel_category: format!("{} Star", liteapi_hotel.stars),
             star_rating: liteapi_hotel.stars as u8,
             price: Some(DomainPrice {
