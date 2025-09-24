@@ -455,9 +455,9 @@ pub fn HotelListPage() -> impl IntoView {
                 </div>
 
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
-                    <aside class="w-full lg:w-64 shrink-0">
+                    <aside class="w-full lg:w-80 shrink-0">
                         <div class="sticky top-24">
-                            <div class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:overscroll-contain">
                                 <div class="flex items-center justify-between">
                                     <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">
                                         "Filters"
