@@ -457,7 +457,7 @@ pub fn HotelListPage() -> impl IntoView {
                 </div>
 
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
-                    <aside class="w-full lg:w-80 shrink-0">
+                    <aside class="w-full lg:w-72 shrink-0">
                         <div class="sticky top-24">
                             <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)]">
                                 <div class="flex items-center gap-2">
