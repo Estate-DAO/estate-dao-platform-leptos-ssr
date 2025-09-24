@@ -93,7 +93,7 @@ fn highlight_email(text: &str) -> impl IntoView {
         // push highlighted email
         views.push({
             let mail = m.as_str().to_string();
-            let is_logged_in = move || AuthStateSignal::get().get().is_authenticated();
+            let is_logged_in = move || AuthStateSignal::auth_state().get().is_authenticated();
             let mailto = if is_logged_in() {
                 format!(
                     "https://mail.google.com/mail/?view=cm&fs=1&to={}",
