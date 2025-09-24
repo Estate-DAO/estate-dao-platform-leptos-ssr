@@ -42,10 +42,12 @@ pub fn DestinationPickerV6() -> impl IntoView {
     create_effect(move |_| {
         if let Some(place) = search_ctx.place.get() {
             if !is_open.get() {
-                set_search_text.set(format!(
-                    "{}, {}",
-                    place.display_name, place.formatted_address
-                ));
+                let search_text = if place.formatted_address.trim().is_empty() {
+                    place.display_name.clone()
+                } else {
+                    format!("{}, {}", place.display_name, place.formatted_address)
+                };
+                set_search_text.set(search_text);
             }
         } else if !is_open.get() {
             set_search_text.set(String::new());
@@ -135,21 +137,25 @@ pub fn DestinationPickerV6() -> impl IntoView {
     };
 
     let select_option = move |place: Place| {
-        log!(
-            "Selecting option: {}, {}",
-            place.display_name,
-            place.formatted_address
-        );
+        // log!(
+        //     "Selecting option: {}, {}",
+        //     place.display_name,
+        //     place.formatted_address
+        // );
         let _ = UISearchCtx::set_place(place.clone());
-        set_search_text.set(format!(
-            "{}\n{}",
-            place.display_name, place.formatted_address
-        ));
+
+        let search_text = if place.formatted_address.trim().is_empty() {
+            place.display_name.clone()
+        } else {
+            format!("{}, {}", place.display_name, place.formatted_address)
+        };
+
+        set_search_text.set(search_text);
         set_is_open.set(false);
-        log!(
-            "Dropdown should be closed now, is_open: {}",
-            is_open.get_untracked()
-        );
+        // log!(
+        //     "Dropdown should be closed now, is_open: {}",
+        //     is_open.get_untracked()
+        // );
 
         // Don't focus input immediately - this was causing the reopen issue
         // The user can click again if they want to search for something else
@@ -354,7 +360,13 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                                         set_active_index.set(i);
                                                     }
                                                 >
-                                                {highlight_match(&format!("{}, {}", dest_clone.display_name, dest_clone.formatted_address), &search_text.get())}
+                                                {highlight_match(&{
+                                                    if dest_clone.formatted_address.trim().is_empty() {
+                                                        dest_clone.display_name.clone()
+                                                    } else {
+                                                        format!("{}, {}", dest_clone.display_name, dest_clone.formatted_address)
+                                                    }
+                                                }, &search_text.get())}
                                                 </div>
                                             }
                                         }).collect::<Vec<_>>().into_view()
