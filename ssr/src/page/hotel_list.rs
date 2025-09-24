@@ -502,7 +502,7 @@ pub fn HotelListPage() -> impl IntoView {
                                     when=move || !filters_collapsed.get()
                                     fallback=move || view! { <></> }
                                 >
-                                    <div class="mt-4 space-y-6 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+                                    <div class="mt-4 space-y-6 custom-scrollbar lg:flex-1 lg:overscroll-contain lg:pr-1">
                                         <div class="border-t border-slate-100"></div>
                                         <PriceRangeFilter
                                             value=price_filter_value
