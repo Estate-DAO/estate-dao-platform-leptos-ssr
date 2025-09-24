@@ -19,8 +19,7 @@ use std::rc::Rc;
 async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     log!("[MyBookings] Loading bookings from API");
 
-    let auth_state_signal: AuthStateSignal = expect_context();
-    let auth_state = auth_state_signal.get();
+    let auth_state = AuthStateSignal::auth_state().get();
     // Call actual canister API to get bookings
     let backend_bookings =
         user_get_my_bookings(auth_state.email.ok_or(ServerFnError::new("Unauthorized"))?).await?;
@@ -46,13 +45,10 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
 pub fn AuthGatedBookings() -> impl IntoView {
     use crate::api::consts::USER_IDENTITY;
 
-    // Use AuthStateSignal pattern (same as base_route.rs and block_room_v1.rs)
-    let auth_state_signal: AuthStateSignal = expect_context();
-
     // Return the reactive view - use move closure for reactivity
     move || {
         // Check auth state from both sources (cookie takes priority)
-        let is_logged_in = auth_state_signal.get().email.is_some();
+        let is_logged_in = AuthStateSignal::auth_state().get().email.is_some();
 
         crate::log!(
             "AUTH_FLOW: my_bookings - AuthGatedBookings render check - is_logged_in: {}",

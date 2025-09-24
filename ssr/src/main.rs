@@ -411,6 +411,8 @@ cfg_if! {
                 .route("/app", get(get_app_url))
                 .route("/api/user-info", get(api_user_info))
                 .route("/api/user-wishlist", get(get_user_wishlist))
+                .route("/api/user-wishlist/add", post(add_to_user_wishlist))
+                .route("/api/user-wishlist/remove", post(remove_from_user_wishlist))
                 .route("/auth/google/callback", get(google_callback))
                 .route("/auth/logout", get(logout))
                 .route("/ipn/webhook", post(nowpayments_webhook))
