@@ -442,6 +442,8 @@ pub fn HotelListPage() -> impl IntoView {
         })
     };
 
+    let filters_collapsed = create_rw_signal(false);
+
     view! {
         <section class="relative min-h-screen bg-slate-50">
             <Navbar />
@@ -457,11 +459,36 @@ pub fn HotelListPage() -> impl IntoView {
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
                     <aside class="w-full lg:w-80 shrink-0">
                         <div class="sticky top-24">
-                            <div class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:overscroll-contain">
-                                <div class="flex items-center justify-between">
-                                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">
-                                        "Filters"
-                                    </h2>
+                            <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)]">
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="flex flex-1 items-center justify-between rounded-md px-2 py-1 text-left transition-colors duration-150 hover:bg-slate-100 cursor-pointer"
+                                        aria-expanded=move || (!filters_collapsed.get()).to_string()
+                                        aria-label="Toggle filter sidebar"
+                                        on:click=move |_| {
+                                            filters_collapsed.update(|collapsed| *collapsed = !*collapsed);
+                                        }
+                                    >
+                                        <span class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                                            "Filters"
+                                        </span>
+                                        {move || {
+                                            if filters_collapsed.get() {
+                                                view! {
+                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 15l-7-7-7 7" />
+                                                    </svg>
+                                                }.into_view()
+                                            } else {
+                                                view! {
+                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                }.into_view()
+                                            }
+                                        }}
+                                    </button>
                                     <button
                                         type="button"
                                         class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
@@ -471,30 +498,37 @@ pub fn HotelListPage() -> impl IntoView {
                                         "Clear filters"
                                     </button>
                                 </div>
-                                <div class="border-t border-slate-100"></div>
-                                <PriceRangeFilter
-                                    value=price_filter_value
-                                    on_select=price_filter_on_select.clone()
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <StarRatingFilter
-                                    value=star_filter_value
-                                    on_select=star_filter_on_select.clone()
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <AmenitiesFilter
-                                    options=amenities_options_signal
-                                    selected=amenities_selected_signal
-                                    on_toggle=amenities_on_toggle
-                                    on_clear=amenities_on_clear
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <PropertyTypeFilter
-                                    options=property_type_options_signal
-                                    selected=property_types_selected_signal
-                                    on_toggle=property_type_on_toggle
-                                    on_clear=property_type_on_clear
-                                />
+                                <Show
+                                    when=move || !filters_collapsed.get()
+                                    fallback=move || view! { <></> }
+                                >
+                                    <div class="mt-4 space-y-6 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+                                        <div class="border-t border-slate-100"></div>
+                                        <PriceRangeFilter
+                                            value=price_filter_value
+                                            on_select=price_filter_on_select.clone()
+                                        />
+                                        <div class="border-t border-slate-100"></div>
+                                        <StarRatingFilter
+                                            value=star_filter_value
+                                            on_select=star_filter_on_select.clone()
+                                        />
+                                        <div class="border-t border-slate-100"></div>
+                                        <AmenitiesFilter
+                                            options=amenities_options_signal
+                                            selected=amenities_selected_signal
+                                            on_toggle=amenities_on_toggle
+                                            on_clear=amenities_on_clear
+                                        />
+                                        <div class="border-t border-slate-100"></div>
+                                        <PropertyTypeFilter
+                                            options=property_type_options_signal
+                                            selected=property_types_selected_signal
+                                            on_toggle=property_type_on_toggle
+                                            on_clear=property_type_on_clear
+                                        />
+                                    </div>
+                                </Show>
                             </div>
                         </div>
                     </aside>
