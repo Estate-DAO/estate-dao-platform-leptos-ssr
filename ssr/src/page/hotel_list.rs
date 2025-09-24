@@ -308,7 +308,7 @@ pub fn HotelListPage() -> impl IntoView {
             }
             let mut items: Vec<(String, u32)> = freq.into_iter().collect();
             items.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-            items.into_iter().map(|(k, _)| k).take(5).collect()
+            items.into_iter().map(|(k, _)| k).take(10).collect()
         })
     };
 
@@ -329,7 +329,7 @@ pub fn HotelListPage() -> impl IntoView {
             }
             let mut items: Vec<(String, u32)> = freq.into_iter().collect();
             items.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-            items.into_iter().map(|(k, _)| k).take(5).collect()
+            items.into_iter().map(|(k, _)| k).take(10).collect()
         })
     };
 
