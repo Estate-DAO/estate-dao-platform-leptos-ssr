@@ -18,6 +18,7 @@ use crate::{
         auth::types::{AppUrl, OidcUser},
         consts::APP_URL,
     },
+    utils::admin::admin_canister,
     view_state_layer::AppState,
 };
 
@@ -231,6 +232,35 @@ pub async fn api_user_info(jar: SignedCookieJar) -> impl IntoResponse {
     match get_current_user(jar).await {
         Some(user) => (StatusCode::OK, Json(user)).into_response(),
         None => (StatusCode::UNAUTHORIZED, "Not authenticated").into_response(),
+    }
+}
+
+async fn get_wishlist_by_email(email: String) -> Result<Vec<String>, String> {
+    // Fetch wishlist from backend canister using email
+    // Placeholder implementation
+    let admin_cans = admin_canister();
+    admin_cans
+        .backend_canister()
+        .await
+        .get_wishlist_by_email(email)
+        .await
+        .map(|f| f.iter().map(|f| f.hotel_code.clone()).collect())
+        .map_err(|f| f.to_string())
+}
+
+pub async fn get_user_wishlist(jar: SignedCookieJar) -> impl IntoResponse {
+    let err = (StatusCode::UNAUTHORIZED, "Not authenticated");
+    let user = match get_current_user(jar).await {
+        Some(user) => user,
+        None => return (StatusCode::UNAUTHORIZED, "Not authenticated").into_response(),
+    };
+    if let Some(email) = user.email {
+        match get_wishlist_by_email(email).await {
+            Ok(w) => Json(w).into_response(),
+            Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+        }
+    } else {
+        (StatusCode::UNAUTHORIZED, "Not authenticated").into_response()
     }
 }
 
