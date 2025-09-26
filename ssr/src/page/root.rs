@@ -167,7 +167,15 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
         search_ctx
             .place
             .get()
-            .map(|d| format!("{}, {}", d.display_name, d.formatted_address))
+            .map(|d| {
+                let search_text = if d.formatted_address.trim().is_empty() {
+                    d.display_name.clone()
+                } else {
+                    format!("{}, {}", d.display_name, d.formatted_address)
+                };
+
+                search_text
+            })
             .unwrap_or_else(|| "".to_string())
     });
 

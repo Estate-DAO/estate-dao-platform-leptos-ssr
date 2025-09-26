@@ -14,24 +14,21 @@ use crate::{
     utils::parent_resource::{MockPartialEq, ParentResource},
 };
 
-#[derive(Copy, Clone)]
-pub struct AuthStateSignal(RwSignal<AuthState>);
-
-impl Default for AuthStateSignal {
-    fn default() -> Self {
-        Self(RwSignal::new(AuthState::default()))
-    }
+#[derive(Copy, Clone, Default)]
+pub struct AuthStateSignal {
+    auth: RwSignal<AuthState>,
+    wishlist: RwSignal<Option<Vec<String>>>,
 }
 
 use std::ops::Deref;
 
-impl Deref for AuthStateSignal {
-    type Target = RwSignal<AuthState>;
+// impl Deref for AuthStateSignal {
+//     type Target = RwSignal<AuthState>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
 
 #[derive(Clone, Default, PartialEq, Debug, serde::Deserialize, serde::Serialize)]
 pub struct AuthState {
@@ -70,11 +67,49 @@ impl AuthStateSignal {
     }
 
     pub fn auth_state() -> RwSignal<AuthState> {
-        Self::get().0
+        Self::get().auth
     }
 
-    pub fn set(state: AuthState) {
+    pub fn wishlist_state() -> RwSignal<Option<Vec<String>>> {
+        Self::get().wishlist
+    }
+
+    pub fn wishlist_set(wishlist: Option<Vec<String>>) {
+        let this = Self::get();
+        if this.auth.get_untracked().is_authenticated() {
+            this.wishlist.set(wishlist);
+        }
+    }
+
+    pub fn toggle_wishlish(wish: String) {
+        let this = Self::get();
+        let mut wishlist = this.wishlist.get_untracked().unwrap_or_default();
+        if !Self::check_if_added_to_wishlist_untracked(&wish) {
+            wishlist.push(wish);
+        } else {
+            wishlist.retain(|x| x != &wish);
+        }
+        Self::wishlist_set(Some(wishlist));
+    }
+
+    // Check if already added to wishlist
+    pub fn check_if_added_to_wishlist_untracked(wish: &String) -> bool {
+        let this = Self::get();
+        this.wishlist
+            .get_untracked()
+            .map_or(false, |wishlist| wishlist.contains(wish))
+    }
+
+    // Check if already added to wishlist
+    pub fn check_if_added_to_wishlist(wish: &String) -> bool {
+        let this = Self::get();
+        this.wishlist
+            .get()
+            .map_or(false, |wishlist| wishlist.contains(wish))
+    }
+
+    pub fn auth_set(state: AuthState) {
         let auth_state = Self::get();
-        auth_state.set(state);
+        auth_state.auth.set(state);
     }
 }

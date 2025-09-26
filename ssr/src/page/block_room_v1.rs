@@ -640,7 +640,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
     use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
     // Use AuthStateSignal pattern (same as base_route.rs and my_bookings.rs)
-    let auth_state_signal: AuthStateSignal = expect_context();
+    // let auth_state_signal: AuthStateSignal = expect_context();
 
     // // Also monitor the USER_IDENTITY cookie directly (same as navbar pattern)
     // let (stored_identity, _) = use_cookie_with_options::<NewIdentity, JsonSerdeCodec>(
@@ -653,7 +653,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
     // );
 
     // Get user email from identity for auto-fill
-    let user_email = Signal::derive(move || auth_state_signal.get().email);
+    let user_email = Signal::derive(move || AuthStateSignal::auth_state().get().email);
 
     // crate::log!(
     //     "AUTH_FLOW: block_room - AuthGatedGuestForm initialized - cookie_identity: {}, auth_signal_identity: {}",

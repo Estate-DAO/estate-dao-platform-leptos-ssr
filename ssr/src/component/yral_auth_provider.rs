@@ -41,7 +41,31 @@ pub fn YralAuthProvider() -> impl IntoView {
                 Ok(response) => {
                     if response.status() == 200 {
                         if let Ok(user_data) = response.json::<AuthState>().await {
-                            AuthStateSignal::set(user_data);
+                            AuthStateSignal::auth_set(user_data);
+                        }
+                    }
+                }
+                Err(_) => {
+                    logging::log!("Failed to fetch user info");
+                }
+            }
+            None
+        },
+    );
+
+    let wishlist_details = Resource::local(
+        move || (AuthStateSignal::auth_state().get()),
+        move |auth| async move {
+            if auth.is_authenticated() {
+                return Some(auth);
+            }
+
+            let url = format!("/api/user-wishlist");
+            match gloo_net::http::Request::get(&url).send().await {
+                Ok(response) => {
+                    if response.status() == 200 {
+                        if let Ok(user_data) = response.json::<Vec<String>>().await {
+                            AuthStateSignal::wishlist_set(Some(user_data));
                         }
                     }
                 }
@@ -59,6 +83,9 @@ pub fn YralAuthProvider() -> impl IntoView {
         //         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         //     </div>
         // }>
+            {
+            move || wishlist_details.get().map(|_|{})
+            }
             {move || profile_details.get().flatten().map(|user|{
                 view! {
                     <div>
@@ -90,7 +117,7 @@ fn LoginButton() -> impl IntoView {
                     match gloo_net::http::Request::get(&url).send().await {
                         Ok(resp) if resp.status() == 200 => {
                             if let Ok(user_data) = resp.json::<AuthState>().await {
-                                AuthStateSignal::set(user_data);
+                                AuthStateSignal::auth_set(user_data);
                             }
                         }
                         _ => {

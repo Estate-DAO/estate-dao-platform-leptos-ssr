@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_router::use_navigate;
 
+use crate::api::auth::auth_state::AuthStateSignal;
 // use crate::api::get_room;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
@@ -308,7 +309,7 @@ pub fn HotelListPage() -> impl IntoView {
             }
             let mut items: Vec<(String, u32)> = freq.into_iter().collect();
             items.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-            items.into_iter().map(|(k, _)| k).take(5).collect()
+            items.into_iter().map(|(k, _)| k).take(10).collect()
         })
     };
 
@@ -329,7 +330,7 @@ pub fn HotelListPage() -> impl IntoView {
             }
             let mut items: Vec<(String, u32)> = freq.into_iter().collect();
             items.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-            items.into_iter().map(|(k, _)| k).take(5).collect()
+            items.into_iter().map(|(k, _)| k).take(10).collect()
         })
     };
 
@@ -442,6 +443,8 @@ pub fn HotelListPage() -> impl IntoView {
         })
     };
 
+    let filters_collapsed = create_rw_signal(false);
+
     view! {
         <section class="relative min-h-screen bg-slate-50">
             <Navbar />
@@ -455,13 +458,38 @@ pub fn HotelListPage() -> impl IntoView {
                 </div>
 
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
-                    <aside class="w-full lg:w-64 shrink-0">
+                    <aside class="w-full lg:w-72 shrink-0">
                         <div class="sticky top-24">
-                            <div class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                                <div class="flex items-center justify-between">
-                                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">
-                                        "Filters"
-                                    </h2>
+                            <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)]">
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="flex flex-1 items-center justify-between rounded-md px-2 py-1 text-left transition-colors duration-150 hover:bg-slate-100 cursor-pointer"
+                                        aria-expanded=move || (!filters_collapsed.get()).to_string()
+                                        aria-label="Toggle filter sidebar"
+                                        on:click=move |_| {
+                                            filters_collapsed.update(|collapsed| *collapsed = !*collapsed);
+                                        }
+                                    >
+                                        <span class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                                            "Filters"
+                                        </span>
+                                        {move || {
+                                            if filters_collapsed.get() {
+                                                view! {
+                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 15l-7-7-7 7" />
+                                                    </svg>
+                                                }.into_view()
+                                            } else {
+                                                view! {
+                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                }.into_view()
+                                            }
+                                        }}
+                                    </button>
                                     <button
                                         type="button"
                                         class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
@@ -471,30 +499,37 @@ pub fn HotelListPage() -> impl IntoView {
                                         "Clear filters"
                                     </button>
                                 </div>
-                                <div class="border-t border-slate-100"></div>
-                                <PriceRangeFilter
-                                    value=price_filter_value
-                                    on_select=price_filter_on_select.clone()
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <StarRatingFilter
-                                    value=star_filter_value
-                                    on_select=star_filter_on_select.clone()
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <AmenitiesFilter
-                                    options=amenities_options_signal
-                                    selected=amenities_selected_signal
-                                    on_toggle=amenities_on_toggle
-                                    on_clear=amenities_on_clear
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <PropertyTypeFilter
-                                    options=property_type_options_signal
-                                    selected=property_types_selected_signal
-                                    on_toggle=property_type_on_toggle
-                                    on_clear=property_type_on_clear
-                                />
+                                <Show
+                                    when=move || !filters_collapsed.get()
+                                    fallback=move || view! { <></> }
+                                >
+                                    <div class="mt-4 space-y-6 custom-scrollbar lg:flex-1 lg:overscroll-contain lg:pr-1">
+                                        <div class="border-t border-slate-100"></div>
+                                        <PriceRangeFilter
+                                            value=price_filter_value
+                                            on_select=price_filter_on_select.clone()
+                                        />
+                                        <div class="border-t border-slate-100"></div>
+                                        <StarRatingFilter
+                                            value=star_filter_value
+                                            on_select=star_filter_on_select.clone()
+                                        />
+                                        <div class="border-t border-slate-100"></div>
+                                        <AmenitiesFilter
+                                            options=amenities_options_signal
+                                            selected=amenities_selected_signal
+                                            on_toggle=amenities_on_toggle
+                                            on_clear=amenities_on_clear
+                                        />
+                                        <div class="border-t border-slate-100"></div>
+                                        <PropertyTypeFilter
+                                            options=property_type_options_signal
+                                            selected=property_types_selected_signal
+                                            on_toggle=property_type_on_toggle
+                                            on_clear=property_type_on_clear
+                                        />
+                                    </div>
+                                </Show>
                             </div>
                         </div>
                     </aside>
@@ -842,6 +877,8 @@ pub fn HotelCardTile(
 
     let price = create_rw_signal(price);
 
+    let wishlist_hotel_code = hotel_code.clone();
+
     let search_list_page: SearchListResults = expect_context();
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
 
@@ -921,13 +958,9 @@ pub fn HotelCardTile(
             }
             class=format!("flex flex-col md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
-            <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
+            <div clone:hotel_code class="relative w-full md:basis-[30%] md:flex-shrink-0">
                 <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
-                // <button class="absolute top-3 left-3 bg-white p-2 rounded-full shadow-sm border border-gray-100" aria-label="Add to wishlist">
-                //     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                //         <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 7.8c0-2.6 2.1-4.6 4.7-4.6 1.6 0 3.1.8 4 2.1 0.9-1.3 2.4-2.1 4-2.1 2.6 0 4.7 2 4.7 4.6 0 5.3-8.7 9.6-8.7 9.6s-8.7-4.3-8.7-9.6z" />
-                //     </svg>
-                // </button>
+                <Wishlist hotel_code />
             </div>
 
             // RIGHT CONTENT
@@ -1013,5 +1046,90 @@ pub fn HotelCardTile(
                 </div>
             </div>
         </div>
+    }
+}
+
+#[component]
+fn Wishlist(hotel_code: String) -> impl IntoView {
+    let wishlist_hotel_code = hotel_code.clone();
+    let add_to_wishlist_action = Action::new(move |_: &()| {
+        let check_present =
+            AuthStateSignal::check_if_added_to_wishlist_untracked(&wishlist_hotel_code);
+        let toggle_action = if check_present { "remove" } else { "add" };
+        AuthStateSignal::toggle_wishlish(wishlist_hotel_code.clone());
+        let hotel_code = wishlist_hotel_code.clone();
+        async move {
+            let url = format!("/api/user-wishlist/{toggle_action}/{hotel_code}");
+            match gloo_net::http::Request::post(&url).send().await {
+                Ok(response) => {
+                    if response.status() != 200 {
+                        AuthStateSignal::toggle_wishlish(hotel_code.clone());
+                    }
+                }
+                Err(_) => {
+                    logging::log!("Failed to fetch user info");
+                }
+            }
+        }
+    });
+
+    view! {
+        <Show when=move || AuthStateSignal::auth_state().get().is_authenticated() >
+            <button
+                on:click=move |ev| {
+                    ev.prevent_default();
+                    ev.stop_propagation();
+                    add_to_wishlist_action.dispatch(());
+                }
+                class="absolute top-3 left-3 bg-white rounded-full shadow-sm"
+                aria-label="Add to wishlist"
+            >
+                {
+                    let code = hotel_code.clone();
+                    move || {
+                        let is_wishlisted = AuthStateSignal::check_if_added_to_wishlist(&code);
+
+                        let heart_d = "M19.62 27.81C19.28 27.93 18.72 27.93 18.38 27.81C15.48 26.82 9 22.69 9 15.69C9 12.6 11.49 10.1 14.56 10.1C16.38 10.1 17.99 10.98 19 12.34C20.01 10.98 21.63 10.1 23.44 10.1C26.51 10.1 29 12.6 29 15.69C29 22.69 22.52 26.82 19.62 27.81Z";
+
+                        view! {
+                            <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="19" cy="19" r="19" fill="white" />
+
+                                // FILL heart (underneath)
+                                <path
+                                    d=heart_d
+                                    fill="currentColor"
+                                    stroke="none"
+                                    class={
+                                        if is_wishlisted {
+                                            "text-red-500 group-hover:text-blue-600 transition-colors"
+                                        } else {
+                                            "text-transparent group-hover:text-blue-600 transition-colors"
+                                        }
+                                    }
+                                />
+
+                                // STROKE heart (outline, always gray)
+                                <path
+                                    d=heart_d
+                                    fill="none"
+                                    stroke="#45556C"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    class={
+                                        if is_wishlisted {
+                                            "stroke-red-500 group-hover:stroke-blue-600 transition-colors"
+                                        } else {
+                                            "stroke-[#45556C] group-hover:stroke-blue-600 transition-colors"
+                                        }
+                                    }
+                                />
+                            </svg>
+                        }
+                    }
+                }
+            </button>
+        </Show>
     }
 }
