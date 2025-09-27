@@ -81,14 +81,15 @@ fn AboutUsHeroSection() -> impl IntoView {
                                     alt="Venice canal"
                                     class="w-full h-full object-cover"
                                 />
-                                // <!-- Map pin icon -->
-                                <div class="absolute bottom-4 left-4">
-                                    <img
-                                        src="/icons/about_us_Maps.svg"
-                                        alt="Location"
-                                        class="w-8 h-8"
-                                    />
-                                </div>
+                            </div>
+
+                            // <!-- Map pin icon - positioned outside right top of bottom left image -->
+                            <div class="absolute bottom-28 md:bottom-32 lg:bottom-36 left-44 md:left-52 lg:left-56">
+                                <img
+                                    src="/icons/about_us_Maps.svg"
+                                    alt="Location"
+                                    class="w-8 h-8"
+                                />
                             </div>
 
                             // <!-- Bottom right image (vertical) - positioned closer to center -->
@@ -100,7 +101,8 @@ fn AboutUsHeroSection() -> impl IntoView {
                                 />
                             </div>
 
-                            // <!-- Decorative arrows and plane - adjusted positions -->
+                            // <!-- Decorative arrows and plane - repositioned for flow -->
+                            // <!-- Horizontal arrow pointing right -->
                             <div class="absolute top-12 right-44 md:right-48 lg:right-52 hidden lg:block">
                                 <img
                                     src="/icons/about_us_arrow_1.svg"
@@ -109,15 +111,17 @@ fn AboutUsHeroSection() -> impl IntoView {
                                 />
                             </div>
 
-                            <div class="absolute bottom-40 md:bottom-44 lg:bottom-48 right-8 md:right-10 lg:right-12 hidden lg:block">
+                            // <!-- Vertical arrow pointing upwards from right bottom image -->
+                            <div class="absolute bottom-48 md:bottom-52 lg:bottom-56 right-2 md:right-4 lg:right-6 hidden lg:block">
                                 <img
                                     src="/icons/about_us_arrow_2.svg"
-                                    alt="Arrow decoration"
+                                    alt="Arrow decoration upward"
                                     class="w-20 md:w-22 lg:w-24 h-auto opacity-60"
                                 />
                             </div>
 
-                            <div class="absolute top-52 md:top-56 lg:top-60 right-24 md:right-26 lg:right-28 hidden lg:block">
+                            // <!-- Plane positioned at the intersection/end of arrows -->
+                            <div class="absolute top-52 md:top-56 lg:top-60 right-12 md:right-14 lg:right-16 hidden lg:block">
                                 <img
                                     src="/icons/about_us_plane.svg"
                                     alt="Plane icon"
@@ -155,20 +159,19 @@ fn VisionSection() -> impl IntoView {
 #[component]
 fn TrustedByTravelersSection() -> impl IntoView {
     view! {
-        <section class="py-16 md:py-24 bg-white">
-            <div class="max-w-7xl mx-auto px-4 md:px-8">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-                    // <!-- Left side - Image -->
-                    <div class="relative">
-                        // <!-- Yellow background element -->
-                        <div class="absolute top-12 left-4 w-80 h-96 rounded-full transform -rotate-12 z-0" style="background-color: #FFF5DD;"></div>
+        <section class="py-16 md:py-24 bg-white relative">
+            // <!-- Background that extends to the left edge -->
+            <div class="absolute top-0 left-0 bottom-0 h-1/2 transform translate-y-1/2 w-1/2 rounded-r-full" style="background-color: #FFF5DD;"></div>
 
-                        // <!-- Woman image -->
-                        <div class="relative z-10">
+            <div class="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                    // <!-- Left side - Woman image overlaying the background -->
+                    <div class="relative flex justify-center lg:justify-start">
+                        <div class="relative z-20">
                             <img
                                 src="/img/about-us-page/woman_left.png"
                                 alt="Traveler with phone"
-                                class="w-full h-auto relative z-10"
+                                class="w-full h-auto max-w-80 md:max-w-96"
                             />
                         </div>
                     </div>
@@ -242,7 +245,7 @@ fn WhatMakesUsDifferentSection() -> impl IntoView {
     view! {
         <section class="py-16 md:py-24 bg-white relative">
             // <!-- Background that extends to the right edge -->
-            <div class="absolute top-0 right-0 bottom-0 w-1/2 bg-blue-50" style="background-color: #EFF6FF;"></div>
+            <div class="absolute top-0 right-0 bottom-0 w-1/2 rounded-l-full h-1/2 transform translate-y-1/2 bg-blue-50" style="background-color: #EFF6FF;"></div>
 
             <div class="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -294,7 +297,7 @@ fn WhatMakesUsDifferentSection() -> impl IntoView {
 
                     // <!-- Right side - Circular container with infinity icon -->
                     <div class="relative flex justify-center lg:justify-end">
-                        <div class="w-80 h-80 md:w-96 md:h-96 rounded-full flex items-center justify-center p-8" style="background-color: #EFF6FF;">
+                        <div class="w-80 h-80 md:w-96 md:h-96 flex items-center justify-center p-8" style="background-color: #EFF6FF;">
                             <img
                                 src="/img/about-us-page/right_image_section_four.png"
                                 alt="Infinity symbol representing infinite possibilities"
