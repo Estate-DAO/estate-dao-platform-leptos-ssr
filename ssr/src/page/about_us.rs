@@ -1,3 +1,5 @@
+use crate::component::FeatureCard;
+use crate::component::Footer;
 use leptos::*;
 use leptos_icons::*;
 
@@ -11,6 +13,7 @@ pub fn AboutUsPage() -> impl IntoView {
             <WhatMakesUsDifferentSection />
             <TravelWithoutLimitsSection />
             <WhyChooseUsSection />
+            <Footer />
         </main>
     }
 }
@@ -43,78 +46,84 @@ fn AboutUsHeroSection() -> impl IntoView {
 
                     // <!-- Right side - Images and Icons -->
                     <div class="relative h-[600px] lg:h-[700px]">
-                        // <!-- Images -->
-                        <div class="absolute top-0 right-0 w-48 md:w-56 lg:w-64 rounded-2xl overflow-hidden shadow-xl">
-                            <img
-                                src="/img/about-us-page/landscape_right_top.png"
-                                alt="Travel destination"
-                                class="w-full h-full object-cover"
-                            />
-                            // <!-- Yellow play button -->
-                            <div class="absolute top-4 right-4">
+                        // <!-- Container for all images positioned more tightly -->
+                        <div class="relative w-full h-full">
+                            // <!-- Top right image (landscape) - made smaller and positioned tighter -->
+                            <div class="absolute top-0 right-0 w-44 md:w-52 lg:w-56 h-28 md:h-32 lg:h-36 rounded-2xl overflow-hidden shadow-xl">
                                 <img
-                                    src="/icons/about_us_yellow_pointer.svg"
-                                    alt="Play"
-                                    class="w-8 h-8"
+                                    src="/img/about-us-page/landscape_right_top.png"
+                                    alt="Travel destination"
+                                    class="w-full h-full object-cover"
+                                />
+                                // <!-- Yellow play button -->
+                                <div class="absolute top-4 right-4">
+                                    <img
+                                        src="/icons/about_us_yellow_pointer.svg"
+                                        alt="Play"
+                                        class="w-8 h-8"
+                                    />
+                                </div>
+                            </div>
+
+                            // <!-- Left square image - positioned closer to top -->
+                            <div class="absolute top-16 md:top-20 lg:top-24 left-0 w-48 md:w-56 lg:w-60 h-36 md:h-40 lg:h-44 rounded-2xl overflow-hidden shadow-xl">
+                                <img
+                                    src="/img/about-us-page/square_left_top.png"
+                                    alt="Coastal view"
+                                    class="w-full h-full object-cover"
                                 />
                             </div>
-                        </div>
 
-                        <div class="absolute top-32 left-0 w-56 md:w-64 lg:w-72 rounded-2xl overflow-hidden shadow-xl">
-                            <img
-                                src="/img/about-us-page/square_left_top.png"
-                                alt="Coastal view"
-                                class="w-full h-full object-cover"
-                            />
-                        </div>
-
-                        <div class="absolute bottom-32 left-0 w-48 md:w-56 lg:w-64 rounded-2xl overflow-hidden shadow-xl">
-                            <img
-                                src="/img/about-us-page/landscape_left_bottom.png"
-                                alt="Venice canal"
-                                class="w-full h-full object-cover"
-                            />
-                            // <!-- Map pin icon -->
-                            <div class="absolute bottom-4 left-4">
+                            // <!-- Bottom left image (landscape) - positioned higher up -->
+                            <div class="absolute bottom-24 md:bottom-28 lg:bottom-32 left-0 w-44 md:w-52 lg:w-56 h-28 md:h-32 lg:h-36 rounded-2xl overflow-hidden shadow-xl">
                                 <img
-                                    src="/icons/about_us_Maps.svg"
-                                    alt="Location"
-                                    class="w-8 h-8"
+                                    src="/img/about-us-page/landscape_left_bottom.png"
+                                    alt="Venice canal"
+                                    class="w-full h-full object-cover"
+                                />
+                                // <!-- Map pin icon -->
+                                <div class="absolute bottom-4 left-4">
+                                    <img
+                                        src="/icons/about_us_Maps.svg"
+                                        alt="Location"
+                                        class="w-8 h-8"
+                                    />
+                                </div>
+                            </div>
+
+                            // <!-- Bottom right image (vertical) - positioned closer to center -->
+                            <div class="absolute bottom-0 right-2 md:right-4 lg:right-6 w-32 md:w-36 lg:w-40 h-40 md:h-44 lg:h-48 rounded-2xl overflow-hidden shadow-xl">
+                                <img
+                                    src="/img/about-us-page/vertical_right_bottom.png"
+                                    alt="Mosque at sunset"
+                                    class="w-full h-full object-cover"
                                 />
                             </div>
-                        </div>
 
-                        <div class="absolute bottom-0 right-8 w-40 md:w-48 lg:w-56 rounded-2xl overflow-hidden shadow-xl">
-                            <img
-                                src="/img/about-us-page/vertical_right_bottom.png"
-                                alt="Mosque at sunset"
-                                class="w-full h-full object-cover"
-                            />
-                        </div>
+                            // <!-- Decorative arrows and plane - adjusted positions -->
+                            <div class="absolute top-12 right-44 md:right-48 lg:right-52 hidden lg:block">
+                                <img
+                                    src="/icons/about_us_arrow_1.svg"
+                                    alt="Arrow decoration"
+                                    class="w-24 md:w-28 lg:w-32 h-auto opacity-60"
+                                />
+                            </div>
 
-                        // <!-- Decorative arrows and plane -->
-                        <div class="absolute top-16 right-56 hidden lg:block">
-                            <img
-                                src="/icons/about_us_arrow_1.svg"
-                                alt="Arrow decoration"
-                                class="w-32 h-auto opacity-60"
-                            />
-                        </div>
+                            <div class="absolute bottom-40 md:bottom-44 lg:bottom-48 right-8 md:right-10 lg:right-12 hidden lg:block">
+                                <img
+                                    src="/icons/about_us_arrow_2.svg"
+                                    alt="Arrow decoration"
+                                    class="w-20 md:w-22 lg:w-24 h-auto opacity-60"
+                                />
+                            </div>
 
-                        <div class="absolute bottom-48 right-16 hidden lg:block">
-                            <img
-                                src="/icons/about_us_arrow_2.svg"
-                                alt="Arrow decoration"
-                                class="w-24 h-auto opacity-60"
-                            />
-                        </div>
-
-                        <div class="absolute top-64 right-32 hidden lg:block">
-                            <img
-                                src="/icons/about_us_plane.svg"
-                                alt="Plane icon"
-                                class="w-12 h-12"
-                            />
+                            <div class="absolute top-52 md:top-56 lg:top-60 right-24 md:right-26 lg:right-28 hidden lg:block">
+                                <img
+                                    src="/icons/about_us_plane.svg"
+                                    alt="Plane icon"
+                                    class="w-10 md:w-11 lg:w-12 h-10 md:h-11 lg:h-12"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -151,22 +160,24 @@ fn TrustedByTravelersSection() -> impl IntoView {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                     // <!-- Left side - Image -->
                     <div class="relative">
-                        <div class="relative bg-gradient-to-br from-yellow-100 via-orange-100 to-blue-100 rounded-3xl p-8 overflow-hidden">
+                        // <!-- Yellow background element -->
+                        <div class="absolute top-12 left-4 w-80 h-96 rounded-full transform -rotate-12 z-0" style="background-color: #FFF5DD;"></div>
+
+                        // <!-- Woman image -->
+                        <div class="relative z-10">
                             <img
-                                src="/img/about-us-page/section_left.png"
+                                src="/img/about-us-page/woman_left.png"
                                 alt="Traveler with phone"
                                 class="w-full h-auto relative z-10"
                             />
-                            // <!-- Decorative circles -->
-                            <div class="absolute top-8 right-8 w-16 h-16 bg-blue-400 rounded-full opacity-80"></div>
-                            <div class="absolute top-24 right-24 w-8 h-8 bg-teal-400 rounded-full"></div>
-                            <div class="absolute bottom-24 left-8 w-12 h-12 bg-blue-300 rounded-full opacity-60"></div>
-                            <div class="absolute bottom-8 left-24 w-6 h-6 bg-blue-500 rounded-full"></div>
                         </div>
                     </div>
 
                     // <!-- Right side - Content -->
-                    <div class="space-y-8">
+                    <div class="space-y-8 relative">
+                        // <!-- Gradient bubbles -->
+                        <GradientBubble size="large" position="top-0 right-0" />
+                        <GradientBubble size="small" position="top-16 right-12" />
                         <div class="space-y-4">
                             <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
                                 "Trusted by Travelers,"
@@ -229,8 +240,11 @@ fn TrustedByTravelersSection() -> impl IntoView {
 #[component]
 fn WhatMakesUsDifferentSection() -> impl IntoView {
     view! {
-        <section class="py-16 md:py-24 bg-gray-50">
-            <div class="max-w-7xl mx-auto px-4 md:px-8">
+        <section class="py-16 md:py-24 bg-white relative">
+            // <!-- Background that extends to the right edge -->
+            <div class="absolute top-0 right-0 bottom-0 w-1/2 bg-blue-50" style="background-color: #EFF6FF;"></div>
+
+            <div class="max-w-7xl mx-auto px-4 md:px-8 relative z-10">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                     // <!-- Left side - Content -->
                     <div class="space-y-8">
@@ -278,19 +292,14 @@ fn WhatMakesUsDifferentSection() -> impl IntoView {
                         </p>
                     </div>
 
-                    // <!-- Right side - Image -->
-                    <div class="relative">
-                        <div class="relative bg-gradient-to-br from-purple-100 via-blue-100 to-blue-50 rounded-3xl p-8 overflow-hidden">
+                    // <!-- Right side - Circular container with infinity icon -->
+                    <div class="relative flex justify-center lg:justify-end">
+                        <div class="w-80 h-80 md:w-96 md:h-96 rounded-full flex items-center justify-center p-8" style="background-color: #EFF6FF;">
                             <img
                                 src="/img/about-us-page/right_image_section_four.png"
                                 alt="Infinity symbol representing infinite possibilities"
-                                class="w-full h-auto relative z-10"
+                                class="w-full h-auto max-w-64 md:max-w-80"
                             />
-                            // <!-- Decorative circles -->
-                            <div class="absolute top-8 left-8 w-12 h-12 bg-purple-300 rounded-full opacity-60"></div>
-                            <div class="absolute top-24 left-24 w-6 h-6 bg-blue-400 rounded-full"></div>
-                            <div class="absolute bottom-24 right-8 w-16 h-16 bg-blue-300 rounded-full opacity-80"></div>
-                            <div class="absolute bottom-8 right-24 w-8 h-8 bg-purple-400 rounded-full opacity-70"></div>
                         </div>
                     </div>
                 </div>
@@ -364,7 +373,7 @@ fn TravelWithoutLimitsSection() -> impl IntoView {
                                 class="flex transition-transform duration-500 ease-in-out"
                                 style=move || format!("transform: translateX(-{}%)", (current_index.get() * 100) / visible_logos)
                             >
-                                {crypto_logos.into_iter().enumerate().map(|(i, logo)| {
+                                {crypto_logos.clone().into_iter().enumerate().map(|(i, logo)| {
                                     view! {
                                         <div class="flex-shrink-0 w-1/5 px-4">
                                             <div class="bg-white rounded-full p-4 w-16 h-16 md:w-20 md:h-20 mx-auto flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-200">
@@ -378,20 +387,20 @@ fn TravelWithoutLimitsSection() -> impl IntoView {
                                     }
                                 }).collect::<Vec<_>>()}
 
-                                // <!-- Duplicate logos for seamless infinite scroll -->
-                                {crypto_logos.into_iter().enumerate().map(|(i, logo)| {
-                                    view! {
-                                        <div class="flex-shrink-0 w-1/5 px-4">
-                                            <div class="bg-white rounded-full p-4 w-16 h-16 md:w-20 md:h-20 mx-auto flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-200">
-                                                <img
-                                                    src=format!("/icons/about_us_logo_{}.svg", logo)
-                                                    alt=format!("{} logo", logo.replace("_", " "))
-                                                    class="w-8 h-8 md:w-10 md:h-10 object-contain"
-                                                />
-                                            </div>
-                                        </div>
-                                    }
-                                }).collect::<Vec<_>>()}
+                                // // <!-- Duplicate logos for seamless infinite scroll -->
+                                // {crypto_logos.clone().into_iter().enumerate().map(|(i, logo)| {
+                                //     view! {
+                                //         <div class="flex-shrink-0 w-1/5 px-4">
+                                //             <div class="bg-white rounded-full p-4 w-16 h-16 md:w-20 md:h-20 mx-auto flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow duration-200">
+                                //                 <img
+                                //                     src=format!("/icons/about_us_logo_{}.svg", logo)
+                                //                     alt=format!("{} logo", logo.replace("_", " "))
+                                //                     class="w-8 h-8 md:w-10 md:h-10 object-contain"
+                                //                 />
+                                //             </div>
+                                //         </div>
+                                //     }
+                                // }).collect::<Vec<_>>()}
                             </div>
                         </div>
 
@@ -441,55 +450,25 @@ fn WhyChooseUsSection() -> impl IntoView {
                     </h2>
                 </div>
 
-                // <!-- Features Grid -->
+                // <!-- Features Grid using FeatureCard components -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-12">
-                    // <!-- Feature 1: Seamless Crypto Payments -->
-                    <div class="text-center space-y-4">
-                        <div class="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900">
-                            "Seamless Crypto Payments"
-                        </h3>
-                        <p class="text-gray-600 leading-relaxed">
-                            "Pay securely with Bitcoin, Ethereum, "
-                            "and more—no banks, no borders."
-                        </p>
-                    </div>
+                    <FeatureCard
+                        icon="/icons/wallet.svg"
+                        title="Seamless Crypto Payments"
+                        description="Pay securely with Bitcoin, Ethereum, and more—no banks, no borders."
+                    />
 
-                    // <!-- Feature 2: Best Price Guarantee -->
-                    <div class="text-center space-y-4">
-                        <div class="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900">
-                            "Best Price Guarantee"
-                        </h3>
-                        <p class="text-gray-600 leading-relaxed">
-                            "Always get the best deals with zero "
-                            "hidden fees."
-                        </p>
-                    </div>
+                    <FeatureCard
+                        icon="/icons/like.svg"
+                        title="Best Price Guarantee"
+                        description="Always get the best deals with zero hidden fees."
+                    />
 
-                    // <!-- Feature 3: Curated Stays Worldwide -->
-                    <div class="text-center space-y-4">
-                        <div class="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900">
-                            "Curated Stays Worldwide"
-                        </h3>
-                        <p class="text-gray-600 leading-relaxed">
-                            "Explore handpicked, crypto-friendly "
-                            "hotels across the globe."
-                        </p>
-                    </div>
+                    <FeatureCard
+                        icon="/icons/globe.svg"
+                        title="Curated Stays Worldwide"
+                        description="Explore handpicked, crypto-friendly hotels across the globe."
+                    />
                 </div>
 
                 // <!-- Japan Image -->
@@ -502,5 +481,30 @@ fn WhyChooseUsSection() -> impl IntoView {
                 </div>
             </div>
         </section>
+    }
+}
+
+#[component]
+fn GradientBubble(#[prop(into)] size: String, #[prop(into)] position: String) -> impl IntoView {
+    let (width, height, gradient) = match size.as_str() {
+        "large" => (
+            "w-16 h-16",
+            "w-16 h-16",
+            "bg-gradient-to-br from-cyan-400 to-blue-500",
+        ),
+        "small" => (
+            "w-8 h-8",
+            "w-8 h-8",
+            "bg-gradient-to-br from-blue-300 to-purple-400",
+        ),
+        _ => (
+            "w-12 h-12",
+            "w-12 h-12",
+            "bg-gradient-to-br from-blue-400 to-cyan-500",
+        ),
+    };
+
+    view! {
+        <div class=format!("absolute {} {} {} rounded-full opacity-80", position, width, gradient)></div>
     }
 }
