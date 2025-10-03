@@ -84,7 +84,7 @@ pub fn DestinationCard(
             display_name: name.to_string(),
             formatted_address: String::new(),
         };
-        
+
         UIPaginationState::reset_to_first_page();
         UISearchCtx::set_date_range(date_range.get());
         UISearchCtx::set_place(place.clone());

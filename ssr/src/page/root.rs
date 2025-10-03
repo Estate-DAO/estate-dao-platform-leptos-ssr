@@ -148,7 +148,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             "bg-gray-300"
         } else {
             // <!-- Updated search button to be blue on mobile to match screenshot -->
-            "bg-blue-500 md:bg-white text-white hover:bg-blue-600 md:hover:bg-blue-200"
+            "bg-blue-500 text-white hover:bg-blue-600 md:hover:bg-blue-200"
         }
     };
 
@@ -157,7 +157,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             "text-gray-400"
         } else {
             // <!-- Updated icon color to white for mobile to match screenshot -->
-            "text-white md:text-blue-600"
+            "text-white"
         }
     };
 
@@ -228,7 +228,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                             disabled=disabled.get()
                         >
                             // span carries the truncation rules
-                            <span class="truncate block w-full">
+                            <span class="truncate font-medium block w-full">
                                 {move || place_display.get()}
                             </span>
                         </button>
@@ -288,7 +288,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                             view! {
                                 <Icon
                                     icon=icondata::AiSearchOutlined
-                                    class=format!("{} p-1 text-2xl", bg_search_icon_class())
+                                    class=format!("{} text-2xl", bg_search_icon_class())
                                 />
                             }
                         }

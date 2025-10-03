@@ -458,7 +458,7 @@ pub fn HotelListPage() -> impl IntoView {
             </div>
         </div>
 
-        <section class="min-h-screen bg-slate-50 p-4 mx-8">
+        <section class="min-h-screen bg-slate-50 p-4 mx-16">
             // <Navbar />
             // <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
             //     <div class="flex flex-col items-center mt-2 sm:mt-6">
