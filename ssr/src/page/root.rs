@@ -219,7 +219,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
                     <Show when=move || disabled.get()>
                         <div class="text-xl flex items-center flex-shrink-0">
-                            <Icon icon=icondata::BsMap class="text-black" />
+                            <Icon icon=icondata::BsMap class="text-blue-500" />
                         </div>
 
                         <button
