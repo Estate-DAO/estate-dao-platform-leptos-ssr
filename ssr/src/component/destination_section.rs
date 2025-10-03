@@ -5,7 +5,7 @@ use crate::{
     api::client_side_api::Place,
     component::SelectedDateRange,
     utils::{date::add_days, search_action::create_search_action_with_ui_state},
-    view_state_layer::ui_search_state::UISearchCtx,
+    view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
 };
 
 #[component]
@@ -84,7 +84,8 @@ pub fn DestinationCard(
             display_name: name.to_string(),
             formatted_address: String::new(),
         };
-
+        
+        UIPaginationState::reset_to_first_page();
         UISearchCtx::set_date_range(date_range.get());
         UISearchCtx::set_place(place.clone());
         let search_action = create_search_action_with_ui_state(false.into());
