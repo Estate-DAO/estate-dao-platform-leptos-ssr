@@ -6,7 +6,9 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
-    format_price_range_value, AmenitiesFilter, Destination, Footer, GuestSelection, Navbar, PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards, StarRatingFilter, MAX_PRICE, MIN_PRICE
+    format_price_range_value, AmenitiesFilter, Destination, Footer, GuestSelection, Navbar,
+    PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards,
+    StarRatingFilter, MAX_PRICE, MIN_PRICE,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
