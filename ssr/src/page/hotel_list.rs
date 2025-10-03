@@ -6,9 +6,7 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
-    format_price_range_value, AmenitiesFilter, Destination, GuestSelection, Navbar,
-    PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards,
-    StarRatingFilter, MAX_PRICE, MIN_PRICE,
+    format_price_range_value, AmenitiesFilter, Destination, Footer, GuestSelection, Navbar, PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards, StarRatingFilter, MAX_PRICE, MIN_PRICE
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -446,20 +444,32 @@ pub fn HotelListPage() -> impl IntoView {
     let filters_collapsed = create_rw_signal(false);
 
     view! {
-        <section class="relative min-h-screen bg-slate-50">
-            <Navbar />
-            <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
-                <div class="flex flex-col items-center mt-2 sm:mt-6">
-                    <div class="w-full rounded-2xl shadow-sm">
-                        <div class="p-2 sm:p-4">
-                            <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
-                        </div>
-                    </div>
-                </div>
+        <div class="bg-blue-600 relative h-40 sm:h-40 md:h-36 lg:h-32">
+            <Navbar blue_header=true />
+
+            <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full flex flex-col items-center max-w-5xl px-4">
+                <InputGroupContainer
+                    default_expanded=false
+                    given_disabled=disabled_input_group
+                    allow_outside_click_collapse=true
+                />
+            </div>
+        </div>
+
+        <section class="min-h-screen bg-slate-50 p-4 mx-8">
+            // <Navbar />
+            // <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
+            //     <div class="flex flex-col items-center mt-2 sm:mt-6">
+            //         <div class="w-full rounded-2xl shadow-sm">
+            //             <div class="p-2 sm:p-4">
+            //                 <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
+            //             </div>
+            //         </div>
+            //     </div>
 
                 <div class="mt-6 flex flex-col gap-6 lg:flex-row">
-                    <aside class="w-full lg:w-72 shrink-0">
-                        <div class="sticky top-24">
+                    <aside class="w-full mt-4 lg:w-72 shrink-0">
+                        <div class="sticky">
                             <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)]">
                                 <div class="flex items-center gap-2">
                                     <button
@@ -756,8 +766,8 @@ pub fn HotelListPage() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-            </div>
         </section>
+        <Footer />
     }
 }
 
