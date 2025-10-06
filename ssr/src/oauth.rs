@@ -246,7 +246,7 @@ pub async fn google_callback(
     let script = Html(
         r#"
             <script>
-            window.opener.postMessage("oauth-success", window.location.origin);
+            window.opener.postMessage("oauth-success", "*");
             window.close();
             </script>
         "#,
