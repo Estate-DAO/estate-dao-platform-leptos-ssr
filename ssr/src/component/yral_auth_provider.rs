@@ -4,7 +4,8 @@ use leptos::*;
 // use leptos::{ev, prelude::*, component, view, server, ServerFnError, expect_context, create_action, window, IntoView, Children, Oco};
 use leptos_use::{
     storage::{use_local_storage, use_local_storage_with_options, UseStorageOptions},
-    use_cookie_with_options, use_event_listener, use_interval_fn, use_window, UseCookieOptions,
+    use_cookie, use_cookie_with_options, use_event_listener, use_interval_fn, use_window,
+    UseCookieOptions,
 };
 use web_sys::Window;
 
@@ -106,12 +107,35 @@ pub fn YralAuthProvider() -> impl IntoView {
 #[component]
 fn LoginButton() -> impl IntoView {
     // Setup listener ONCE
+    // let session_cookie = use_cookie::<String, FromToStringCodec>("session");
+
+    // Effect::new(move |_| {
+    //     if let Some(s) = session_cookie.0.get() {
+    //         log::warn!("Login Success: {:?}", s);
+    //         // If session cookie exists, fetch user info
+    //         wasm_bindgen_futures::spawn_local(async move {
+    //             let url = format!("/api/user-info");
+    //             match gloo_net::http::Request::get(&url).send().await {
+    //                 Ok(resp) if resp.status() == 200 => {
+    //                     if let Ok(user_data) = resp.json::<AuthState>().await {
+    //                         AuthStateSignal::auth_set(user_data);
+    //                     }
+    //                 }
+    //                 _ => {
+    //                     logging::log!("Failed to fetch user info");
+    //                 }
+    //             }
+    //         });
+    //     }
+    // });
+
     let _ = use_event_listener(
         use_window(),
         ev::message,
         move |msg: web_sys::MessageEvent| {
             if let Some(data) = msg.data().as_string() {
                 log::warn!("received message: {:?}", data);
+                window().location().reload().expect("failed to reload");
                 wasm_bindgen_futures::spawn_local(async move {
                     let url = format!("/api/user-info");
                     match gloo_net::http::Request::get(&url).send().await {
