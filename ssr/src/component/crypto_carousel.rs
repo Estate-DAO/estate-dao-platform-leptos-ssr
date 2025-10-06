@@ -23,9 +23,9 @@ pub fn CryptoCarousel() -> impl IntoView {
                 </p>
 
                 <div class="flex items-center justify-center mx-4 mt-8 space-x-4 md:space-x-6">
-                    <button class="md:inline-flex  hover:bg-white/10 transition">
-                        <span class="text-xl">"←"</span>
-                    </button>
+                    // <button class="md:inline-flex  hover:bg-white/10 transition">
+                    //     <span class="text-xl">"←"</span>
+                    // </button>
 
                     <div class="w-full md:max-w-none">
                         <div
@@ -40,9 +40,9 @@ pub fn CryptoCarousel() -> impl IntoView {
                         </div>
                     </div>
 
-                    <button class="md:inline-flex  hover:bg-white/10 transition">
-                        <span class="text-xl">"→"</span>
-                    </button>
+                    // <button class="md:inline-flex  hover:bg-white/10 transition">
+                    //     <span class="text-xl">"→"</span>
+                    // </button>
                 </div>
             </div>
         </section>

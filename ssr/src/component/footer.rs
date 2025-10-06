@@ -12,7 +12,7 @@ pub fn Footer() -> impl IntoView {
                 <div class="space-y-6 order-2 lg:order-1">
                     <div class="flex items-center space-x-2">
                         <img src="/img/nofeebooking.webp" alt="NoFee Booking Logo" class="h-8 w-auto" />
-                        <span class="text-xl font-semibold text-white">"NoFee Booking"</span>
+                        // <span class="text-xl font-semibold text-white">"NoFee Booking"</span>
                     </div>
 
                     <p class="text-sm">
@@ -31,7 +31,7 @@ pub fn Footer() -> impl IntoView {
                     <div class="space-y-3">
                         <h3 class="text-white font-semibold">"Company"</h3>
                         <ul class="space-y-2 text-sm">
-                            <li><a href="/about" class="hover:text-white">"About Us"</a></li>
+                            <li><a href="/about" class="hover:text-white cursor-not-allowed pointer-events-none">"About Us"</a></li>
                             <li><a href=AppRoutes::MyBookings.to_string() class="hover:text-white">"My Trips"</a></li>
                         </ul>
                     </div>
