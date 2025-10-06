@@ -86,12 +86,13 @@ pub async fn google_auth(
 
     // Build PKCE cookie
     let pkce_key = format!("{CSRF_COOKIE}_pkce");
-    let mut pkce_cookie_builder = Cookie::build((pkce_key.clone(), pkce_verifier.secret().to_string()))
-        .path("/")
-        .http_only(true)
-        .same_site(axum_extra::extract::cookie::SameSite::Lax)
-        .secure(app_url.starts_with("https://"));
-    
+    let mut pkce_cookie_builder =
+        Cookie::build((pkce_key.clone(), pkce_verifier.secret().to_string()))
+            .path("/")
+            .http_only(true)
+            .same_site(axum_extra::extract::cookie::SameSite::Lax)
+            .secure(app_url.starts_with("https://"));
+
     if let Some(domain) = cookie_domain.clone() {
         pkce_cookie_builder = pkce_cookie_builder.domain(domain);
     }
@@ -134,7 +135,11 @@ pub async fn google_callback(
         return (StatusCode::BAD_REQUEST, "missing CSRF cookie").into_response();
     };
     if csrf_cookie.value() != state_param {
-        tracing::error!("CSRF token mismatch: cookie={}, state={}", csrf_cookie.value(), state_param);
+        tracing::error!(
+            "CSRF token mismatch: cookie={}, state={}",
+            csrf_cookie.value(),
+            state_param
+        );
         return (StatusCode::BAD_REQUEST, "invalid CSRF").into_response();
     }
 
@@ -204,7 +209,7 @@ pub async fn google_callback(
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
         .secure(app_url.starts_with("https://"));
-    
+
     if let Some(domain) = cookie_domain.clone() {
         session_cookie_builder = session_cookie_builder.domain(domain);
     }
@@ -238,7 +243,6 @@ pub async fn google_callback(
 
     (jar, script).into_response()
 }
-
 
 /// POST /auth/logout
 pub async fn logout(State(_state): State<AppState>, jar: SignedCookieJar) -> impl IntoResponse {
