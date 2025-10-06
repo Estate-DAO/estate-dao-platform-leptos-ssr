@@ -129,7 +129,6 @@ pub async fn google_callback(
         None => return (StatusCode::BAD_REQUEST, "missing state").into_response(),
     };
 
-    // Verify CSRF
     let Some(csrf_cookie) = jar.get(CSRF_COOKIE) else {
         tracing::error!("Missing CSRF cookie in callback");
         return (StatusCode::BAD_REQUEST, "missing CSRF cookie").into_response();
@@ -141,9 +140,8 @@ pub async fn google_callback(
             state_param
         );
         return (StatusCode::BAD_REQUEST, "invalid CSRF").into_response();
-    }
+    };
 
-    // Fetch PKCE verifier
     let pkce_key = format!("{CSRF_COOKIE}_pkce");
     let Some(pkce_cookie) = jar.get(&pkce_key) else {
         tracing::error!("Missing PKCE cookie in callback");
@@ -151,7 +149,6 @@ pub async fn google_callback(
     };
     let pkce_verifier = oauth2::PkceCodeVerifier::new(pkce_cookie.value().to_string());
 
-    // Exchange code
     let client = build_google_client();
     let token_res = match client
         .exchange_code(oauth2::AuthorizationCode::new(code.to_string()))
@@ -166,7 +163,6 @@ pub async fn google_callback(
         }
     };
 
-    // Get userinfo from OIDC endpoint
     let access_token = token_res.access_token().secret();
     let userinfo: OidcUser = match reqwest::Client::new()
         .get("https://openidconnect.googleapis.com/v1/userinfo")
@@ -188,13 +184,13 @@ pub async fn google_callback(
         }
     };
 
-    // Create a signed session cookie
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
     let cookie_domain = if app_url.contains("nofeebooking.com") {
         Some(".nofeebooking.com".to_string())
     } else {
         None
     };
+    let is_secure = app_url.starts_with("https://");
 
     let session_json = match serde_json::to_string(&userinfo) {
         Ok(json) => json,
@@ -208,29 +204,44 @@ pub async fn google_callback(
         .path("/")
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
-        .secure(app_url.starts_with("https://"));
+        .secure(is_secure);
 
     if let Some(domain) = cookie_domain.clone() {
         session_cookie_builder = session_cookie_builder.domain(domain);
     }
     let session_cookie = session_cookie_builder.build();
 
+    // Remove CSRF and PKCE cookies with matching attributes
+    let mut csrf_removal_builder = Cookie::build((CSRF_COOKIE, ""))
+        .path("/")
+        .http_only(true)
+        .secure(is_secure)
+        .max_age(Duration::seconds(0));
+
+    if let Some(domain) = cookie_domain.clone() {
+        csrf_removal_builder = csrf_removal_builder.domain(domain);
+    }
+    let csrf_removal = csrf_removal_builder.build();
+
+    let mut pkce_removal_builder = Cookie::build((pkce_key.clone(), ""))
+        .path("/")
+        .http_only(true)
+        .secure(is_secure)
+        .max_age(Duration::seconds(0));
+
+    if let Some(domain) = cookie_domain.clone() {
+        pkce_removal_builder = pkce_removal_builder.domain(domain);
+    }
+    let pkce_removal = pkce_removal_builder.build();
+
     let jar = jar
-        .remove(
-            Cookie::build((CSRF_COOKIE, ""))
-                .path("/")
-                .http_only(true)
-                .secure(app_url.starts_with("https://"))
-                .build(),
-        )
-        .remove(
-            Cookie::build((pkce_key.clone(), ""))
-                .path("/")
-                .http_only(true)
-                .secure(app_url.starts_with("https://"))
-                .build(),
-        )
-        .add(session_cookie);
+        .remove(csrf_removal.clone())
+        .remove(pkce_removal.clone())
+        .add(session_cookie.clone());
+
+    tracing::debug!("Setting session cookie: {:?}", session_cookie);
+    tracing::debug!("Removing CSRF cookie: {:?}", csrf_removal);
+    tracing::debug!("Removing PKCE cookie: {:?}", pkce_removal);
 
     let script = Html(
         r#"
@@ -246,24 +257,62 @@ pub async fn google_callback(
 
 /// POST /auth/logout
 pub async fn logout(State(_state): State<AppState>, jar: SignedCookieJar) -> impl IntoResponse {
-    // Create a removal cookie with the same attributes as the session cookie
-    let removal_cookie = Cookie::build((SESSION_COOKIE, ""))
+    // Determine cookie domain and secure attribute based on APP_URL
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
+    let cookie_domain = if app_url.contains("nofeebooking.com") {
+        Some(".nofeebooking.com".to_string())
+    } else {
+        None
+    };
+    let is_secure = app_url.starts_with("https://");
+
+    // Create a removal cookie for session with matching attributes
+    let mut session_removal_builder = Cookie::build((SESSION_COOKIE, ""))
         .path("/")
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
-        .max_age(Duration::seconds(0)) // Expire immediately
-        .finish();
+        .secure(is_secure)
+        .max_age(Duration::seconds(0)); // Expire immediately
 
-    let jar = jar.add(removal_cookie);
+    if let Some(domain) = cookie_domain.clone() {
+        session_removal_builder = session_removal_builder.domain(domain);
+    }
+    let session_removal = session_removal_builder.build();
 
-    // Also clear any other auth-related cookies
-    let csrf_removal = Cookie::build((CSRF_COOKIE, ""))
+    // Create a removal cookie for CSRF with matching attributes
+    let mut csrf_removal_builder = Cookie::build((CSRF_COOKIE, ""))
         .path("/")
         .http_only(true)
-        .max_age(Duration::seconds(0))
-        .finish();
+        .secure(is_secure)
+        .max_age(Duration::seconds(0));
 
-    let jar = jar.add(csrf_removal);
+    if let Some(domain) = cookie_domain.clone() {
+        csrf_removal_builder = csrf_removal_builder.domain(domain);
+    }
+    let csrf_removal = csrf_removal_builder.build();
+
+    // Create a removal cookie for PKCE with matching attributes
+    let pkce_key = format!("{CSRF_COOKIE}_pkce");
+    let mut pkce_removal_builder = Cookie::build((pkce_key, ""))
+        .path("/")
+        .http_only(true)
+        .secure(is_secure)
+        .max_age(Duration::seconds(0));
+
+    if let Some(domain) = cookie_domain.clone() {
+        pkce_removal_builder = pkce_removal_builder.domain(domain);
+    }
+    let pkce_removal = pkce_removal_builder.build();
+
+    // Add removal cookies to the jar
+    let jar = jar
+        .add(session_removal.clone())
+        .add(csrf_removal.clone())
+        .add(pkce_removal.clone());
+
+    tracing::debug!("Removing session cookie: {:?}", session_removal);
+    tracing::debug!("Removing CSRF cookie: {:?}", csrf_removal);
+    tracing::debug!("Removing PKCE cookie: {:?}", pkce_removal);
 
     (jar, axum::response::Redirect::to("/"))
 }
