@@ -4,9 +4,7 @@ use axum::{
     Json,
 };
 use axum_extra::extract::cookie::{Cookie, SignedCookieJar};
-use codee::string::JsonSerdeCodec;
 use http::StatusCode;
-use leptos_use::use_cookie;
 use oauth2::{
     basic::BasicClient, AuthUrl, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
     Scope, TokenResponse, TokenUrl,
@@ -31,11 +29,14 @@ pub async fn get_app_url() -> Json<AppUrl> {
     let const_url = APP_URL.to_string();
     Json(AppUrl { env_url, const_url })
 }
+
 fn build_google_client() -> BasicClient {
     let client_id = std::env::var("GOOGLE_CLIENT_ID").expect("GOOGLE_CLIENT_ID not set");
     let client_secret =
         std::env::var("GOOGLE_CLIENT_SECRET").expect("GOOGLE_CLIENT_SECRET not set");
-    let redirect = std::env::var("GOOGLE_REDIRECT_URL").expect("GOOGLE_REDIRECT_URL not set");
+    // Use APP_URL to construct the redirect URL dynamically
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
+    let redirect = format!("{}/auth/google/callback", app_url.trim_end_matches('/'));
 
     BasicClient::new(
         ClientId::new(client_id),
@@ -43,7 +44,7 @@ fn build_google_client() -> BasicClient {
         AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string()).unwrap(),
         Some(TokenUrl::new("https://oauth2.googleapis.com/token".to_string()).unwrap()),
     )
-    .set_redirect_uri(RedirectUrl::new(redirect).unwrap())
+    .set_redirect_uri(RedirectUrl::new(redirect).expect("Invalid redirect URL"))
 }
 
 /// GET /auth/google
@@ -52,10 +53,7 @@ pub async fn google_auth(
     jar: SignedCookieJar,
 ) -> impl IntoResponse {
     let client = build_google_client();
-
-    // PKCE (recommended with public clients)
     let (pkce_challenge, pkce_verifier) = oauth2::PkceCodeChallenge::new_random_sha256();
-
     let (auth_url, csrf) = client
         .authorize_url(CsrfToken::new_random)
         .add_scope(Scope::new("openid".into()))
@@ -64,27 +62,50 @@ pub async fn google_auth(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    // Persist CSRF token in a signed cookie
-    let csrf_cookie = Cookie::build((CSRF_COOKIE, csrf.secret().to_string()))
+    // Determine cookie domain based on APP_URL
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
+    let cookie_domain = if app_url.contains("nofeebooking.com") {
+        Some(".nofeebooking.com".to_string()) // Covers nofeebooking.com and www.nofeebooking.com
+    } else {
+        None
+    };
+
+    // Build CSRF cookie
+    let mut csrf_cookie_builder = Cookie::build((CSRF_COOKIE, csrf.secret().to_string()))
+        .path("/")
         .http_only(true)
-        .same_site(axum_extra::extract::cookie::SameSite::Lax) // Add SameSite
-        .secure(true) // Ensure cookie is only sent over HTTPS
-        .build();
+        .same_site(axum_extra::extract::cookie::SameSite::Lax)
+        .secure(app_url.starts_with("https://"));
+
+    if let Some(domain) = cookie_domain.clone() {
+        csrf_cookie_builder = csrf_cookie_builder.domain(domain);
+    }
+    let csrf_cookie = csrf_cookie_builder.build();
 
     let jar = jar.add(csrf_cookie);
 
-    // Persist the PKCE verifier
-    let pkce_cookie = Cookie::build((
-        format!("{CSRF_COOKIE}_pkce"),
-        pkce_verifier.secret().to_string(),
-    ))
-    .path("/")
-    .http_only(true)
-    .same_site(axum_extra::extract::cookie::SameSite::Lax)
-    .secure(true)
-    .build();
+    // Build PKCE cookie
+    let pkce_key = format!("{CSRF_COOKIE}_pkce");
+    let mut pkce_cookie_builder = Cookie::build((pkce_key.clone(), pkce_verifier.secret().to_string()))
+        .path("/")
+        .http_only(true)
+        .same_site(axum_extra::extract::cookie::SameSite::Lax)
+        .secure(app_url.starts_with("https://"));
+    
+    if let Some(domain) = cookie_domain.clone() {
+        pkce_cookie_builder = pkce_cookie_builder.domain(domain);
+    }
+    let pkce_cookie = pkce_cookie_builder.build();
 
-    let jar = jar.add(pkce_cookie);
+    let jar = if jar.get(&pkce_key.clone()).is_none() {
+        jar.add(pkce_cookie)
+    } else {
+        jar
+    };
+
+    // tracing::debug!("Setting CSRF cookie: {:?}", csrf_cookie);
+    // tracing::debug!("Setting PKCE cookie: {:?}", pkce_cookie);
+    tracing::debug!("Redirecting to: {}", auth_url.as_ref());
 
     (jar, axum::response::Redirect::to(auth_url.as_ref()))
 }
@@ -95,6 +116,9 @@ pub async fn google_callback(
     jar: SignedCookieJar,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> impl IntoResponse {
+    tracing::debug!("Received cookies: {:?}", jar.iter().collect::<Vec<_>>());
+    tracing::debug!("Query params: {:?}", params);
+
     let code = match params.get("code") {
         Some(c) => c,
         None => return (StatusCode::BAD_REQUEST, "missing code").into_response(),
@@ -105,16 +129,19 @@ pub async fn google_callback(
     };
 
     // Verify CSRF
-    // let Some(csrf_cookie) = jar.get(CSRF_COOKIE) else {
-    //     return (StatusCode::BAD_REQUEST, "missing CSRF cookie").into_response();
-    // };
-    // if csrf_cookie.value() != state_param {
-    //     return (StatusCode::BAD_REQUEST, "invalid CSRF").into_response();
-    // }
+    let Some(csrf_cookie) = jar.get(CSRF_COOKIE) else {
+        tracing::error!("Missing CSRF cookie in callback");
+        return (StatusCode::BAD_REQUEST, "missing CSRF cookie").into_response();
+    };
+    if csrf_cookie.value() != state_param {
+        tracing::error!("CSRF token mismatch: cookie={}, state={}", csrf_cookie.value(), state_param);
+        return (StatusCode::BAD_REQUEST, "invalid CSRF").into_response();
+    }
 
     // Fetch PKCE verifier
     let pkce_key = format!("{CSRF_COOKIE}_pkce");
     let Some(pkce_cookie) = jar.get(&pkce_key) else {
+        tracing::error!("Missing PKCE cookie in callback");
         return (StatusCode::BAD_REQUEST, "missing PKCE").into_response();
     };
     let pkce_verifier = oauth2::PkceCodeVerifier::new(pkce_cookie.value().to_string());
@@ -157,6 +184,13 @@ pub async fn google_callback(
     };
 
     // Create a signed session cookie
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
+    let cookie_domain = if app_url.contains("nofeebooking.com") {
+        Some(".nofeebooking.com".to_string())
+    } else {
+        None
+    };
+
     let session_json = match serde_json::to_string(&userinfo) {
         Ok(json) => json,
         Err(e) => {
@@ -165,42 +199,46 @@ pub async fn google_callback(
         }
     };
 
-    let session_cookie = Cookie::build((SESSION_COOKIE, session_json))
+    let mut session_cookie_builder = Cookie::build((SESSION_COOKIE, session_json))
         .path("/")
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
-        // Optional: set max age for session persistence
-        // .max_age(time::Duration::days(7))
-        .build();
+        .secure(app_url.starts_with("https://"));
+    
+    if let Some(domain) = cookie_domain.clone() {
+        session_cookie_builder = session_cookie_builder.domain(domain);
+    }
+    let session_cookie = session_cookie_builder.build();
 
     let jar = jar
-        // Remove CSRF cookie with same attributes as when set
         .remove(
             Cookie::build((CSRF_COOKIE, ""))
                 .path("/")
                 .http_only(true)
+                .secure(app_url.starts_with("https://"))
                 .build(),
         )
-        // Remove PKCE cookie with same attributes as when set
         .remove(
             Cookie::build((pkce_key.clone(), ""))
                 .path("/")
                 .http_only(true)
+                .secure(app_url.starts_with("https://"))
                 .build(),
         )
         .add(session_cookie);
+
     let script = Html(
         r#"
-                    <script>
-                    window.opener.postMessage("oauth-success", window.location.origin);
-                    window.close();
-                    </script>
-                    "#,
+            <script>
+            window.opener.postMessage("oauth-success", window.location.origin);
+            window.close();
+            </script>
+        "#,
     );
 
-    // Redirect to home or dashboard
     (jar, script).into_response()
 }
+
 
 /// POST /auth/logout
 pub async fn logout(State(_state): State<AppState>, jar: SignedCookieJar) -> impl IntoResponse {
@@ -339,15 +377,3 @@ pub async fn get_user_wishlist(jar: SignedCookieJar) -> impl IntoResponse {
         (StatusCode::UNAUTHORIZED, "Not authenticated").into_response()
     }
 }
-
-// use leptos::*;
-// use leptos_axum::extract;
-
-// #[server]
-// pub async fn get_current_user_server() -> Result<Option<OidcUser>, ServerFnError> {
-//     let jar = extract::<SignedCookieJar>()
-//         .await
-//         .map_err(|e| ServerFnError::new(format!("Failed to extract cookies: {}", e)))?;
-
-//     Ok(get_current_user(jar).await)
-// }
