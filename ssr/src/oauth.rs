@@ -305,10 +305,9 @@ pub async fn logout(State(_state): State<AppState>, jar: SignedCookieJar) -> imp
     let pkce_removal = pkce_removal_builder.build();
 
     // Add removal cookies to the jar
-    let jar = jar
-        .add(session_removal.clone())
-        .add(csrf_removal.clone())
-        .add(pkce_removal.clone());
+    let jar = jar.add(session_removal.clone());
+    // .add(csrf_removal.clone())
+    // .add(pkce_removal.clone());
 
     tracing::debug!("Removing session cookie: {:?}", session_removal);
     tracing::debug!("Removing CSRF cookie: {:?}", csrf_removal);
