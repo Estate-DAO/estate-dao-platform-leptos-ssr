@@ -337,14 +337,14 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     view! {
         <div class="relative">
             <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::AiCalendarOutlined class="text-black font-extralight" />
+                <Icon icon=icondata::AiCalendarOutlined class="text-blue-500 font-extralight" />
             </div>
 
             <button
                 class="w-full py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left"
                 on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
             >
-                {{ move || view! { <span class="text-gray-500">{date_range_display()}</span> } }}
+                {{ move || view! { <span class="text-black font-medium">{date_range_display()}</span> } }}
             </button>
 
             <Show when=move || is_open()>

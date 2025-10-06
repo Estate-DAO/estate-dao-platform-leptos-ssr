@@ -327,14 +327,14 @@ pub fn GuestQuantity() -> impl IntoView {
     view! {
         <div class="relative flex items-center w-full">
             <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::BiUserRegular class="text-black font-extralight" />
+                <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight" />
             </div>
 
             <button
                 class="w-full py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left flex items-center justify-around"
                 on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
             >
-                <div class="text-gray-500">{guest_count_display}</div>
+                <div class="text-black font-medium">{guest_count_display}</div>
                 <div>
                 // <div class="absolute inset-y-0 right-3 flex items-center">
                     <Icon icon=icon() class="text-gray-600 text-sm" />

@@ -19,9 +19,11 @@ concurrency:
 
 jobs:
   build_check_prod:
-    uses: ./.github/workflows/build-check-prod.yml
+    uses: ./.github/workflows/build-check.yml
     with:
       publish-artifact: true
+      app-url: https://nofeebooking.com/
+    secrets: inherit
 
   deploy:
     name: Deploy

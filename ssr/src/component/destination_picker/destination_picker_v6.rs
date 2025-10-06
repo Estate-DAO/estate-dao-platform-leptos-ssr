@@ -277,7 +277,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
             node_ref=container_ref
         >
             <div class="absolute inset-y-0 left-2 py-6 px-4 text-xl pointer-events-none flex items-center">
-                <Icon icon=icondata::BsMap class="text-black font-bold" />
+                <Icon icon=icondata::BsMap class="text-blue-500 font-bold" />
             </div>
 
             <div class="relative w-full">
@@ -285,7 +285,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                     type="text"
                     node_ref=input_ref
                     id="destination-live-select"
-                    class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 bg-transparent rounded-full transition-colors focus:outline-none py-6"
+                    class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-full transition-colors focus:outline-none py-6"
                     placeholder="Where to?"
                     autocomplete="off"
                     aria-autocomplete="list"
@@ -307,7 +307,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                         Some(view! {
                             <div
                                 id="destination-dropdown"
-                                class="absolute z-50 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-2"
+                                class="absolute z-100 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-2"
                                 role="listbox"
                             >
                                 {move || {
