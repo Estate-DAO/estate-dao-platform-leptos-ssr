@@ -99,7 +99,13 @@ impl HotelProviderPort for LiteApiAdapter {
                 // Populate main_photo from other image fields if it's empty
                 hotel_details_response.data.populate_main_photo_if_empty();
                 // Check if hotel has room data - if not, skip this hotel
-                if hotel_details_response.data.rooms.clone().unwrap_or_default().is_empty() {
+                if hotel_details_response
+                    .data
+                    .rooms
+                    .clone()
+                    .unwrap_or_default()
+                    .is_empty()
+                {
                     crate::log!("Hotel {} has no room data, skipping hotel", hotel_id);
                     return Err(ProviderError(Arc::new(ProviderErrorDetails {
                         provider_name: ProviderNames::LiteApi,

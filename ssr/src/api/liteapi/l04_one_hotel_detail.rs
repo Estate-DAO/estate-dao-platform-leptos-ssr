@@ -235,7 +235,11 @@ impl LiteApiSingleHotelDetailData {
             while let Some(room) = &self.rooms {
                 if let Some(room_main_photo) = room
                     .iter()
-                    .map(|f| f.photos.iter().find(|photo| photo.main_photo && !photo.url.trim().is_empty()))
+                    .map(|f| {
+                        f.photos
+                            .iter()
+                            .find(|photo| photo.main_photo && !photo.url.trim().is_empty())
+                    })
                     .flatten()
                     .next()
                 {
@@ -248,7 +252,11 @@ impl LiteApiSingleHotelDetailData {
             while let Some(room) = &self.rooms {
                 if let Some(room_photo) = room
                     .iter()
-                    .map(|f| f.photos.iter().find(|photo| !photo.hd_url.trim().is_empty()))
+                    .map(|f| {
+                        f.photos
+                            .iter()
+                            .find(|photo| !photo.hd_url.trim().is_empty())
+                    })
                     .flatten()
                     .next()
                 {

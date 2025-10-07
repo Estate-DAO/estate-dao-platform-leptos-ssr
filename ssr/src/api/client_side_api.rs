@@ -4,8 +4,9 @@ use crate::api::payments::ports::GetPaymentStatusResponse;
 use crate::canister::backend::{Booking, PaymentDetails};
 
 use crate::domain::{
-    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria,
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelDetails,
+    DomainHotelDetailsWithoutRates, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
+    DomainHotelSearchCriteria,
 };
 use crate::log;
 use crate::utils::route::join_base_and_path_url;
@@ -621,6 +622,45 @@ impl ClientSideApiClient {
             "update user principal email mapping",
         )
         .await
+    }
+
+    /// Get hotel details without rates using hotel ID
+    pub async fn get_hotel_details_without_rates(
+        &self,
+        hotel_id: &str,
+    ) -> Result<DomainHotelDetailsWithoutRates, String> {
+        let url = format!("server_fn_api/get_hotel_details_api?hotel_id={}", hotel_id);
+
+        #[cfg(not(feature = "ssr"))]
+        {
+            use gloo_net::http::Request;
+
+            let response = Request::get(&url)
+                .send()
+                .await
+                .map_err(|e| format!("Network error: {}", e))?;
+
+            if !response.ok() {
+                let error_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(format!("HTTP {}: {}", response.status(), error_text));
+            }
+
+            let response_text = response
+                .text()
+                .await
+                .map_err(|e| format!("Failed to read response: {}", e))?;
+
+            serde_json::from_str(&response_text)
+                .map_err(|e| format!("Failed to parse response: {}", e))
+        }
+
+        #[cfg(feature = "ssr")]
+        {
+            Err("Hotel details API not available on server side".to_string())
+        }
     }
 }
 
