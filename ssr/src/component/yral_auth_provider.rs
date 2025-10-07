@@ -4,7 +4,8 @@ use leptos::*;
 // use leptos::{ev, prelude::*, component, view, server, ServerFnError, expect_context, create_action, window, IntoView, Children, Oco};
 use leptos_use::{
     storage::{use_local_storage, use_local_storage_with_options, UseStorageOptions},
-    use_cookie_with_options, use_event_listener, use_interval_fn, use_window, UseCookieOptions,
+    use_cookie, use_cookie_with_options, use_event_listener, use_interval_fn, use_window,
+    UseCookieOptions,
 };
 use web_sys::Window;
 
@@ -30,7 +31,7 @@ pub async fn get_app_url_server() -> Result<String, ServerFnError> {
 #[component]
 pub fn YralAuthProvider() -> impl IntoView {
     let profile_details = Resource::local(
-        move || (AuthStateSignal::auth_state().get()),
+        move || AuthStateSignal::auth_state().get(),
         move |auth| async move {
             if auth.is_authenticated() {
                 return Some(auth);
@@ -41,12 +42,14 @@ pub fn YralAuthProvider() -> impl IntoView {
                 Ok(response) => {
                     if response.status() == 200 {
                         if let Ok(user_data) = response.json::<AuthState>().await {
-                            AuthStateSignal::auth_set(user_data);
+                            logging::log!("Fetched user info: {:?}", user_data);
+                            AuthStateSignal::auth_set(user_data.clone());
+                            return Some(user_data);
                         }
                     }
                 }
-                Err(_) => {
-                    logging::log!("Failed to fetch user info");
+                Err(e) => {
+                    logging::log!("Failed to fetch user info: {:?}", e);
                 }
             }
             None
@@ -54,7 +57,7 @@ pub fn YralAuthProvider() -> impl IntoView {
     );
 
     let wishlist_details = Resource::local(
-        move || (AuthStateSignal::auth_state().get()),
+        move || AuthStateSignal::auth_state().get(),
         move |auth| async move {
             if auth.is_authenticated() {
                 return Some(auth);
@@ -65,69 +68,84 @@ pub fn YralAuthProvider() -> impl IntoView {
                 Ok(response) => {
                     if response.status() == 200 {
                         if let Ok(user_data) = response.json::<Vec<String>>().await {
+                            logging::log!("Fetched wishlist: {:?}", user_data);
                             AuthStateSignal::wishlist_set(Some(user_data));
                         }
                     }
                 }
-                Err(_) => {
-                    logging::log!("Failed to fetch user info");
+                Err(e) => {
+                    logging::log!("Failed to fetch wishlist: {:?}", e);
                 }
             }
             None
         },
     );
 
-    view! {
-        // <Show when=move || !loading.get() fallback=|| view! {
-        //     <div class="flex justify-center items-center w-10 h-10">
-        //         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-        //     </div>
-        // }>
-            {
-            move || wishlist_details.get().map(|_|{})
-            }
-            {move || profile_details.get().flatten().map(|user|{
-                view! {
-                    <div>
-                        <UserAvatar user />
-                    </div>
+    // Cookie-based check for session
+    let (session_cookie, _) = use_cookie::<String, FromToStringCodec>("session");
+
+    Effect::new(move |_| {
+        if session_cookie.get().is_some() {
+            logging::log!("Session cookie detected, fetching user info");
+            wasm_bindgen_futures::spawn_local(async move {
+                let url = format!("/api/user-info");
+                match gloo_net::http::Request::get(&url).send().await {
+                    Ok(resp) if resp.status() == 200 => {
+                        if let Ok(user_data) = resp.json::<AuthState>().await {
+                            logging::log!("User info from cookie: {:?}", user_data);
+                            AuthStateSignal::auth_set(user_data);
+                        }
+                    }
+                    _ => {
+                        logging::log!("Failed to fetch user info from cookie check");
+                    }
                 }
-            }).or_else(|| view!{
-                <div>
-                                <LoginButton />
-                </div>
-            }.into())
+            });
         }
-        // </Show>
+    });
+
+    view! {
+        {
+            move || wishlist_details.get().map(|_| {})
+        }
+        {move || profile_details.get().flatten().map(|user| {
+            view! {
+                <div>
+                    <UserAvatar user />
+                </div>
+            }
+        }).or_else(|| view! {
+            <div>
+                <LoginButton />
+            </div>
+        }.into())}
     }
 }
 
-/// Login button component (shown when not authenticated)
 #[component]
 fn LoginButton() -> impl IntoView {
-    // Setup listener ONCE
-    let _ = use_event_listener(
-        use_window(),
-        ev::message,
-        move |msg: web_sys::MessageEvent| {
-            if let Some(data) = msg.data().as_string() {
-                log::warn!("received message: {:?}", data);
+    let _ = use_event_listener(use_window(), ev::message, move |msg| {
+        if let Some(data) = msg.data().as_string() {
+            if data == "oauth-success" {
+                logging::log!("Received oauth-success message");
                 wasm_bindgen_futures::spawn_local(async move {
                     let url = format!("/api/user-info");
                     match gloo_net::http::Request::get(&url).send().await {
                         Ok(resp) if resp.status() == 200 => {
                             if let Ok(user_data) = resp.json::<AuthState>().await {
+                                logging::log!("User info from postMessage: {:?}", user_data);
                                 AuthStateSignal::auth_set(user_data);
                             }
                         }
-                        _ => {
-                            logging::log!("Failed to fetch user info");
+                        Err(e) => {
+                            logging::log!("Failed to fetch user info from postMessage: {:?}", e);
                         }
+                        _ => logging::log!("Unexpected response when fetching user info"),
                     }
                 });
             }
-        },
-    );
+        }
+    });
 
     view! {
         <button
@@ -136,7 +154,7 @@ fn LoginButton() -> impl IntoView {
                 ev.prevent_default();
                 let window = web_sys::window().unwrap();
                 let _ = window.open_with_url_and_target(
-                    &format!("auth/google"),
+                    &format!("/auth/google"),
                     "oauthPopup"
                 );
             }
