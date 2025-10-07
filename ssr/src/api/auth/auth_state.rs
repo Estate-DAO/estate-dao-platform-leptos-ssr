@@ -92,6 +92,11 @@ impl AuthStateSignal {
         Self::wishlist_set(Some(wishlist));
     }
 
+    pub fn wishlist_hotel_codes() -> Vec<String> {
+        let this = Self::get();
+        this.wishlist.get().unwrap_or_default()
+    }
+
     // Check if already added to wishlist
     pub fn check_if_added_to_wishlist_untracked(wish: &String) -> bool {
         let this = Self::get();
