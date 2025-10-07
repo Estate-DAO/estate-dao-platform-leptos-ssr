@@ -9,14 +9,6 @@ use crate::domain::DomainHotelDetailsWithoutRates;
 use crate::log;
 use crate::page::HotelCardTile;
 
-#[derive(Clone, Debug)]
-pub struct WishlistHotelDetails {
-    pub hotel_code: String,
-    pub details: Option<DomainHotelDetailsWithoutRates>,
-    pub loading: bool,
-    pub error: Option<String>,
-}
-
 #[component]
 pub fn WishlistPage() -> impl IntoView {
     let navigate = use_navigate();
@@ -24,81 +16,43 @@ pub fn WishlistPage() -> impl IntoView {
     // Get wishlist hotel codes from auth state
     let wishlist_hotel_codes = move || AuthStateSignal::wishlist_hotel_codes();
 
-    // Create signals for managing hotel details
-    let (hotel_details_map, set_hotel_details_map) =
-        create_signal(std::collections::HashMap::<String, WishlistHotelDetails>::new());
-
     // API client for fetching hotel details
     let api_client = ClientSideApiClient::new();
 
-    // Effect to load hotel details when wishlist changes
-    create_effect(move |_| {
-        let hotel_codes = wishlist_hotel_codes();
-        log!("Wishlist hotel codes: {:?}", hotel_codes);
+    // Create a resource that fetches all hotel details
+    let hotel_details_resource = create_resource(
+        move || wishlist_hotel_codes(),
+        move |hotel_codes| {
+            let api_client = api_client.clone();
+            async move {
+                if hotel_codes.is_empty() {
+                    return Vec::new();
+                }
 
-        if hotel_codes.is_empty() {
-            set_hotel_details_map.set(std::collections::HashMap::new());
-            return;
-        }
+                log!("Fetching details for hotels: {:?}", hotel_codes);
 
-        // Initialize loading state for all hotels
-        let mut initial_map = std::collections::HashMap::new();
-        for hotel_code in &hotel_codes {
-            initial_map.insert(
-                hotel_code.clone(),
-                WishlistHotelDetails {
-                    hotel_code: hotel_code.clone(),
-                    details: None,
-                    loading: true,
-                    error: None,
-                },
-            );
-        }
-        set_hotel_details_map.set(initial_map);
+                let mut hotel_details = Vec::new();
 
-        // Fetch details for each hotel
-        for hotel_code in hotel_codes {
-            let hotel_code_clone = hotel_code.clone();
-            let api_client_clone = api_client.clone();
-            let set_hotel_details_map_clone = set_hotel_details_map.clone();
-
-            spawn_local(async move {
-                log!("Fetching details for hotel: {}", hotel_code_clone);
-
-                match api_client_clone
-                    .get_hotel_details_without_rates(&hotel_code_clone)
-                    .await
-                {
-                    Ok(details) => {
-                        log!(
-                            "Successfully fetched details for hotel: {}",
-                            hotel_code_clone
-                        );
-                        set_hotel_details_map_clone.update(|map| {
-                            if let Some(hotel_detail) = map.get_mut(&hotel_code_clone) {
-                                hotel_detail.details = Some(details);
-                                hotel_detail.loading = false;
-                                hotel_detail.error = None;
-                            }
-                        });
-                    }
-                    Err(e) => {
-                        log!(
-                            "Failed to fetch details for hotel {}: {}",
-                            hotel_code_clone,
-                            e
-                        );
-                        set_hotel_details_map_clone.update(|map| {
-                            if let Some(hotel_detail) = map.get_mut(&hotel_code_clone) {
-                                hotel_detail.loading = false;
-                                hotel_detail.error = Some(e.to_string());
-                            }
-                        });
+                for hotel_code in hotel_codes {
+                    match api_client
+                        .get_hotel_details_without_rates(&hotel_code)
+                        .await
+                    {
+                        Ok(details) => {
+                            log!("Successfully fetched details for hotel: {}", hotel_code);
+                            hotel_details.push(details);
+                        }
+                        Err(e) => {
+                            log!("Failed to fetch details for hotel {}: {}", hotel_code, e);
+                            // You could choose to continue with other hotels or handle errors differently
+                        }
                     }
                 }
-            });
-        }
-    });
+
+                hotel_details
+            }
+        },
+    );
 
     view! {
         <div class="min-h-screen bg-slate-50">
@@ -157,78 +111,58 @@ pub fn WishlistPage() -> impl IntoView {
                         }
                     >
                         <div class="space-y-4">
-                            <For
-                                each=move || {
-                                    let details_map = hotel_details_map.get();
-                                    details_map.values().cloned().collect::<Vec<_>>()
+                            <Suspense
+                                fallback=move || view! {
+                                    <div class="space-y-4">
+                                        <SkeletonCards />
+                                        <SkeletonCards />
+                                        <SkeletonCards />
+                                    </div>
                                 }
-                                key=|hotel_detail| hotel_detail.hotel_code.clone()
-                                let:hotel_detail
                             >
-                                {
-                                    if hotel_detail.loading {
-                                        view! {
-                                            <SkeletonCards />
-                                        }.into_view()
-                                    } else if let Some(ref error) = hotel_detail.error {
-                                        view! {
-                                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                                                <div class="flex items-center">
-                                                    <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                                    </svg>
-                                                    <p class="text-red-800">
-                                                        "Failed to load hotel details for " {hotel_detail.hotel_code.clone()} ": " {error.clone()}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        }.into_view()
-                                    } else if let Some(ref details) = hotel_detail.details {
-                                        // Create a default image if none provided
-                                        let img = if details.images.is_empty() {
-                                            "https://via.placeholder.com/300x200?text=No+Image".to_string()
-                                        } else {
-                                            details.images[0].clone()
-                                        };
-
-                                        // Format address
-                                        let address = if details.address.trim().is_empty() {
-                                            if !details.city.trim().is_empty() && !details.country.trim().is_empty() {
-                                                Some(format!("{}, {}", details.city, details.country))
-                                            } else if !details.city.trim().is_empty() {
-                                                Some(details.city.clone())
-                                            } else {
-                                                None
-                                            }
-                                        } else {
-                                            Some(details.address.clone())
-                                        };
-
-                                        view! {
+                                {move || {
+                                    hotel_details_resource.get().map(|hotel_details| view! {
+                                        <For
+                                            each=move || hotel_details.clone()
+                                            key=|hotel| hotel.hotel_code.clone()
+                                            let:hotel
+                                        >
                                             <HotelCardTile
-                                                img=img
+                                                img={
+                                                    if hotel.images.is_empty() {
+                                                        "https://via.placeholder.com/300x200?text=No+Image".to_string()
+                                                    } else {
+                                                        hotel.images[0].clone()
+                                                    }
+                                                }
                                                 guest_score=None
-                                                rating=details.star_rating as u8
-                                                hotel_name=details.hotel_name.clone()
-                                                hotel_code=details.hotel_code.clone()
+                                                rating=hotel.star_rating as u8
+                                                hotel_name=hotel.hotel_name.clone()
+                                                hotel_code=hotel.hotel_code.clone()
                                                 price=None // Wishlist doesn't show pricing
                                                 discount_percent=None
-                                                amenities=details.amenities.clone()
+                                                amenities=hotel.amenities.clone()
                                                 property_type=None
                                                 class="w-full mb-4 bg-white".to_string()
-                                                hotel_address=address
+                                                hotel_address={
+                                                    if hotel.address.trim().is_empty() {
+                                                        if !hotel.city.trim().is_empty() && !hotel.country.trim().is_empty() {
+                                                            Some(format!("{}, {}", hotel.city, hotel.country))
+                                                        } else if !hotel.city.trim().is_empty() {
+                                                            Some(hotel.city.clone())
+                                                        } else {
+                                                            None
+                                                        }
+                                                    } else {
+                                                        Some(hotel.address.clone())
+                                                    }
+                                                }
                                                 disabled=false
                                             />
-                                        }.into_view()
-                                    } else {
-                                        view! {
-                                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                                <p class="text-gray-600">"Hotel details not available"</p>
-                                            </div>
-                                        }.into_view()
-                                    }
-                                }
-                            </For>
+                                        </For>
+                                    })
+                                }}
+                            </Suspense>
                         </div>
                     </Show>
                 </Show>
