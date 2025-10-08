@@ -165,7 +165,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 />
 
                 <meta name="facebook-domain-verification" content="mpv8l4xgm70yb70avrye8pggdegv3r" />
-
                 <script
                     inner_html=r#"
                         window.addEventListener('load', function() {
