@@ -16,6 +16,7 @@ pub mod view_state_layer;
 pub mod adapters;
 pub mod application_services;
 pub mod domain;
+pub mod facebook;
 pub mod ports;
 pub mod web_api_translator;
 
