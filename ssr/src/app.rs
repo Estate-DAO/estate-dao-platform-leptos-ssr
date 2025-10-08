@@ -153,10 +153,19 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-                // Facebook domain verification
+                <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
+                <Meta property="og:image" content="/img/logo_white.svg" />
+
+                <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
+                <Link rel="preconnect" href="https://fonts.googleapis.com" />
+                <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
+                <Link
+                    href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
+                    rel="stylesheet"
+                />
+
                 <meta name="facebook-domain-verification" content="mpv8l4xgm70yb70avrye8pggdegv3r" />
 
-                // ✅ Meta Pixel Code
                 <script
                     inner_html=r#"
                         window.addEventListener('load', function() {
@@ -182,10 +191,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                         src="https://www.facebook.com/tr?id=1720214695361495&ev=PageView&noscript=1"
                     />
                 </noscript>
-                // ✅ End Meta Pixel Code
-
-                <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
-                <Meta property="og:image" content="/img/logo_white.svg" />
             </head>
 
             <body>
@@ -255,21 +260,6 @@ pub fn App() -> impl IntoView {
     );
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
-
-        // sets the document title
-        <Title text="NoFeeBooking" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
-        // import Figtree font
-        <Link rel="preconnect" href="https://fonts.googleapis.com" />
-        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
-        <Link
-            href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
-            rel="stylesheet"
-        />
-        <LeptosQueryDevtools />
-
         <GA4ScriptAsync />
 
         // <Body>
