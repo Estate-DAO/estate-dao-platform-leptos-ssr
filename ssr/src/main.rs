@@ -154,7 +154,7 @@ cfg_if! {
                     // provide_context(app_state.grpc_offchain_channel.clone());
                     provide_context(app_state.env_var_config.clone());
                 },
-                App,
+                move || shell(app_state.leptos_options.clone()),
             );
             handler(req).await.into_response()
         }

@@ -145,6 +145,56 @@ impl AppRoutes {
     }
 }
 
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+                // Facebook domain verification
+                <meta name="facebook-domain-verification" content="mpv8l4xgm70yb70avrye8pggdegv3r" />
+
+                // ✅ Meta Pixel Code
+                <script
+                    inner_html=r#"
+                        window.addEventListener('load', function() {
+                        !function(f,b,e,v,n,t,s)
+                        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                        n.queue=[];t=b.createElement(e);t.async=!0;
+                        t.src=v;s=b.getElementsByTagName(e)[0];
+                        s.parentNode.insertBefore(t,s)}(window, document,'script',
+                        'https://connect.facebook.net/en_US/fbevents.js');
+                        fbq('init', '1720214695361495');
+                        fbq('track', 'PageView');
+                        });
+                        "#
+                ></script>
+
+                <noscript>
+                    <img
+                        height="1"
+                        width="1"
+                        style="display:none"
+                        src="https://www.facebook.com/tr?id=1720214695361495&ev=PageView&noscript=1"
+                    />
+                </noscript>
+                // ✅ End Meta Pixel Code
+
+                <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
+                <Meta property="og:image" content="/img/logo_white.svg" />
+            </head>
+
+            <body>
+                <App />
+            </body>
+        </html>
+    }
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
@@ -210,32 +260,6 @@ pub fn App() -> impl IntoView {
         // sets the document title
         <Title text="NoFeeBooking" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-       // Meta pixel
-        <meta name="facebook-domain-verification" content="mpv8l4xgm70yb70avrye8pggdegv3r" />
-        // Facebook Pixel
-                <script
-                inner_html=r#"
-                    !function(f,b,e,v,n,t,s)
-                    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                    n.queue=[];t=b.createElement(e);t.async=!0;
-                    t.src=v;s=b.getElementsByTagName(e)[0];
-                    s.parentNode.insertBefore(t,s)}(window, document,'script',
-                    'https://connect.facebook.net/en_US/fbevents.js');
-                    fbq('init', '1720214695361495');
-                    fbq('track', 'PageView');
-                    "#
-                ></script>
-
-                <noscript>
-                    <img
-                        height="1"
-                        width="1"
-                        style="display:none"
-                        src="https://www.facebook.com/tr?id=1720214695361495&ev=PageView&noscript=1"
-                    />
-                </noscript>
 
         // import Figtree font
         <Link rel="preconnect" href="https://fonts.googleapis.com" />
