@@ -11,6 +11,19 @@ use crate::page::HotelCardTile;
 
 #[component]
 pub fn WishlistPage() -> impl IntoView {
+    view! {
+        <div class="min-h-screen bg-slate-50">
+            <Navbar blue_header=false />
+
+            <WishlistComponent />
+
+            <Footer />
+        </div>
+    }
+}
+
+#[component]
+pub fn WishlistComponent() -> impl IntoView {
     let navigate = use_navigate();
 
     // Get wishlist hotel codes from auth state
@@ -18,6 +31,31 @@ pub fn WishlistPage() -> impl IntoView {
 
     // API client for fetching hotel details
     let api_client = ClientSideApiClient::new();
+
+    let wishlist_details = Resource::local(
+        move || AuthStateSignal::auth_state().get(),
+        move |auth| async move {
+            if auth.is_authenticated() {
+                return Some(auth);
+            }
+
+            let url = format!("/api/user-wishlist");
+            match gloo_net::http::Request::get(&url).send().await {
+                Ok(response) => {
+                    if response.status() == 200 {
+                        if let Ok(user_data) = response.json::<Vec<String>>().await {
+                            logging::log!("Fetched wishlist: {:?}", user_data);
+                            AuthStateSignal::wishlist_set(Some(user_data));
+                        }
+                    }
+                }
+                Err(e) => {
+                    logging::log!("Failed to fetch wishlist: {:?}", e);
+                }
+            }
+            None
+        },
+    );
 
     // Create a resource that fetches all hotel details
     let hotel_details_resource = create_resource(
@@ -55,14 +93,14 @@ pub fn WishlistPage() -> impl IntoView {
     );
 
     view! {
-        <div class="min-h-screen bg-slate-50">
-            <Navbar blue_header=false />
-
-            <div class="container mx-auto px-4 py-8">
+        <div class="container mx-auto px-4 py-8">
                 <div class="mb-8">
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">"My Wishlist"</h1>
                     <p class="text-gray-600">"Your saved hotels"</p>
                 </div>
+                {move || wishlist_details.get().map(|_| view! {
+                    <></>
+                })}
 
                 <Show
                     when=move || !AuthStateSignal::auth_state().get().is_authenticated()
@@ -167,8 +205,5 @@ pub fn WishlistPage() -> impl IntoView {
                     </Show>
                 </Show>
             </div>
-
-            <Footer />
-        </div>
     }
 }

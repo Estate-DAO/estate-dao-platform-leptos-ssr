@@ -19,6 +19,7 @@ use crate::{
         consts::{get_host, APP_URL, USER_IDENTITY},
     },
     app::AppRoutes,
+    page::AccountTabs,
 };
 
 #[server]
@@ -192,7 +193,7 @@ fn UserAvatar(user: AuthState) -> impl IntoView {
                     <a href=AppRoutes::MyBookings.to_string() class="text-sm font-medium text-gray-900 truncate">My Bookings</a>
                 </div>
                 <div class="px-4 py-2 border-b border-gray-100">
-                    <a href=AppRoutes::Wishlist.to_string() class="text-sm font-medium text-gray-900 truncate">My Wishlist</a>
+                    <a href=AccountTabs::Wishlist.as_route() class="text-sm font-medium text-gray-900 truncate">My Wishlist</a>
                 </div>
                 <button
                     on:click=move |ev| {
