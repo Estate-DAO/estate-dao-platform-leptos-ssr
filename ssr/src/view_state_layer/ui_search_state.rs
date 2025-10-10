@@ -4,7 +4,10 @@ use crate::{
     //     BookRoomRequest, BookRoomResponse, HotelInfoRequest, HotelInfoResponse, HotelRoomDetail,
     //     HotelRoomRequest, HotelRoomResponse, HotelSearchRequest, HotelSearchResponse, RoomDetail,
     // },
-    api::client_side_api::{Place, PlaceData},
+    api::{
+        client_side_api::{Place, PlaceData},
+        consts::PAGINATION_LIMIT,
+    },
     application_services::filter_types::UISearchFilters,
     canister::backend,
     component::{Destination, GuestSelection, SelectedDateRange},
@@ -306,7 +309,7 @@ impl Default for UIPaginationState {
     fn default() -> Self {
         Self {
             current_page: create_rw_signal(1),
-            page_size: create_rw_signal(50), // Default page size
+            page_size: create_rw_signal(PAGINATION_LIMIT as u32), // Default page size
             pagination_meta: create_rw_signal(None),
         }
     }
