@@ -154,7 +154,7 @@ cfg_if! {
                     // provide_context(app_state.grpc_offchain_channel.clone());
                     provide_context(app_state.env_var_config.clone());
                 },
-                App,
+                move || shell(app_state.leptos_options.clone()),
             );
             handler(req).await.into_response()
         }
@@ -320,8 +320,9 @@ cfg_if! {
 
             let conf = get_configuration(None).await.unwrap();
             let leptos_options = conf.leptos_options;
+            let option = leptos_options.clone();
             let addr = leptos_options.site_addr;
-            let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(App));
+            let routes = leptos_query::with_query_suppression(|| leptos_axum::generate_route_list(move || shell(option.clone())));
 
             let res = AppStateBuilder::new(leptos_options, routes.clone())
             .build()

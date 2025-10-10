@@ -1,4 +1,5 @@
 use crate::api::auth::auth_state::AuthStateSignal;
+use crate::facebook::FacebookPixel;
 use crate::page::MyAccountPage;
 use crate::{
     api::{
@@ -149,6 +150,32 @@ impl AppRoutes {
     }
 }
 
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+
+
+                // <script
+                //     inner_html=r#"
+                //         window.addEventListener('load', function() {
+                //         !function(f,b,e,v,n,t,s)
+                //         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                //         n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                //         if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                //         n.queue=[];t=b.createElement(e);t.async=!0;
+                //         t.src=v;s=b.getElementsByTagName(e)[0];
+                //         s.parentNode.insertBefore(t,s)}(window, document,'script',
+                //         'https://connect.facebook.net/en_US/fbevents.js');
+                //         fbq('init', '1720214695361495');
+                //         fbq('track', 'PageView');
+                //         });
+                //         "#
+                // ></script>
+
+
+            <App />
+    }
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
@@ -209,20 +236,30 @@ pub fn App() -> impl IntoView {
     );
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
 
-        // sets the document title
-        <Title text="NoFeeBooking" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-        // import Figtree font
-        <Link rel="preconnect" href="https://fonts.googleapis.com" />
-        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
-        <Link
-            href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
-            rel="stylesheet"
-        />
-        <LeptosQueryDevtools />
+                <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
+                <Meta property="og:image" content="/img/logo_white.svg" />
+
+                <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
+                <Link rel="preconnect" href="https://fonts.googleapis.com" />
+                <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
+                <Link
+                    href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
+                    rel="stylesheet"
+                />
+
+                <FacebookPixel />
+                 <noscript>
+                    <img
+                        height="1"
+                        width="1"
+                        style="display:none"
+                        src="https://www.facebook.com/tr?id=1720214695361495&ev=PageView&noscript=1"
+                    />
+                </noscript>
 
         <GA4ScriptAsync />
 
