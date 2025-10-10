@@ -307,7 +307,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                         Some(view! {
                             <div
                                 id="destination-dropdown"
-                                class="absolute z-100 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-2"
+                                class="absolute z-[9999] w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-2"
                                 role="listbox"
                             >
                                 {move || {

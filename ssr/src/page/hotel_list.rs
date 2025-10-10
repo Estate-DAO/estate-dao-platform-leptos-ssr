@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos_router::use_navigate;
+use web_sys::MouseEvent;
 
 use crate::api::auth::auth_state::AuthStateSignal;
 // use crate::api::get_room;
@@ -443,110 +444,150 @@ pub fn HotelListPage() -> impl IntoView {
         })
     };
 
+    let disabled_filters = Signal::derive(move || false);
     let filters_collapsed = create_rw_signal(false);
 
     view! {
-        <div class="bg-blue-600 relative h-40 sm:h-40 md:h-36 lg:h-32">
-            <Navbar blue_header=true />
+        // Fixed header section at top
+        <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+            <div class={
+                let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+                move || format!(
+                    "bg-blue-600 relative transition-all duration-300 {}",
+                    if is_input_expanded() {
+                        // Expanded height on mobile/tablet when input group is open, normal on desktop
+                        "h-96 sm:h-96 md:h-80 lg:h-32"
+                    } else {
+                        // Normal collapsed height for all screen sizes
+                        "h-40 sm:h-40 md:h-36 lg:h-32"
+                    }
+                )
+            }>
+                <Navbar blue_header=true />
 
-            <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full flex flex-col items-center max-w-5xl px-4">
-                <InputGroupContainer
-                    default_expanded=false
-                    given_disabled=disabled_input_group
-                    allow_outside_click_collapse=true
-                />
+                // Mobile/tablet: position input group normally in the flow when expanded
+                // Desktop: use absolute positioning (original behavior)
+                <div class={
+                    let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+                    move || format!(
+                        "w-full flex flex-col items-center px-4 {}",
+                        if is_input_expanded() {
+                            // Mobile/tablet expanded: normal flow positioning
+                            "justify-end h-full pb-4 lg:absolute lg:left-1/2 lg:bottom-0 lg:transform lg:-translate-x-1/2 lg:translate-y-1/2 lg:max-w-5xl lg:z-40 lg:h-auto lg:pb-0"
+                        } else {
+                            // All screens collapsed: absolute positioning for desktop, hidden for mobile
+                            "absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 max-w-5xl z-40"
+                        }
+                    )
+                }>
+                    <InputGroupContainer
+                        default_expanded=false
+                        given_disabled=disabled_input_group
+                        allow_outside_click_collapse=true
+                    />
+                </div>
             </div>
         </div>
 
-        <section class="min-h-screen bg-slate-50 p-4 mx-16">
-            // <Navbar />
-            // <div class="w-full max-w-6xl mx-auto px-2 sm:px-4 pb-10">
-            //     <div class="flex flex-col items-center mt-2 sm:mt-6">
-            //         <div class="w-full rounded-2xl shadow-sm">
-            //             <div class="p-2 sm:p-4">
-            //                 <InputGroupContainer default_expanded=false given_disabled=disabled_input_group allow_outside_click_collapse=true />
-            //             </div>
-            //         </div>
-            //     </div>
+        // Dynamic spacer that only adjusts on mobile/tablet, stays normal on desktop
+        <div class={
+            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+            move || format!(
+                "transition-all duration-300 {}",
+                if is_input_expanded() {
+                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
+                    "h-96 sm:h-96 md:h-80 lg:h-48"
+                } else {
+                    // Normal spacer when collapsed on all screens
+                    "h-56 sm:h-56 md:h-60 lg:h-48"
+                }
+            )
+        }></div>
 
-                <div class="mt-6 flex flex-col gap-6 lg:flex-row">
-                    <aside class="w-full mt-4 lg:w-72 shrink-0">
-                        <div class="sticky">
-                            <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[calc(100vh-6rem)]">
-                                <div class="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        class="flex flex-1 items-center justify-between rounded-md px-2 py-1 text-left transition-colors duration-150 hover:bg-slate-100 cursor-pointer"
-                                        aria-expanded=move || (!filters_collapsed.get()).to_string()
-                                        aria-label="Toggle filter sidebar"
-                                        on:click=move |_| {
-                                            filters_collapsed.update(|collapsed| *collapsed = !*collapsed);
-                                        }
-                                    >
-                                        <span class="text-sm font-semibold uppercase tracking-wide text-slate-600">
-                                            "Filters"
-                                        </span>
-                                        {move || {
-                                            if filters_collapsed.get() {
-                                                view! {
-                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 15l-7-7-7 7" />
-                                                    </svg>
-                                                }.into_view()
-                                            } else {
-                                                view! {
-                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                }.into_view()
-                                            }
-                                        }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
-                                        disabled=move || !has_active_filters.get()
-                                        on:click=clear_filters.clone()
-                                    >
-                                        "Clear filters"
-                                    </button>
-                                </div>
-                                <Show
-                                    when=move || !filters_collapsed.get()
-                                    fallback=move || view! { <></> }
+        // Main scrollable section
+        <section class="min-h-screen bg-slate-50 p-8">
+            // Desktop layout (lg screens and up)
+            <div class="hidden lg:flex h-[calc(100vh-12rem)]">
+                // Fixed aside on left (desktop only)
+                <aside class="w-72 shrink-0 bg-slate-50 border-r border-slate-200">
+                    <div class="h-full overflow-y-auto p-4">
+                        <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    class="flex flex-1 items-center justify-between rounded-md px-2 py-1 text-left transition-colors duration-150 hover:bg-slate-100 cursor-pointer"
+                                    aria-expanded=move || (!filters_collapsed.get()).to_string()
+                                    aria-label="Toggle filter sidebar"
+                                    on:click=move |_| {
+                                        filters_collapsed.update(|collapsed| *collapsed = !*collapsed);
+                                    }
                                 >
-                                    <div class="mt-4 space-y-6 custom-scrollbar lg:flex-1 lg:overscroll-contain lg:pr-1">
-                                        <div class="border-t border-slate-100"></div>
-                                        <PriceRangeFilter
-                                            value=price_filter_value
-                                            on_select=price_filter_on_select.clone()
-                                        />
-                                        <div class="border-t border-slate-100"></div>
-                                        <StarRatingFilter
-                                            value=star_filter_value
-                                            on_select=star_filter_on_select.clone()
-                                        />
-                                        <div class="border-t border-slate-100"></div>
-                                        <AmenitiesFilter
-                                            options=amenities_options_signal
-                                            selected=amenities_selected_signal
-                                            on_toggle=amenities_on_toggle
-                                            on_clear=amenities_on_clear
-                                        />
-                                        <div class="border-t border-slate-100"></div>
-                                        <PropertyTypeFilter
-                                            options=property_type_options_signal
-                                            selected=property_types_selected_signal
-                                            on_toggle=property_type_on_toggle
-                                            on_clear=property_type_on_clear
-                                        />
-                                    </div>
-                                </Show>
+                                    <span class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                                        "Filters"
+                                    </span>
+                                    {move || {
+                                        if filters_collapsed.get() {
+                                            view! {
+                                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 15l-7-7-7 7" />
+                                                </svg>
+                                            }.into_view()
+                                        } else {
+                                            view! {
+                                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            }.into_view()
+                                        }
+                                    }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
+                                    disabled=move || !has_active_filters.get()
+                                    on:click=clear_filters.clone()
+                                >
+                                    "Clear filters"
+                                </button>
                             </div>
+                            <Show
+                                when=move || !filters_collapsed.get()
+                                fallback=move || view! { <></> }
+                            >
+                                <div class="mt-4 space-y-6 custom-scrollbar flex-1 overscroll-contain pr-1">
+                                    <div class="border-t border-slate-100"></div>
+                                    <PriceRangeFilter
+                                        value=price_filter_value
+                                        on_select=price_filter_on_select.clone()
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <StarRatingFilter
+                                        value=star_filter_value
+                                        on_select=star_filter_on_select.clone()
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <AmenitiesFilter
+                                        options=amenities_options_signal
+                                        selected=amenities_selected_signal
+                                        on_toggle=amenities_on_toggle
+                                        on_clear=amenities_on_clear
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <PropertyTypeFilter
+                                        options=property_type_options_signal
+                                        selected=property_types_selected_signal
+                                        on_toggle=property_type_on_toggle
+                                        on_clear=property_type_on_clear
+                                    />
+                                </div>
+                            </Show>
                         </div>
-                    </aside>
+                    </div>
+                </aside>
 
-                    <div class="flex-1 min-w-0">
+                // Right content area (desktop)
+                <div class="flex-1 min-w-0 overflow-y-auto">
+                    <div class="p-4">
                         // Use resource pattern with Suspense for automatic loading states
                         <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
                             {move || {
@@ -555,8 +596,6 @@ pub fn HotelListPage() -> impl IntoView {
                                 view! { <></> }
                             }}
                         </Suspense>
-
-                        <div class="mt-4">
 
                             <Show
                                 when=move || search_list_page.search_result.get().is_some()
@@ -768,7 +807,182 @@ pub fn HotelListPage() -> impl IntoView {
                         </div>
                     </div>
                 </div>
+
+            // Mobile layout (lg screens and below)
+            <div class="lg:hidden min-h-screen pb-20">
+                <div class="px-4 py-6">
+                    // Filter toggle button for mobile
+                    <div class="mb-4">
+                        <button
+                            type="button"
+                            class="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
+                            on:click=move |_| filters_collapsed.update(|c| *c = !*c)
+                        >
+                            <span class="font-medium">Filters</span>
+                            <svg
+                                class={move || format!("w-5 h-5 transition-transform {}", if filters_collapsed.get() { "rotate-180" } else { "" })}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    // Collapsible filter section with max height to prevent footer overlap
+                    <Show when=move || !filters_collapsed.get()>
+                        <div class="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm max-h-96 overflow-y-auto">
+                            <div class="space-y-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <span class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+                                        "Filters"
+                                    </span>
+                                    <button
+                                        type="button"
+                                        class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
+                                        disabled=move || !has_active_filters.get()
+                                        on:click=clear_filters.clone()
+                                    >
+                                        "Clear filters"
+                                    </button>
+                                </div>
+
+                                <PriceRangeFilter
+                                    value=price_filter_value
+                                    on_select=price_filter_on_select.clone()
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <StarRatingFilter
+                                    value=star_filter_value
+                                    on_select=star_filter_on_select.clone()
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <AmenitiesFilter
+                                    options=amenities_options_signal
+                                    selected=amenities_selected_signal
+                                    on_toggle=amenities_on_toggle
+                                    on_clear=amenities_on_clear
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <PropertyTypeFilter
+                                    options=property_type_options_signal
+                                    selected=property_types_selected_signal
+                                    on_toggle=property_type_on_toggle
+                                    on_clear=property_type_on_clear
+                                />
+                            </div>
+                        </div>
+                    </Show>
+
+                    // Mobile hotel listings
+                    <div class="space-y-4">
+                        <Suspense fallback=move || view! { <div class="space-y-4">{(0..5).map(|_| fallback()).collect_view()}</div> }>
+                            {move || {
+                                // Trigger the resource loading
+                                let _ = hotel_search_resource.get();
+                                view! { <></> }
+                            }}
+                        </Suspense>
+
+                        <Show
+                            when=move || search_list_page.search_result.get().is_some()
+                            fallback=move || view! { <></> }
+                        >
+                            {move || {
+                                let hotel_results = search_list_page
+                                    .search_result
+                                    .get()
+                                    .unwrap()
+                                    .hotel_list();
+                                let filters = filters_signal.get();
+                                let filtered_hotels = filters.apply_filters(&hotel_results);
+
+                                if hotel_results.is_empty() {
+                                    view! {
+                                        <div class="text-center py-8">
+                                            <p class="text-gray-600">No hotels found</p>
+                                        </div>
+                                    }
+                                } else if filtered_hotels.is_empty() {
+                                    view! {
+                                        <div class="text-center py-8">
+                                            <p class="text-gray-600">No hotels match your filters</p>
+                                            <button
+                                                class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
+                                                on:click=move |e| clear_filters.call(e)
+                                            >
+                                                Clear Filters
+                                            </button>
+                                        </div>
+                                    }
+                                } else {
+                                    view! {
+                                        <div>
+                                            { filtered_hotels
+                                            .into_iter()
+                                            .map(|hotel_result| {
+                                                let mut price = hotel_result
+                                                .price
+                                                .clone()
+                                                .map(|p| p.room_price);
+                                            let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                            if is_disabled {
+                                                price = None;
+                                            }
+                                            let img = if hotel_result.hotel_picture.is_empty() {
+                                                "https://via.placeholder.com/300x200?text=No+Image".into()
+                                            } else {
+                                                hotel_result.hotel_picture.clone()
+                                            };
+                                            let res = hotel_result.clone();
+                                            let hotel_address = hotel_result.hotel_address.clone();
+                                            let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+                                            view! {
+                                                <HotelCardTile
+                                                img
+                                                guest_score=None
+                                                rating=hotel_result.star_rating
+                                                hotel_name=hotel_result.hotel_name.clone()
+                                                hotel_code=hotel_result.hotel_code.clone()
+                                                price=price
+                                                discount_percent=None
+                                                amenities=amenities.get()
+                                                property_type=hotel_result.property_type.clone()
+                                                class=format!(
+                                                    "w-full mb-4 {}",
+                                                    if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
+                                                )
+                                                hotel_address
+                                                disabled=is_disabled
+                                                />
+                                            }
+                                        })
+                                        .collect_view()}
+                                    </div>
+                                    }
+                                }
+                            }}
+                        </Show>
+
+                        // Mobile pagination controls
+                        <Show
+                            when=move || {
+                                search_list_page.search_result.get()
+                                    .map_or(false, |result| !result.hotel_list().is_empty())
+                            }
+                            fallback=move || view! { <></> }
+                        >
+                            <div class="mt-6">
+                                <PaginationControls />
+                            </div>
+                        </Show>
+                    </div>
+                </div>
+            </div>
         </section>
+
+        // Footer at the bottom
         <Footer />
     }
 }
