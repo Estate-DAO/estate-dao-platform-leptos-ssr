@@ -987,7 +987,7 @@ pub fn HotelCardTile(
 
                         // amenities
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {amenities.iter().map(|a| view! {
+                            {amenities.iter().take(8).map(|a| view! {
                                 <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a}</span>
                             }).collect_view()}
                         </div>
