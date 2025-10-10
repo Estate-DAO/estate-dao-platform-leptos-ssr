@@ -57,10 +57,30 @@ impl HotelDetailsParams {
         let place = search_ctx.place.get_untracked()?;
         let date_range = search_ctx.date_range.get_untracked();
 
-        // Only create params if we have valid dates
-        if date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0) {
-            return None;
-        }
+        // Use next week as fallback if dates are not available
+        let (start_date, end_date, nights) =
+            if date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0) {
+                // Calculate next week dates
+                let today = chrono::Local::now().naive_local().date();
+                let next_week_start = today + chrono::Duration::days(7);
+                let next_week_end = next_week_start + chrono::Duration::days(7);
+
+                let start = (
+                    next_week_start.year() as u32,
+                    next_week_start.month(),
+                    next_week_start.day(),
+                );
+                let end = (
+                    next_week_end.year() as u32,
+                    next_week_end.month(),
+                    next_week_end.day(),
+                );
+                let nights = 7u32;
+
+                (start, end, nights)
+            } else {
+                (date_range.start, date_range.end, date_range.no_of_nights())
+            };
 
         let guests = &search_ctx.guests;
 
@@ -74,13 +94,10 @@ impl HotelDetailsParams {
             place_details,
             checkin: format!(
                 "{:04}-{:02}-{:02}",
-                date_range.start.0, date_range.start.1, date_range.start.2
+                start_date.0, start_date.1, start_date.2
             ),
-            checkout: format!(
-                "{:04}-{:02}-{:02}",
-                date_range.end.0, date_range.end.1, date_range.end.2
-            ),
-            no_of_nights: date_range.no_of_nights(),
+            checkout: format!("{:04}-{:02}-{:02}", end_date.0, end_date.1, end_date.2),
+            no_of_nights: nights,
             adults: guests.adults.get_untracked(),
             children: guests.children.get_untracked(),
             rooms: guests.rooms.get_untracked(),

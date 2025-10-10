@@ -1041,7 +1041,7 @@ pub fn HotelCardTile(
                                         </p>
                                     }
                                 } else {
-                                    view! { <p class="text-xl font-bold">"Check Availability"</p> }
+                                    view! { <p class="text-sm font-bold">"Check Availability"</p> }
                                 }
                             }}
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
