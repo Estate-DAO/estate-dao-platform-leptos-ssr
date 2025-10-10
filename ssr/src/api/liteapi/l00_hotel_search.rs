@@ -3,6 +3,7 @@ use reqwest::Method;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 
 use crate::api::api_client::{ApiClient, ApiRequest, ApiRequestMeta};
+use crate::api::consts::PAGINATION_LIMIT;
 use crate::api::liteapi::client::LiteApiHTTPClient;
 use crate::api::liteapi::traits::LiteApiReq;
 use crate::component::{Destination, GuestSelection};
@@ -131,7 +132,7 @@ impl Default for LiteApiHotelSearchRequest {
             // country_code: "US".into(),
             // city_name: "New York".into(),
             offset: 0,
-            limit: 50,
+            limit: PAGINATION_LIMIT,
             // destination_latitude: Some(40.7),
             // destination_longitude: Some(-74.0),
             place_id: "ChIJOwg_06VPwokRYv534QaPC8g".into(),
@@ -151,7 +152,7 @@ impl LiteApiHotelSearchRequest {
             // country_code: destination.country_code.clone(),
             // city_name: destination.city.clone(),
             offset: 0,
-            limit: 50,
+            limit: PAGINATION_LIMIT,
             // destination_latitude: destination.latitude,
             // destination_longitude: destination.longitude,
             // radius: Some(1000),
