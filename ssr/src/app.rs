@@ -14,6 +14,7 @@ use crate::{
         AdminEditPanel, AdminPanelPage, BlockRoomPage, BlockRoomV1Page, ConfirmationPage,
         /* ConfirmationPageV1, */ ConfirmationPageV2, HotelDetailsPage, HotelDetailsV1Page,
         HotelListPage, MyBookingsPage, PreviousSearchContext, RootPage, SSEConfirmationPage,
+        WishlistPage,
     },
     view_state_layer::{
         api_error_state::ApiErrorState,
@@ -70,6 +71,7 @@ pub enum AppRoutes {
     AdminEditPanel,
     MyBookings,
     MyAccount, // Notifications
+    Wishlist,
 }
 
 impl AppRoutes {
@@ -86,6 +88,7 @@ impl AppRoutes {
             AppRoutes::AdminEditPanel => "/admin-edit-panel",
             AppRoutes::MyBookings => "/my-bookings",
             AppRoutes::MyAccount => "/account",
+            AppRoutes::Wishlist => "/wishlist",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -102,6 +105,7 @@ impl AppRoutes {
             Self::AdminPanel,
             Self::AdminEditPanel,
             Self::MyBookings,
+            Self::Wishlist,
             // Self::Notifications,
         ]
         .into_iter()
@@ -277,6 +281,7 @@ pub fn App() -> impl IntoView {
                         <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
                         <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
                         <Route path=AppRoutes::MyAccount.to_string() view=MyAccountPage />
+                        <Route path=AppRoutes::Wishlist.to_string() view=WishlistPage />
                         // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                         // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>

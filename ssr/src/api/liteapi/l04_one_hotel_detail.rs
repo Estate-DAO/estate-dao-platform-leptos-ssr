@@ -46,8 +46,19 @@ pub struct LiteApiFacility {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiCheckinCheckoutTimes {
+    #[serde(default)]
     pub checkout: String,
+    #[serde(default)]
     pub checkin: String,
+}
+
+impl Default for LiteApiCheckinCheckoutTimes {
+    fn default() -> Self {
+        Self {
+            checkout: String::new(),
+            checkin: String::new(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -122,11 +133,11 @@ pub struct LiteApiRoom {
 pub struct LiteApiSingleHotelDetailData {
     pub id: String,
     pub name: String,
-    #[serde(rename = "hotelDescription")]
+    #[serde(rename = "hotelDescription", default)]
     pub hotel_description: String,
     #[serde(rename = "hotelImportantInformation", default)]
     pub hotel_important_information: String,
-    #[serde(rename = "checkinCheckoutTimes")]
+    #[serde(rename = "checkinCheckoutTimes", default)]
     pub checkin_checkout_times: LiteApiCheckinCheckoutTimes,
     // for_claude_hint: hotel_images is not received in the final api response because of some reason
     #[serde(rename = "hotelImages", default)]
@@ -137,37 +148,43 @@ pub struct LiteApiSingleHotelDetailData {
     pub thumbnail: Option<String>,
     pub country: String,
     pub city: String,
-    #[serde(rename = "starRating")]
+    #[serde(rename = "starRating", default)]
     pub star_rating: i32,
-    // pub location: LiteApiLocation,
+    pub location: Option<LiteApiLocation>,
+    #[serde(default)]
     pub address: String,
-    #[serde(rename = "hotelFacilities")]
+    #[serde(rename = "hotelFacilities", default)]
     pub hotel_facilities: Vec<String>,
     #[serde(default)]
     pub zip: String,
+    #[serde(default)]
     pub chain: String,
+    #[serde(default)]
     pub facilities: Vec<LiteApiFacility>,
+    #[serde(default)]
     pub phone: String,
     // pub fax: String,
-    pub email: String,
-    #[serde(rename = "hotelType")]
-    pub hotel_type: String,
-    #[serde(rename = "hotelTypeId")]
-    pub hotel_type_id: i32,
-    #[serde(rename = "airportCode")]
-    pub airport_code: String,
-    pub rating: f64,
-    #[serde(rename = "reviewCount")]
-    pub review_count: i32,
-    pub parking: String,
-    #[serde(rename = "groupRoomMin")]
-    pub group_room_min: i32,
-    #[serde(rename = "childAllowed")]
-    pub child_allowed: bool,
-    #[serde(rename = "petsAllowed")]
-    pub pets_allowed: bool,
     #[serde(default)]
-    pub rooms: Vec<LiteApiRoom>,
+    pub email: String,
+    #[serde(rename = "hotelType", default)]
+    pub hotel_type: String,
+    #[serde(rename = "hotelTypeId", default)]
+    pub hotel_type_id: i32,
+    #[serde(rename = "airportCode", default)]
+    pub airport_code: String,
+    #[serde(default)]
+    pub rating: f64,
+    #[serde(rename = "reviewCount", default)]
+    pub review_count: i32,
+    #[serde(default)]
+    pub parking: String,
+    #[serde(rename = "groupRoomMin", default)]
+    pub group_room_min: i32,
+    #[serde(rename = "childAllowed", default)]
+    pub child_allowed: bool,
+    #[serde(rename = "petsAllowed", default)]
+    pub pets_allowed: bool,
+    pub rooms: Option<Vec<LiteApiRoom>>,
     // Simplified policies and sentiment_analysis fields for now
     // Can be expanded later if needed
 }
@@ -215,11 +232,16 @@ impl LiteApiSingleHotelDetailData {
             }
 
             // As a last resort, try to use room photos (main photo from rooms)
-            for room in &self.rooms {
+            while let Some(room) = &self.rooms {
                 if let Some(room_main_photo) = room
-                    .photos
                     .iter()
-                    .find(|photo| photo.main_photo && !photo.url.trim().is_empty())
+                    .map(|f| {
+                        f.photos
+                            .iter()
+                            .find(|photo| photo.main_photo && !photo.url.trim().is_empty())
+                    })
+                    .flatten()
+                    .next()
                 {
                     self.main_photo = room_main_photo.url.clone();
                     return;
@@ -227,11 +249,16 @@ impl LiteApiSingleHotelDetailData {
             }
 
             // If no main room photo, try any room photo with HD URL
-            for room in &self.rooms {
+            while let Some(room) = &self.rooms {
                 if let Some(room_photo) = room
-                    .photos
                     .iter()
-                    .find(|photo| !photo.hd_url.trim().is_empty())
+                    .map(|f| {
+                        f.photos
+                            .iter()
+                            .find(|photo| !photo.hd_url.trim().is_empty())
+                    })
+                    .flatten()
+                    .next()
                 {
                     self.main_photo = room_photo.hd_url.clone();
                     return;
@@ -239,11 +266,12 @@ impl LiteApiSingleHotelDetailData {
             }
 
             // If no HD room photo, try any room photo with regular URL
-            for room in &self.rooms {
+            while let Some(room) = &self.rooms {
                 if let Some(room_photo) = room
-                    .photos
                     .iter()
-                    .find(|photo| !photo.url.trim().is_empty())
+                    .map(|f| f.photos.iter().find(|photo| !photo.url.trim().is_empty()))
+                    .flatten()
+                    .next()
                 {
                     self.main_photo = room_photo.url.clone();
                     return;

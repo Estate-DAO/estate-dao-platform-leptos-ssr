@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::component::*;
+use crate::{component::*, page::WishlistComponent};
 
 // ---------------- Tabs ----------------
 
@@ -28,8 +28,8 @@ pub fn WalletView() -> impl IntoView {
 pub fn WishlistView() -> impl IntoView {
     view! {
         <div>
-            <h1 class="text-xl font-semibold mb-4">"Wishlist"</h1>
-            <p class="text-gray-600">"Saved items and bookings appear here."</p>
+            <h1 class="text-xl font-semibold mb-4">"My Favorites"</h1>
+            <WishlistComponent />
         </div>
     }
 }

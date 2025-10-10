@@ -5,9 +5,9 @@ use crate::{
     domain::{
         DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest,
         DomainBookRoomResponse, DomainGetBookingRequest, DomainGetBookingResponse,
-        DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
-        DomainHotelSearchCriteria, DomainPlaceDetails, DomainPlaceDetailsPayload,
-        DomainPlacesResponse, DomainPlacesSearchPayload,
+        DomainHotelDetails, DomainHotelDetailsWithoutRates, DomainHotelInfoCriteria,
+        DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPlaceDetails,
+        DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload,
     },
     ports::hotel_provider_port::ProviderError,
 };
@@ -36,6 +36,12 @@ pub trait HotelProviderPort {
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError>;
+
+    // <!-- Get hotel details without rates - returns basic hotel information without pricing -->
+    async fn get_hotel_details_without_rates(
+        &self,
+        hotel_id: String,
+    ) -> Result<DomainHotelDetailsWithoutRates, ProviderError>;
 
     // fn get_hotel_details(
     //     &self,

@@ -181,11 +181,11 @@ impl LiteApiAdapter {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(20).clamp(1, 1000);
+                let page_size = params.page_size.unwrap_or(20).clamp(1, 50);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 1000), // Default: first page, 1000 results
+            None => (0, 50), // Default: first page, 50 results
         }
     }
 
@@ -1926,5 +1926,66 @@ impl LiteApiAdapter {
             .collect();
 
         Ok(DomainGetBookingResponse { bookings })
+    }
+
+    /// Map LiteAPI hotel details to domain hotel details without rates
+    fn map_liteapi_hotel_details_to_domain_without_rates(
+        hotel_data: crate::api::liteapi::l04_one_hotel_detail::LiteApiSingleHotelDetailData,
+    ) -> DomainHotelDetailsWithoutRates {
+        // Build images array following the same pattern as existing code
+        let mut images = Vec::new();
+
+        // Add main_photo if available
+        if !hotel_data.main_photo.is_empty() {
+            images.push(hotel_data.main_photo.clone());
+        }
+
+        // Add thumbnail if available and different from main_photo
+        if let Some(thumbnail) = &hotel_data.thumbnail {
+            if !thumbnail.is_empty() && thumbnail != &hotel_data.main_photo {
+                images.push(thumbnail.clone());
+            }
+        }
+
+        // Add all hotel images from the hotelImages array
+        for hotel_image in &hotel_data.hotel_images {
+            if !hotel_image.url.is_empty() && !images.contains(&hotel_image.url) {
+                images.push(hotel_image.url.clone());
+            }
+            // Also add HD version if different
+            if !hotel_image.url_hd.is_empty()
+                && hotel_image.url_hd != hotel_image.url
+                && !images.contains(&hotel_image.url_hd)
+            {
+                images.push(hotel_image.url_hd.clone());
+            }
+        }
+
+        // Extract amenities from room amenities (since there's no hotel-level amenities field)
+        let mut all_amenities = Vec::new();
+        if let Some(rooms) = &hotel_data.rooms {
+            for room in rooms {
+                for amenity in &room.room_amenities {
+                    if !all_amenities.contains(&amenity.name) {
+                        all_amenities.push(amenity.name.clone());
+                    }
+                }
+            }
+        }
+
+        DomainHotelDetailsWithoutRates {
+            hotel_name: hotel_data.name,
+            hotel_code: hotel_data.id,
+            star_rating: hotel_data.star_rating,
+            description: hotel_data.hotel_description,
+            hotel_facilities: hotel_data.hotel_facilities,
+            address: hotel_data.address,
+            images,
+            amenities: all_amenities,
+            city: hotel_data.city,
+            country: hotel_data.country,
+            latitude: hotel_data.location.as_ref().map(|l| l.latitude),
+            longitude: hotel_data.location.as_ref().map(|l| l.longitude),
+        }
     }
 }

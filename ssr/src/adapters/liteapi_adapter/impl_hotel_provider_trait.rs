@@ -19,8 +19,9 @@ use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
     DomainDetailedPrice, DomainFirstRoomDetails, DomainGetBookingRequest, DomainGetBookingResponse,
-    DomainHotelAfterSearch, DomainHotelDetails, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice, DomainRoomData,
+    DomainHotelAfterSearch, DomainHotelDetails, DomainHotelDetailsWithoutRates,
+    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPrice,
+    DomainRoomData,
 };
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
 use crate::ports::ProviderNames;
@@ -98,7 +99,13 @@ impl HotelProviderPort for LiteApiAdapter {
                 // Populate main_photo from other image fields if it's empty
                 hotel_details_response.data.populate_main_photo_if_empty();
                 // Check if hotel has room data - if not, skip this hotel
-                if hotel_details_response.data.rooms.is_empty() {
+                if hotel_details_response
+                    .data
+                    .rooms
+                    .clone()
+                    .unwrap_or_default()
+                    .is_empty()
+                {
                     crate::log!("Hotel {} has no room data, skipping hotel", hotel_id);
                     return Err(ProviderError(Arc::new(ProviderErrorDetails {
                         provider_name: ProviderNames::LiteApi,
@@ -111,7 +118,7 @@ impl HotelProviderPort for LiteApiAdapter {
                 }
 
                 // Check if hotel details are empty (name, description, address, etc.)
-                if Self::is_hotel_details_empty(&hotel_details_response.data) {
+                if Self::is_hotel_details_empty(&hotel_details_response.clone().data.clone()) {
                     crate::log!("Hotel {} has empty details, skipping hotel", hotel_id);
                     return Err(ProviderError(Arc::new(ProviderErrorDetails {
                         provider_name: ProviderNames::LiteApi,
@@ -127,13 +134,13 @@ impl HotelProviderPort for LiteApiAdapter {
                     "✅ Successfully retrieved both hotel details and rates for hotel_id: {}",
                     hotel_id
                 );
-                crate::log!(
-                    "📊 Hotel has {} rooms, main_photo: '{}', {} facilities, description length: {}",
-                    hotel_details_response.data.rooms.len(),
-                    if hotel_details_response.data.main_photo.is_empty() { "EMPTY" } else { "Available" },
-                    hotel_details_response.data.hotel_facilities.len(),
-                    hotel_details_response.data.hotel_description.len()
-                );
+                // crate::log!(
+                //     "📊 Hotel has {} rooms, main_photo: '{}', {} facilities, description length: {}",
+                //     hotel_details_response.data.rooms.len(),
+                //     if hotel_details_response.data.main_photo.is_empty() { "EMPTY" } else { "Available" },
+                //     hotel_details_response.data.hotel_facilities.len(),
+                //     hotel_details_response.data.hotel_description.len()
+                // );
                 (Some(hotel_details_response.data), rates_response)
             }
             Err(e) => {
@@ -339,6 +346,78 @@ impl HotelProviderPort for LiteApiAdapter {
             crate::log!("LiteAPI get booking details mapping error: {:?}", e);
             e
         })
+    }
+
+    #[tracing::instrument(skip(self))]
+    async fn get_hotel_details_without_rates(
+        &self,
+        hotel_id: String,
+    ) -> Result<DomainHotelDetailsWithoutRates, ProviderError> {
+        crate::log!(
+            "LiteAPI get_hotel_details_without_rates called with hotel_id: {}",
+            hotel_id
+        );
+
+        // Create request for hotel details API only (no rates needed)
+        let hotel_details_request =
+            crate::api::liteapi::l04_one_hotel_detail::LiteApiSingleHotelDetailRequest {
+                hotel_id: hotel_id.clone(),
+            };
+
+        crate::log!(
+            "LiteAPI get_hotel_details_without_rates: calling hotel details API for hotel_id: {}",
+            hotel_id
+        );
+
+        // Call hotel details API
+        let mut hotel_details_response =
+            self.client
+                .send(hotel_details_request)
+                .await
+                .map_err(|e: ApiError| {
+                    ProviderError::from_api_error(
+                        e,
+                        ProviderNames::LiteApi,
+                        ProviderSteps::HotelDetails,
+                    )
+                })?;
+
+        // Populate main_photo from other image fields if it's empty
+        hotel_details_response.data.populate_main_photo_if_empty();
+
+        // For hotel details without rates, only check if hotel name is available
+        // (more lenient than the full hotel details check)
+        if hotel_details_response.data.name.trim().is_empty() {
+            crate::log!("Hotel {} has no name, skipping hotel", hotel_id);
+            return Err(ProviderError(Arc::new(ProviderErrorDetails {
+                provider_name: ProviderNames::LiteApi,
+                api_error: ApiError::Other(format!(
+                    "Hotel {} has no name and should be skipped",
+                    hotel_id
+                )),
+                error_step: ProviderSteps::HotelDetails,
+            })));
+        }
+
+        crate::log!(
+            "✅ Successfully retrieved hotel details for hotel_id: {}",
+            hotel_id
+        );
+        crate::log!(
+            "📊 Hotel main_photo: '{}', {} facilities, description length: {}",
+            if hotel_details_response.data.main_photo.is_empty() {
+                "EMPTY"
+            } else {
+                "Available"
+            },
+            hotel_details_response.data.hotel_facilities.len(),
+            hotel_details_response.data.hotel_description.len()
+        );
+
+        // Map to domain hotel details without rates
+        Ok(Self::map_liteapi_hotel_details_to_domain_without_rates(
+            hotel_details_response.data,
+        ))
     }
 }
 
