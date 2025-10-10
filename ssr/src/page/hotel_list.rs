@@ -948,6 +948,8 @@ pub fn HotelCardTile(
             let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
             if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
                 target_url = hotel_params.to_shareable_url();
+            } else {
+                return;
             }
             log!("Opening in new tab: {}", target_url);
 
@@ -968,7 +970,7 @@ pub fn HotelCardTile(
                 ev.stop_propagation();
                 on_navigate();
             }
-            class=format!("flex flex-col md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
+            class=format!("flex flex-col md:max-h-80  md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
             <div clone:hotel_code class="relative w-full md:basis-[30%] md:flex-shrink-0">
                 <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
@@ -987,7 +989,7 @@ pub fn HotelCardTile(
 
                         // amenities
                         <div class="flex flex-wrap gap-2 mt-3">
-                            {amenities.iter().map(|a| view! {
+                            {amenities.iter().take(8).map(|a| view! {
                                 <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a}</span>
                             }).collect_view()}
                         </div>
@@ -1041,7 +1043,7 @@ pub fn HotelCardTile(
                                         </p>
                                     }
                                 } else {
-                                    view! { <p class="text-xl font-bold">"Check Availability"</p> }
+                                    view! { <p class="text-sm font-bold">"Check Availability"</p> }
                                 }
                             }}
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>

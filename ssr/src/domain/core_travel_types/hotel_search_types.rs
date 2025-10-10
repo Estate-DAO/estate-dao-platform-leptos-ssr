@@ -244,6 +244,22 @@ pub struct DomainHotelDetails {
     pub amenities: Vec<String>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainHotelDetailsWithoutRates {
+    pub hotel_name: String,
+    pub hotel_code: String,
+    pub star_rating: i32,
+    pub description: String,
+    pub hotel_facilities: Vec<String>,
+    pub address: String,
+    pub images: Vec<String>,
+    pub amenities: Vec<String>,
+    pub city: String,
+    pub country: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+}
+
 // <!-- Default implementations -->
 
 impl Default for DomainHotelSearchCriteria {

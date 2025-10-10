@@ -19,10 +19,11 @@ pub enum AccountTabs {
 }
 
 impl AccountTabs {
-    const TABS: [AccountTabs; 6] = [
+    const TABS: [AccountTabs; 7] = [
         AccountTabs::PersonalInfo,
         AccountTabs::Wallet,
         AccountTabs::Support,
+        AccountTabs::Wishlist,
         AccountTabs::Terms,
         AccountTabs::Privacy,
         AccountTabs::Faq,
@@ -63,10 +64,7 @@ impl AccountTabs {
     pub fn disabled(&self) -> bool {
         matches!(
             self,
-            AccountTabs::PersonalInfo
-                | AccountTabs::Wallet
-                | AccountTabs::Wishlist
-                | AccountTabs::Support
+            AccountTabs::PersonalInfo | AccountTabs::Wallet | AccountTabs::Support
         )
     }
 
@@ -74,7 +72,7 @@ impl AccountTabs {
         match self {
             AccountTabs::PersonalInfo => "Personal Information",
             AccountTabs::Wallet => "Wallet",
-            AccountTabs::Wishlist => "Wishlist",
+            AccountTabs::Wishlist => "My Favorites",
             AccountTabs::Support => "Support",
             AccountTabs::Terms => "Terms & Conditions",
             AccountTabs::Privacy => "Privacy Policy",
@@ -85,7 +83,7 @@ impl AccountTabs {
     pub fn icon_src(&self) -> &'static str {
         match self {
             AccountTabs::PersonalInfo => "/icons/profile.svg",
-            AccountTabs::Wishlist => "/icons/profile.svg",
+            AccountTabs::Wishlist => "/icons/heart.svg",
             AccountTabs::Wallet => "/icons/wallet1.svg",
             AccountTabs::Support => "/icons/support.svg",
             AccountTabs::Terms => "/icons/tnc.svg",

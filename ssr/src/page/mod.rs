@@ -49,3 +49,6 @@ pub use my_bookings::*;
 
 mod my_accounts;
 pub use my_accounts::*;
+
+mod wishlist;
+pub use wishlist::*;
