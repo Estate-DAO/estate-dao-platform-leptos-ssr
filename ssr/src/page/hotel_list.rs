@@ -505,7 +505,7 @@ pub fn HotelListPage() -> impl IntoView {
         }></div>
 
         // Main scrollable section
-        <section class="min-h-screen bg-slate-50">
+        <section class="min-h-screen bg-slate-50 p-8">
             // Desktop layout (lg screens and up)
             <div class="hidden lg:flex h-[calc(100vh-12rem)]">
                 // Fixed aside on left (desktop only)
@@ -587,7 +587,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                 // Right content area (desktop)
                 <div class="flex-1 min-w-0 overflow-y-auto">
-                    <div class="p-4 pr-16">
+                    <div class="p-4">
                         // Use resource pattern with Suspense for automatic loading states
                         <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
                             {move || {
