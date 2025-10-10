@@ -60,10 +60,10 @@ impl HotelDetailsParams {
         // Use next week as fallback if dates are not available
         let (start_date, end_date, nights) =
             if date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0) {
-                // Calculate next week dates
+                // Calculate next week dates (1 night stay)
                 let today = chrono::Local::now().naive_local().date();
                 let next_week_start = today + chrono::Duration::days(7);
-                let next_week_end = next_week_start + chrono::Duration::days(7);
+                let next_week_end = next_week_start + chrono::Duration::days(1); // Just 1 night
 
                 let start = (
                     next_week_start.year() as u32,
@@ -75,7 +75,7 @@ impl HotelDetailsParams {
                     next_week_end.month(),
                     next_week_end.day(),
                 );
-                let nights = 7u32;
+                let nights = 1u32; // 1 night stay
 
                 (start, end, nights)
             } else {

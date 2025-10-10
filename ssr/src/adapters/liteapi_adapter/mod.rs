@@ -181,11 +181,11 @@ impl LiteApiAdapter {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(20).clamp(1, 1000);
+                let page_size = params.page_size.unwrap_or(20).clamp(1, 50);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 1000), // Default: first page, 1000 results
+            None => (0, 50), // Default: first page, 50 results
         }
     }
 
