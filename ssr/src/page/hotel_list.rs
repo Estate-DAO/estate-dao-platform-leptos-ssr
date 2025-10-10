@@ -450,10 +450,36 @@ pub fn HotelListPage() -> impl IntoView {
     view! {
         // Fixed header section at top
         <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
-            <div class="bg-blue-600 relative h-40 sm:h-40 md:h-36 lg:h-32">
+            <div class={
+                let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+                move || format!(
+                    "bg-blue-600 relative transition-all duration-300 {}",
+                    if is_input_expanded() {
+                        // Expanded height on mobile/tablet when input group is open, normal on desktop
+                        "h-96 sm:h-96 md:h-80 lg:h-32"
+                    } else {
+                        // Normal collapsed height for all screen sizes
+                        "h-40 sm:h-40 md:h-36 lg:h-32"
+                    }
+                )
+            }>
                 <Navbar blue_header=true />
 
-                <div class="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 w-full flex flex-col items-center max-w-5xl px-4 z-40">
+                // Mobile/tablet: position input group normally in the flow when expanded
+                // Desktop: use absolute positioning (original behavior)
+                <div class={
+                    let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+                    move || format!(
+                        "w-full flex flex-col items-center px-4 {}",
+                        if is_input_expanded() {
+                            // Mobile/tablet expanded: normal flow positioning
+                            "justify-end h-full pb-4 lg:absolute lg:left-1/2 lg:bottom-0 lg:transform lg:-translate-x-1/2 lg:translate-y-1/2 lg:max-w-5xl lg:z-40 lg:h-auto lg:pb-0"
+                        } else {
+                            // All screens collapsed: absolute positioning for desktop, hidden for mobile
+                            "absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 max-w-5xl z-40"
+                        }
+                    )
+                }>
                     <InputGroupContainer
                         default_expanded=false
                         given_disabled=disabled_input_group
@@ -463,8 +489,20 @@ pub fn HotelListPage() -> impl IntoView {
             </div>
         </div>
 
-        // Spacer to push content below fixed header (increased for InputGroupContainer)
-        <div class="h-56 sm:h-56 md:h-60 lg:h-48"></div>
+        // Dynamic spacer that only adjusts on mobile/tablet, stays normal on desktop
+        <div class={
+            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+            move || format!(
+                "transition-all duration-300 {}",
+                if is_input_expanded() {
+                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
+                    "h-96 sm:h-96 md:h-80 lg:h-48"
+                } else {
+                    // Normal spacer when collapsed on all screens
+                    "h-56 sm:h-56 md:h-60 lg:h-48"
+                }
+            )
+        }></div>
 
         // Main scrollable section
         <section class="min-h-screen bg-slate-50">
