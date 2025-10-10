@@ -8,6 +8,7 @@ cfg_if::cfg_if! {
 use std::sync::Arc;
 
 use crate::api::api_client::ApiClient;
+use crate::api::consts::PAGINATION_LIMIT;
 use crate::api::liteapi::{
     liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook,
     LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiGetPlaceRequest,
@@ -181,11 +182,14 @@ impl LiteApiAdapter {
         match pagination {
             Some(params) => {
                 let page = params.page.unwrap_or(1).max(1);
-                let page_size = params.page_size.unwrap_or(20).clamp(1, 50);
+                let page_size = params
+                    .page_size
+                    .unwrap_or(20)
+                    .clamp(1, PAGINATION_LIMIT as u32);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
             }
-            None => (0, 50), // Default: first page, 50 results
+            None => (0, PAGINATION_LIMIT), // Default: first page, 50 results
         }
     }
 
