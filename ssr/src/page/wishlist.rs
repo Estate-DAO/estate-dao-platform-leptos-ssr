@@ -14,9 +14,11 @@ pub fn WishlistPage() -> impl IntoView {
     view! {
         <div class="min-h-screen bg-slate-50">
             <Navbar blue_header=false />
-
+            <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">"My Wishlist"</h1>
+                        <p class="text-gray-600">"Your saved hotels"</p>
+            </div>
             <WishlistComponent />
-
             <Footer />
         </div>
     }
@@ -94,10 +96,6 @@ pub fn WishlistComponent() -> impl IntoView {
 
     view! {
         <div class="container mx-auto px-4 py-8">
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">"My Wishlist"</h1>
-                    <p class="text-gray-600">"Your saved hotels"</p>
-                </div>
                 {move || wishlist_details.get().map(|_| view! {
                     <></>
                 })}
