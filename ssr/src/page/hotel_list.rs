@@ -947,10 +947,9 @@ pub fn HotelCardTile(
             // ✅ 3. Try to build query params
             let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
             if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                log!("Hotel params set: {:?}", hotel_params);
                 target_url = hotel_params.to_shareable_url();
             } else {
-                log!("Hotel params set: None");
+                return;
             }
             log!("Opening in new tab: {}", target_url);
 
