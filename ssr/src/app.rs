@@ -21,6 +21,7 @@ use crate::{
         booking_context_state::BookingContextState,
         booking_id_state::BookingIdState,
         confirmation_results_state::ConfirmationResultsState,
+        cookie_booking_context_state::CookieBookingContextState,
         email_verification_state::EmailVerificationState,
         hotel_details_state::PricingBookNowState,
         input_group_state::InputGroupState,
@@ -210,6 +211,7 @@ pub fn App() -> impl IntoView {
     provide_context(ConfirmationPageUIState::default());
     provide_context(ConfirmationPageState::default());
     provide_context(BookingContextState::default());
+    provide_context(CookieBookingContextState::default());
 
     // provide_context(PaymentBookingStatusUpdates::default());
     // provide_context(SSEBookingStatusUpdates::default());

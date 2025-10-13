@@ -82,24 +82,27 @@ impl BookingId {
         state
     }
 
-    /// Extract app_reference from local storage as JSON string representation
-    /// Returns raw JSON string from localStorage, similar to how browser APIs work
-    pub fn extract_app_reference_from_local_storage() -> Option<String> {
-        #[cfg(not(feature = "ssr"))]
-        {
-            use web_sys::window;
+    /// Store a BookingId in cookies (preferred method for SSR compatibility)
+    pub fn store_booking_id_in_cookies(&self) {
+        use crate::utils::cookie_storage::CookieBookingStorage;
 
-            use crate::api::consts::BOOKING_ID;
-            window()?
-                .local_storage()
-                .ok()??
-                .get_item(&BOOKING_ID)
-                .ok()?
-        }
-        #[cfg(feature = "ssr")]
-        {
-            None
-        }
+        CookieBookingStorage::store_booking_id(self);
+        leptos::logging::log!(
+            "Successfully stored BookingId in cookies: {}",
+            self.app_reference
+        );
+    }
+
+    /// Extract app_reference from local storage via BookingId
+    /// DEPRECATED: Use extract_booking_id_from_local_storage() and access .app_reference instead
+    /// This method can return incorrect data because it returns the entire JSON string
+    /// instead of just the app_reference field
+    #[deprecated(
+        since = "1.0.0",
+        note = "Use extract_booking_id_from_local_storage().map(|b| b.app_reference) instead"
+    )]
+    pub fn extract_app_reference_from_local_storage() -> Option<String> {
+        Self::extract_booking_id_from_local_storage().map(|booking_id| booking_id.app_reference)
     }
 
     /// Extract BookingId struct from local storage
@@ -116,7 +119,7 @@ impl BookingId {
     }
 }
 
-/// Generates a new app reference and stores it in local storage
+/// Generates a new app reference and stores it in cookies (preferred) with localStorage fallback
 /// Format: HB<date>-<random>-<random>
 /// Example: HB2203-12345-67890
 /// Generate and store a new app reference
@@ -130,7 +133,10 @@ pub fn generate_app_reference(email: String) -> Signal<Option<BookingId>> {
     // Create new BookingId
     let booking_id = BookingId::new(email, app_reference_string);
 
-    // Store and return
+    // Store in cookies (preferred method for SSR compatibility)
+    booking_id.store_booking_id_in_cookies();
+
+    // Also store in localStorage for immediate access and backwards compatibility
     booking_id.store_booking_id_in_local_storage()
 }
 
