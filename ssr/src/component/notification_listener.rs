@@ -34,6 +34,7 @@ pub fn NotificationListener(
     {
         use futures::StreamExt;
         use gloo_net::eventsource::futures::EventSource as GlooEventSource;
+        use std::time::Duration;
 
         // Build the URL with query parameters
         let mut url = "/stream/events".to_string();
@@ -53,44 +54,119 @@ pub fn NotificationListener(
             url = format!("{}?{}", url, params.join("&"));
         }
 
+        log!("Setting up SSE connection to: {}", url);
+
+        // Create signals for connection state monitoring
+        let (connection_status, set_connection_status) = create_signal("connecting".to_string());
+
         // Create event source and subscribe to messages
         let mut source = GlooEventSource::new(&url).expect("couldn't connect to SSE stream");
+
+        // Monitor connection state
+        let connection_state = source.ready_state();
+        let initial_state = match connection_state {
+            0 => "connecting",
+            1 => "open",
+            2 => "closed",
+            _ => "unknown",
+        };
+        set_connection_status(initial_state.to_string());
+        log!("Initial SSE connection state: {}", initial_state);
 
         let stream = source
             .subscribe("message")
             .expect("couldn't subscribe to messages");
 
-        // Create a signal from the stream
+        // Create a signal from the stream with enhanced error handling
         let s = create_signal_from_stream(stream.map(move |value| match value {
             Ok(event) => {
                 let data = event.1.data().as_string().expect("expected string value");
-                log!("notification_data: {}", data);
+                log!("SSE notification received: {}", data);
+
+                // Update connection status to indicate active communication
+                set_connection_status("active".to_string());
+
                 match serde_json::from_str::<NotificationData>(&data) {
                     Ok(notification) => {
                         // Store notification in global state
-                        log!("notification_parsed: {:#?}", notification);
+                        log!("SSE notification parsed successfully: {:#?}", notification);
                         NotificationState::add_notification(notification.clone());
                         // invoke the handler
                         (on_notification)(notification.clone());
                         Some(notification)
                     }
                     Err(e) => {
-                        error!("Failed to parse notification: {}", e);
+                        error!(
+                            "Failed to parse SSE notification: {} - Raw data: {}",
+                            e, data
+                        );
                         None
                     }
                 }
             }
             Err(e) => {
-                error!("Error in event stream: {}", e);
+                error!("Error in SSE stream: {}", e);
+                set_connection_status("error".to_string());
+
+                // Log connection state for debugging
+                let state = source.ready_state();
+                let state_str = match state {
+                    0 => "connecting",
+                    1 => "open",
+                    2 => "closed",
+                    _ => "unknown",
+                };
+                error!(
+                    "SSE connection state after error: {} ({})",
+                    state_str, state
+                );
                 None
             }
         }));
 
-        // Cleanup when component is destroyed
-        on_cleanup(move || source.close());
+        // Periodic connection health check
+        let url_for_health_check = url.clone();
+        spawn_local(async move {
+            let mut interval = gloo_timers::future::IntervalStream::new(5_000); // Check every 5 seconds
 
-        // Return an empty view - this component only handles events
-        view! {}
+            while let Some(_) = interval.next().await {
+                let current_state = source.ready_state();
+                let state_str = match current_state {
+                    0 => "connecting",
+                    1 => "open",
+                    2 => "closed",
+                    _ => "unknown",
+                };
+
+                if current_state == 2 {
+                    // Closed
+                    warn!(
+                        "SSE connection closed unexpectedly. State: {} ({})",
+                        state_str, current_state
+                    );
+                    set_connection_status("closed".to_string());
+                    break;
+                } else if current_state == 1 {
+                    // Connection is open and healthy
+                    if connection_status.get_untracked() != "active" {
+                        set_connection_status("open".to_string());
+                    }
+                }
+            }
+        });
+
+        // Cleanup when component is destroyed
+        on_cleanup(move || {
+            log!("Cleaning up SSE connection");
+            source.close();
+        });
+
+        // Return connection status indicator for debugging
+        view! {
+            <div class="hidden" data-sse-status=move || connection_status.get()>
+                "SSE: " {move || connection_status.get()}
+            </div>
+        }
     }
 
     #[cfg(feature = "ssr")]
