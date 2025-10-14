@@ -72,11 +72,14 @@ impl Default for StepProgress {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ConfirmationPageState {
     // Workflow steps with integrated tracking
     pub current_step: RwSignal<ConfirmationStep>,
     pub completed_steps: RwSignal<Vec<ConfirmationStep>>,
+
+    // Track individual step completion for fallback handling
+    pub completed_step_names: RwSignal<Vec<String>>,
 
     // Step progress details
     pub step_progress: RwSignal<StepProgress>,
@@ -90,6 +93,23 @@ pub struct ConfirmationPageState {
     // UI state
     pub loading: RwSignal<bool>,
     pub error: RwSignal<Option<String>>,
+}
+
+impl Default for ConfirmationPageState {
+    fn default() -> Self {
+        Self {
+            current_step: RwSignal::new(ConfirmationStep::default()),
+            completed_steps: RwSignal::new(Vec::new()),
+            completed_step_names: RwSignal::new(Vec::new()),
+            step_progress: RwSignal::new(StepProgress::default()),
+            payment_id: RwSignal::new(None),
+            app_reference: RwSignal::new(None),
+            booking_details: RwSignal::new(None),
+            display_info: RwSignal::new(None),
+            loading: RwSignal::new(true),
+            error: RwSignal::new(None),
+        }
+    }
 }
 
 impl GlobalStateForLeptos for ConfirmationPageState {}
@@ -199,18 +219,25 @@ impl ConfirmationPageState {
                         );
                     }
                 }
+
+                // Mark GetBookingFromBackend as completed
+                Self::mark_step_completed("GetBookingFromBackend");
+                Self::check_and_handle_completion_fallback();
             }
             (Some("SendEmailAfterSuccessfullBooking"), "OnStepCompleted") => {
                 let current_step = Self::get().current_step.get_untracked();
                 if current_step != ConfirmationStep::Completed {
                     Self::advance_to_step(
                         ConfirmationStep::EmailSending,
-                        "Confirmation booking email is being sent!".to_string(),
+                        "Confirmation booking email sent successfully!".to_string(),
                     );
                 } else {
                     Self::add_step_detail("Confirmation email sent successfully".to_string());
                 }
-                Self::get().loading.set(false);
+
+                // Mark email step as completed and finish the workflow
+                Self::mark_step_completed("SendEmailAfterSuccessfullBooking");
+                Self::check_and_handle_completion_fallback();
             }
             (Some("MockStep"), "OnStepCompleted") => {
                 Self::advance_to_step(
@@ -240,6 +267,68 @@ impl ConfirmationPageState {
         this.step_progress.update(|progress| {
             progress.error_details = Some(error);
         });
+    }
+
+    /// **Mark a specific pipeline step as completed for fallback handling**
+    pub fn mark_step_completed(step_name: &str) {
+        let this = Self::get();
+        this.completed_step_names.update(|completed| {
+            if !completed.contains(&step_name.to_string()) {
+                completed.push(step_name.to_string());
+                log!("Marked step '{}' as completed", step_name);
+            }
+        });
+    }
+
+    /// **Check if all required steps are completed (fallback for missed SSE events)**
+    pub fn check_and_handle_completion_fallback() {
+        let this = Self::get();
+        let completed_step_names = this.completed_step_names.get_untracked();
+
+        log!(
+            "Fallback check - completed steps: {:?}",
+            completed_step_names
+        );
+
+        // Check if we have both GetBookingFromBackend and SendEmailAfterSuccessfullBooking
+        let has_booking_step = completed_step_names.contains(&"GetBookingFromBackend".to_string());
+        let has_email_step =
+            completed_step_names.contains(&"SendEmailAfterSuccessfullBooking".to_string());
+
+        log!(
+            "Fallback check - has_booking_step: {}, has_email_step: {}",
+            has_booking_step,
+            has_email_step
+        );
+
+        if has_booking_step && has_email_step {
+            let current_step = this.current_step.get_untracked();
+            if current_step != ConfirmationStep::Completed {
+                log!("✅ Fallback completion detected - both GetBookingFromBackend and SendEmailAfterSuccessfullBooking completed");
+                Self::advance_to_step(
+                    ConfirmationStep::Completed,
+                    "Your booking is fully confirmed! (All steps completed)".to_string(),
+                );
+                this.loading.set(false);
+            } else {
+                log!("Already completed via SSE - no fallback needed");
+            }
+        } else {
+            log!(
+                "⏳ Not all steps completed yet - booking: {}, email: {}",
+                has_booking_step,
+                has_email_step
+            );
+
+            // If we have booking data but no completion, maybe just the email step is pending
+            if has_booking_step && this.booking_details.get_untracked().is_some() {
+                log!("📧 Have booking data, likely just waiting for email confirmation");
+                Self::advance_to_step(
+                    ConfirmationStep::EmailSending,
+                    "Booking confirmed, sending confirmation email...".to_string(),
+                );
+            }
+        }
     }
 
     /// **Batch update for successful API call - following block_room_v1 pattern**

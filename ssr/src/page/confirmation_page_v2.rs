@@ -153,6 +153,17 @@ pub fn ConfirmationPageV2() -> impl IntoView {
                             ConfirmationPageState::add_step_detail(
                                 "Payment confirmed, processing booking...".to_string(),
                             );
+
+                            // Start fallback completion check in case SSE events are missed
+                            spawn_local(async move {
+                                // Check if completion was already handled via SSE
+                                let current_step =
+                                    ConfirmationPageState::get().current_step.get_untracked();
+                                if current_step != ConfirmationStep::Completed {
+                                    log!("Quick fallback check - SSE may have missed final steps");
+                                    ConfirmationPageState::check_and_handle_completion_fallback();
+                                }
+                            });
                         } else {
                             log!("Booking workflow failed: {} - but booking data may still be available", response.message);
 
@@ -260,10 +271,20 @@ fn NotificationListenerWrapper() -> impl IntoView {
                             email={email.clone()}
                             event_type={event_type}
                             on_notification={Box::new(move |notification: NotificationData| {
-                                log!("Received notification: {:#?}", notification);
+                                log!("Received SSE notification: {:#?}", notification);
                                 ConfirmationPageState::update_from_sse_notification(&notification);
                             })}
                         />
+
+                        // Add a subtle indicator that real-time updates are active
+                        <div class="hidden lg:block fixed bottom-4 right-4 z-50">
+                            <div class="bg-green-100 border border-green-300 text-green-700 px-3 py-2 rounded-lg text-xs">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span>"Real-time updates active"</span>
+                                </div>
+                            </div>
+                        </div>
                     }.into_view()
                 } else {
                     view! {

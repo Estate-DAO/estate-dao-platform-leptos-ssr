@@ -53,6 +53,8 @@ pub fn NotificationListener(
             url = format!("{}?{}", url, params.join("&"));
         }
 
+        log!("Setting up SSE connection to: {}", url);
+
         // Create event source and subscribe to messages
         let mut source = GlooEventSource::new(&url).expect("couldn't connect to SSE stream");
 
@@ -60,36 +62,43 @@ pub fn NotificationListener(
             .subscribe("message")
             .expect("couldn't subscribe to messages");
 
-        // Create a signal from the stream
+        // Create a signal from the stream with enhanced error handling
         let s = create_signal_from_stream(stream.map(move |value| match value {
             Ok(event) => {
                 let data = event.1.data().as_string().expect("expected string value");
-                log!("notification_data: {}", data);
+                log!("SSE notification received: {}", data);
+
                 match serde_json::from_str::<NotificationData>(&data) {
                     Ok(notification) => {
                         // Store notification in global state
-                        log!("notification_parsed: {:#?}", notification);
+                        log!("SSE notification parsed successfully: {:#?}", notification);
                         NotificationState::add_notification(notification.clone());
                         // invoke the handler
                         (on_notification)(notification.clone());
                         Some(notification)
                     }
                     Err(e) => {
-                        error!("Failed to parse notification: {}", e);
+                        error!(
+                            "Failed to parse SSE notification: {} - Raw data: {}",
+                            e, data
+                        );
                         None
                     }
                 }
             }
             Err(e) => {
-                error!("Error in event stream: {}", e);
+                error!("Error in SSE stream: {}", e);
                 None
             }
         }));
 
         // Cleanup when component is destroyed
-        on_cleanup(move || source.close());
+        on_cleanup(move || {
+            log!("Cleaning up SSE connection");
+            source.close();
+        });
 
-        // Return an empty view - this component only handles events
+        // Return empty view - this component only handles events
         view! {}
     }
 
