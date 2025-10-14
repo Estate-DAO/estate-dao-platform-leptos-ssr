@@ -204,8 +204,8 @@ impl ConfirmationPageState {
                 let current_step = Self::get().current_step.get_untracked();
                 if current_step != ConfirmationStep::Completed {
                     Self::advance_to_step(
-                        ConfirmationStep::Completed,
-                        "Your booking is confirmed!".to_string(),
+                        ConfirmationStep::EmailSending,
+                        "Confirmation booking email is being sent!".to_string(),
                     );
                 } else {
                     Self::add_step_detail("Confirmation email sent successfully".to_string());
