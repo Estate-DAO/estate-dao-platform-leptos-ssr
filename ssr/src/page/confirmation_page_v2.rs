@@ -10,7 +10,7 @@ use crate::component::{Divider, Navbar, NotificationData, NotificationListener, 
 use crate::log;
 use crate::utils::app_reference::BookingId;
 use crate::view_state_layer::{
-    booking_context_state::BookingContextState,
+    cookie_booking_context_state::CookieBookingContextState,
     ui_confirmation_page_v2::{ConfirmationPageState, ConfirmationStep},
     GlobalStateForLeptos,
 };
@@ -27,7 +27,7 @@ use crate::view_state_layer::{
 #[component]
 pub fn ConfirmationPageV2() -> impl IntoView {
     let confirmation_state: ConfirmationPageState = expect_context();
-    let booking_context: BookingContextState = expect_context();
+    let booking_context: CookieBookingContextState = expect_context();
     let query_map = use_query_map();
 
     // Initialize state on component mount
@@ -41,21 +41,31 @@ pub fn ConfirmationPageV2() -> impl IntoView {
             query_map.with(|params| params.get("session_id").map(|p| p.to_string()));
         let payment_id = np_payment_id.or(checkout_session_id);
 
-        // Read booking data from localStorage
-        let booking_id = BookingId::extract_booking_id_from_local_storage();
-        let app_reference = BookingId::extract_app_reference_from_local_storage();
+        // Initialize cookie-based booking context state (loads from cookies automatically)
+        CookieBookingContextState::initialize();
 
-        // Initialize booking context state
-        BookingContextState::initialize_with_data(booking_id.clone(), app_reference.clone());
-
-        log!(
-            "ConfirmationPageV2 - payment_id: {:?}, app_reference: {:?}",
-            payment_id,
-            app_reference
-        );
+        log!("ConfirmationPageV2 - payment_id: {:?}", payment_id);
 
         ConfirmationPageState::set_payment_id(payment_id.clone());
+
+        // We'll get app_reference from the cookie-loaded context once it's ready
+        // This is handled in a separate effect below
+    });
+
+    // Separate effect to handle workflow trigger once cookie data is loaded
+    create_effect(move |_| {
+        // Cookie data is loaded synchronously, so we can check immediately
+        let app_reference = CookieBookingContextState::get_app_reference().get();
+        let payment_id = ConfirmationPageState::get_payment_id().get();
+
+        // Set app_reference in confirmation state
         ConfirmationPageState::set_app_reference(app_reference.clone());
+
+        log!(
+            "Cookie data check - app_reference: {:?}, payment_id: {:?}",
+            app_reference,
+            payment_id
+        );
 
         // Trigger backend booking workflow - support both flows
         let should_trigger_workflow = match (payment_id.clone(), app_reference.clone()) {
@@ -91,7 +101,7 @@ pub fn ConfirmationPageV2() -> impl IntoView {
             // Spawn async task to call confirmation API
             spawn_local(async move {
                 let api_client = ClientSideApiClient::new();
-                let (order_id, email) = BookingContextState::get_order_details_untracked();
+                let (order_id, email) = CookieBookingContextState::get_order_details_untracked();
                 let app_ref_value = app_reference.unwrap(); // Safe because we checked above
                 let order_id = order_id.unwrap_or_else(|| app_ref_value.clone());
 
@@ -231,8 +241,8 @@ fn NotificationListenerWrapper() -> impl IntoView {
 
             // SSE should work if we have app_reference (regardless of payment_id)
             if let Some(_app_ref) = app_reference {
-                let order_id = BookingContextState::get_order_id_untracked().unwrap_or_default();
-                let email = BookingContextState::get_email_untracked().unwrap_or_default();
+                let order_id = CookieBookingContextState::get_order_id_untracked().unwrap_or_default();
+                let email = CookieBookingContextState::get_email_untracked().unwrap_or_default();
 
                 if !order_id.is_empty() && !email.is_empty() {
                     log!("NotificationListener setup - order_id: {}, email: {}, payment_id: {:?}", order_id, email, payment_id);

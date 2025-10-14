@@ -6,6 +6,7 @@ pub mod booking_backend_conversions;
 pub mod booking_id;
 pub mod browser;
 mod colored_print;
+pub mod cookie_storage;
 pub mod date;
 pub mod host;
 pub mod ic;

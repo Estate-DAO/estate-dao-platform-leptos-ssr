@@ -19,6 +19,7 @@ use crate::domain::{
 };
 use crate::log;
 use crate::utils::app_reference::generate_app_reference;
+use crate::utils::cookie_storage::CookieBookingStorage;
 use crate::utils::{app_reference::BookingId, BackendIntegrationHelper};
 use crate::view_state_layer::booking_id_state::BookingIdState;
 use crate::view_state_layer::email_verification_state::EmailVerificationState;

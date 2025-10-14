@@ -3,6 +3,7 @@ pub mod booking_context_state;
 pub mod booking_conversions;
 pub mod booking_id_state;
 pub mod confirmation_results_state;
+pub mod cookie_booking_context_state;
 pub mod email_verification_state;
 pub mod hotel_details_state;
 pub mod input_group_state;

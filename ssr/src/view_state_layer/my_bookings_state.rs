@@ -80,10 +80,18 @@ impl From<backend::Booking> for MyBookingItem {
         let adults = value.guests.adults.len() as u32;
         let rooms = value.user_selected_hotel_room_details.room_details.len() as u32;
 
-        // Determine booking status
+        // Determine booking status based on booking confirmation and dates
         let status = match &value.book_room_status {
             Some(response) => match response.commit_booking.resolved_booking_status {
-                backend::ResolvedBookingStatus::BookingConfirmed => BookingStatus::Completed,
+                backend::ResolvedBookingStatus::BookingConfirmed => {
+                    // For confirmed bookings, check if they're upcoming or completed based on check-out date
+                    let now = Utc::now();
+                    if check_out_date > now {
+                        BookingStatus::Upcoming
+                    } else {
+                        BookingStatus::Completed
+                    }
+                }
                 backend::ResolvedBookingStatus::BookingOnHold => BookingStatus::Upcoming,
                 backend::ResolvedBookingStatus::BookingFailed => BookingStatus::Cancelled,
                 backend::ResolvedBookingStatus::BookingCancelled => BookingStatus::Cancelled,
