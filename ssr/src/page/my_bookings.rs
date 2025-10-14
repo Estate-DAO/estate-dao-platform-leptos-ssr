@@ -28,15 +28,44 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
         backend_bookings.len()
     );
 
-    // Convert backend Booking objects to MyBookingItem
-    let bookings: Vec<MyBookingItem> = backend_bookings
+    let total_bookings_count = backend_bookings.len();
+
+    // Filter out incomplete bookings and convert to MyBookingItem
+    let complete_bookings: Vec<_> = backend_bookings
+        .into_iter()
+        .filter(|booking| {
+            // Check if booking is complete by verifying both payment and booking status
+            let has_payment = match &booking.payment_details.payment_status {
+                crate::canister::backend::BackendPaymentStatus::Paid(_) => true,
+                crate::canister::backend::BackendPaymentStatus::Unpaid(_) => false,
+            };
+
+            let has_booking_confirmation = booking.book_room_status.is_some();
+
+            let is_complete = has_payment && has_booking_confirmation;
+
+            if !is_complete {
+                log!(
+                    "[MyBookings] Filtering out incomplete booking - app_reference: {}, has_payment: {}, has_booking: {}",
+                    booking.booking_id.app_reference,
+                    has_payment,
+                    has_booking_confirmation
+                );
+            }
+
+            is_complete
+        })
+        .collect();
+
+    let bookings: Vec<MyBookingItem> = complete_bookings
         .into_iter()
         .map(|booking| booking.into())
         .collect();
 
     log!(
-        "[MyBookings] Returning {} converted bookings",
-        bookings.len()
+        "[MyBookings] Returning {} complete bookings (filtered from {} total)",
+        bookings.len(),
+        total_bookings_count
     );
     Ok(bookings)
 }
