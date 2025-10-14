@@ -114,6 +114,27 @@ impl From<backend::Booking> for MyBookingItem {
                 .clone(),
         );
 
+        // Detect if this is a test booking by checking:
+        // 1. Confirmation number is "test"
+        // 2. Payment ID starts with "cs_test_"
+        let is_test = match &value.book_room_status {
+            Some(book_status) => book_status.commit_booking.confirmation_no == "test",
+            None => false,
+        } || value
+            .payment_details
+            .payment_api_response
+            .payment_id_v2
+            .starts_with("cs_test_");
+
+        if is_test {
+            log!(
+                "[MyBookingItem] Detected test booking - app_reference: {}, confirmation_no: {:?}, payment_id: {}",
+                value.booking_id.app_reference,
+                value.book_room_status.as_ref().map(|s| &s.commit_booking.confirmation_no),
+                value.payment_details.payment_api_response.payment_id_v2
+            );
+        }
+
         Self {
             booking_id,
             hotel_name,
@@ -126,6 +147,7 @@ impl From<backend::Booking> for MyBookingItem {
             status,
             total_amount,
             currency,
+            is_test,
         }
     }
 }
@@ -143,6 +165,7 @@ pub struct MyBookingItem {
     pub status: BookingStatus,
     pub total_amount: Option<f64>,
     pub currency: Option<String>,
+    pub is_test: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default)]

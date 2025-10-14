@@ -375,10 +375,21 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                                 </h3>
                                 <p class="text-gray-600 mb-3">{&booking.hotel_location}</p>
                             </div>
-                            <div class="flex justify-start sm:justify-end mb-3 sm:mb-0">
+                            <div class="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mb-3 sm:mb-0">
                                 <span class=format!("px-3 py-1 rounded-full text-sm font-medium {}", status_color)>
                                     {booking.status.to_string()}
                                 </span>
+                                {move || {
+                                    if booking.is_test {
+                                        view! {
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200">
+                                                TEST
+                                            </span>
+                                        }.into_view()
+                                    } else {
+                                        view! { <></> }.into_view()
+                                    }
+                                }}
                             </div>
                         </div>
 
