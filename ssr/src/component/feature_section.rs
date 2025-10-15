@@ -21,9 +21,15 @@ pub fn FeatureCard(
 }
 
 #[component]
-pub fn FeaturesSection() -> impl IntoView {
+pub fn FeaturesSection(#[prop(optional)] show_why_choose_us: bool) -> impl IntoView {
+    let class = if show_why_choose_us {
+        "py-12 px-6"
+    } else {
+        "bg-blue-50 py-12 px-6"
+    };
     view! {
-        <section class="bg-blue-50 py-12 px-6">
+        <section class={class}>
+            <Show when=move ||show_why_choose_us><h3 class="font-figtree text-[40px] lg:text-[64px] flex justify-center items-center font-semibold mb-4 p-4">Why choose us?</h3></Show>
             <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
                 <FeatureCard
                     icon="/icons/wallet.svg"
