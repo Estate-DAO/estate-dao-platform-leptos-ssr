@@ -100,10 +100,8 @@ pub fn AboutUsPage() -> impl IntoView {
         </section>
 
         <CryptoCarousel />
-        <div class="bg-blue-50 px-16">
-                <FeaturesSection show_why_choose_us=true />
-        </div>
-        <div class="container mx-auto px-6 lg:px-12">
+        <FeaturesSection show_why_choose_us=true />
+        <div class="container mx-auto px-8 lg:px-16">
             <img src="/img/japan.jpg" alt="Japan" class="w-full rounded-md h-56 object-cover" />
         </div>
         <div class="my-16" />
