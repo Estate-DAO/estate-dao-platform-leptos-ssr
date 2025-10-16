@@ -780,26 +780,39 @@ impl MakeBookingFromBookingProvider {
         info!("Executing MakeBookingFromBookingProvider");
 
         // ---------------------------
-        // 1a. Derive BookingId from order_id and user_email
-        let app_reference = PaymentIdentifiers::app_reference_from_order_id(&event.order_id)
-            .ok_or_else(|| {
-                format!(
-                    "Failed to extract app_reference from order_id: {}",
-                    event.order_id
-                )
-            })?;
-        let booking_id = backend::BookingId {
-            app_reference,
-            email: event.user_email.clone(),
+        // 1a. Use booking from event if available, otherwise fetch from backend
+        let booking = if let Some(ref backend_booking) = event.backend_booking_struct {
+            info!("Using booking from event (already loaded by previous step)");
+            backend_booking.clone()
+        } else {
+            info!("No booking in event, fetching from backend");
+            // Derive BookingId from order_id and user_email
+            let app_reference = PaymentIdentifiers::app_reference_from_order_id(&event.order_id)
+                .ok_or_else(|| {
+                    format!(
+                        "Failed to extract app_reference from order_id: {}",
+                        event.order_id
+                    )
+                })?;
+            let booking_id = backend::BookingId {
+                app_reference,
+                email: event.user_email.clone(),
+            };
+
+            // Fetch booking by ID directly from backend
+            get_booking_by_id_backend(booking_id.clone())
+                .await
+                .map_err(|e| format!("Failed to fetch booking: ServerFnError = {}", e))?
+                .ok_or_else(|| "No booking found with the specified booking ID".to_string())?
         };
 
-        // 1b. Fetch booking by ID directly from backend
-        let booking = get_booking_by_id_backend(booking_id.clone())
-            .await
-            .map_err(|e| format!("Failed to fetch booking: ServerFnError = {}", e))?
-            .ok_or_else(|| "No booking found with the specified booking ID".to_string())?;
-
         let booking_clone = booking.clone();
+
+        info!(
+            "About to verify payment status: {:?}",
+            booking.payment_details.payment_status
+        );
+
         // 1d. Verify payment status
         Self::verify_payment_status(&booking.payment_details.payment_status)?;
 

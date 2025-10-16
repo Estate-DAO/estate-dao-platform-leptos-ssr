@@ -191,6 +191,9 @@ pub fn App() -> impl IntoView {
 
     let _ = AuthStateSignal::init();
 
+    // Ensure canonical domain (redirect www.nofeebooking.com -> nofeebooking.com)
+    crate::utils::domain_normalize::ensure_canonical_domain();
+
     provide_context(InputGroupState::default());
 
     provide_context(UIPaginationState::default());

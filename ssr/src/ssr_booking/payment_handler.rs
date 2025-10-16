@@ -1060,6 +1060,9 @@ impl PipelineExecutor for GetPaymentStatusFromPaymentProviderV2 {
                     booking
                 );
 
+                // 🔑 CRITICAL FIX: Update the event with fresh booking data from backend
+                updated_event.backend_booking_struct = Some(booking.clone());
+
                 // Additional validation
                 if matches!(
                     booking.payment_details.payment_status,

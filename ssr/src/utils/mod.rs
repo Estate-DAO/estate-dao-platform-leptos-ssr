@@ -8,6 +8,7 @@ pub mod browser;
 mod colored_print;
 pub mod cookie_storage;
 pub mod date;
+pub mod domain_normalize;
 pub mod host;
 pub mod ic;
 pub mod icon;
