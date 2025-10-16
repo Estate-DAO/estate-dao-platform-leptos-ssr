@@ -21,15 +21,30 @@ const BOOKING_ID_COOKIE: &str = "estatedao_booking_id";
 pub struct CookieBookingStorage;
 
 impl CookieBookingStorage {
+    /// **Get cookie domain configuration (same as OAuth system)**
+    fn get_cookie_domain() -> Option<String> {
+        // Use same logic as oauth.rs for consistent domain handling
+        let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
+        if app_url.contains("nofeebooking.com") {
+            Some(".nofeebooking.com".to_string()) // Covers nofeebooking.com and www.nofeebooking.com
+        } else {
+            None
+        }
+    }
+
     /// **Get or create a cookie store for BookingId**
     /// Returns (getter_signal, setter)
     pub fn use_booking_id_cookie() -> (Signal<Option<BookingId>>, WriteSignal<Option<BookingId>>) {
-        use_cookie_with_options::<BookingId, JsonSerdeCodec>(
-            BOOKING_ID_COOKIE,
-            UseCookieOptions::default()
-                .path("/")
-                .same_site(leptos_use::SameSite::Lax),
-        )
+        let mut cookie_options = UseCookieOptions::default()
+            .path("/")
+            .same_site(leptos_use::SameSite::Lax);
+
+        // Apply domain configuration if needed (same as OAuth system)
+        if let Some(domain) = Self::get_cookie_domain() {
+            cookie_options = cookie_options.domain(&domain);
+        }
+
+        use_cookie_with_options::<BookingId, JsonSerdeCodec>(BOOKING_ID_COOKIE, cookie_options)
     }
 
     /// **Store BookingId in cookie**
