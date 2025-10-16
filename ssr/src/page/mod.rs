@@ -52,3 +52,6 @@ pub use my_accounts::*;
 
 mod wishlist;
 pub use wishlist::*;
+
+mod about_us;
+pub use about_us::*;
