@@ -845,7 +845,7 @@ impl LiteApiAdapter {
             })?;
 
         // Extract all rooms and rates from LiteAPI response
-        let mut all_rooms = Vec::new();
+        // let mut all_rooms = Vec::new();
         let mut room_type_map: std::collections::HashMap<String, DomainRoomOption> =
             std::collections::HashMap::new();
 
@@ -922,7 +922,7 @@ impl LiteApiAdapter {
         }
 
         // Convert the deduplicated map back to a vector
-        all_rooms = room_type_map.into_values().collect();
+        let mut all_rooms: Vec<DomainRoomOption> = room_type_map.into_values().collect();
 
         // Sort rooms: unique names first, then repeated names at the end
         let mut name_counts: std::collections::HashMap<String, usize> =

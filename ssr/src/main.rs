@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
+#![allow(non_snake_case)]
 
 use cfg_if::cfg_if;
 use estate_fe::{
