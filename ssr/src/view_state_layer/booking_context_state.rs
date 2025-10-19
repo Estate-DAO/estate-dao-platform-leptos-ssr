@@ -1,6 +1,6 @@
 use crate::utils::{app_reference::BookingId, booking_id::PaymentIdentifiers};
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 
 /// **Centralized Booking Context State**
 ///

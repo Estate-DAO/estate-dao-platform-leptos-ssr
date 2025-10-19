@@ -5,13 +5,13 @@ use crate::domain::{DomainHotelListAfterSearch, DomainHotelSearchCriteria};
 use crate::utils::search_action::create_search_action_with_ui_state;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::{log, utils};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_query::QueryResult;
 
 use crate::component::{
     /* DestinationPickerV5, */ CryptoCarousel, DestinationPickerV6, DestinationsSection,
-    FeaturesSection, FeedbackSection, Footer, MostPopular, Navbar,
+    FeaturesSection, FeedbackSection, Footer, Navbar,
 };
 use crate::{
     api::canister::greet_call::greet_backend,
@@ -27,7 +27,7 @@ use crate::{
 // use chrono::{Datelike, NaiveDate};
 use crate::page::InputGroupContainer;
 use crate::utils::date::*;
-use leptos::ev::MouseEvent;
+use leptos::prelude::*;
 use leptos_query::{query_persister, *};
 use leptos_use::{on_click_outside, use_timestamp_with_controls, UseTimestampReturn};
 use serde::{Deserialize, Serialize};
@@ -63,7 +63,7 @@ pub fn HeroSection() -> impl IntoView {
 
     // Define whether outside click collapse is allowed
     // On root page we don't want it enabled
-    let allow_outside_click = create_rw_signal(false);
+    let allow_outside_click = RwSignal::new(false);
 
     view! {
         <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] min-h-screen">
@@ -121,8 +121,8 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     // TODO (search-button): we want to disable the button for 5 seconds before user can click on it again.
     // button with counter component
 
-    let local_disabled = create_rw_signal(false);
-    let disabled = create_memo(move |_|
+    let local_disabled = RwSignal::new(false);
+    let disabled = Memo::new(move |_|
         // let disabled = Signal::derive(move ||
         {
         let val = given_disabled.get() || local_disabled.get();
@@ -163,7 +163,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
     let search_ctx: UISearchCtx = expect_context();
 
-    let place_display = create_memo(move |_| {
+    let place_display = Memo::new(move |_| {
         search_ctx
             .place
             .get()
@@ -189,7 +189,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
     //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
     // };
 
-    let parent_div_ref: NodeRef<html::Div> = create_node_ref();
+    let parent_div_ref: NodeRef<leptos::html::Div> = NodeRef::new();
 
     // let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
 
@@ -219,7 +219,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
 
                     <Show when=move || disabled.get()>
                         <div class="text-xl flex items-center flex-shrink-0">
-                            <Icon icon=icondata::BsMap class="text-blue-500" />
+                            <Icon icon=icondata::BsMap />
                         </div>
 
                         <button
@@ -286,17 +286,15 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                         when=move || disabled.get()
                         fallback=move || {
                             view! {
-                                <Icon
-                                    icon=icondata::AiSearchOutlined
-                                    class=format!("{} text-2xl", bg_search_icon_class())
-                                />
+                                <span class=format!("{} text-2xl", bg_search_icon_class())>
+                                    <Icon icon=icondata::AiSearchOutlined />
+                                </span>
                             }
                         }
                     >
-                        <Icon
-                            icon=icondata::AiSearchOutlined
-                            class=format!("{} p-1 text-2xl", bg_search_icon_class())
-                        />
+                        <span class=format!("{} p-1 text-2xl", bg_search_icon_class())>
+                            <Icon icon=icondata::AiSearchOutlined />
+                        </span>
 
                     </Show>
                     </div>

@@ -61,9 +61,9 @@
 //                                 on_notification={Box::new(move |notification: NotificationData| {
 //                                     SSEBookingStatusUpdates::update_from_notification(&notification);
 //                                 })} />
-//                             }.into_view()
+//                             }.into_any()
 //                         } else {
-//                             view! { <p class="text-red-500">No email found, not subscribing to notifications.</p> }.into_view()
+//                             view! { <p class="text-red-500">No email found, not subscribing to notifications.</p> }.into_any()
 //                         }
 //                     }
 //                 }
@@ -276,7 +276,7 @@
 //                     <div class="flex flex-row justify-between items-center border-t border-b border-gray-200 py-2 sm:py-3 md:py-6 gap-2 md:gap-0">
 //                         <div class="flex flex-col items-start flex-1">
 //                             <span class="flex items-center text-gray-400 font-light text-xs sm:text-sm md:text-base lg:text-base">
-//                                 <Icon icon=icondata::AiCalendarOutlined class="text-gray-400 font-light w-4 h-4 mr-1" />
+//                                 <Icon icon=icondata::AiCalendarOutlined />
 //                                 Check-in
 //                             </span>
 //                             <p class="font-normal text-xs sm:text-sm md:text-base lg:text-lg">{move || {
@@ -306,7 +306,7 @@
 
 //                     <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
 //                         <h3 class="flex items-center text-xs sm:text-sm md:text-base lg:text-base text-gray-400 font-light">
-//                             <Icon icon=icondata::SiHomeassistantcommunitystore class="text-gray-400 font-light w-4 h-4 mr-1" />
+//                             <Icon icon=icondata::SiHomeassistantcommunitystore />
 //                             Guests & Rooms
 //                         </h3>
 //                         <p class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-700 font-normal">{move || {
@@ -358,7 +358,7 @@
 //         .unwrap_or_default()
 // }
 
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SSEConfirmationPage() -> impl IntoView {

@@ -1,20 +1,20 @@
+use std::sync::Arc;
+
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
 use crate::component::yral_auth_provider::YralAuthProvider;
 use crate::component::Navbar;
 use crate::log;
-use crate::utils::parent_resource::MockPartialEq;
 use crate::view_state_layer::my_bookings_state::{
     BookingStatus, BookingTab, MyBookingItem, MyBookingsState,
 };
+use ::codee::string::JsonSerdeCodec;
 use chrono::{DateTime, Utc};
-use codee::string::JsonSerdeCodec;
-use leptos::SignalGet;
-use leptos::*;
+
+use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
-use std::rc::Rc;
 
 async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     log!("[MyBookings] Loading bookings from API");
@@ -86,10 +86,10 @@ pub fn AuthGatedBookings() -> impl IntoView {
 
         if is_logged_in {
             // User is logged in, show bookings content
-            view! { <BookingsLoader /> }.into_view()
+            view! { <BookingsLoader /> }.into_any()
         } else {
             // User is not logged in, show login prompt
-            view! { <BookingsLoginPrompt /> }.into_view()
+            view! { <BookingsLoginPrompt /> }.into_any()
         }
     }
 }
@@ -101,7 +101,7 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
         <div class="max-w-md mx-auto mt-16">
             <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
                 <div class="mb-6">
-                    <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-6xl mx-auto mb-4" />
+                    <Icon icon=icondata::AiUserOutlined />
                     <h2 class="text-2xl font-semibold text-gray-900 mb-2">
                         "Login Required"
                     </h2>
@@ -120,7 +120,7 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
 #[component]
 pub fn BookingsLoader() -> impl IntoView {
     // Create resource for loading bookings data - following pattern from base_route.rs user_email_sync_resource
-    let bookings_resource = create_resource(
+    let bookings_resource = Resource::new(
         || (),
         move |_| async move {
             log!("[MyBookings] Resource loading bookings");
@@ -140,7 +140,7 @@ pub fn BookingsLoader() -> impl IntoView {
                     match bookings_resource.get() {
                         Some(Ok(bookings)) => {
                             log!("[MyBookings] Resource loaded {} bookings", bookings.len());
-                            view! { <BookingsContent bookings=bookings /> }.into_view()
+                            view! { <BookingsContent bookings=bookings /> }.into_any()
                         }
                         Some(Err(error)) => {
                             log!("[MyBookings] Resource error: {}", error);
@@ -149,9 +149,9 @@ pub fn BookingsLoader() -> impl IntoView {
                                     <p class="text-red-600 mb-2">Failed to load bookings</p>
                                     <p class="text-gray-500 text-sm">{error.to_string()}</p>
                                 </div>
-                            }.into_view()
+                            }.into_any()
                         }
-                        None => view! { <>"Loading..."</> }.into_view()
+                        None => view! { <>"Loading..."</> }.into_any()
                     }
                 }}
             </Suspense>
@@ -185,7 +185,7 @@ pub fn MyBookingsPage() -> impl IntoView {
             </div>
         </div>
     }
-    .into_view()
+    .into_any()
 }
 
 #[component]
@@ -238,8 +238,8 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
     // Create state for managing current tab
     let current_tab = RwSignal::new(BookingTab::Upcoming);
 
-    // Wrap bookings in Rc to allow sharing between closures
-    let bookings_rc = Rc::new(bookings);
+    // Wrap bookings in Arc to allow sharing between closures
+    let bookings_rc = Arc::new(bookings);
     let bookings_for_filter = bookings_rc.clone();
     let bookings_for_count = bookings_rc.clone();
 
@@ -302,7 +302,7 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
             {move || {
             let filtered = filtered_bookings.get();
             if filtered.is_empty() {
-                view! { <EmptyBookingsState /> }.into_view()
+                view! { <EmptyBookingsState /> }.into_any()
             } else {
                 view! {
                     <div class="space-y-4">
@@ -312,7 +312,7 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
                             children=|booking| view! { <BookingCard booking=booking /> }
                         />
                     </div>
-                }.into_view()
+                }.into_any()
             }
         }}
     </Suspense>
@@ -332,9 +332,10 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
     // Signal to track if image failed to load
     let image_failed = RwSignal::new(false);
 
+    let book = booking.clone();
     // Clone values for use in closures
-    let hotel_name_for_image = booking.hotel_name.clone();
-    let image_url = booking.hotel_image_url.clone();
+    let hotel_name_for_image = book.hotel_name.clone();
+    let image_url = book.hotel_image_url.clone();
 
     view! {
         <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
@@ -347,7 +348,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                                 <div class="w-full h-full flex items-center justify-center text-gray-500 text-sm text-center p-4">
                                     {format!("{} image", &hotel_name_for_image)}
                                 </div>
-                            }.into_view()
+                            }.into_any()
                         } else {
                             view! {
                                 <img
@@ -359,7 +360,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                                         image_failed.set(true);
                                     }
                                 />
-                            }.into_view()
+                            }.into_any()
                         }
                     }}
                 </div>
@@ -371,9 +372,9 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3">
                             <div class="flex-1">
                                 <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1">
-                                    {&booking.hotel_name}
+                                    {booking.hotel_name.clone()}
                                 </h3>
-                                <p class="text-gray-600 mb-3">{&booking.hotel_location}</p>
+                                <p class="text-gray-600 mb-3">{booking.hotel_location.clone()}</p>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mb-3 sm:mb-0">
                                 <span class=format!("px-3 py-1 rounded-full text-sm font-medium {}", status_color)>
@@ -385,9 +386,9 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                                             <span class="px-2 py-1 rounded-full text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200">
                                                 TEST
                                             </span>
-                                        }.into_view()
+                                        }.into_any()
                                     } else {
-                                        view! { <></> }.into_view()
+                                        view! { <></> }.into_any()
                                     }
                                 }}
                             </div>
@@ -420,7 +421,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                         // <!-- Booking ID -->
                         <div class="mb-4">
                             <p class="text-sm text-gray-500">
-                                Booking ID: <span class="font-mono text-xs sm:text-sm break-all">{&booking.booking_id}</span>
+                                Booking ID: <span class="font-mono text-xs sm:text-sm break-all">{booking.booking_id.clone()}</span>
                             </p>
                         </div>
                     </div>

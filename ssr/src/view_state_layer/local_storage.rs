@@ -1,5 +1,5 @@
-use codee::string::JsonSerdeCodec;
-use leptos::{Signal, WriteSignal};
+use ::codee::string::{JsonSerdeCodec, OptionCodec};
+use leptos::prelude::*;
 use leptos_use::storage::{use_local_storage, use_local_storage_with_options, UseStorageOptions};
 
 use crate::api::{
@@ -14,7 +14,7 @@ pub fn use_payment_store() -> (
     impl Fn() + Clone,
 ) {
     // use_local_storage::<Option<u64>, JsonSerdeCodec>(PAYMENT_ID)
-    use_local_storage_with_options::<Option<u64>, JsonSerdeCodec>(
+    use_local_storage_with_options::<Option<u64>, OptionCodec<JsonSerdeCodec>>(
         PAYMENT_ID,
         UseStorageOptions::default().delay_during_hydration(true),
     )
@@ -26,7 +26,7 @@ pub fn use_payment_status_store() -> (
     impl Fn() + Clone,
 ) {
     // use_local_storage::<Option<String>, JsonSerdeCodec>(PAYMENT_STATUS)
-    use_local_storage_with_options::<Option<String>, JsonSerdeCodec>(
+    use_local_storage_with_options::<Option<String>, OptionCodec<JsonSerdeCodec>>(
         PAYMENT_STATUS,
         UseStorageOptions::default().delay_during_hydration(true),
     )
@@ -37,7 +37,7 @@ pub fn use_booking_id_store() -> (
     WriteSignal<Option<BookingId>>,
     impl Fn() + Clone,
 ) {
-    use_local_storage_with_options::<Option<BookingId>, JsonSerdeCodec>(
+    use_local_storage_with_options::<Option<BookingId>, OptionCodec<JsonSerdeCodec>>(
         BOOKING_ID,
         UseStorageOptions::default().delay_during_hydration(true),
     )

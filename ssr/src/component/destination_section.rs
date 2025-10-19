@@ -1,5 +1,5 @@
 use chrono::Datelike;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::{
     api::client_side_api::Place,
@@ -60,7 +60,7 @@ pub fn DestinationCard(
     properties: u32,
     place_id: &'static str,
 ) -> impl IntoView {
-    let date_range = create_memo(move |_| {
+    let date_range = Memo::new(move |_| {
         let current_date = chrono::Utc::now().date_naive();
         let (current_year, current_month, current_day) = (
             current_date.year() as u32,
@@ -88,7 +88,7 @@ pub fn DestinationCard(
         UIPaginationState::reset_to_first_page();
         UISearchCtx::set_date_range(date_range.get());
         UISearchCtx::set_place(place.clone());
-        let search_action = create_search_action_with_ui_state(false.into());
+        let search_action = create_search_action_with_ui_state(RwSignal::new(false));
         search_action.dispatch(());
     };
 

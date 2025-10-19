@@ -1,5 +1,6 @@
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::{use_navigate, use_query_map};
+use reqwest::Client;
 use web_sys::MouseEvent;
 
 use crate::api::auth::auth_state::AuthStateSignal;
@@ -79,7 +80,7 @@ impl PreviousSearchContext {
 pub fn HotelListPage() -> impl IntoView {
     let search_ctx: UISearchCtx = expect_context();
     let navigate = use_navigate();
-    let query_map = leptos_router::use_query_map();
+    let query_map = use_query_map();
 
     let search_ctx2: UISearchCtx = expect_context();
 
@@ -88,14 +89,16 @@ pub fn HotelListPage() -> impl IntoView {
 
     // Sync query params with state on page load (URL → State)
     // This leverages use_query_map's built-in reactivity for browser navigation
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let params = query_map.get();
-        if !params.0.is_empty() {
-            // log!("Found query params in URL: {:?}", params);
+        let params_map: std::collections::HashMap<String, String> = params
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
+        if !params_map.is_empty() {
+            // log!("Found query params in URL: {:?}", params_map);
 
-            if let Some(hotel_params) =
-                HotelListParams::from_url_params(&params.0.into_iter().collect())
-            {
+            if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
                 // log!("Parsed hotel params from URL: {:?}", hotel_params);
                 hotel_params.sync_to_app_state();
                 PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
@@ -108,7 +111,7 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx_for_url_update = search_ctx.clone();
 
     // Hotel search resource - triggers when search context or pagination changes
-    let hotel_search_resource = create_resource(
+    let hotel_search_resource = Resource::new(
         move || {
             // Track search context changes reactively
             let place = search_ctx_for_resource.place.get();
@@ -445,23 +448,26 @@ pub fn HotelListPage() -> impl IntoView {
     };
 
     let disabled_filters = Signal::derive(move || false);
-    let filters_collapsed = create_rw_signal(false);
+    let filters_collapsed = RwSignal::new(false);
 
     view! {
         // Fixed header section at top
         <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
             <div class={
                 let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-                move || format!(
-                    "bg-blue-600 relative transition-all duration-300 {}",
-                    if is_input_expanded() {
+                move || {
+                    let height = if is_input_expanded() {
                         // Expanded height on mobile/tablet when input group is open, normal on desktop
                         "h-96 sm:h-96 md:h-80 lg:h-32"
                     } else {
                         // Normal collapsed height for all screen sizes
                         "h-40 sm:h-40 md:h-36 lg:h-32"
-                    }
-                )
+                    };
+                    format!(
+                        "bg-blue-600 relative transition-all duration-300 {}",
+                        height
+                    )
+                }
             }>
                 <Navbar blue_header=true />
 
@@ -531,13 +537,13 @@ pub fn HotelListPage() -> impl IntoView {
                                                 <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 15l-7-7-7 7" />
                                                 </svg>
-                                            }.into_view()
+                                            }.into_any()
                                         } else {
                                             view! {
                                                 <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                                 </svg>
-                                            }.into_view()
+                                            }.into_any()
                                         }
                                     }}
                                 </button>
@@ -545,7 +551,7 @@ pub fn HotelListPage() -> impl IntoView {
                                     type="button"
                                     class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
                                     disabled=move || !has_active_filters.get()
-                                    on:click=clear_filters.clone()
+                                    on:click=move|ev| clear_filters.run(ev)
                                 >
                                     "Clear filters"
                                 </button>
@@ -633,7 +639,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                         Go to First Page
                                                     </button>
                                                 </div>
-                                            }
+                                            }.into_any()
                                         } else {
                                             // Show regular "No hotels found" message on page 1
                                             view! {
@@ -642,9 +648,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                         No hotels found for your search criteria.
                                                     </p>
                                                 </div>
-                                            }
+                                            }.into_any()
                                         }
-                                            .into_view()
+                                            .into_any()
                                     } else if filtered_hotels.is_empty() {
                                         if min_rating_filter.is_some()
                                             || min_price_filter.is_some()
@@ -729,9 +735,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                     </div>
                                                 </div>
                                             }
-                                                .into_view()
+                                                .into_any()
                                         } else {
-                                            view! { <></> }.into_view()
+                                            view! { <></> }.into_any()
                                         }
                                     } else {
                                         filtered_hotels
@@ -787,6 +793,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                 }
                                             })
                                             .collect_view()
+                                            .into_any()
                                     }
                                 }}
                             </Show>
@@ -842,7 +849,7 @@ pub fn HotelListPage() -> impl IntoView {
                                         type="button"
                                         class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
                                         disabled=move || !has_active_filters.get()
-                                        on:click=clear_filters.clone()
+                                        on:click=move|ev| {clear_filters.run(ev)}
                                     >
                                         "Clear filters"
                                     </button>
@@ -903,65 +910,65 @@ pub fn HotelListPage() -> impl IntoView {
                                         <div class="text-center py-8">
                                             <p class="text-gray-600">No hotels found</p>
                                         </div>
-                                    }
+                                    }.into_any()
                                 } else if filtered_hotels.is_empty() {
-                                    view! {
-                                        <div class="text-center py-8">
-                                            <p class="text-gray-600">No hotels match your filters</p>
-                                            <button
-                                                class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                                on:click=move |e| clear_filters.call(e)
-                                            >
-                                                Clear Filters
-                                            </button>
-                                        </div>
-                                    }
-                                } else {
-                                    view! {
-                                        <div>
-                                            { filtered_hotels
-                                            .into_iter()
-                                            .map(|hotel_result| {
-                                                let mut price = hotel_result
-                                                .price
-                                                .clone()
-                                                .map(|p| p.room_price);
-                                            let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                            if is_disabled {
-                                                price = None;
-                                            }
-                                            let img = if hotel_result.hotel_picture.is_empty() {
-                                                "https://via.placeholder.com/300x200?text=No+Image".into()
-                                            } else {
-                                                hotel_result.hotel_picture.clone()
-                                            };
-                                            let res = hotel_result.clone();
-                                            let hotel_address = hotel_result.hotel_address.clone();
-                                            let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-                                            view! {
-                                                <HotelCardTile
-                                                img
-                                                guest_score=None
-                                                rating=hotel_result.star_rating
-                                                hotel_name=hotel_result.hotel_name.clone()
-                                                hotel_code=hotel_result.hotel_code.clone()
-                                                price=price
-                                                discount_percent=None
-                                                amenities=amenities.get()
-                                                property_type=hotel_result.property_type.clone()
-                                                class=format!(
-                                                    "w-full mb-4 {}",
-                                                    if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
-                                                )
-                                                hotel_address
-                                                disabled=is_disabled
-                                                />
-                                            }
-                                        })
-                                        .collect_view()}
+                                view! {
+                                    <div class="text-center py-8">
+                                        <p class="text-gray-600">No hotels match your filters</p>
+                                        <button
+                                            class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
+                                            on:click=move |e| clear_filters.run(e)
+                                        >
+                                            Clear Filters
+                                        </button>
                                     </div>
-                                    }
-                                }
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <div>
+                                        { filtered_hotels
+                                        .into_iter()
+                                        .map(|hotel_result| {
+                                            let mut price = hotel_result
+                                            .price
+                                            .clone()
+                                            .map(|p| p.room_price);
+                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                        if is_disabled {
+                                            price = None;
+                                        }
+                                        let img = if hotel_result.hotel_picture.is_empty() {
+                                            "https://via.placeholder.com/300x200?text=No+Image".into()
+                                        } else {
+                                            hotel_result.hotel_picture.clone()
+                                        };
+                                        let res = hotel_result.clone();
+                                        let hotel_address = hotel_result.hotel_address.clone();
+                                        let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+                                        view! {
+                                            <HotelCardTile
+                                            img
+                                            guest_score=None
+                                            rating=hotel_result.star_rating
+                                            hotel_name=hotel_result.hotel_name.clone()
+                                            hotel_code=hotel_result.hotel_code.clone()
+                                            price=price
+                                            discount_percent=None
+                                            amenities=amenities.get()
+                                            property_type=hotel_result.property_type.clone()
+                                            class=format!(
+                                                "w-full mb-4 {}",
+                                                if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
+                                            )
+                                            hotel_address
+                                            disabled=is_disabled
+                                            />
+                                        }
+                                    })
+                                    .collect_view()}
+                                </div>
+                                }.into_any()
+                            }
                             }}
                         </Show>
 
@@ -996,7 +1003,7 @@ pub fn HotelCard(
     hotel_name: String,
     class: String,
 ) -> impl IntoView {
-    let price = create_rw_signal(price);
+    let price = RwSignal::new(price);
 
     let search_list_page: SearchListResults = expect_context();
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
@@ -1101,7 +1108,7 @@ pub fn HotelCardTile(
 ) -> impl IntoView {
     let price_copy = price.clone();
 
-    let price = create_rw_signal(price);
+    let price = RwSignal::new(price);
 
     let wishlist_hotel_code = hotel_code.clone();
 
@@ -1186,9 +1193,9 @@ pub fn HotelCardTile(
             }
             class=format!("flex flex-col md:max-h-80  md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
-            <div clone:hotel_code class="relative w-full md:basis-[30%] md:flex-shrink-0">
+            <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
                 <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
-                <Wishlist hotel_code />
+                <Wishlist hotel_code=hotel_code.clone() />
             </div>
 
             // RIGHT CONTENT
@@ -1204,7 +1211,7 @@ pub fn HotelCardTile(
                         // amenities
                         <div class="flex flex-wrap gap-2 mt-3">
                             {amenities.iter().take(8).map(|a| view! {
-                                <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a}</span>
+                                <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a.clone()}</span>
                             }).collect_view()}
                         </div>
                     </div>
@@ -1250,14 +1257,14 @@ pub fn HotelCardTile(
                     }>
                         <div class="text-right">
                             {move || {
-                                if let Some(p) = price_copy {
+                                if let Some(p) = price() {
                                     view! {
                                         <p class="text-xl font-bold">
                                             ${format!("{:.0}", p)} <span class="text-sm font-normal text-gray-500">"/ night"</span>
                                         </p>
-                                    }
+                                    }.into_any()
                                 } else {
-                                    view! { <p class="text-sm font-bold">"Check Availability"</p> }
+                                    view! { <p class="text-sm font-bold">"Check Availability"</p> }.into_any()
                                 }
                             }}
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
@@ -1280,6 +1287,7 @@ pub fn HotelCardTile(
 #[component]
 fn Wishlist(hotel_code: String) -> impl IntoView {
     let wishlist_hotel_code = hotel_code.clone();
+
     let add_to_wishlist_action = Action::new(move |_: &()| {
         let check_present =
             AuthStateSignal::check_if_added_to_wishlist_untracked(&wishlist_hotel_code);
@@ -1288,14 +1296,14 @@ fn Wishlist(hotel_code: String) -> impl IntoView {
         let hotel_code = wishlist_hotel_code.clone();
         async move {
             let url = format!("/api/user-wishlist/{toggle_action}/{hotel_code}");
-            match gloo_net::http::Request::post(&url).send().await {
+            match Client::new().post(&url).send().await {
                 Ok(response) => {
                     if response.status() != 200 {
                         AuthStateSignal::toggle_wishlish(hotel_code.clone());
                     }
                 }
                 Err(_) => {
-                    logging::log!("Failed to fetch user info");
+                    crate::log!("Failed to fetch user info");
                 }
             }
         }

@@ -38,11 +38,12 @@ use crate::{
     },
 };
 use chrono::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_query::{query_persister, *};
 use leptos_query_devtools::LeptosQueryDevtools;
-use leptos_router::*;
+use leptos_router::components::{Route, Router, Routes, A};
+use leptos_router::{path, *};
 use sitewriter::{ChangeFreq, UrlEntry};
 use std::sync::{Arc, OnceLock};
 
@@ -276,23 +277,23 @@ pub fn App() -> impl IntoView {
             // <GoogleTagManagerIFrame />
 
         // content for this welcome page
-        <Router fallback=|| { view! { <NotFound /> }.into_view() }>
-                <Routes>
-                        <Route path=AppRoutes::Root.to_string() view=RootPage />
-                        <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
-                        <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
-                        <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
-                        <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPageV2 />
-                        // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
-                        // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
-                        <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
-                        <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
-                        <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
-                        <Route path=AppRoutes::MyAccount.to_string() view=MyAccountPage />
-                        <Route path=AppRoutes::Wishlist.to_string() view=WishlistPage />
-                        <Route path=AppRoutes::AboutUs.to_string() view=AboutUsPage />
-                        // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
-                        // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
+        <Router>
+                <Routes fallback=|| view! { <NotFound /> }>
+                        <Route path=path!("") view=RootPage />
+                        <Route path=path!("/hotel-list") view=HotelListPage />
+                        <Route path=path!("/hotel-details") view=HotelDetailsV1Page />
+                        <Route path=path!("/block_room") view=BlockRoomV1Page />
+                        <Route path=path!("/confirmation") view=ConfirmationPageV2 />
+                        // <Route path=path!("/confirmation-v1") view=ConfirmationPageV1 />
+                        // <Route path=path!("/confirmation-v2") view=ConfirmationPageV2 />
+                        <Route path=path!("/admin-panel") view=AdminPanelPage />
+                        <Route path=path!("/admin-edit-panel") view=AdminEditPanel />
+                        <Route path=path!("/my-bookings") view=MyBookingsPage />
+                        <Route path=path!("/account") view=MyAccountPage />
+                        <Route path=path!("/wishlist") view=WishlistPage />
+                        <Route path=path!("/about-us") view=AboutUsPage />
+                        // <Route path=path!("/confirmation") view=ConfirmationPage />
+                        // <Route path=path!("/notifications") view=NotificationExample />
                 </Routes>
         </Router>
         </main>

@@ -3,7 +3,7 @@ mod destination_picker_v6;
 pub use destination_picker_v6::DestinationPickerV6;
 
 use leptos::html::Input;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::on_click_outside;
 use serde::{Deserialize, Serialize};
 

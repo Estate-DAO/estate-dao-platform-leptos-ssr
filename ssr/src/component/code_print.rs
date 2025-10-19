@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use std::fmt::Debug;
 
 /// A component to display the debug representation of a value using a custom formatting function
@@ -28,7 +28,8 @@ use std::fmt::Debug;
 #[component]
 pub fn DebugDisplay(
     /// A function that returns the string to be displayed
-    value: impl Fn() -> String + 'static,
+    #[prop(into)]
+    value: Callback<(), String>,
 
     /// A label to display above the debug output
     #[prop(into)]
@@ -48,7 +49,7 @@ pub fn DebugDisplay(
             // The preformatted block for the debug output
             <pre class="border border-dashed border-indigo-400 bg-indigo-50 p-3 text-xs text-indigo-900 overflow-auto rounded shadow-sm font-mono">
                 // Call the value function to get the debug string
-                {move || (value)()}
+                {move || value.run(()) }
             </pre>
         </div>
             }

@@ -2,7 +2,7 @@ use crate::utils::{
     app_reference::BookingId, booking_id::PaymentIdentifiers, cookie_storage::CookieBookingStorage,
 };
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 
 /// **Cookie-based Booking Context State**
 ///
@@ -107,7 +107,7 @@ impl CookieBookingContextState {
             );
             this.order_id.set(Some(order_id));
 
-            leptos::logging::log!(
+            crate::log!(
                 "CookieBookingContextState loaded - app_reference: {}, email: {}, order_id: {}",
                 booking_id.app_reference,
                 booking_id.email,
@@ -208,7 +208,7 @@ impl CookieBookingContextState {
     #[cfg(feature = "debug_log")]
     pub fn debug_log_state() {
         let this = Self::get();
-        leptos::logging::log!(
+        crate::log!(
             "CookieBookingContextState Debug - BookingId: {:?}, AppRef: {:?}, OrderId: {:?}, Email: {:?}",
             this.booking_id.get_untracked(),
             this.app_reference.get_untracked(),

@@ -1,7 +1,7 @@
 use crate::canister::backend::*;
 use crate::utils::admin::admin_canister;
 use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 
 #[server(GreetBackend)]
 pub async fn update_payment_details_backend(

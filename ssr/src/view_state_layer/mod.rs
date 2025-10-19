@@ -19,7 +19,12 @@ pub mod ui_search_state;
 pub mod view_state;
 // pub mod pricing_book_now;
 
-pub trait GlobalStateForLeptos: Clone + Default + 'static + Sized {
+use leptos::prelude::*;
+
+// Remove redundant imports - these are already in prelude
+// use leptos::{provide_context, use_context};
+
+pub trait GlobalStateForLeptos: Clone + Default + 'static + Sized + Send + Sync {
     fn get() -> Self {
         let this = use_context::<Self>();
         match this {
@@ -37,13 +42,12 @@ pub trait GlobalStateForLeptos: Clone + Default + 'static + Sized {
 }
 
 use cfg_if::cfg_if;
-use leptos::{provide_context, use_context};
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::extract::FromRef;
         use crate::api::liteapi::LiteApiHTTPClient;
-        use leptos::LeptosOptions;
+        use leptos::prelude::LeptosOptions;
         use leptos_router::RouteListing;
         use crate::ssr_booking::PipelineLockManager;
         // use tokio::sync::broadcast;
@@ -59,7 +63,7 @@ cfg_if! {
         use tracing::instrument;
         use axum_extra::extract::cookie::Key;
         use axum_extra::extract::cookie::PrivateCookieJar;
-
+        use leptos_axum::AxumRouteListing;
         #[derive(FromRef, Clone, Debug)]
         pub struct AppState {
             pub leptos_options: LeptosOptions,
@@ -69,7 +73,7 @@ cfg_if! {
             // #[cfg(feature = "cloudflare")]
             // pub cloudflare: gob_cloudflare::CloudflareAuth,
             // pub kv: KVStoreImpl,
-            pub routes: Vec<RouteListing>,
+            pub routes: Vec<AxumRouteListing>,
             pub env_var_config: EnvVarConfig,
             // pub count_tx: broadcast::Sender<i32>,
             pub pipeline_lock_manager: PipelineLockManager,

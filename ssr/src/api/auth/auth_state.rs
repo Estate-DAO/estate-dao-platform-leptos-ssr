@@ -1,7 +1,7 @@
+use ::codee::string::{FromToStringCodec, JsonSerdeCodec};
 use candid::Principal;
-use codee::string::{FromToStringCodec, JsonSerdeCodec};
 // use yral_canisters_common::{utils::time::current_epoch, Canisters, CanistersAuthWire};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
 // use leptos_reactive::Resource;
 
@@ -11,7 +11,6 @@ use crate::{
         consts::{USER_EMAIL_MAPPING_SYNCED, USER_IDENTITY},
     },
     send_wrap,
-    utils::parent_resource::{MockPartialEq, ParentResource},
 };
 
 #[derive(Copy, Clone, Default)]

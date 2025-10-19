@@ -1,4 +1,6 @@
-use leptos::*;
+use leptos::prelude::*;
+use leptos_router::components::A;
+use leptos_router::hooks::use_query_map;
 use leptos_router::*;
 
 use crate::{
@@ -29,8 +31,8 @@ impl AccountTabs {
         AccountTabs::Faq,
     ];
 
-    pub fn from_str(s: &String) -> Self {
-        match s.as_str() {
+    pub fn from_str(s: &str) -> Self {
+        match s {
             "wallet" => AccountTabs::Wallet,
             "wishlist" => AccountTabs::Wishlist,
             "support" => AccountTabs::Support,
@@ -98,12 +100,12 @@ pub fn MyAccountPage() -> impl IntoView {
     let active_tab = move || {
         query.with(|q| {
             q.get("page")
-                .map(AccountTabs::from_str)
+                .map(|s| AccountTabs::from_str(s.as_str()))
                 .unwrap_or(AccountTabs::PersonalInfo)
         })
     };
 
-    let (sidebar_open, set_sidebar_open) = create_signal(false);
+    let (sidebar_open, set_sidebar_open) = signal(false);
 
     view! {
         {/* Navbar */}
@@ -176,12 +178,12 @@ pub fn MyAccountPage() -> impl IntoView {
                                                 <img src={tab.icon_src()} class={class} />
                                                 {tab.label()}
                                             </span>
-                                        }.into_view()
+                                        }.into_any()
                                     } else {
+                                        let tab_clone = tab;
                                         view! {
-                                            <A
-                                                clone:tab
-                                                href=tab.as_route()
+                                            <a
+                                                href=tab_clone.as_route()
                                                 class=move || {
                                                     format!(
                                                         "flex items-center gap-2 px-2 py-1 rounded-md transition-colors {}",
@@ -193,10 +195,10 @@ pub fn MyAccountPage() -> impl IntoView {
                                                     )
                                                 }
                                             >
-                                                <img src={tab.icon_src()} class={class} />
-                                                {tab.label()}
-                                            </A>
-                                        }.into_view()
+                                                <img src={tab_clone.icon_src()} class={class} />
+                                                {tab_clone.label()}
+                                            </a>
+                                        }.into_any()
                                     }
                                 })
                                 .collect_view()}
@@ -211,21 +213,21 @@ pub fn MyAccountPage() -> impl IntoView {
                             class="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
                             on:click=move |_| set_sidebar_open.set(false)
                         />
-                    }
+                    }.into_any()
                 } else {
-                    view! { <div></div> }
+                    view! { <div/> }.into_any()
                 }}
 
                 {/* Main content */}
                 <section class="flex-1 bg-white rounded-xl border p-8 overflow-y-auto">
                     {move || match active_tab() {
-                        AccountTabs::PersonalInfo => view! { <PersonalInfoView/> }.into_view(),
-                        AccountTabs::Wallet => view! { <WalletView/> }.into_view(),
-                        AccountTabs::Wishlist => view! { <WishlistView/> }.into_view(),
-                        AccountTabs::Support => view! { <SupportView/> }.into_view(),
-                        AccountTabs::Terms => view! { <TermsView/> }.into_view(),
-                        AccountTabs::Privacy => view! { <PrivacyView/> }.into_view(),
-                        AccountTabs::Faq => view! { <FaqView/> }.into_view(),
+                        AccountTabs::PersonalInfo => view! { <PersonalInfoView/> }.into_any(),
+                        AccountTabs::Wallet => view! { <WalletView/> }.into_any(),
+                        AccountTabs::Wishlist => view! { <WishlistView/> }.into_any(),
+                        AccountTabs::Support => view! { <SupportView/> }.into_any(),
+                        AccountTabs::Terms => view! { <TermsView/> }.into_any(),
+                        AccountTabs::Privacy => view! { <PrivacyView/> }.into_any(),
+                        AccountTabs::Faq => view! { <FaqView/> }.into_any(),
                     }}
                 </section>
             </main>

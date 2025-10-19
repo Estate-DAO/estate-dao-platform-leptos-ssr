@@ -53,8 +53,8 @@ cfg_if! {
         use axum::{middleware, routing::get, Router, routing::post};
         use tower_http::cors::{CorsLayer, Any};
 
-        use leptos::*;
-        use leptos::{get_configuration, logging::log, provide_context};
+        use leptos::prelude::*;
+        use leptos::{logging::log};
         use leptos_axum::handle_server_fns_with_context;
         use leptos_axum::{generate_route_list, LeptosRoutes};
 
@@ -141,8 +141,8 @@ cfg_if! {
             State(app_state): State<AppState>,
             req: Request<AxumBody>,
         ) -> Response {
+            let state = app_state.clone();
             let handler = leptos_axum::render_route_with_context(
-                app_state.leptos_options.clone(),
                 app_state.routes.clone(),
                 move || {
                                         // provide_context(app_state.canisters.clone());
@@ -161,7 +161,7 @@ cfg_if! {
                 },
                 move || shell(app_state.leptos_options.clone()),
             );
-            handler(req).await.into_response()
+            handler(State(state), req).await.into_response()
         }
 
 
@@ -323,7 +323,7 @@ cfg_if! {
 
             estate_fe::utils::debug_local_env();
 
-            let conf = get_configuration(None).await.unwrap();
+            let conf = get_configuration(None).unwrap();
             let leptos_options = conf.leptos_options;
             let option = leptos_options.clone();
             let addr = leptos_options.site_addr;
@@ -441,7 +441,7 @@ cfg_if! {
 
 
                 let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-                logging::log!("listening on http://{}", &addr);
+                crate::log!("listening on http://{}", &addr);
 
                 axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
                     .await

@@ -2,21 +2,21 @@ use crate::log;
 use crate::page::{InputGroup, InputGroupMobile};
 use crate::utils::responsive::use_is_desktop;
 use crate::view_state_layer::input_group_state::InputGroupState;
-use leptos::*;
+use leptos::prelude::*;
 use web_sys;
 
 #[component]
 pub fn InputGroupContainer(
-    #[prop(optional, into)] given_disabled: MaybeSignal<bool>,
-    #[prop(optional, into)] default_expanded: MaybeSignal<bool>,
-    #[prop(optional, into)] allow_outside_click_collapse: MaybeSignal<bool>, // New prop
+    #[prop(optional, into)] given_disabled: Signal<bool>,
+    #[prop(optional, into)] default_expanded: Signal<bool>,
+    #[prop(optional, into)] allow_outside_click_collapse: Signal<bool>, // New prop
 ) -> impl IntoView {
     // Signal to track if the detailed input group is open on mobile
     let is_desktop = use_is_desktop();
 
     InputGroupState::set_show_full_input(default_expanded.get());
 
-    let show_full_input = create_memo(move |_prev| {
+    let show_full_input = Memo::new(move |_prev| {
         log!(
             "[input_group_container.rs] Derived show_full_input: {}",
             is_desktop.get() || default_expanded.get()

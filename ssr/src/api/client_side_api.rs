@@ -11,7 +11,7 @@ use crate::domain::{
 use crate::log;
 use crate::utils::route::join_base_and_path_url;
 use candid::Principal;
-use leptos::*;
+use leptos::prelude::*;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 // use yral_types::delegated_identity::DelegatedIdentityWire;

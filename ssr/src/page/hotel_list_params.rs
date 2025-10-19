@@ -9,7 +9,7 @@ use crate::{
     view_state_layer::ui_search_state::UISearchCtx,
 };
 use chrono::Datelike;
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

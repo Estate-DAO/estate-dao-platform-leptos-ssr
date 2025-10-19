@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -125,55 +125,53 @@ fn StatusBadge(status: String, status_type: &'static str) -> impl IntoView {
 #[component]
 fn PaymentStatusDisplay(payment_response: GetPaymentStatusResponse) -> impl IntoView {
     match payment_response {
-        GetPaymentStatusResponse::Success(success) => {
-            view! {
-                <div class="bg-white p-4 rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-semibold mb-3">"Payment Status Details"</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <span class="font-medium">"Status: "</span>
-                            <StatusBadge status=success.payment_status.clone() status_type="payment" />
-                        </div>
-                        <div>
-                            <span class="font-medium">"Payment ID: "</span>
-                            <span>{success.payment_id}</span>
-                        </div>
-                        <div>
-                            <span class="font-medium">"Order ID: "</span>
-                            <span>{success.order_id}</span>
-                        </div>
-                        <div>
-                            <span class="font-medium">"Amount: "</span>
-                            <span>{format!("{} {}", success.pay_amount, success.pay_currency)}</span>
-                        </div>
-                        <div>
-                            <span class="font-medium">"Actually Paid: "</span>
-                            <span>{success.actually_paid}</span>
-                        </div>
-                        <div>
-                            <span class="font-medium">"Created: "</span>
-                            <span>{success.created_at}</span>
-                        </div>
-                        <div>
-                            <span class="font-medium">"Updated: "</span>
-                            <span>{success.updated_at}</span>
-                        </div>
-                        <div class="col-span-2">
-                            <span class="font-medium">"Description: "</span>
-                            <span>{success.order_description}</span>
-                        </div>
+        GetPaymentStatusResponse::Success(success) => view! {
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <h3 class="text-lg font-semibold mb-3">"Payment Status Details"</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="font-medium">"Status: "</span>
+                        <StatusBadge status=success.payment_status.clone() status_type="payment" />
+                    </div>
+                    <div>
+                        <span class="font-medium">"Payment ID: "</span>
+                        <span>{success.payment_id}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium">"Order ID: "</span>
+                        <span>{success.order_id}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium">"Amount: "</span>
+                        <span>{format!("{} {}", success.pay_amount, success.pay_currency)}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium">"Actually Paid: "</span>
+                        <span>{success.actually_paid}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium">"Created: "</span>
+                        <span>{success.created_at}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium">"Updated: "</span>
+                        <span>{success.updated_at}</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="font-medium">"Description: "</span>
+                        <span>{success.order_description}</span>
                     </div>
                 </div>
-            }
+            </div>
         }
-        GetPaymentStatusResponse::Failure(error) => {
-            view! {
-                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h3 class="text-lg font-semibold text-red-800 mb-2">"Error"</h3>
-                    <p class="text-red-700">"Payment status check failed"</p>
-                </div>
-            }
+        .into_any(),
+        GetPaymentStatusResponse::Failure(error) => view! {
+            <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                <h3 class="text-lg font-semibold text-red-800 mb-2">"Error"</h3>
+                <p class="text-red-700">"Payment status check failed"</p>
+            </div>
         }
+        .into_any(),
     }
 }
 
@@ -225,39 +223,39 @@ pub fn AdminEditPanel() -> impl IntoView {
     let state = AdminEditPanelState::new();
 
     // Payment status lookup
-    let check_payment_action = create_action(move |payment_id: &String| {
+    let check_payment_action = Action::new(move |payment_id: &String| {
         let payment_id = payment_id.parse::<u64>().unwrap_or(0);
         check_payment_status_api(payment_id)
     });
 
     // Backend booking lookup
-    let get_booking_action = create_action(move |(email, app_ref): &(String, String)| {
+    let get_booking_action = Action::new(move |(email, app_ref): &(String, String)| {
         get_backend_booking_api(email.clone(), app_ref.clone())
     });
 
     // Payment update action
-    let update_payment_action = create_action(
+    let update_payment_action = Action::new(
         move |(email, app_ref, payment_details): &(String, String, PaymentDetails)| {
             update_payment_details_api(email.clone(), app_ref.clone(), payment_details.clone())
         },
     );
 
     // Handle payment status response
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(Some(response)) = check_payment_action.value().get() {
             state.payment_status_display.set(Some(response));
         }
     });
 
     // Handle booking response
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(booking_opt) = get_booking_action.value().get() {
             state.backend_booking_display.set(booking_opt);
         }
     });
 
     // Handle update response
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(result) = update_payment_action.value().get() {
             match result {
                 Some(message) => state.update_status.set(format!("✅ {}", message)),
@@ -303,9 +301,9 @@ pub fn AdminEditPanel() -> impl IntoView {
                             <div class="mt-6">
                                 <PaymentStatusDisplay payment_response=response />
                             </div>
-                        }.into_view()
+                        }.into_any()
                     } else {
-                        view! { <div></div> }.into_view()
+                        view! { <div></div> }.into_any()
                     }
                 }}
             </div>
@@ -356,9 +354,9 @@ pub fn AdminEditPanel() -> impl IntoView {
                             <div class="mt-6">
                                 <BookingDisplay booking=booking />
                             </div>
-                        }.into_view()
+                        }.into_any()
                     } else {
-                        view! { <div></div> }.into_view()
+                        view! { <div></div> }.into_any()
                     }
                 }}
             </div>

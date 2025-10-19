@@ -132,7 +132,7 @@
 //     let payment_booking_step_signals = expect_context::<SSEBookingStatusUpdates>();
 //     let booking_id_signal_read = use_booking_id_store().0;
 
-//     let backend_booking_res = create_resource(
+//     let backend_booking_res = Resource::new(
 //         move || {
 //             (
 //                 payment_booking_step_signals.p03_fetch_booking_details.get(),

@@ -1,7 +1,7 @@
 use crate::utils::admin::admin_canister;
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 
 #[server(GreetBackend)]
 pub async fn greet_backend(name: String) -> Result<String, ServerFnError> {

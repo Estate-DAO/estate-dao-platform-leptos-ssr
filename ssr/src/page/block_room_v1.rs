@@ -1,6 +1,7 @@
-use leptos::*;
+use leptos::ev;
+use leptos::prelude::*;
 use leptos_icons::Icon;
-use leptos_router::use_navigate;
+use leptos_router::hooks::use_navigate;
 use leptos_use::{use_interval_fn, utils::Pausable};
 
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
@@ -43,10 +44,10 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let navigate = use_navigate();
 
     // Initialize form data on mount - only once
-    let (initialized, set_initialized) = create_signal(false);
+    let (initialized, set_initialized) = signal(false);
 
     // Create booking ID signal - uses centralized BookingIdState
-    let booking_id_signal = create_memo(move |_| {
+    let booking_id_signal = Memo::new(move |_| {
         // Get the primary adult email
         let adults_list = block_room_state.adults.get();
         if let Some(email) = adults_list.first().and_then(|adult| adult.email.clone()) {
@@ -57,7 +58,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
         }
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let adults_count = ui_search_ctx.guests.adults.get() as usize;
         let children_count = ui_search_ctx.guests.children.get() as usize;
         let children_ages = ui_search_ctx.guests.children_ages.clone();
@@ -152,7 +153,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     // NOTE: This can be simplified using BookingService:
     // let booking_service = BookingService::from_ui_context(LiteApiAdapter::default());
     // let response = booking_service.block_room_and_save_to_backend(booking_id, hotel_token).await;
-    // let prebook_resource = create_resource(
+    // let prebook_resource = Resource::new(
     //     move || {
     //         // Wait for essential data to be ready before calling API
     //         let room_price_val = room_price();
@@ -351,7 +352,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             <div class="max-w-5xl mx-auto px-2 sm:px-6">
                 <div class="flex items-center py-4 md:py-8">
                     <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
-                        <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
+                        <Icon icon=icondata::AiArrowLeftOutlined />
                     </span>
                     <h1 class="ml-2 sm:ml-4 text-2xl sm:text-3xl font-bold">"You're just one step away!"</h1>
                 </div>
@@ -419,7 +420,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                         <hr class="my-3 border-gray-200" />
 
                         <div class="flex items-center gap-2 mt-2">
-                            <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-lg" />
+                            <Icon icon=icondata::AiUserOutlined />
                             <span class="text-xs text-gray-400 font-semibold">Guests & Rooms</span>
                             <span class="font-bold text-sm ml-2 text-right min-w-0 break-words">
                                 {move || format!(
@@ -637,7 +638,7 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
 #[component]
 pub fn AuthGatedGuestForm() -> impl IntoView {
     use crate::api::consts::USER_IDENTITY;
-    use codee::string::JsonSerdeCodec;
+    use ::codee::string::JsonSerdeCodec;
     use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
     // Use AuthStateSignal pattern (same as base_route.rs and my_bookings.rs)
@@ -675,10 +676,10 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
 
         if is_logged_in {
             // User is logged in, show guest form
-            view! { <GuestForm user_email=user_email /> }.into_view()
+            view! { <GuestForm user_email=user_email /> }.into_any()
         } else {
             // User is not logged in, show login prompt
-            view! { <LoginPrompt /> }.into_view()
+            view! { <LoginPrompt /> }.into_any()
         }
     }
 }
@@ -688,7 +689,7 @@ pub fn LoginPrompt() -> impl IntoView {
     view! {
         <div class="bg-white rounded-2xl shadow p-6 text-center">
             <div class="mb-4">
-                <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-4xl mx-auto mb-3" />
+                <Icon icon=icondata::AiUserOutlined />
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">
                     "Login Required"
                 </h3>
@@ -744,7 +745,7 @@ pub fn AdultFormSection(
     #[prop(into)] user_email: Signal<Option<String>>,
 ) -> impl IntoView {
     // Auto-fill email for primary adult (index 0) when user email is available
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if index == 0 {
             if let Some(email) = user_email.get() {
                 // Check if email field is empty before auto-filling
@@ -891,9 +892,9 @@ pub fn AdultFormSection(
                                 }
                             />
                         </div>
-                    }.into_view()
+                    }.into_any()
                 } else {
-                    view! { <div></div> }.into_view()
+                    view! { <div></div> }.into_any()
                 }
             }}
         </div>
@@ -944,13 +945,9 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
                     <option disabled selected>{age_value}</option>
                     {(1..18)
                         .map(|age| {
-                            let selected = if age == age_value {
-                                "selected"
-                            } else {
-                                ""
-                            };
+                            let is_selected = age == age_value;
                             view! {
-                                <option value=age.to_string() {selected}>{age}</option>
+                                <option value=age.to_string() selected=is_selected>{age}</option>
                             }
                         })
                         .collect::<Vec<_>>()}
@@ -992,7 +989,7 @@ pub fn ConfirmButton(
     let email_state = EmailVerificationState::from_leptos_context();
 
     // Create action for integrated prebook + backend save API call
-    let prebook_action = create_action(move |_: &()| async move {
+    let prebook_action = Action::new(move |_: &()| async move {
         log!("Integrated prebook action triggered - calling integrated API");
         BlockRoomUIState::set_loading(true);
 
@@ -1071,7 +1068,7 @@ pub fn ConfirmButton(
                     current_room_price,
                 );
 
-                log!("Integrated prebook action: After batch_update_on_success - loading: {}, block_room_called: {}", 
+                log!("Integrated prebook action: After batch_update_on_success - loading: {}, block_room_called: {}",
                      BlockRoomUIState::get_loading(), BlockRoomUIState::get_block_room_called());
 
                 Some(booking_id.to_order_id())
@@ -1133,9 +1130,9 @@ pub fn ConfirmButton(
         })
     };
 
-    let on_email_cancel = Callback::new(move |_: ()| {
+    let on_email_cancel = move || {
         // Cancellation is already handled in EmailVerificationState::cancel_verification
-    });
+    };
 
     view! {
         <button
@@ -1293,7 +1290,7 @@ pub fn PaymentModal() -> impl IntoView {
 //         <Show when=move || hotel_context().is_some()>
 //             <div class="mt-4">
 //                 <div class="flex items-center gap-2 mb-3">
-//                     <Icon icon=icondata::FaStarSolid class="text-yellow-400 text-sm" />
+//                     <Icon icon=icondata::FaStarSolid />
 //                     <span class="text-xs text-gray-400 font-semibold">Hotel Amenities</span>
 //                 </div>
 
@@ -1309,11 +1306,11 @@ pub fn PaymentModal() -> impl IntoView {
 //                                         <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
 //                                             {match icon {
 //                                                 Some(icon_data) => view! {
-//                                                     <Icon icon=icon_data class="text-gray-600 text-sm flex-shrink-0" />
-//                                                 }.into_view(),
+//                                                     <Icon icon=icon_data />
+//                                                 }.into_any(),
 //                                                 None => view! {
 //                                                     <div class="w-4 h-4 bg-gray-300 rounded-full flex-shrink-0"></div>
-//                                                 }.into_view()
+//                                                 }.into_any()
 //                                             }}
 //                                             <span class="text-xs text-gray-700 truncate">{facility.clone()}</span>
 //                                         </div>
@@ -1440,7 +1437,7 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
             <div class="flex flex-col items-center text-center space-y-4">
                 // <!-- Error icon -->
                 <div class=format!("w-16 h-16 rounded-full {} flex items-center justify-center", get_error_display().2)>
-                    <Icon icon=get_error_display().0 class=format!("text-3xl {}", get_error_display().1) />
+                    <span class=format!("text-3xl {}", get_error_display().1)><Icon icon=get_error_display().0/></span>
                 </div>
 
                 // <!-- Error title -->
@@ -1532,7 +1529,7 @@ pub fn EmailVerificationStep(
     );
 
     // Start timer when it becomes active
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if EmailVerificationState::get_timer_active() {
             (timer.resume)();
         } else {
@@ -1541,7 +1538,7 @@ pub fn EmailVerificationStep(
     });
 
     // Action to send OTP
-    let send_otp_action = create_action(move |_: &()| {
+    let send_otp_action = Action::new(move |_: &()| {
         let get_email = get_email.clone();
         let get_booking_id = get_booking_id.clone();
         async move {
@@ -1569,7 +1566,7 @@ pub fn EmailVerificationStep(
     });
 
     // Action to verify OTP
-    let verify_otp_action = create_action(move |otp: &String| {
+    let verify_otp_action = Action::new(move |otp: &String| {
         let read_booking_id =
             BookingId::read_from_local_storage().map(|booking_id| booking_id.to_order_id());
         let otp = otp.clone();
@@ -1582,7 +1579,7 @@ pub fn EmailVerificationStep(
                     Ok(response) => {
                         if EmailVerificationState::handle_verify_otp_success(response) {
                             // Verification successful - trigger callback
-                            Callable::call(&on_verified, ());
+                            on_verified.run(());
                         }
                     }
                     Err(e) => {
@@ -1614,7 +1611,7 @@ pub fn EmailVerificationStep(
 
     let cancel_verification = move |_| {
         EmailVerificationState::cancel_verification();
-        Callable::call(&on_cancel, ());
+        on_cancel.run(());
     };
 
     // Handle Enter key in OTP input
@@ -1634,7 +1631,7 @@ pub fn EmailVerificationStep(
                         class="text-gray-400 hover:text-gray-600"
                         on:click=cancel_verification
                     >
-                        <Icon icon=icondata::AiCloseOutlined class="text-xl" />
+                        <Icon icon=icondata::AiCloseOutlined />
                     </button>
                 </div>
 
@@ -1683,7 +1680,7 @@ pub fn EmailVerificationStep(
                                     // Timer display
                                     <Show when=move || EmailVerificationState::get_timer_active()>
                                         <div class="flex items-center text-xs text-gray-500 mt-1">
-                                            <Icon icon=icondata::AiClockCircleOutlined class="mr-1" />
+                                            <Icon icon=icondata::AiClockCircleOutlined />
                                             <span>"Resend in " {move || EmailVerificationState::format_timer()}</span>
                                         </div>
                                     </Show>
@@ -1717,7 +1714,7 @@ pub fn EmailVerificationStep(
                 <Show when=move || EmailVerificationState::get_verification_error().is_some()>
                     <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <div class="flex items-center">
-                            <Icon icon=icondata::AiExclamationCircleOutlined class="text-red-500 mr-2" />
+                            <Icon icon=icondata::AiExclamationCircleOutlined />
                             <p class="text-red-600 text-sm">{move || EmailVerificationState::get_verification_error().unwrap_or_default()}</p>
                         </div>
                     </div>
@@ -1736,11 +1733,11 @@ pub fn PaymentProviderButtons() -> impl IntoView {
     let total_price = move || BlockRoomUIState::get_total_price();
 
     // Payment loading state
-    let (payment_loading, set_payment_loading) = create_signal(false);
+    let (payment_loading, set_payment_loading) = signal(false);
     let (selected_provider, set_selected_provider) = create_signal::<Option<PaymentProvider>>(None);
 
     // Create payment action
-    let create_payment_action = create_action(move |provider: &PaymentProvider| {
+    let create_payment_action = Action::new(move |provider: &PaymentProvider| {
         let provider = provider.clone();
         async move {
             log!("Creating payment invoice with provider: {:?}", provider);
@@ -1856,7 +1853,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
     });
 
     // Handle action completion
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if create_payment_action.value().get().is_some() {
             set_payment_loading.set(false);
             set_selected_provider.set(None);

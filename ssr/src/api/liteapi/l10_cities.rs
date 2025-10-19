@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;

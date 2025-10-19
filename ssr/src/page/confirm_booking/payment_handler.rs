@@ -49,7 +49,7 @@
 
 //     let np_id_query_map = use_query::<NowpaymentsPaymentId>();
 
-//     let np_payment_id = create_memo(move |_| {
+//     let np_payment_id = Memo::new(move |_| {
 //         // let np_payment_id = Signal::derive(move || {
 //         let print_query_map = np_id_query_map.get();
 
@@ -64,7 +64,7 @@
 //     });
 
 //     // whenever the payment ID changes, we update the value in local storage as well
-//     create_effect(move |_| {
+//     Effect::new(move |_| {
 //         log!("create_effect - update np_payment_id = {np_payment_id:?}");
 //         // let (payment_store, set_payment_store, _) = use_payment_store();
 //         if payment_store.get().is_some() {
@@ -74,7 +74,7 @@
 //     });
 
 //     //  ================================= get_payment_status_api_call -  polling =================================\
-//     // let payments_api_called = create_rw_signal(false);
+//     // let payments_api_called = RwSignal::new(false);
 
 //     let Pausable {
 //         pause,
@@ -150,7 +150,7 @@
 //     );
 
 //     // if the updates to remote API are done, stop the API call use_interval
-//     create_effect(move |_| {
+//     Effect::new(move |_| {
 //         let should_stop_timer = payment_booking_step_signals
 //             .p02_update_payment_details_to_backend
 //             .get();
@@ -164,7 +164,7 @@
 //         };
 //     });
 
-//     let update_payment_details_to_backend = create_resource(
+//     let update_payment_details_to_backend = Resource::new(
 //         move || {
 //             payment_booking_step_signals
 //                 .p02_update_payment_details_to_backend

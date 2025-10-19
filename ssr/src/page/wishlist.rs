@@ -1,5 +1,6 @@
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
+use reqwest::{Client, Request};
 
 use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::ClientSideApiClient;
@@ -34,7 +35,7 @@ pub fn WishlistComponent() -> impl IntoView {
     // API client for fetching hotel details
     let api_client = ClientSideApiClient::new();
 
-    let wishlist_details = Resource::local(
+    let wishlist_details = Resource::new(
         move || AuthStateSignal::auth_state().get(),
         move |auth| async move {
             if auth.is_authenticated() {
@@ -42,17 +43,17 @@ pub fn WishlistComponent() -> impl IntoView {
             }
 
             let url = format!("/api/user-wishlist");
-            match gloo_net::http::Request::get(&url).send().await {
+            match Client::new().get(&url).send().await {
                 Ok(response) => {
                     if response.status() == 200 {
                         if let Ok(user_data) = response.json::<Vec<String>>().await {
-                            logging::log!("Fetched wishlist: {:?}", user_data);
+                            crate::log!("Fetched wishlist: {:?}", user_data);
                             AuthStateSignal::wishlist_set(Some(user_data));
                         }
                     }
                 }
                 Err(e) => {
-                    logging::log!("Failed to fetch wishlist: {:?}", e);
+                    crate::log!("Failed to fetch wishlist: {:?}", e);
                 }
             }
             None
@@ -60,7 +61,7 @@ pub fn WishlistComponent() -> impl IntoView {
     );
 
     // Create a resource that fetches all hotel details
-    let hotel_details_resource = create_resource(
+    let hotel_details_resource = Resource::new(
         move || wishlist_hotel_codes(),
         move |hotel_codes| {
             let api_client = api_client.clone();

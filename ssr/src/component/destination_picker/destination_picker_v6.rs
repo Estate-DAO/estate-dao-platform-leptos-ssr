@@ -3,7 +3,8 @@ use crate::api::client_side_api::{CitySearchResult, ClientSideApiClient, Place};
 
 use crate::log;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
-use leptos::{html::Div, NodeRef};
+use leptos::html::Div;
+use leptos::prelude::*;
 use leptos_use::on_click_outside;
 use wasm_bindgen::JsCast;
 use web_sys::MouseEvent;
@@ -25,11 +26,11 @@ pub fn DestinationPickerV6() -> impl IntoView {
     let search_ctx: UISearchCtx = expect_context();
 
     // Simple state management
-    let (search_text, set_search_text) = create_signal(String::new());
-    let (is_open, set_is_open) = create_signal(false);
-    let (active_index, set_active_index) = create_signal(0);
-    let (search_results, set_search_results) = create_signal(Vec::<Place>::new());
-    let (is_loading, set_is_loading) = create_signal(false);
+    let (search_text, set_search_text) = signal(String::new());
+    let (is_open, set_is_open) = signal(false);
+    let (active_index, set_active_index) = signal(0);
+    let (search_results, set_search_results) = signal(Vec::<Place>::new());
+    let (is_loading, set_is_loading) = signal(false);
 
     // DOM refs
     let container_ref = create_node_ref::<Div>();
@@ -39,7 +40,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     let api_client = ClientSideApiClient::new();
 
     // Initialize search text with current selection
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(place) = search_ctx.place.get() {
             if !is_open.get() {
                 let search_text = if place.formatted_address.trim().is_empty() {
@@ -55,7 +56,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     });
 
     // Reset active index when filtered options change
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = search_results.get();
         set_active_index.set(0);
     });
@@ -74,7 +75,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     });
 
     // Debounced search function
-    let perform_search = create_action(move |prefix: &String| {
+    let perform_search = Action::new(move |prefix: &String| {
         let prefix = prefix.clone();
         let api_client = api_client.clone();
         async move {
@@ -93,7 +94,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     });
 
     // Watch for search action completion
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(results) = perform_search.value().get() {
             set_search_results.set(results);
             set_is_loading.set(false);
@@ -101,7 +102,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     });
 
     // Watch for search action pending state
-    create_effect(move |_| {
+    Effect::new(move |_| {
         set_is_loading.set(perform_search.pending().get());
     });
 
@@ -240,12 +241,12 @@ pub fn DestinationPickerV6() -> impl IntoView {
     };
 
     // Add this function inside your component, before the view! macro
-    let highlight_match = move |text: &str, search: &str| -> View {
+    let highlight_match = move |text: &str, search: &str| -> AnyView {
         if search.is_empty() {
             return view! {
                 {text.to_string()}
             }
-            .into_view();
+            .into_any();
         }
 
         let search_lower = search.to_lowercase();
@@ -262,12 +263,12 @@ pub fn DestinationPickerV6() -> impl IntoView {
                 <span class="text-blue-700 font-medium">{matched.to_string()}</span>
                 {after.to_string()}
             }
-            .into_view()
+            .into_any()
         } else {
             view! {
                 {text.to_string()}
             }
-            .into_view()
+            .into_any()
         }
     };
 
@@ -277,7 +278,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
             node_ref=container_ref
         >
             <div class="absolute inset-y-0 left-2 py-6 px-4 text-xl pointer-events-none flex items-center">
-                <Icon icon=icondata::BsMap class="text-blue-500 font-bold" />
+                <Icon icon=icondata::BsMap />
             </div>
 
             <div class="relative w-full">
@@ -322,19 +323,19 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                             <div class="px-3 py-2 text-gray-500">
                                                 "Searching..."
                                             </div>
-                                        }.into_view()
+                                        }.into_any()
                                     } else if search_text_val.trim().is_empty() {
                                         view! {
                                             <div class="px-3 py-2 text-gray-500">
                                                 "Start typing to search cities..."
                                             </div>
-                                        }.into_view()
+                                        }.into_any()
                                     } else if results.is_empty() {
                                         view! {
                                             <div class="px-3 py-2 text-gray-500">
                                                 "No results found"
                                             </div>
-                                        }.into_view()
+                                        }.into_any()
                                     } else {
                                         results.into_iter().enumerate().map(|(i, dest)| {
                                             let dest_clone = dest.clone();
@@ -351,7 +352,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                                     }
                                                     role="option"
                                                     aria-selected=move || (active_index.get() == i).to_string()
-                                                    on:click=move |ev| {
+                                                    on:click=move |ev: MouseEvent| {
                                                         log!("Option clicked");
                                                         ev.stop_propagation();
                                                         select_option(dest_for_click.clone());
@@ -369,7 +370,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                                 }, &search_text.get())}
                                                 </div>
                                             }
-                                        }).collect::<Vec<_>>().into_view()
+                                        }).collect::<Vec<_>>().into_any()
                                     }
                                 }}
                             </div>

@@ -1,6 +1,6 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
-use leptos_router::use_query_map;
+use leptos_router::hooks::use_query_map;
 use std::collections::HashMap;
 
 use crate::api::client_side_api::{
@@ -31,7 +31,7 @@ pub fn ConfirmationPageV2() -> impl IntoView {
     let query_map = use_query_map();
 
     // Initialize state on component mount
-    create_effect(move |_| {
+    Effect::new(move |_| {
         ConfirmationPageState::initialize();
 
         // Extract payment_id from query params - support both NowPayments and Stripe
@@ -68,7 +68,7 @@ pub fn ConfirmationPageV2() -> impl IntoView {
     });
 
     // Separate effect to handle workflow trigger once cookie data is loaded
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // Cookie data is loaded synchronously, so we can check immediately
         let app_reference = CookieBookingContextState::get_app_reference().get();
         let payment_id = ConfirmationPageState::get_payment_id().get();
@@ -107,14 +107,14 @@ pub fn ConfirmationPageV2() -> impl IntoView {
             // Extract query parameters for API call
             let query_params = query_map.with(|params| {
                 params
-                    .0
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .clone()
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), v))
                     .collect::<HashMap<String, String>>()
             });
 
             // Spawn async task to call confirmation API
-            spawn_local(async move {
+            leptos::task::spawn_local(async move {
                 let api_client = ClientSideApiClient::new();
                 let (order_id, email) = CookieBookingContextState::get_order_details_untracked();
                 let app_ref_value = app_reference.unwrap(); // Safe because we checked above
@@ -279,13 +279,13 @@ fn NotificationListenerWrapper() -> impl IntoView {
                                 ConfirmationPageState::update_from_sse_notification(&notification);
                             })}
                         />
-                    }.into_view()
+                    }.into_any()
                 } else {
                     view! {
                         <div class="text-sm text-yellow-600 mb-4">
                             "Missing order details for real-time updates"
                         </div>
-                    }.into_view()
+                    }.into_any()
                 }
             } else {
                 view! {
@@ -296,7 +296,7 @@ fn NotificationListenerWrapper() -> impl IntoView {
                             "No booking reference found - unable to track confirmation status"
                         }}
                     </div>
-                }.into_view()
+                }.into_any()
             }
         }}
     }
@@ -351,12 +351,12 @@ fn IntegratedProgressStepper() -> impl IntoView {
                                         <div class=circle_classes>
                                             {if is_completed {
                                                 view! {
-                                                    <Icon icon=icondata::AiCheckOutlined class="w-3 h-3 sm:w-4 sm:h-4" />
-                                                }.into_view()
+                                                    <Icon icon=icondata::AiCheckOutlined />
+                                                }.into_any()
                                             } else {
                                                 view! {
                                                     <span class="text-xs sm:text-sm">{(index + 1).to_string()}</span>
-                                                }.into_view()
+                                                }.into_any()
                                             }}
                                         </div>
                                         <span class="mt-2 sm:mt-3 md:mt-4 text-[10px] sm:text-xs text-gray-600 text-center break-words max-w-[80px] sm:max-w-[100px] md:max-w-[120px]">
@@ -366,9 +366,9 @@ fn IntegratedProgressStepper() -> impl IntoView {
                                     {if index < 3 {
                                         view! {
                                             <div class=format!("h-[1px] w-12 sm:w-16 md:w-24 lg:w-40 transition-colors mt-3 sm:mt-4 mx-1 sm:mx-2 {}", line_color) />
-                                        }.into_view()
+                                        }.into_any()
                                     } else {
-                                        view! { <div /> }.into_view()
+                                        view! { <div /> }.into_any()
                                     }}
                                 </div>
                             }
@@ -395,9 +395,9 @@ fn IntegratedProgressStepper() -> impl IntoView {
                                             view! { <div>{detail}</div> }
                                         }).collect::<Vec<_>>()}
                                     </div>
-                                }.into_view()
+                                }.into_any()
                             } else {
-                                view! { <div /> }.into_view()
+                                view! { <div /> }.into_any()
                             }
                         }}
                     </div>
@@ -438,7 +438,7 @@ fn ErrorView() -> impl IntoView {
 
             // Error header
             <div class="text-center">
-                <Icon icon=icondata::AiCloseCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-red-500" />
+                <Icon icon=icondata::AiCloseCircleOutlined />
                 <h2 class="text-lg sm:text-xl md:text-2xl font-semibold text-red-600 mb-2">
                     "Booking Processing Error"
                 </h2>
@@ -487,29 +487,29 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                         if display_info.is_confirmed {
                             view! {
                                 <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-green-600">
-                                    <Icon icon=icondata::AiCheckCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
+                                    <Icon icon=icondata::AiCheckCircleOutlined />
                                     "Your Booking has been confirmed!"
                                 </div>
-                            }.into_view()
+                            }.into_any()
                         } else {
                             view! {
                                 <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-blue-600">
-                                    <Icon icon=icondata::AiClockCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
+                                    <Icon icon=icondata::AiClockCircleOutlined />
                                     "Your Booking is being processed"
                                     <p class="text-sm text-gray-600 mt-2 font-normal">
                                         {format!("Status: {}", display_info.booking_status_message)}
                                     </p>
                                 </div>
-                            }.into_view()
+                            }.into_any()
                         }
                     }
                     None => {
                         view! {
                             <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-blue-600">
-                                <Icon icon=icondata::AiClockCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
+                                <Icon icon=icondata::AiClockCircleOutlined />
                                 "Loading booking details..."
                             </div>
-                        }.into_view()
+                        }.into_any()
                     }
                 }
             }}
@@ -550,9 +550,9 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                                 {display_info.booking_ref_no.clone()}
                                             </p>
                                         </div>
-                                    }.into_view()
+                                    }.into_any()
                                 } else {
-                                    view! { <div></div> }.into_view()
+                                    view! { <div></div> }.into_any()
                                 }}
 
                                 // Confirmation Number (from provider - only show if available)
@@ -564,16 +564,16 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                                 {display_info.confirmation_no}
                                             </p>
                                         </div>
-                                    }.into_view()
+                                    }.into_any()
                                 } else {
-                                    view! { <div></div> }.into_view()
+                                    view! { <div></div> }.into_any()
                                 }}
 
                                 // Check-in and Check-out dates
                                 <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
                                     <div class="flex-1">
                                         <div class="flex items-center space-x-2">
-                                            <Icon icon=icondata::FaCalendarSolid class="w-3 h-3 text-gray-500" />
+                                            <Icon icon=icondata::FaCalendarSolid />
                                             <span class="text-gray-600 text-xs md:text-sm">"Check-in"</span>
                                         </div>
                                         <p class="text-sm md:text-base font-medium mt-1">
@@ -587,7 +587,7 @@ fn BookingConfirmationDisplay() -> impl IntoView {
 
                                     <div class="flex-1">
                                         <div class="flex items-center space-x-2">
-                                            <Icon icon=icondata::FaCalendarSolid class="w-3 h-3 text-gray-500" />
+                                            <Icon icon=icondata::FaCalendarSolid />
                                             <span class="text-gray-600 text-xs md:text-sm">"Check-out"</span>
                                         </div>
                                         <p class="text-sm md:text-base font-medium mt-1">
@@ -599,7 +599,7 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                 // Guests & Rooms
                                 <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
                                     <div class="flex items-center space-x-2">
-                                        <Icon icon=icondata::FaUsersSolid class="w-3 h-3 text-gray-500" />
+                                        <Icon icon=icondata::FaUsersSolid />
                                         <span class="text-gray-600 text-xs md:text-sm">"Guests & Rooms"</span>
                                     </div>
                                     <p class="text-sm md:text-base font-medium">
@@ -629,7 +629,7 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                     </div>
                                 </div>
                             </div>
-                        }.into_view()
+                        }.into_any()
                     }
                     None => {
                         view! {
@@ -639,7 +639,7 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                 </div>
                                 <p class="mt-2">"Loading booking details..."</p>
                             </div>
-                        }.into_view()
+                        }.into_any()
                     }
                 }
             }}

@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose, Engine as _};
-use leptos::*;
-use leptos_router::{use_navigate, use_query_map};
+use leptos::prelude::*;
+use leptos_router::hooks::{use_navigate, use_query_map};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;

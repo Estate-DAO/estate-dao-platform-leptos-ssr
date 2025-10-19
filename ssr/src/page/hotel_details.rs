@@ -26,7 +26,7 @@
 // use crate::view_state_layer::GlobalStateForLeptos;
 // use leptos::*;
 // use leptos_icons::Icon;
-// use leptos_router::use_navigate;
+// use leptos_router::hooks::use_navigate;
 // use std::collections::{HashMap, HashSet};
 // use web_sys::MouseEvent;
 
@@ -341,8 +341,8 @@
 // // // impl Default for RoomCounterKeyValue {
 // // //     fn default() -> Self {
 // // //         Self {
-// // //             key: create_rw_signal(0),
-// // //             value: create_rw_signal(None),
+// // //             key: RwSignal::new(0),
+// // //             value: RwSignal::new(None),
 // // //         }
 // // //     }
 // // // }
@@ -383,7 +383,7 @@
 //     let hotel_info_results_clone = hotel_info_results.clone();
 //     // let pricing_book_now_state: PricingBookNowState = expect_context();
 
-//     // create_effect(move |_| {
+//     // Effect::new(move |_| {
 //     //     let _val = hotel_info_results_clone.room_result.track();
 //     //     log!("[diagnosis] hotel_info_results_clone.room_result called from create_effect");
 //     //     let room_details = hotel_info_results_clone.get_hotel_room_details();
@@ -412,7 +412,7 @@
 //             </Show>
 
 //             <div class="flex items-center space-x-2">
-//                 <Icon icon=icondata::AiCalendarOutlined class="text-black text-lg md:text-xl" />
+//                 <Icon icon=icondata::AiCalendarOutlined />
 //                 <div>
 //                     {move || {
 //                         let search_ctx: SearchCtx = expect_context();
@@ -423,12 +423,12 @@
 //             </div>
 
 //             <div class="flex items-center space-x-2">
-//             <Icon icon=icondata::BsPerson class="text-black text-lg md:text-xl" />
+//             <Icon icon=icondata::BsPerson />
 //             <div>{move || pluralize(num_adults.get(), "adult", "adults")}</div>
 //             </div>
 
 //             <div class="flex items-center space-x-2">
-//             <Icon icon=icondata::LuSofa class="text-black text-lg md:text-xl" />
+//             <Icon icon=icondata::LuSofa />
 //             <div>{move || pluralize(num_rooms.get(), "room", "rooms")}</div>
 //             </div>
 
@@ -499,7 +499,7 @@
 //     let search_ctx: SearchCtx = expect_context();
 //     let num_nights = move || search_ctx.date_range.get().no_of_nights();
 
-//     let total_room_price = create_memo(|_| {
+//     let total_room_price = Memo::new(|_| {
 //         let pricing_book_state: PricingBookNowState = expect_context();
 //         pricing_book_state.room_counters_as_chosen_by_user.track();
 //         let valv = PricingBookNowState::total_room_price_for_all_user_selected_rooms();
@@ -519,13 +519,13 @@
 //     };
 
 //     let navigate = use_navigate();
-//     let loading = create_rw_signal(true);
+//     let loading = RwSignal::new(true);
 
 //     // let hotel_info_results: HotelInfoResults = expect_context();
 //     // let hotel_info_ctx: HotelInfoCtx = expect_context();
-//     let is_booking = create_rw_signal(false);
+//     let is_booking = RwSignal::new(false);
 
-//     let block_room_action = create_action(move |_| {
+//     let block_room_action = Action::new(move |_| {
 //         let nav = navigate.clone();
 //         let hotel_info_results: HotelInfoResults = expect_context();
 //         let loading_state = loading.clone();
@@ -582,7 +582,7 @@
 //         }
 //     });
 
-//     let can_book_now_memo = create_memo(move |_| total_room_price.get() > 0.001);
+//     let can_book_now_memo = Memo::new(move |_| total_room_price.get() > 0.001);
 //     let cannot_book_now = Signal::derive(move || !can_book_now_memo.get());
 
 //     view! {
@@ -675,20 +675,20 @@
 //     // let num_adults = Signal::derive(move || search_ctx.guests.get().adults.get());
 //     let max_rooms_allowed = move || search_ctx.guests.get().rooms.get();
 
-//     let room_type_signal = store_value(room_type.clone());
-//     // let room_type_signal = create_rw_signal(room_type.clone());
+//     let room_type_signal = StoredValue::new(room_type.clone());
+//     // let room_type_signal = RwSignal::new(room_type.clone());
 
 //     // let counter = move || {
 //     //     PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone())
 //     // };
-//     let counter = create_rw_signal(PricingBookNowState::get_count_of_rooms_for_room_type(
+//     let counter = RwSignal::new(PricingBookNowState::get_count_of_rooms_for_room_type(
 //         room_type_signal.get_value().clone(),
 //     ));
 
 //     // let counter_clone = move || {
 //     //     PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone())
 //     // };
-//     // let counter_clone = create_rw_signal(PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone()));
+//     // let counter_clone = RwSignal::new(PricingBookNowState::get_count_of_rooms_for_room_type(room_type_signal.get_value().clone()));
 
 //     let can_increment =
 //         move || PricingBookNowState::total_count_of_rooms_selected_by_user() < max_rooms_allowed();
@@ -738,13 +738,13 @@
 // pub fn AmenitiesIconText(icon: icondata::Icon, #[prop(into)] text: String) -> impl IntoView {
 //     view! {
 //         <div class="flex items-center">
-//             <Icon class="inline text-xl" icon=icon />
+//             < Icon icon=icon  />
 //             <span class="inline ml-2">{text}</span>
 //         </div>
 //     }
 // }
 
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn HotelDetailsPage() -> impl IntoView {

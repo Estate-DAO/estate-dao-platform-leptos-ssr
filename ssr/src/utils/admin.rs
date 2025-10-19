@@ -7,7 +7,7 @@ use ic_agent::{Agent, Identity};
 use super::ic::AgentWrapper;
 use crate::canister::backend::Backend;
 use crate::log;
-use leptos::{expect_context, use_context};
+use leptos::prelude::{expect_context, use_context};
 
 #[derive(Clone)]
 pub struct AdminCanisters {

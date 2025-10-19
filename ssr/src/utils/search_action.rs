@@ -1,5 +1,5 @@
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 
 use crate::{
     api::client_side_api::ClientSideApiClient,
@@ -44,7 +44,7 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
     let search_ctx: UISearchCtx = expect_context();
     let previous_search_ctx = expect_context::<PreviousSearchContext>();
 
-    create_action(move |_| {
+    Action::new(move |_| {
         log!(
             "Search action triggered with config: close_dialogs={}, navigate_with_params={}",
             config.close_dialogs,

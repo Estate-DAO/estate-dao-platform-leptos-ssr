@@ -16,8 +16,7 @@ use crate::{
 };
 // use leptos::logging::log;
 use crate::log;
-use leptos::RwSignal;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::{view_state::HotelInfoCtx, GlobalStateForLeptos};
@@ -308,9 +307,9 @@ impl UIPaginationState {
 impl Default for UIPaginationState {
     fn default() -> Self {
         Self {
-            current_page: create_rw_signal(1),
-            page_size: create_rw_signal(PAGINATION_LIMIT as u32), // Default page size
-            pagination_meta: create_rw_signal(None),
+            current_page: RwSignal::new(1),
+            page_size: RwSignal::new(PAGINATION_LIMIT as u32), // Default page size
+            pagination_meta: RwSignal::new(None),
         }
     }
 }

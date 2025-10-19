@@ -5,8 +5,7 @@ use crate::{
 };
 // use leptos::logging::log;
 use crate::log;
-use leptos::RwSignal;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Default, Clone)]

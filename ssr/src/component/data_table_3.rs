@@ -2,7 +2,7 @@ use crate::{
     api::canister::get_all_bookings::get_all_bookings_backend,
     canister::backend::{self, BookingSummary},
 };
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Clone, Default, Debug)]
 pub struct DataTableCtx {
@@ -219,11 +219,11 @@ fn SortIndicator(column: &'static str, label: &'static str) -> impl IntoView {
                     let sort_direction = ctx.sort_direction.get();
                     if sort_column == Some(column.to_string()) {
                         match sort_direction {
-                            SortDirection::Asc => view! { <span>"↑"</span> },
-                            SortDirection::Desc => view! { <span>"↓"</span> },
+                            SortDirection::Asc => view! { <span>"↑"</span> }.into_any(),
+                            SortDirection::Desc => view! { <span>"↓"</span> }.into_any(),
                         }
                     } else {
-                        view! { <span></span> }
+                        view! { <span></span> }.into_any()
                     }
                 }}
             </div>
@@ -293,13 +293,13 @@ pub fn DataTableV3() -> impl IntoView {
     let ctx: DataTableCtx = expect_context();
 
     // Load the data from server function get_all_bookings
-    let all_user_bookings = create_resource(
+    let all_user_bookings = Resource::new(
         move || (),
         move |_| async move { get_all_bookings_backend().await.unwrap_or(vec![]) },
     );
 
     // Use create_local_resource that combines data fetching with filtering/sorting
-    let filtered_sorted_bookings = create_local_resource(
+    let filtered_sorted_bookings = Resource::new(
         move || {
             (
                 ctx.booking_id_filter.get(),
@@ -322,15 +322,15 @@ pub fn DataTableV3() -> impl IntoView {
 
     // this create effect method also works.
     // // Create a signal that filters and sorts the bookings
-    // let filtered_sorted_bookings = create_rw_signal(vec![]);
+    // let filtered_sorted_bookings = RwSignal::new(vec![]);
 
-    // create_effect(move |_| {
+    // Effect::new(move |_| {
     //     all_user_bookings.get().map(|bookings| {
     //         filtered_sorted_bookings.set(DataTableCtx::filter_and_sort_bookings(bookings));
     //     });
     // });
 
-    // let filtered_sorted_bookings = create_local_resource(move || all_user_bookings.get(), move |user_bookings_from_api| async move {
+    // let filtered_sorted_bookings = LocalResource::new(move || all_user_bookings.get(), move |user_bookings_from_api| async move {
     //     DataTableCtx::filter_and_sort_bookings(user_bookings_from_api.unwrap_or(vec![]))
     // });
 
@@ -438,7 +438,7 @@ pub fn DataTableV3() -> impl IntoView {
                                         <tr>
                                             <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">"No bookings found matching the current filters."</td>
                                         </tr>
-                                    }.into_view()
+                                    }.into_any()
                                 } else {
                                     bookings.into_iter().enumerate().map(|(i, booking)| {
                                         let booking_id_display = format!("{:?}", booking.booking_id);
@@ -452,16 +452,16 @@ pub fn DataTableV3() -> impl IntoView {
                                                     {booking_id_display}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {&booking.destination}
+                                                    {booking.destination.to_string()}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {&booking.hotel_name}
+                                                    {booking.hotel_name.to_string()}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {&booking.booking_dates}
+                                                    {booking.booking_dates.to_string()}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {&booking.user_email}
+                                                    {booking.user_email.to_string()}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                     {booking.nights}
@@ -473,11 +473,11 @@ pub fn DataTableV3() -> impl IntoView {
                                                     <StatusBadge status=booking.payment_status.clone() status_type="payment" />
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {&booking.payment_id}
+                                                    {booking.payment_id.to_string()}
                                                 </td>
                                             </tr>
                                         }
-                                    }).collect::<Vec<_>>().into_view()
+                                    }).collect::<Vec<_>>().into_any()
                                 }
                             })
                             }}

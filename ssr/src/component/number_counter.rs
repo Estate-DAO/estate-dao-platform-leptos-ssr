@@ -1,5 +1,5 @@
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn NumberCounter(
@@ -51,7 +51,7 @@ pub fn NumberCounterV2(
 ) -> impl IntoView {
     let merged_class = format!("flex items-center justify-between {}", class);
     let min_value = min.unwrap_or(0);
-    let is_min = create_memo(move |_| {
+    let is_min = Memo::new(move |_| {
         let current_value = counter.get();
         let at_min = current_value <= min_value;
         // log!(

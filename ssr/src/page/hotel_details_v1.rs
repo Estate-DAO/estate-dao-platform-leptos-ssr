@@ -1,6 +1,6 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
-use leptos_router::{use_navigate, use_query_map};
+use leptos_router::hooks::{use_navigate, use_query_map};
 
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
@@ -168,14 +168,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
     // <!-- Query params handling for shareable URLs -->
     // Sync query params with state on page load (URL → State)
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let params = query_map.get();
-        if !params.0.is_empty() {
-            log!("Found query params in URL: {:?}", params);
+        let params_map: std::collections::HashMap<String, String> = params
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
+        if !params_map.is_empty() {
+            log!("Found query params in URL: {:?}", params_map);
 
-            if let Some(hotel_params) =
-                HotelDetailsParams::from_url_params(&params.0.into_iter().collect())
-            {
+            if let Some(hotel_params) = HotelDetailsParams::from_url_params(&params_map) {
                 log!("Parsed hotel params from URL: {:?}", hotel_params);
                 hotel_params.sync_to_app_state();
             }
@@ -195,7 +197,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     // <!-- Auto-update URL when essential data becomes available -->
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let hotel_code = hotel_info_ctx.hotel_code.get();
         let destination = ui_search_ctx.destination.get();
         let date_range = ui_search_ctx.date_range.get();
@@ -208,7 +210,11 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         if has_essential_data {
             // Only update URL if query params are empty (to avoid infinite loops)
             let current_params = query_map.get();
-            if current_params.0.is_empty() {
+            let params_map: std::collections::HashMap<String, String> = current_params
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect();
+            if params_map.is_empty() {
                 update_url_with_current_state();
             }
         }
@@ -217,7 +223,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // Create resource to fetch hotel details when page loads
     // Following the pattern from block_room_v1.rs prebook_resource
     // Enhanced to work with query params for shareable URLs
-    let hotel_details_resource = create_resource(
+    let hotel_details_resource = Resource::new(
         move || {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
@@ -231,7 +237,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Return true when ready to call API
             let is_ready = has_hotel_code && has_place_details && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}", 
+            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}",
                 has_hotel_code, has_place_details, has_valid_dates, is_ready);
 
             is_ready
@@ -463,7 +469,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                                                     "Please try different dates or check other hotels in the area."
                                                 </div>
                                             </div>
-                                        }
+                                        }.into_any()
                                     } else {
                                         view! {
                                             <div>
@@ -472,7 +478,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                                                     {error}
                                                 </div>
                                             </div>
-                                        }
+                                        }.into_any()
                                     }
                                 }
                             </div>
@@ -563,10 +569,10 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    // let (show_viewer, set_show_viewer) = create_signal(false);
-    let (selected_index, set_selected_index) = create_signal(0);
+    // let (show_viewer, set_show_viewer) = signal(false);
+    let (selected_index, set_selected_index) = signal(0);
 
-    let images_signal = create_memo(move |_| {
+    let images_signal = Memo::new(move |_| {
         if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
             let mut images = hotel_details.images.clone();
             if images.len() < 6 {
@@ -583,6 +589,7 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     move || {
         if images_signal().is_empty() {
             view! { <div class="text-gray-500 text-center py-8">No images available</div> }
+                .into_any()
         } else {
             view! {
                 <div>
@@ -673,7 +680,7 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
                         }
                     })}
                 </div>
-            }
+            }.into_any()
         }
     }
 }
@@ -683,7 +690,7 @@ pub fn AmenitiesIconText(icon: icondata::Icon, #[prop(into)] text: String) -> im
     view! {
         <div class="flex items-center">
         // todo: for now, we are showing a bullet only
-            <Icon class="inline text-xl text-gray-600" icon=icondata::BsDot />
+            < Icon icon=icondata::BsDot  />
             <span class="inline ml-2 text-sm text-gray-700">{text}</span>
         </div>
     }
@@ -703,7 +710,7 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
     // **Reactive State Management**:
     // Tracks room count for this specific room type using room_unique_id as key
     // Uses create_memo for efficient reactivity - only updates when selection changes
-    let room_count = create_memo({
+    let room_count = Memo::new({
         let room_key = room_unique_id.clone();
         move |_| {
             hotel_details_state
@@ -718,7 +725,7 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
     let is_at_minimum = move || room_count() == 0;
 
     // <!-- Room validation signals -->
-    let is_at_maximum = create_memo(move |_| {
+    let is_at_maximum = Memo::new(move |_| {
         // Disable increment if we're at the global room limit
         HotelDetailsUIState::is_at_room_selection_limit()
     });
@@ -786,7 +793,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     let navigate = use_navigate();
 
     // Create loading state for the Book Now button
-    let booking_loading = create_rw_signal(false);
+    let booking_loading = RwSignal::new(false);
 
     // Reactive signals for pricing calculations
     let date_range = move || ui_search_ctx.date_range.get();
@@ -804,10 +811,10 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     let has_rooms_selected = move || total_selected_rooms() > 0;
 
     // Create memo for button disabled state
-    let button_disabled = create_memo(move |_| !has_rooms_selected() || booking_loading.get());
+    let button_disabled = Memo::new(move |_| !has_rooms_selected() || booking_loading.get());
 
     // Create action for Book Now button
-    let book_now_action = create_action(move |_: &()| {
+    let book_now_action = Action::new(move |_: &()| {
         let navigate = navigate.clone();
         async move {
             booking_loading.set(true);
@@ -1006,8 +1013,8 @@ pub fn PricingBookNowV1() -> impl IntoView {
     let is_rooms_loading = move || hotel_details_state.loading.get();
 
     // Reactive signals for display
-    let total_price = create_memo(move |_| HotelDetailsUIState::total_room_price());
-    let has_price = create_memo(move |_| total_price.get() > 0.0);
+    let total_price = Memo::new(move |_| HotelDetailsUIState::total_room_price());
+    let has_price = Memo::new(move |_| total_price.get() > 0.0);
     let date_range = move || ui_search_ctx.date_range.get();
     let guests = ui_search_ctx.guests;
 
@@ -1052,7 +1059,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 
                 // <!-- Dates -->
                 <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::BiCalendarRegular />
+                    < Icon icon=icondata::BiCalendarRegular  />
                     <span class="text-gray-700">
                         {check_in_display} " to " {check_out_display}
                     </span>
@@ -1060,7 +1067,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 
                 // <!-- Adults -->
                 <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::BiUserRegular />
+                    < Icon icon=icondata::BiUserRegular  />
                     <span class="text-gray-700">
                         {adults_count} {move || if adults_count() == 1 { "adult" } else { "adults" }}
                     </span>
@@ -1068,7 +1075,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 
                 // <!-- Rooms -->
                 <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::RiHomeSmile2BuildingsLine />
+                    < Icon icon=icondata::RiHomeSmile2BuildingsLine  />
                     <span class="text-gray-700">
                         {rooms_count} {move || if rooms_count() == 1 { "room" } else { "rooms" }}
                     </span>

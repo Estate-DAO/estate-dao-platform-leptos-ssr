@@ -39,10 +39,11 @@ cfg_if::cfg_if! {
         #[wasm_bindgen::prelude::wasm_bindgen]
         pub fn hydrate() {
             use crate::app::*;
+            use leptos::prelude::*;
             // initializes logging using the `log` crate
             _ = console_log::init_with_level(log::Level::Debug);
             console_error_panic_hook::set_once();
-            leptos::mount_to_body(App);
+            leptos::mount::mount_to_body(|| view! { <App /> });
         }
 
     }

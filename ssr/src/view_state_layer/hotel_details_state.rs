@@ -3,7 +3,7 @@ use super::GlobalStateForLeptos;
 // use crate::api::{HotelRoomDetail, RoomDetail};
 use crate::canister::backend::RoomDetails;
 use crate::{log, warn};
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 

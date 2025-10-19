@@ -1,6 +1,6 @@
 use crate::domain::{DomainHotelDetails, DomainRoomData};
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::HashMap;
 
 // Domain types for form data

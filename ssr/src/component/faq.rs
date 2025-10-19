@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 /// Single FAQ item with nicer styling + smooth slide animation
 #[component]
@@ -7,7 +7,7 @@ fn FaqItem(
     #[prop(into)] answer: String,
     #[prop(into)] initially_open: bool,
 ) -> impl IntoView {
-    let (open, set_open) = create_signal(initially_open);
+    let (open, set_open) = signal(initially_open);
 
     // button classes adapt to `open`
     let btn_class = move || {

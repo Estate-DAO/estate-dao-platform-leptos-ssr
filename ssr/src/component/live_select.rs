@@ -90,20 +90,20 @@
 //     ) -> Self {
 //         // Initialize search text with current value's label if available
 //         let initial_text = value.get().map_or(String::new(), |v| {
-//             leptos::Callable::call(&label_fn, v.clone())
+//             label_fn(v.clone())
 //         });
-//         let search_text = create_rw_signal(initial_text);
-//         let is_open = create_rw_signal(false);
-//         let active_index = create_rw_signal(0);
+//         let search_text = RwSignal::new(initial_text);
+//         let is_open = RwSignal::new(false);
+//         let active_index = RwSignal::new(0);
 
 //         let input_ref = create_node_ref::<Input>();
 //         let dropdown_ref = create_node_ref::<Div>();
 //         let container_ref = create_node_ref::<Div>();
 
 //         // Create effect to update search text when value changes
-//         create_effect(move |_| {
+//         Effect::new(move |_| {
 //             let current_text = value.get().map_or(String::new(), |v| {
-//                 leptos::Callable::call(&label_fn, v.clone())
+//                 label_fn(v.clone())
 //             });
 //             if !is_open.get() {
 //                 // Only update when dropdown is closed to avoid interfering with user typing
@@ -113,7 +113,7 @@
 
 //         let options_clone = options.clone();
 //         // Create filtered options memo
-//         let filtered_options = create_memo(move |_| {
+//         let filtered_options = Memo::new(move |_| {
 //             let search = search_text.get().to_lowercase();
 //             let all_options = options.get();
 
@@ -124,7 +124,7 @@
 //             all_options
 //                 .into_iter()
 //                 .filter(|opt| {
-//                     leptos::Callable::call(&label_fn, opt.clone())
+//                     label_fn(opt.clone())
 //                         .to_lowercase()
 //                         .contains(&search)
 //                 })
@@ -196,10 +196,10 @@
 //         let label_fn = self.label_fn.clone();
 
 //         Callback::new(move |opt: T| {
-//             let label = leptos::Callable::call(&label_fn, opt.clone());
-//             leptos::Callable::call(&set_value, opt);
-//             leptos::Callable::call(&close_dropdown, ());
-//             leptos::Callable::call(&set_search_text, label.clone());
+//             let label = label_fn(opt.clone());
+//             set_value(opt);
+//             close_dropdown(());
+//             set_search_text(label.clone());
 
 //             // Focus the input after selection
 //             if let Some(input) = input_ref.get() {
@@ -216,9 +216,9 @@
 
 //         Callback::new(move |ev: Event| {
 //             let value = event_target_value(&ev);
-//             leptos::Callable::call(&set_search_text, value);
-//             leptos::Callable::call(&open_dropdown, ());
-//             leptos::Callable::call(&set_active_index, 0);
+//             set_search_text(value);
+//             open_dropdown(());
+//             set_active_index(0);
 //         })
 //     }
 
@@ -232,7 +232,7 @@
 //             // Only set search text if it's empty and there's a selected value
 //             if search_text.get().is_empty() {
 //                 if let Some(value) = selected_value.get() {
-//                     let label = leptos::Callable::call(&label_fn, value);
+//                     let label = label_fn(value);
 //                     search_text.set(label);
 //                 }
 //             }
@@ -246,7 +246,7 @@
 
 //         Callback::new(move |ev: MouseEvent| {
 //             ev.stop_propagation();
-//             leptos::Callable::call(&toggle_dropdown, ());
+//             toggle_dropdown(());
 
 //             // Focus the input when toggling
 //             if let Some(input) = input_ref.get() {
@@ -270,7 +270,7 @@
 //                 ev.prevent_default();
 
 //                 if !is_open.get() {
-//                     leptos::Callable::call(&open_dropdown, ());
+//                     open_dropdown(());
 //                     return;
 //                 }
 
@@ -286,13 +286,13 @@
 //                     current + 1
 //                 };
 
-//                 leptos::Callable::call(&set_active_index, next);
+//                 set_active_index(next);
 //             }
 //             "ArrowUp" => {
 //                 ev.prevent_default();
 
 //                 if !is_open.get() {
-//                     leptos::Callable::call(&open_dropdown, ());
+//                     open_dropdown(());
 //                     return;
 //                 }
 
@@ -308,7 +308,7 @@
 //                     current - 1
 //                 };
 
-//                 leptos::Callable::call(&set_active_index, next);
+//                 set_active_index(next);
 //             }
 //             "Enter" => {
 //                 if is_open.get() {
@@ -318,25 +318,25 @@
 //                     let current = active_index.get();
 
 //                     if !filtered.is_empty() && current < filtered.len() {
-//                         leptos::Callable::call(&select_option, filtered[current].clone());
+//                         select_option(filtered[current].clone());
 //                     }
 //                 }
 //             }
 //             "Escape" => {
 //                 if is_open.get() {
 //                     ev.prevent_default();
-//                     leptos::Callable::call(&close_dropdown, ());
+//                     close_dropdown(());
 //                 }
 //             }
 //             "Tab" => {
 //                 if is_open.get() {
-//                     leptos::Callable::call(&close_dropdown, ());
+//                     close_dropdown(());
 //                 }
 //             }
 //             "Home" => {
 //                 if is_open.get() {
 //                     ev.prevent_default();
-//                     leptos::Callable::call(&set_active_index, 0);
+//                     set_active_index(0);
 //                 }
 //             }
 //             "End" => {
@@ -344,7 +344,7 @@
 //                     ev.prevent_default();
 //                     let filtered = filtered_options.get();
 //                     if !filtered.is_empty() {
-//                         leptos::Callable::call(&set_active_index, filtered.len() - 1);
+//                         set_active_index(filtered.len() - 1);
 //                     }
 //                 }
 //             }
@@ -356,7 +356,7 @@
 //     pub fn highlight_text(&self) -> Callback<(String, String), Vec<View>> {
 //         Callback::new(|(text, search): (String, String)| {
 //             if search.is_empty() {
-//                 return vec![text.into_view()];
+//                 return vec![text.into_any()];
 //             }
 
 //             let mut result = Vec::new();
@@ -365,7 +365,7 @@
 
 //             while let Some(start_idx) = remaining.to_lowercase().find(&search_lower) {
 //                 if start_idx > 0 {
-//                     result.push(remaining[..start_idx].to_string().into_view());
+//                     result.push(remaining[..start_idx].to_string().into_any());
 //                 }
 
 //                 let end_idx = start_idx + search.len();
@@ -375,14 +375,14 @@
 //                             {remaining[start_idx..end_idx].to_string()}
 //                         </span>
 //                     }
-//                     .into_view(),
+//                     .into_any(),
 //                 );
 
 //                 remaining = remaining[end_idx..].to_string();
 //             }
 
 //             if !remaining.is_empty() {
-//                 result.push(remaining.into_view());
+//                 result.push(remaining.into_any());
 //             }
 
 //             result
@@ -397,7 +397,7 @@
 
 //         let close_fn = move |_| {
 //             if is_open.get() {
-//                 leptos::Callable::call(&close_dropdown, ());
+//                 close_dropdown(());
 //             }
 //         };
 
@@ -418,7 +418,7 @@
 //                                     .get()
 //                                     .map_or(false, |c| !c.contains(Some(&element)))
 //                                 {
-//                                     leptos::Callable::call(&close_dropdown, ());
+//                                     close_dropdown(());
 //                                     ev.stop_propagation();
 //                                 }
 //                             }
@@ -480,7 +480,7 @@
 //     T: Clone + PartialEq + 'static,
 // {
 //     let option_id = format!("option-{index}");
-//     let label = leptos::Callable::call(&label_fn, option.clone());
+//     let label = label_fn(option.clone());
 
 //     view! {
 //         <li
@@ -495,11 +495,11 @@
 //             }
 //             role="option"
 //             aria-selected=move || active.get().to_string()
-//             on:click=move |_| leptos::Callable::call(&on_select, option.clone())
+//             on:click=move |_| on_select(option.clone())
 //             on:mouseenter=move |_| { }
 //         >
 //             {move || {
-//                 leptos::Callable::call(&highlight_text, (label.clone(), search_text.get()))
+//                 highlight_text((label.clone(), search_text.get()))
 //             }}
 //         </li>
 //     }
@@ -588,8 +588,8 @@
 //     input_ref: NodeRef<Input>,
 //     #[prop(optional, into)] input_class: MaybeSignal<String>,
 // ) -> impl IntoView {
-//     let input_placeholder = create_memo(move |_| placeholder.get());
-//     let icon = create_memo(move |_| {
+//     let input_placeholder = Memo::new(move |_| placeholder.get());
+//     let icon = Memo::new(move |_| {
 //         if is_open.get() {
 //             icondata::BiChevronUpRegular
 //         } else {
@@ -613,10 +613,10 @@
 //                 aria-activedescendant=move || format!("{}-option-{}", id, active_index.get())
 //                 role="combobox"
 //                 value=search_text
-//                 on:input=move |ev| leptos::Callable::call(&handle_input, ev)
-//                 on:focus=move |ev| leptos::Callable::call(&handle_focus, ev)
-//                 on:keydown=move |ev| leptos::Callable::call(&handle_key_down, ev)
-//                 on:click=move |ev| leptos::Callable::call(&handle_toggle_click, ev)
+//                 on:input=move |ev| handle_input(ev)
+//                 on:focus=move |ev| handle_focus(ev)
+//                 on:keydown=move |ev| handle_key_down(ev)
+//                 on:click=move |ev| handle_toggle_click(ev)
 //             />
 //         </div>
 
@@ -628,7 +628,7 @@
 //     >
 //         {move || {
 //             view! {
-//                 <Icon icon=icon class="w-4 h-4" />
+//                 <Icon icon=icon />
 //             }
 //         }}
 //     </div>
@@ -667,26 +667,26 @@
 //     hook.init_click_outside();
 
 //     // Set initial search text based on selected value
-//     create_effect(move |_| {
+//     Effect::new(move |_| {
 //         if let Some(opt) = state.selected_value.get() {
-//             let selected_label = leptos::Callable::call(&hook.label_fn, opt);
+//             let selected_label = hook.label_fn(opt);
 //             if state.search_text.get().is_empty() {
-//                 leptos::Callable::call(&state.set_search_text, selected_label);
+//                 state.set_search_text(selected_label);
 //             }
 //         }
 //     });
 
 //     // Close dropdown when options change to empty
-//     create_effect(move |_| {
+//     Effect::new(move |_| {
 //         let options_list = hook.options.get();
 //         if options_list.is_empty() && state.is_open.get() {
-//             leptos::Callable::call(&state.close_dropdown, ());
+//             state.close_dropdown(());
 //         }
 //     });
 
 //     // Debug mode
 //     if debug {
-//         create_effect(move |_| {
+//         Effect::new(move |_| {
 //             log!("Search text: {}", state.search_text.get());
 //             log!("Is open: {}", state.is_open.get());
 //             log!("Active index: {}", state.active_index.get());
@@ -695,7 +695,7 @@
 //                 state
 //                     .selected_value
 //                     .get()
-//                     .map(|v| leptos::Callable::call(&hook.label_fn, v))
+//                     .map(|v| hook.label_fn(v))
 //             );
 //             log!("Filtered options: {:?}", state.filtered_options.get().len());
 //         });
@@ -733,9 +733,9 @@
 //                     dropdown_ref=state.dropdown_ref
 //                     dropdown_class=dropdown_class.clone()
 //                 />
-//                     }.into_view()
+//                     }.into_any()
 //                 } else {
-//                     view! { <></> }.into_view()
+//                     view! { <></> }.into_any()
 //                 }
 //             }}
 //         </div>
