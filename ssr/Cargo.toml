@@ -287,7 +287,7 @@ site-pkg-dir = "pkg"
 # style-file = "style/main.scss"
 
 # The tailwind input file.
-tailwind-input-file = "style/input.css"
+tailwind-input-file = "style/output.css"
 
 # The tailwind config file.
 tailwind-config-file = "tailwind.config.js"

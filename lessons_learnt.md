@@ -645,3 +645,127 @@ The Leptos 0.6 → 0.8 migration is now complete and fully functional:
 
 The migration demonstrates that while Leptos 0.8 requires more explicit structure, it provides better control and clarity for SSR applications.
 
+
+## Leptos 0.8 Migration - CSS Loading Fix
+### Date: 2025-01-$(date +%d)
+
+#### Problem: Tailwind CSS Not Loading
+After upgrading to Leptos 0.8, the application loaded without any CSS styling. The browser console showed 404 errors for `/pkg/estate-fe.css`.
+
+#### Root Cause
+1. **CSS File Hashing**: In Leptos 0.8, CSS files are generated with hashed filenames by default (e.g., `estate-fe.vlVOkkx-hbCav1whuBNZFg.css`)
+2. **Explicit CSS Reference Required**: Unlike some frameworks, `<HydrationScripts>` in Leptos 0.8 SSR only handles JavaScript/WASM hydration, not CSS
+3. **Static Path Mismatch**: The `<Stylesheet>` component was referencing `/pkg/estate-fe.css` but the generated file had a hash in its name
+
+#### Solution Applied
+1. **Disabled CSS File Hashing** in `ssr/Cargo.toml`:
+   ```toml
+   [package.metadata.leptos]
+   # ... other config ...
+   hash-files = false  # Disable hashing for easier CSS referencing
+   ```
+
+2. **Explicitly Added CSS Link** in `ssr/src/app.rs`:
+   ```rust
+   view! {
+       <Meta property="og:title" content="..." />
+       <Stylesheet id="leptos" href="/pkg/estate-fe.css" />  // Explicit CSS reference
+       // ... rest of head content
+   }
+   ```
+
+#### Key Learnings
+1. **CSS Must Be Explicitly Loaded**: In Leptos 0.8 SSR, CSS files must be explicitly referenced using `<Stylesheet>` or `<Link>` components
+2. **HydrationScripts != CSS Injection**: The `<HydrationScripts>` component only handles JS/WASM hydration, not stylesheet injection
+3. **File Hashing Configuration**: The `hash-files` config in Cargo.toml can be set to `false` for development to simplify asset references
+4. **Static File Serving**: Axum's `ServeDir` in the fallback handler correctly serves files from `target/site/`
+
+#### Alternative Approach (Production)
+For production with hashed filenames:
+- Keep `hash-files = true`
+- Read the asset manifest at runtime
+- Dynamically inject the correct hashed CSS filename
+- This provides better cache-busting for production deployments
+
+#### Files Modified
+- `ssr/Cargo.toml`: Added `hash-files = false`
+- `ssr/src/app.rs`: Re-added `<Stylesheet>` component
+
+#### Verification
+```bash
+# Check CSS file exists
+ls -lah target/site/pkg/estate-fe.css
+
+# Verify it's served correctly
+curl -I http://localhost:3002/pkg/estate-fe.css
+
+# Should return 200 OK with ~7-8KB Tailwind CSS file
+```
+
+#### Status: ✅ RESOLVED
+The application now loads with full Tailwind CSS styling as expected.
+
+## CSS Loading Fix - The Real Solution
+### Date: 2025-01-22 (Updated)
+
+#### The Problem
+Even after setting `hash-files = false` in Cargo.toml, the CSS file was still being generated with a hash: `estate-fe.vlVOkkx-hbCav1whuBNZFg.css`
+
+#### The Real Root Cause
+**Environment variables override Cargo.toml configuration!**
+
+The `scripts/local_run.sh` script had:
+```bash
+export LEPTOS_HASH_FILES="true"
+```
+
+This environment variable was **overriding** the `hash-files = false` setting in Cargo.toml, causing the CSS to continue being hashed regardless of the Cargo.toml configuration.
+
+#### The Complete Fix
+
+**1. Update scripts/local_run.sh (Line 47):**
+```bash
+# Changed from:
+export LEPTOS_HASH_FILES="true"
+
+# To:
+export LEPTOS_HASH_FILES="false"
+```
+
+**2. Keep hash-files = false in ssr/Cargo.toml:**
+```toml
+[package.metadata.leptos]
+hash-files = false
+```
+
+**3. Keep explicit Stylesheet in ssr/src/app.rs:**
+```rust
+<Stylesheet id="leptos" href="/pkg/estate-fe.css" />
+```
+
+**4. Clean rebuild:**
+```bash
+rm -f target/site/pkg/*.css
+bash scripts/local_run.sh
+```
+
+#### Result
+✅ CSS now generates as `estate-fe.css` (no hash)
+✅ Browser loads `/pkg/estate-fe.css` successfully (200 OK)
+✅ Tailwind styles are applied correctly
+
+#### Key Lesson
+**Environment variables ALWAYS override Cargo.toml configuration!**
+
+When debugging Leptos configuration issues:
+1. Check Cargo.toml settings
+2. Check environment variables in build scripts
+3. Environment variables take precedence
+
+#### Files Modified
+- `scripts/local_run.sh`: Changed `LEPTOS_HASH_FILES="true"` to `"false"`
+- `ssr/Cargo.toml`: Added `hash-files = false` (but this alone wasn't enough)
+- `ssr/src/app.rs`: Kept explicit `<Stylesheet>` component
+
+#### Testing
+Run `./test_css_loading.sh` to verify all configuration is correct before starting the server.

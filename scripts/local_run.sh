@@ -1,5 +1,5 @@
 #!/bin/bash
-set -a 
+set -a
 
 source .env
 
@@ -44,7 +44,7 @@ export NOWPAYMENTS_API_HOST="http://localhost:3001"
 echo "NGROK_LOCALHOST_URL: $NGROK_LOCALHOST_URL"
 export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
 
-export LEPTOS_HASH_FILES="true"
+export LEPTOS_HASH_FILES="false"
 # FOR LOCAL BUILDS 
 
 cargo leptos build --lib-features "local-lib,debug_display" --bin-features "local-bin,debug_display" || exit 1
@@ -56,7 +56,7 @@ cargo leptos build --lib-features "local-lib,debug_display" --bin-features "loca
 
 
 
-# FOR STAGING  BUILDS 
+# FOR STAGING  BUILDS
 # cargo leptos build --lib-features "release-lib" --bin-features "release-bin" --release || exit 1
 # ./target/release/estate-fe
 

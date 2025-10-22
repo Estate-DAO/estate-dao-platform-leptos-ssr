@@ -34,19 +34,12 @@ cfg_if::cfg_if! {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "hydrate")] {
-        #[wasm_bindgen::prelude::wasm_bindgen]
-        pub fn hydrate() {
-            use crate::app::*;
-            use leptos::prelude::*;
-            // initializes logging using the `log` crate
-            _ = console_log::init_with_level(log::Level::Debug);
-            console_error_panic_hook::set_once();
-            leptos::mount::mount_to_body(|| view! { <App /> });
-        }
-
-    }
+#[cfg(feature = "hydrate")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
+    use crate::app::App;
+    console_error_panic_hook::set_once();
+    leptos::mount::hydrate_body(App);
 }
 
 #[cfg(not(feature = "hydrate"))]

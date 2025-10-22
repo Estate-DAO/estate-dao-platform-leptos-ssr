@@ -164,6 +164,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <AutoReload options=options.clone() />
                 <HydrationScripts options />
+                <link rel="stylesheet" href="/pkg/estate-fe.css" />
                 <MetaTags />
             </head>
             <body>
@@ -242,7 +243,7 @@ pub fn App() -> impl IntoView {
         <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
         <Meta property="og:image" content="/img/logo_white.svg" />
 
-        <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
+
         <Link rel="preconnect" href="https://fonts.googleapis.com" />
         <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
         <Link
