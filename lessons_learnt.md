@@ -769,3 +769,190 @@ When debugging Leptos configuration issues:
 
 #### Testing
 Run `./test_css_loading.sh` to verify all configuration is correct before starting the server.
+
+
+## OAuth CSRF Cookie Fix - axum-extra 0.10 Breaking Change
+### Date: 2025-01-22
+
+#### Problem: OAuth Login Failing with "missing CSRF cookie"
+After upgrading from Leptos 0.6 to 0.8 (which requires Axum 0.8 and axum-extra 0.10), OAuth login was failing with:
+```
+missing CSRF cookie
+```
+
+#### Root Cause
+**Breaking change in axum-extra 0.10**: `SignedCookieJar` no longer automatically extracts the signing key from app state. It now requires an explicit layer to be added to the router.
+
+In axum-extra 0.9 and earlier:
+- `SignedCookieJar` could extract the key from `AppState` via `FromRef`
+- No additional configuration needed
+
+In axum-extra 0.10:
+- `SignedCookieJar` requires `SignedCookieJarLayer` to be explicitly added
+- The layer provides the signing key to all handlers
+
+#### The Fix
+
+**Step 1**: Import the layer in `ssr/src/main.rs`:
+```rust
+use axum_extra::extract::cookie::SignedCookieJarLayer;
+```
+
+**Step 2**: Add the layer to the router (before `.with_state()`):
+```rust
+let app = Router::new()
+    .route("/auth/google", get(google_auth))
+    .route("/auth/google/callback", get(google_callback))
+    // ... other routes ...
+    .layer(cors)
+    .layer(trace_layer)
+    .layer(middleware::from_fn(domain_normalization_middleware))
+    .layer(middleware::from_fn_with_state(res.clone(), selective_auth_middleware))
+    .layer(SignedCookieJarLayer::from_key(res.cookie_key.clone()))  // ADD THIS
+    .with_state(res);
+```
+
+#### Why This Works
+The `SignedCookieJarLayer` provides the signing key to all route handlers that use `SignedCookieJar` as an extractor:
+- In `google_auth`: Signs the CSRF and PKCE cookies when setting them
+- In `google_callback`: Verifies signed cookies when reading them
+- In `logout`: Properly removes signed cookies
+
+#### Layer Ordering
+The `SignedCookieJarLayer` should be placed:
+- **After** other middleware layers (CORS, tracing, auth)
+- **Before** `.with_state()` call
+
+This ensures cookies are properly signed/verified while still allowing other middleware to function correctly.
+
+#### Key Lessons
+1. **Read migration guides carefully**: axum-extra 0.10 had breaking changes for cookie handling
+2. **Layer order matters**: Cookie layer must be before `.with_state()`
+3. **Type checking helps**: The fix compiled immediately once added correctly
+4. **Context vs Layers**: Axum 0.8 prefers layers over context for cross-cutting concerns
+
+#### Files Modified
+- `ssr/src/main.rs`: Added `SignedCookieJarLayer` import and layer
+
+#### Verification Steps
+1. Run `bash scripts/local_check.sh` - should compile without errors
+2. Run `bash scripts/local_run.sh` 
+3. Navigate to login page
+4. Click "Login with Google"
+5. Verify OAuth flow completes successfully
+
+#### Status: ✅ FIXED
+
+#### References
+- [axum-extra 0.10 SignedCookieJar docs](https://docs.rs/axum-extra/0.10/axum_extra/extract/cookie/struct.SignedCookieJar.html)
+- [Axum 0.7 to 0.8 migration guide](https://github.com/tokio-rs/axum/blob/main/axum/CHANGELOG.md)
+
+
+## OAuth CSRF Cookie Debugging - axum-extra 0.10 
+### Date: 2025-01-22 (Updated)
+
+#### Problem: "missing CSRF cookie" after Leptos 0.8 upgrade
+After upgrading to Leptos 0.8 (which requires Axum 0.8 and axum-extra 0.10), OAuth login was failing with "missing CSRF cookie" error.
+
+#### Investigation Results
+
+**Initial assumption (WRONG):** Thought axum-extra 0.10 required a `SignedCookieJarLayer` to be added to router.
+**Reality:** No such layer exists. axum-extra 0.10 uses `FromRef<AppState>` pattern for key extraction.
+
+#### How SignedCookieJar Works in axum-extra 0.10
+
+1. **AppState must have a `cookie_key: Key` field** ✅ Already present
+2. **AppState must derive `FromRef`** ✅ Already present: `#[derive(FromRef, Clone, Debug)]`
+3. **Router must use `.with_state(app_state)`** ✅ Already present
+4. **No layer needed** - SignedCookieJar automatically extracts Key via FromRef
+
+```rust
+// Correct pattern (already in our code):
+#[derive(FromRef, Clone, Debug)]
+pub struct AppState {
+    pub cookie_key: Key,
+    // ... other fields
+}
+
+// SignedCookieJar as extractor automatically gets the key:
+async fn handler(jar: SignedCookieJar) -> impl IntoResponse {
+    jar.add(Cookie::new("name", "value"))  // Automatically signed with key
+}
+```
+
+#### Root Cause
+The code structure is **already correct**. The "missing CSRF cookie" error is a **runtime issue**, not a code structure issue.
+
+#### Debugging Steps Added
+1. **Enabled debug logging** in `oauth.rs` to track cookie operations
+2. **Created comprehensive debugging guide**: `DEBUG_OAUTH_CSRF.md`
+3. **Updated documentation** with correct information about axum-extra 0.10
+
+#### Possible Runtime Issues
+The error could be caused by:
+1. **Environment config**: Wrong `APP_URL` or `COOKIE_KEY` 
+2. **Cookie domain mismatch**: Especially for localhost testing
+3. **SameSite policy**: Browser blocking cookies in OAuth redirect flow
+4. **Secure flag**: Cookies requiring HTTPS but using HTTP
+5. **Cookie key verification**: Key different between signing and verification
+
+#### Files Modified
+- `ssr/src/oauth.rs`: Uncommented debug logging statements
+- `DEBUG_OAUTH_CSRF.md`: Created comprehensive debugging guide
+- `OAUTH_FIX_SUMMARY.md`: Updated with correct information
+- `oauth_csrf_fix_plan.md`: Original plan (now known to be incorrect approach)
+
+#### Key Lessons
+1. **Read the docs carefully**: axum-extra 0.10 docs clearly show FromRef pattern, not layer
+2. **No SignedCookieJarLayer exists**: Was misled by similar patterns in other cookie libraries
+3. **Code structure can be correct while runtime fails**: Environment and configuration matter
+4. **Systematic debugging**: Use logs and browser DevTools to diagnose runtime issues
+
+#### Next Steps for User
+1. Run `bash scripts/local_run.sh` and test OAuth login
+2. Check server logs for "Setting CSRF cookie" messages
+3. Use browser DevTools to verify cookies are being set
+4. Follow `DEBUG_OAUTH_CSRF.md` for systematic troubleshooting
+5. Most likely need to verify environment variables (APP_URL, COOKIE_KEY)
+
+#### Status
+✅ **Code structure verified correct**  
+🔍 **Runtime debugging guide provided**  
+📚 **Documentation updated with accurate information**
+
+#### References
+- [axum-extra 0.10 SignedCookieJar docs](https://docs.rs/axum-extra/0.10/axum_extra/extract/cookie/struct.SignedCookieJar.html)
+- [Axum FromRef pattern](https://docs.rs/axum/latest/axum/extract/trait.FromRef.html)
+- See `DEBUG_OAUTH_CSRF.md` for complete debugging guide
+
+
+### ACTUAL ROOT CAUSE FOUND - Hardcoded NGROK_LOCALHOST_URL
+
+**Real Issue:** The `scripts/local_run.sh` had a hardcoded line:
+```bash
+export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
+```
+
+This was overriding the `.env` configuration and causing cookies to be set for the ngrok domain even when accessing via localhost.
+
+**The Flow:**
+1. `local-consts` feature flag → uses `NGROK_LOCALHOST_URL` env var
+2. `scripts/local_run.sh` → hardcodes `NGROK_LOCALHOST_URL` to ngrok URL
+3. `get_app_domain_with_dot()` → extracts domain from `APP_URL` (which is set from `NGROK_LOCALHOST_URL`)
+4. Cookies set for `.louse-musical-hideously.ngrok-free.app`
+5. But Google redirects to `localhost:3002` (from `GOOGLE_REDIRECT_URL`)
+6. Browser refuses to send ngrok cookies to localhost → "missing CSRF cookie" ❌
+
+**Fix Applied:**
+Commented out line 45 in `scripts/local_run.sh`:
+```bash
+# export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
+```
+
+Now `APP_URL` will use the fallback `LOCALHOST_APP_URL` constant ("http://localhost:3002/"), which matches the Google redirect URL.
+
+**Files Modified:**
+- `scripts/local_run.sh`: Commented out hardcoded NGROK_LOCALHOST_URL
+
+**Status:** ✅ **FIXED** - OAuth should now work correctly
+

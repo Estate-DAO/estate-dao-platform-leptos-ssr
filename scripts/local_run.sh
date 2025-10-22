@@ -42,10 +42,10 @@ export LEPTOS_SITE_ADDR="127.0.0.1:3002"
 export NOWPAYMENTS_API_HOST="http://localhost:3001"
 
 echo "NGROK_LOCALHOST_URL: $NGROK_LOCALHOST_URL"
-export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
+# export NGROK_LOCALHOST_URL="https://louse-musical-hideously.ngrok-free.app"
 
 export LEPTOS_HASH_FILES="false"
-# FOR LOCAL BUILDS 
+# FOR LOCAL BUILDS
 
 cargo leptos build --lib-features "local-lib,debug_display" --bin-features "local-bin,debug_display" || exit 1
 # cargo leptos build --lib-features "local-lib,mock-provab,debug_display" --bin-features "local-bin,mock-provab,debug_display" || exit 1
