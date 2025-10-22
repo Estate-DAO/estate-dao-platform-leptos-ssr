@@ -299,26 +299,23 @@ pub fn DataTableV3() -> impl IntoView {
     );
 
     // Use create_local_resource that combines data fetching with filtering/sorting
-    let filtered_sorted_bookings = Resource::new(
-        move || {
-            (
-                ctx.booking_id_filter.get(),
-                ctx.destination_filter.get(),
-                ctx.hotel_name_filter.get(),
-                ctx.booking_dates_filter.get(),
-                ctx.user_email_filter.get(),
-                ctx.booking_status_filter.get(),
-                ctx.payment_status_filter.get(),
-                ctx.payment_id_filter.get(),
-                ctx.sort_column.get(),
-                ctx.sort_direction.get(),
-            )
-        },
-        move |filters| async move {
-            let bookings = all_user_bookings.get().unwrap_or(vec![]);
-            DataTableCtx::filter_and_sort_bookings(bookings)
-        },
-    );
+    let filtered_sorted_bookings = LocalResource::new(move || async move {
+        // Track all filter signals to make resource reactive
+        let _ = (
+            ctx.booking_id_filter.get(),
+            ctx.destination_filter.get(),
+            ctx.hotel_name_filter.get(),
+            ctx.booking_dates_filter.get(),
+            ctx.user_email_filter.get(),
+            ctx.booking_status_filter.get(),
+            ctx.payment_status_filter.get(),
+            ctx.payment_id_filter.get(),
+            ctx.sort_column.get(),
+            ctx.sort_direction.get(),
+        );
+        let bookings = all_user_bookings.get().unwrap_or(vec![]);
+        DataTableCtx::filter_and_sort_bookings(bookings)
+    });
 
     // this create effect method also works.
     // // Create a signal that filters and sorts the bookings

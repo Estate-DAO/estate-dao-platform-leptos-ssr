@@ -989,7 +989,7 @@ pub fn ConfirmButton(
     let email_state = EmailVerificationState::from_leptos_context();
 
     // Create action for integrated prebook + backend save API call
-    let prebook_action = Action::new(move |_: &()| async move {
+    let prebook_action = Action::new_local(move |_: &()| async move {
         log!("Integrated prebook action triggered - calling integrated API");
         BlockRoomUIState::set_loading(true);
 
@@ -1538,7 +1538,7 @@ pub fn EmailVerificationStep(
     });
 
     // Action to send OTP
-    let send_otp_action = Action::new(move |_: &()| {
+    let send_otp_action = Action::new_local(move |_: &()| {
         let get_email = get_email.clone();
         let get_booking_id = get_booking_id.clone();
         async move {
@@ -1566,7 +1566,7 @@ pub fn EmailVerificationStep(
     });
 
     // Action to verify OTP
-    let verify_otp_action = Action::new(move |otp: &String| {
+    let verify_otp_action = Action::new_local(move |otp: &String| {
         let read_booking_id =
             BookingId::read_from_local_storage().map(|booking_id| booking_id.to_order_id());
         let otp = otp.clone();
@@ -1737,7 +1737,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
     let (selected_provider, set_selected_provider) = create_signal::<Option<PaymentProvider>>(None);
 
     // Create payment action
-    let create_payment_action = Action::new(move |provider: &PaymentProvider| {
+    let create_payment_action = Action::new_local(move |provider: &PaymentProvider| {
         let provider = provider.clone();
         async move {
             log!("Creating payment invoice with provider: {:?}", provider);

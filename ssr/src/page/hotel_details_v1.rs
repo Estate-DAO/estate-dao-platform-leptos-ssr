@@ -223,8 +223,9 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // Create resource to fetch hotel details when page loads
     // Following the pattern from block_room_v1.rs prebook_resource
     // Enhanced to work with query params for shareable URLs
-    let hotel_details_resource = Resource::new(
-        move || {
+    let hotel_details_resource = LocalResource::new(move || {
+        let guests_for_details = ui_search_ctx.guests.clone();
+        async move {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
@@ -240,129 +241,119 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}",
                 has_hotel_code, has_place_details, has_valid_dates, is_ready);
 
-            is_ready
-        },
-        move |is_ready| {
-            let guests_for_details = ui_search_ctx.guests.clone();
-            async move {
-                if !is_ready {
-                    log!("Hotel details resource: Not ready yet, waiting for data...");
-                    return None;
-                }
+            if !is_ready {
+                log!("Hotel details resource: Not ready yet, waiting for data...");
+                return None;
+            }
 
-                log!("Hotel details resource: Page data ready, fetching hotel details...");
-                HotelDetailsUIState::set_loading(true);
-                HotelDetailsUIState::set_error(None);
+            log!("Hotel details resource: Page data ready, fetching hotel details...");
+            HotelDetailsUIState::set_loading(true);
+            HotelDetailsUIState::set_error(None);
 
-                let client = ClientSideApiClient::new();
-                let guests_clone = guests_for_details.clone();
+            let client = ClientSideApiClient::new();
+            let guests_clone = guests_for_details.clone();
 
-                // Get hotel code from context
-                let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
-                if hotel_code.is_empty() {
-                    HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
+            // Get hotel code from context
+            let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
+            if hotel_code.is_empty() {
+                HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
+                HotelDetailsUIState::set_loading(false);
+                return None;
+            }
+
+            // Create search criteria from UI context
+            // This will work whether data came from direct navigation or URL query params
+            let place_details = ui_search_ctx.place_details.get_untracked();
+            let place = ui_search_ctx.place.get_untracked();
+            let date_range = ui_search_ctx.date_range.get_untracked();
+            let guests = &guests_clone;
+
+            if place_details.is_none() {
+                HotelDetailsUIState::set_error(Some("Search criteria not available".to_string()));
+                HotelDetailsUIState::set_loading(false);
+                return None;
+            }
+
+            if place.is_none() {
+                HotelDetailsUIState::set_error(Some("Search criteria not available".to_string()));
+                HotelDetailsUIState::set_loading(false);
+                return None;
+            }
+
+            let place_details = place_details.unwrap();
+            let place = place.unwrap();
+
+            // Create room guests
+            let room_guests = vec![DomainRoomGuest {
+                no_of_adults: guests.adults.get_untracked(),
+                no_of_children: guests.children.get_untracked(),
+                children_ages: if guests.children.get_untracked() > 0 {
+                    Some(
+                        guests
+                            .children_ages
+                            .get_untracked()
+                            .into_iter()
+                            .map(|age| age.to_string())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+            }];
+
+            // Create search criteria
+            let search_criteria = DomainHotelSearchCriteria {
+                // destination_city_id: destination.city_id.parse().unwrap_or(0),
+                // destination_city_name: destination.city.clone(),
+                // destination_country_code: destination.country_code.clone(),
+                // destination_country_name: destination.country_name.clone(),
+                // destination_latitude: Some(place.location.latitude),
+                // destination_longitude: Some(place.location.longitude),
+                place_id: place.place_id.clone(),
+                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                no_of_nights: date_range.no_of_nights(),
+                no_of_rooms: guests.rooms.get_untracked(),
+                room_guests,
+                guest_nationality: "US".to_string(), // Default for now
+                pagination: None,                    // No pagination for hotel details
+                ..Default::default()
+            };
+
+            log!(
+                "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
+                // search_criteria.destination_city_name,
+                search_criteria.check_in_date,
+                search_criteria.check_out_date,
+                search_criteria.room_guests[0].no_of_adults,
+                search_criteria.room_guests[0].no_of_children,
+                search_criteria.no_of_rooms
+            );
+
+            // Create hotel info criteria
+            let criteria = DomainHotelInfoCriteria {
+                token: hotel_code.clone(),
+                hotel_ids: vec![hotel_code],
+                search_criteria,
+            };
+
+            // Call API
+            match client.get_hotel_info(criteria).await {
+                Ok(details) => {
+                    log!("Hotel details resource: Success - {}", details.hotel_name);
+                    HotelDetailsUIState::set_hotel_details(Some(details.clone()));
                     HotelDetailsUIState::set_loading(false);
-                    return None;
+                    Some(details)
                 }
-
-                // Create search criteria from UI context
-                // This will work whether data came from direct navigation or URL query params
-                let place_details = ui_search_ctx.place_details.get_untracked();
-                let place = ui_search_ctx.place.get_untracked();
-                let date_range = ui_search_ctx.date_range.get_untracked();
-                let guests = &guests_clone;
-
-                if place_details.is_none() {
-                    HotelDetailsUIState::set_error(Some(
-                        "Search criteria not available".to_string(),
-                    ));
+                Err(error_msg) => {
+                    log!("Hotel details resource: Error - {}", error_msg);
+                    HotelDetailsUIState::set_error(Some(error_msg));
                     HotelDetailsUIState::set_loading(false);
-                    return None;
-                }
-
-                if place.is_none() {
-                    HotelDetailsUIState::set_error(Some(
-                        "Search criteria not available".to_string(),
-                    ));
-                    HotelDetailsUIState::set_loading(false);
-                    return None;
-                }
-
-                let place_details = place_details.unwrap();
-                let place = place.unwrap();
-
-                // Create room guests
-                let room_guests = vec![DomainRoomGuest {
-                    no_of_adults: guests.adults.get_untracked(),
-                    no_of_children: guests.children.get_untracked(),
-                    children_ages: if guests.children.get_untracked() > 0 {
-                        Some(
-                            guests
-                                .children_ages
-                                .get_untracked()
-                                .into_iter()
-                                .map(|age| age.to_string())
-                                .collect(),
-                        )
-                    } else {
-                        None
-                    },
-                }];
-
-                // Create search criteria
-                let search_criteria = DomainHotelSearchCriteria {
-                    // destination_city_id: destination.city_id.parse().unwrap_or(0),
-                    // destination_city_name: destination.city.clone(),
-                    // destination_country_code: destination.country_code.clone(),
-                    // destination_country_name: destination.country_name.clone(),
-                    // destination_latitude: Some(place.location.latitude),
-                    // destination_longitude: Some(place.location.longitude),
-                    place_id: place.place_id.clone(),
-                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                    no_of_nights: date_range.no_of_nights(),
-                    no_of_rooms: guests.rooms.get_untracked(),
-                    room_guests,
-                    guest_nationality: "US".to_string(), // Default for now
-                    pagination: None,                    // No pagination for hotel details
-                    ..Default::default()
-                };
-
-                log!(
-                    "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
-                    // search_criteria.destination_city_name,
-                    search_criteria.check_in_date,
-                    search_criteria.check_out_date,
-                    search_criteria.room_guests[0].no_of_adults,
-                    search_criteria.room_guests[0].no_of_children,
-                    search_criteria.no_of_rooms
-                );
-
-                // Create hotel info criteria
-                let criteria = DomainHotelInfoCriteria {
-                    token: hotel_code.clone(),
-                    hotel_ids: vec![hotel_code],
-                    search_criteria,
-                };
-
-                // Call API
-                match client.get_hotel_info(criteria).await {
-                    Ok(details) => {
-                        log!("Hotel details resource: Success - {}", details.hotel_name);
-                        HotelDetailsUIState::set_hotel_details(Some(details.clone()));
-                        HotelDetailsUIState::set_loading(false);
-                        Some(details)
-                    }
-                    Err(error_msg) => {
-                        log!("Hotel details resource: Error - {}", error_msg);
-                        HotelDetailsUIState::set_error(Some(error_msg));
-                        HotelDetailsUIState::set_loading(false);
-                        None
-                    }
+                    None
                 }
             }
-        },
-    );
+        }
+    });
 
     let loaded = move || hotel_details_state.hotel_details.get().is_some();
     let is_loading = move || hotel_details_state.loading.get();

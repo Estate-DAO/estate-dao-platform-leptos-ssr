@@ -34,56 +34,52 @@ pub async fn get_app_url_server() -> Result<String, ServerFnError> {
 
 #[component]
 pub fn YralAuthProvider() -> impl IntoView {
-    let profile_details = Resource::new(
-        move || AuthStateSignal::auth_state().get(),
-        move |auth| async move {
-            if auth.is_authenticated() {
-                return Some(auth);
-            }
+    let profile_details = LocalResource::new(move || async move {
+        let auth = AuthStateSignal::auth_state().get();
+        if auth.is_authenticated() {
+            return Some(auth);
+        }
 
-            let url = format!("/api/user-info");
-            match Client::new().get(&url).send().await {
-                Ok(response) => {
-                    if response.status() == 200 {
-                        if let Ok(user_data) = response.json::<AuthState>().await {
-                            crate::log!("Fetched user info: {:?}", user_data);
-                            AuthStateSignal::auth_set(user_data.clone());
-                            return Some(user_data);
-                        }
+        let url = format!("/api/user-info");
+        match Client::new().get(&url).send().await {
+            Ok(response) => {
+                if response.status() == 200 {
+                    if let Ok(user_data) = response.json::<AuthState>().await {
+                        crate::log!("Fetched user info: {:?}", user_data);
+                        AuthStateSignal::auth_set(user_data.clone());
+                        return Some(user_data);
                     }
                 }
-                Err(e) => {
-                    crate::log!("Failed to fetch user info: {:?}", e);
-                }
             }
-            None
-        },
-    );
-
-    let wishlist_details = Resource::new(
-        move || AuthStateSignal::auth_state().get(),
-        move |auth| async move {
-            if auth.is_authenticated() {
-                return Some(auth);
+            Err(e) => {
+                crate::log!("Failed to fetch user info: {:?}", e);
             }
+        }
+        None
+    });
 
-            let url = format!("/api/user-wishlist");
-            match Client::new().get(&url).send().await {
-                Ok(response) => {
-                    if response.status() == 200 {
-                        if let Ok(user_data) = response.json::<Vec<String>>().await {
-                            crate::log!("Fetched wishlist: {:?}", user_data);
-                            AuthStateSignal::wishlist_set(Some(user_data));
-                        }
+    let wishlist_details = LocalResource::new(move || async move {
+        let auth = AuthStateSignal::auth_state().get();
+        if auth.is_authenticated() {
+            return Some(auth);
+        }
+
+        let url = format!("/api/user-wishlist");
+        match Client::new().get(&url).send().await {
+            Ok(response) => {
+                if response.status() == 200 {
+                    if let Ok(user_data) = response.json::<Vec<String>>().await {
+                        crate::log!("Fetched wishlist: {:?}", user_data);
+                        AuthStateSignal::wishlist_set(Some(user_data));
                     }
                 }
-                Err(e) => {
-                    crate::log!("Failed to fetch wishlist: {:?}", e);
-                }
             }
-            None
-        },
-    );
+            Err(e) => {
+                crate::log!("Failed to fetch wishlist: {:?}", e);
+            }
+        }
+        None
+    });
 
     // Cookie-based check for session
     let (session_cookie, _) = use_cookie::<String, FromToStringCodec>("session");

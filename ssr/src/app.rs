@@ -40,8 +40,8 @@ use crate::{
 use chrono::prelude::*;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_query::{query_persister, *};
-use leptos_query_devtools::LeptosQueryDevtools;
+// use leptos_query::{query_persister, *};
+// use leptos_query_devtools::LeptosQueryDevtools;
 use leptos_router::components::{Route, Router, Routes, A};
 use leptos_router::{path, *};
 use sitewriter::{ChangeFreq, UrlEntry};
@@ -238,11 +238,13 @@ pub fn App() -> impl IntoView {
     // provide_context(NotificationState::default());
 
     // Provides Query Client for entire app.
+    // NOTE: leptos_query 0.5.3 is incompatible with Leptos 0.8
+    // Commented out until migrated to leptos-fetch or alternative
     // leptos_query::provide_query_client();
-    provide_query_client_with_options_and_persister(
-        Default::default(),
-        query_persister::LocalStoragePersister,
-    );
+    // provide_query_client_with_options_and_persister(
+    //     Default::default(),
+    //     query_persister::LocalStoragePersister,
+    // );
 
     view! {
 

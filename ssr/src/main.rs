@@ -410,22 +410,22 @@ cfg_if! {
 
             let app = Router::new()
                 .route(
-                    "/api/*fn_name",
+                    "/api/{*fn_name}",
                     get(server_fn_handler).post(server_fn_handler),
                 )
                 .route("/auth/google", get(google_auth))
                 .route("/app", get(get_app_url))
                 .route("/api/user-info", get(api_user_info))
                 .route("/api/user-wishlist", get(get_user_wishlist))
-                .route("/api/user-wishlist/add/:hotel_code", post(add_to_user_wishlist))
-                .route("/api/user-wishlist/remove/:hotel_code", post(remove_from_user_wishlist))
+                .route("/api/user-wishlist/add/{hotel_code}", post(add_to_user_wishlist))
+                .route("/api/user-wishlist/remove/{hotel_code}", post(remove_from_user_wishlist))
                 .route("/auth/google/callback", get(google_callback))
                 .route("/auth/logout", get(logout))
                 .route("/ipn/webhook", post(nowpayments_webhook))
                 .route("/stream/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))
                 .nest("/server_fn_api", api_routes())
-                .nest("/", debug_routes()) // Debug routes for testing domain normalization
+                .merge(debug_routes()) // Debug routes for testing domain normalization (merge instead of nest at root for Axum 0.8)
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(cors)

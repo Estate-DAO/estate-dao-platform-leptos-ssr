@@ -224,18 +224,18 @@ pub fn AdminEditPanel() -> impl IntoView {
     let state = AdminEditPanelState::new();
 
     // Payment status lookup
-    let check_payment_action = Action::new(move |payment_id: &String| {
+    let check_payment_action = Action::new_local(move |payment_id: &String| {
         let payment_id = payment_id.parse::<u64>().unwrap_or(0);
         check_payment_status_api(payment_id)
     });
 
     // Backend booking lookup
-    let get_booking_action = Action::new(move |(email, app_ref): &(String, String)| {
+    let get_booking_action = Action::new_local(move |(email, app_ref): &(String, String)| {
         send_wrap(get_backend_booking_api(email.clone(), app_ref.clone()))
     });
 
     // Payment update action
-    let update_payment_action = Action::new(
+    let update_payment_action = Action::new_local(
         move |(email, app_ref, payment_details): &(String, String, PaymentDetails)| {
             send_wrap(update_payment_details_api(
                 email.clone(),

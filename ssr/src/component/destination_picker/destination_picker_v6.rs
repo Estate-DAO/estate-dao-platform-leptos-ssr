@@ -75,7 +75,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
     });
 
     // Debounced search function
-    let perform_search = Action::new(move |prefix: &String| {
+    let perform_search = Action::new_local(move |prefix: &String| {
         let prefix = prefix.clone();
         let api_client = api_client.clone();
         async move {

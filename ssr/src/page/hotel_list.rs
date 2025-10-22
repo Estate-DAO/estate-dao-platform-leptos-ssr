@@ -111,8 +111,10 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx_for_url_update = search_ctx.clone();
 
     // Hotel search resource - triggers when search context or pagination changes
-    let hotel_search_resource = Resource::new(
-        move || {
+    let hotel_search_resource = LocalResource::new(move || {
+        let search_ctx_clone = search_ctx_for_resource.clone();
+        let search_ctx_clone2 = search_ctx_for_resource.clone();
+        async move {
             // Track search context changes reactively
             let place = search_ctx_for_resource.place.get();
             let date_range = search_ctx_for_resource.date_range.get();
@@ -178,55 +180,42 @@ pub fn HotelListPage() -> impl IntoView {
             //     is_ready
             // );
 
-            // Return a tuple that changes when pagination changes, not just a boolean
-            // This ensures the resource re-runs when pagination state changes
-            if is_ready {
-                (true, current_page, page_size)
+            log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
+
+            if !is_ready {
+                log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
+                return None;
+            }
+
+            log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
+
+            // Use the same API client as root.rs
+            let api_client = ClientSideApiClient::new();
+            let result = api_client.search_hotel(search_ctx_clone.into()).await;
+
+            log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
+
+            // Set results in the same way as root.rs
+            SearchListResults::set_search_results(result.clone());
+            PreviousSearchContext::update(search_ctx_clone2.clone());
+
+            // Update pagination metadata from search results
+            if let Some(ref response) = result {
+                log!(
+                    "🔄 Setting Pagination Metadata: pagination={:?}",
+                    response.pagination
+                );
+                UIPaginationState::set_pagination_meta(response.pagination.clone());
             } else {
-                (false, 0, 0)
+                log!("⚠️ No search result to extract pagination metadata from");
             }
-        },
-        move |(is_ready, current_page, page_size)| {
-            let search_ctx_clone = search_ctx_for_resource.clone();
-            let search_ctx_clone2 = search_ctx_for_resource.clone();
-            async move {
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
 
-                if !is_ready {
-                    log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
-                    return None;
-                }
+            // Reset first_time_filled flag after successful search
+            PreviousSearchContext::reset_first_time_filled();
 
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
-
-                // Use the same API client as root.rs
-                let api_client = ClientSideApiClient::new();
-                let result = api_client.search_hotel(search_ctx_clone.into()).await;
-
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
-
-                // Set results in the same way as root.rs
-                SearchListResults::set_search_results(result.clone());
-                PreviousSearchContext::update(search_ctx_clone2.clone());
-
-                // Update pagination metadata from search results
-                if let Some(ref response) = result {
-                    log!(
-                        "🔄 Setting Pagination Metadata: pagination={:?}",
-                        response.pagination
-                    );
-                    UIPaginationState::set_pagination_meta(response.pagination.clone());
-                } else {
-                    log!("⚠️ No search result to extract pagination metadata from");
-                }
-
-                // Reset first_time_filled flag after successful search
-                PreviousSearchContext::reset_first_time_filled();
-
-                Some(result)
-            }
-        },
-    );
+            Some(result)
+        }
+    });
 
     // Example: Manual URL updates (State → URL) when user performs actions
     // This function can be called from search form submissions, filter changes, etc.
@@ -1288,7 +1277,7 @@ pub fn HotelCardTile(
 fn Wishlist(hotel_code: String) -> impl IntoView {
     let wishlist_hotel_code = hotel_code.clone();
 
-    let add_to_wishlist_action = Action::new(move |_: &()| {
+    let add_to_wishlist_action = Action::new_local(move |_: &()| {
         let check_present =
             AuthStateSignal::check_if_added_to_wishlist_untracked(&wishlist_hotel_code);
         let toggle_action = if check_present { "remove" } else { "add" };

@@ -35,64 +35,60 @@ pub fn WishlistComponent() -> impl IntoView {
     // API client for fetching hotel details
     let api_client = ClientSideApiClient::new();
 
-    let wishlist_details = Resource::new(
-        move || AuthStateSignal::auth_state().get().is_authenticated(),
-        move |auth| async move {
-            if auth {
-                return;
-            }
+    let wishlist_details = LocalResource::new(move || async move {
+        let auth = AuthStateSignal::auth_state().get().is_authenticated();
+        if auth {
+            return;
+        }
 
-            let url = format!("/api/user-wishlist");
-            match Client::new().get(&url).send().await {
-                Ok(response) => {
-                    if response.status() == 200 {
-                        if let Ok(user_data) = response.json::<Vec<String>>().await {
-                            crate::log!("Fetched wishlist: {:?}", user_data);
-                            // AuthStateSignal::wishlist_set(Some(user_data));
-                        }
+        let url = format!("/api/user-wishlist");
+        match Client::new().get(&url).send().await {
+            Ok(response) => {
+                if response.status() == 200 {
+                    if let Ok(user_data) = response.json::<Vec<String>>().await {
+                        crate::log!("Fetched wishlist: {:?}", user_data);
+                        // AuthStateSignal::wishlist_set(Some(user_data));
                     }
                 }
-                Err(e) => {
-                    crate::log!("Failed to fetch wishlist: {:?}", e);
-                }
             }
-        },
-    );
+            Err(e) => {
+                crate::log!("Failed to fetch wishlist: {:?}", e);
+            }
+        }
+    });
 
     // Create a resource that fetches all hotel details
-    let hotel_details_resource = Resource::new(
-        move || wishlist_hotel_codes(),
-        move |hotel_codes| {
-            let api_client = api_client.clone();
-            async move {
-                if hotel_codes.is_empty() {
-                    return Vec::new();
-                }
+    let hotel_details_resource = LocalResource::new(move || {
+        let api_client = api_client.clone();
+        async move {
+            let hotel_codes = wishlist_hotel_codes();
+            if hotel_codes.is_empty() {
+                return Vec::new();
+            }
 
-                log!("Fetching details for hotels: {:?}", hotel_codes);
+            log!("Fetching details for hotels: {:?}", hotel_codes);
 
-                let mut hotel_details = Vec::new();
+            let mut hotel_details = Vec::new();
 
-                for hotel_code in hotel_codes {
-                    match api_client
-                        .get_hotel_details_without_rates(&hotel_code)
-                        .await
-                    {
-                        Ok(details) => {
-                            log!("Successfully fetched details for hotel: {}", hotel_code);
-                            hotel_details.push(details);
-                        }
-                        Err(e) => {
-                            log!("Failed to fetch details for hotel {}: {}", hotel_code, e);
-                            // You could choose to continue with other hotels or handle errors differently
-                        }
+            for hotel_code in hotel_codes {
+                match api_client
+                    .get_hotel_details_without_rates(&hotel_code)
+                    .await
+                {
+                    Ok(details) => {
+                        log!("Successfully fetched details for hotel: {}", hotel_code);
+                        hotel_details.push(details);
+                    }
+                    Err(e) => {
+                        log!("Failed to fetch details for hotel {}: {}", hotel_code, e);
+                        // You could choose to continue with other hotels or handle errors differently
                     }
                 }
-
-                hotel_details
             }
-        },
-    );
+
+            hotel_details
+        }
+    });
 
     view! {
         <div class="container mx-auto px-4 py-8">
