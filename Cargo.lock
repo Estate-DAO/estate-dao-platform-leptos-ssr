@@ -1749,6 +1749,7 @@ dependencies = [
  "once_cell",
  "openidconnect",
  "rand 0.8.5",
+ "reactive_graph",
  "regex",
  "reqwest 0.12.23",
  "send_wrapper",

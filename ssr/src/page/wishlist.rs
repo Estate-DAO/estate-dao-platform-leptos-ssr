@@ -36,10 +36,10 @@ pub fn WishlistComponent() -> impl IntoView {
     let api_client = ClientSideApiClient::new();
 
     let wishlist_details = Resource::new(
-        move || AuthStateSignal::auth_state().get(),
+        move || AuthStateSignal::auth_state().get().is_authenticated(),
         move |auth| async move {
-            if auth.is_authenticated() {
-                return Some(auth);
+            if auth {
+                return;
             }
 
             let url = format!("/api/user-wishlist");
@@ -48,7 +48,7 @@ pub fn WishlistComponent() -> impl IntoView {
                     if response.status() == 200 {
                         if let Ok(user_data) = response.json::<Vec<String>>().await {
                             crate::log!("Fetched wishlist: {:?}", user_data);
-                            AuthStateSignal::wishlist_set(Some(user_data));
+                            // AuthStateSignal::wishlist_set(Some(user_data));
                         }
                     }
                 }
@@ -56,7 +56,6 @@ pub fn WishlistComponent() -> impl IntoView {
                     crate::log!("Failed to fetch wishlist: {:?}", e);
                 }
             }
-            None
         },
     );
 

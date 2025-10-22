@@ -2,6 +2,7 @@ use ::codee::string::{FromToStringCodec, JsonSerdeCodec};
 use ic_agent::identity::DelegatedIdentity;
 use leptos::ev;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 // use leptos::{ev, prelude::*, component, view, server, ServerFnError, expect_context, create_action, window, IntoView, Children, Oco};
 use leptos_use::{
     storage::{use_local_storage, use_local_storage_with_options, UseStorageOptions},
@@ -131,7 +132,7 @@ fn LoginButton() -> impl IntoView {
         if let Some(data) = msg.data().as_string() {
             if data == "oauth-success" {
                 crate::log!("Received oauth-success message");
-                wasm_bindgen_futures::spawn_local(async move {
+                spawn_local(async move {
                     let url = format!("/api/user-info");
                     match Client::new().get(&url).send().await {
                         Ok(resp) if resp.status() == 200 => {

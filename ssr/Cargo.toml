@@ -114,6 +114,7 @@ leptos_query_devtools = { version = "0.1", features = [
 ] }
 better-panic = "0.3.0"
 wasm-bindgen-futures = "0.4"
+reactive_graph = "0.2.5"
 rand = "0.8.5"
 codee = { version = "0.3", features = ["json_serde_wasm", "json_serde"] }
 futures = "0.3.31"

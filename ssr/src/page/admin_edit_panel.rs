@@ -13,6 +13,7 @@ use crate::{
         BackendPaymentStatus, BePaymentApiResponse, Booking, BookingId as BackendBookingId,
         PaymentDetails,
     },
+    send_wrap,
 };
 
 #[derive(Clone, Default, Debug)]
@@ -230,13 +231,17 @@ pub fn AdminEditPanel() -> impl IntoView {
 
     // Backend booking lookup
     let get_booking_action = Action::new(move |(email, app_ref): &(String, String)| {
-        get_backend_booking_api(email.clone(), app_ref.clone())
+        send_wrap(get_backend_booking_api(email.clone(), app_ref.clone()))
     });
 
     // Payment update action
     let update_payment_action = Action::new(
         move |(email, app_ref, payment_details): &(String, String, PaymentDetails)| {
-            update_payment_details_api(email.clone(), app_ref.clone(), payment_details.clone())
+            send_wrap(update_payment_details_api(
+                email.clone(),
+                app_ref.clone(),
+                payment_details.clone(),
+            ))
         },
     );
 

@@ -82,14 +82,14 @@ pub struct ConfirmationProcessRequest {
     pub query_params: std::collections::HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfirmationProcessResponse {
-    pub success: bool,
-    pub message: String,
-    pub order_id: Option<String>,
-    pub user_email: Option<String>,
-    pub booking_data: Option<serde_json::Value>,
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct ConfirmationProcessResponse {
+//     pub success: bool,
+//     pub message: String,
+//     pub order_id: Option<String>,
+//     pub user_email: Option<String>,
+//     pub booking_data: Option<serde_json::Value>,
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntegratedBlockRoomRequest {

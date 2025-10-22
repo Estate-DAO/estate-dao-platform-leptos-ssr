@@ -44,7 +44,7 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
     let search_ctx: UISearchCtx = expect_context();
     let previous_search_ctx = expect_context::<PreviousSearchContext>();
 
-    Action::new(move |_| {
+    Action::new_local(move |_| {
         log!(
             "Search action triggered with config: close_dialogs={}, navigate_with_params={}",
             config.close_dialogs,

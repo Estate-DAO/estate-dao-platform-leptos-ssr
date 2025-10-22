@@ -5,7 +5,7 @@ pub fn get_host() -> String {
         return window().location().host().unwrap().to_string();
     }
 
-    #[cfg(feature = "ssr")]
+    #[cfg(not(feature = "hydrate"))]
     {
         use axum::http::request::Parts;
         use leptos::prelude::{expect_context, use_context};

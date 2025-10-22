@@ -31,7 +31,7 @@ impl AdminCanisters {
     //     Self::new(key)
     // }
 
-    pub async fn backend_canister(&self) -> Backend {
+    pub async fn backend_canister(&self) -> Backend<'_> {
         let agent = self.agent.get_agent().await;
         let principal = crate::canister::BACKEND_ID;
         #[cfg(feature = "debug_log")]
