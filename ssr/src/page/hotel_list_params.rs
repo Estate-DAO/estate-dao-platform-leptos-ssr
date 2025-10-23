@@ -126,6 +126,10 @@ pub struct HotelListParams {
     pub place: Option<Place>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+
+    // Place name to search (when placeId is not available in URL)
+    #[serde(skip)]
+    pub place_name_to_search: Option<String>,
 }
 
 impl Default for HotelListParams {
@@ -145,6 +149,7 @@ impl Default for HotelListParams {
             per_page: Some(500),
             latitude: None,
             longitude: None,
+            place_name_to_search: None,
         }
     }
 }
@@ -219,6 +224,7 @@ impl HotelListParams {
             per_page,
             latitude,
             longitude,
+            place_name_to_search: None,
         }
     }
 
@@ -309,13 +315,36 @@ impl HotelListParams {
             return Self::from_url_params(params);
         }
 
-        // Parse Place from placeId (required)
-        let place_id = params.get("placeId")?.clone();
-        log!("[from_query_params] placeId: {}", place_id);
-        let place = Place {
-            place_id: place_id.clone(),
-            display_name: params.get("placeName").cloned().unwrap_or_default(),
-            formatted_address: params.get("placeAddress").cloned().unwrap_or_default(),
+        // Parse Place from placeId and placeName
+        let place_id_opt = params.get("placeId");
+        let place_name_opt = params.get("placeName");
+
+        let (place, place_name_to_search) = match (place_id_opt, place_name_opt) {
+            // Case 1: Both placeId and placeName present (normal case)
+            (Some(place_id), name_opt) => {
+                log!("[from_query_params] placeId: {}", place_id);
+                let place = Place {
+                    place_id: place_id.clone(),
+                    display_name: name_opt.cloned().unwrap_or_default(),
+                    formatted_address: params.get("placeAddress").cloned().unwrap_or_default(),
+                };
+                (Some(place), None)
+            }
+
+            // Case 2: Only placeName present - need to search for placeId
+            (None, Some(place_name)) => {
+                log!(
+                    "[from_query_params] Only placeName provided: '{}', will search for placeId",
+                    place_name
+                );
+                (None, Some(place_name.clone()))
+            }
+
+            // Case 3: Neither present - invalid, cannot proceed
+            (None, None) => {
+                log!("[from_query_params] Missing both placeId and placeName, cannot proceed");
+                return None;
+            }
         };
 
         // Parse dates with defaults if missing (next week + 1 night)
@@ -422,7 +451,7 @@ impl HotelListParams {
         );
 
         Some(Self {
-            place: Some(place),
+            place,
             place_details: None, // Will be fetched async if needed
             checkin,
             checkout,
@@ -436,6 +465,7 @@ impl HotelListParams {
             per_page,
             latitude,
             longitude,
+            place_name_to_search,
         })
     }
 

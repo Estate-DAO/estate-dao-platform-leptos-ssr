@@ -1,8 +1,3 @@
-//! URL-driven search parameters with smart defaults
-//!
-//! This module implements the "UI as a function of URL" pattern where all search
-//! state is derived from URL query parameters with sensible defaults for missing values.
-
 use crate::api::{client_side_api::Place, consts::PAGINATION_LIMIT};
 use crate::utils::query_params::individual_params;
 use chrono::{Datelike, Duration, Local, NaiveDate};
@@ -12,16 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use url::form_urlencoded;
 
-/// Search parameters derived from URL with smart defaults
-///
-/// This struct represents all search state as URL parameters. Missing parameters
-/// are filled with sensible defaults (e.g., checkin = 7 days from today).
-///
-/// # Philosophy
-/// - URL is the single source of truth
-/// - No state stored in signals
-/// - Every user interaction = navigation to new URL
-/// - UI re-renders based on URL params
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SearchParamsV2 {
     // Location

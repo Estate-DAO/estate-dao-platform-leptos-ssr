@@ -101,6 +101,68 @@ pub fn HotelListPage() -> impl IntoView {
 
             // Try individual query params first (NEW format), then fall back to base64 state (LEGACY)
             if let Some(hotel_params) = HotelListParams::from_query_params(&params_map) {
+                // Check if we need to search for place by name (placeId missing)
+                if hotel_params.place.is_none() && hotel_params.place_name_to_search.is_some() {
+                    let place_name = hotel_params.place_name_to_search.clone().unwrap();
+                    log!(
+                        "[HotelListPage] Only placeName in URL: '{}', searching for placeId...",
+                        place_name
+                    );
+
+                    // Clone params_map for async closure
+                    let params_map_clone = params_map.clone();
+                    let place_name_clone = place_name.clone();
+
+                    // Spawn async task to search for place
+                    spawn_local(async move {
+                        let api_client = ClientSideApiClient::new();
+                        match api_client.search_places(place_name_clone.clone()).await {
+                            Ok(results) => {
+                                if let Some(first_result) = results.first() {
+                                    log!(
+                                        "[HotelListPage] Found place: {} (ID: {})",
+                                        first_result.display_name,
+                                        first_result.place_id
+                                    );
+
+                                    // Update URL with fetched placeId
+                                    let mut new_params = params_map_clone.clone();
+                                    new_params.insert(
+                                        "placeId".to_string(),
+                                        first_result.place_id.clone(),
+                                    );
+
+                                    // Keep the placeName for display
+                                    new_params.insert("placeName".to_string(), place_name_clone);
+
+                                    // Navigate to updated URL (this will trigger the effect again)
+                                    use crate::utils::query_params::update_url_with_params;
+                                    update_url_with_params("/hotel-list", &new_params);
+                                } else {
+                                    log!(
+                                        "[HotelListPage] No results found for place name: {}",
+                                        place_name_clone
+                                    );
+                                    // TODO: Show error message to user
+                                }
+                            }
+                            Err(e) => {
+                                log!(
+                                    "[HotelListPage] Place search failed for '{}': {}",
+                                    place_name_clone,
+                                    e
+                                );
+                                // TODO: Show error message to user
+                            }
+                        }
+                    });
+
+                    // Don't sync to app state yet - wait for place search to complete
+                    // The URL update above will trigger this effect again with complete params
+                    return;
+                }
+
+                // Normal case: we have complete params with placeId
                 log!(
                     "Parsed hotel params from URL (individual params): {:?}",
                     hotel_params
