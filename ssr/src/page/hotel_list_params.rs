@@ -2,6 +2,7 @@ use crate::{
     api::{
         self,
         client_side_api::{ClientSideApiClient, Place, PlaceData},
+        consts::PAGINATION_LIMIT,
     },
     application_services::filter_types::UISearchFilters,
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
@@ -10,7 +11,7 @@ use crate::{
         build_query_string, individual_params, update_url_with_params, update_url_with_state,
         FilterMap, QueryParamsSync, SortDirection,
     },
-    view_state_layer::ui_search_state::UISearchCtx,
+    view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
 };
 use chrono::Datelike;
 use leptos::*;
@@ -141,7 +142,7 @@ impl Default for HotelListParams {
             filters: HashMap::new(),
             sort: Vec::new(),
             page: Some(1),
-            per_page: Some(20),
+            per_page: Some(500),
             latitude: None,
             longitude: None,
         }
@@ -183,6 +184,26 @@ impl HotelListParams {
 
         let filters_map = search_ctx.filters.get_untracked().to_filter_map();
 
+        // Get pagination from context instead of hardcoding
+        // Only include page/per_page if they differ from defaults to avoid polluting URLs
+        let pagination_state: UIPaginationState = expect_context();
+        let current_page = pagination_state.current_page.get_untracked();
+        let current_page_size = pagination_state.page_size.get_untracked();
+
+        // Only include page if > 1 (to avoid polluting URL with defaults)
+        let page = if current_page > 1 {
+            Some(current_page)
+        } else {
+            None
+        };
+
+        // Only include per_page if different from backend default
+        let per_page = if current_page_size != PAGINATION_LIMIT as u32 {
+            Some(current_page_size)
+        } else {
+            None
+        };
+
         Self {
             place_details,
             place,
@@ -194,8 +215,8 @@ impl HotelListParams {
             children_ages,
             filters: filters_map,
             sort: Vec::new(),
-            page: Some(1),
-            per_page: Some(20),
+            page,
+            per_page,
             latitude,
             longitude,
         }
@@ -383,6 +404,7 @@ impl HotelListParams {
         }
 
         // Pagination - support both pageSize and perPage (perPage for backward compat)
+        // Only set if present in URL - otherwise leave as None to use backend default
         let page = params.get("page").and_then(|s| s.parse().ok());
         let per_page = params
             .get("pageSize")
@@ -422,12 +444,12 @@ impl HotelListParams {
         use individual_params::*;
         let mut params = HashMap::new();
 
-        // Place information - MINIMAL: only placeId (we can derive placeName from API)
+        // Place information - always include if present
         if let Some(ref place) = self.place {
             params.insert("placeId".to_string(), place.place_id.clone());
         }
 
-        // Dates - required
+        // Dates - always include if present
         if let Some(ref checkin) = self.checkin {
             params.insert("checkin".to_string(), checkin.clone());
         }
@@ -435,14 +457,12 @@ impl HotelListParams {
             params.insert("checkout".to_string(), checkout.clone());
         }
 
-        // Guest information - required
+        // Guest information - always include if present (even if default values)
         if let Some(adults) = self.adults {
             params.insert("adults".to_string(), adults.to_string());
         }
         if let Some(children) = self.children {
-            if children > 0 {
-                params.insert("children".to_string(), children.to_string());
-            }
+            params.insert("children".to_string(), children.to_string());
         }
         if let Some(rooms) = self.rooms {
             params.insert("rooms".to_string(), rooms.to_string());
@@ -479,18 +499,18 @@ impl HotelListParams {
             }
         }
 
-        // Pagination - only include non-default values
+        // Pagination - only include if different from defaults
+        // Only add page if > 1 (default is 1)
         if let Some(page) = self.page {
             if page > 1 {
                 params.insert("page".to_string(), page.to_string());
             }
         }
 
-        // Include pageSize if different from default (20)
+        // Only add pageSize if explicitly set (backend will use PAGINATION_LIMIT by default)
+        // Don't include if it's None - let backend use its default
         if let Some(per_page) = self.per_page {
-            if per_page != 20 {
-                params.insert("pageSize".to_string(), per_page.to_string());
-            }
+            params.insert("pageSize".to_string(), per_page.to_string());
         }
 
         // NOTE: Removed lat/lng/placeAddress - these can be derived from placeId via API
@@ -616,11 +636,17 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
         if let Some(page) = self.page {
             UIPaginationState::set_current_page(page);
             log!("[sync_to_app_state] Set current page to: {}", page);
+        } else {
+            // Reset to page 1 if not in URL
+            UIPaginationState::set_current_page(1);
         }
 
         if let Some(per_page) = self.per_page {
             UIPaginationState::set_page_size(per_page);
             log!("[sync_to_app_state] Set page size to: {}", per_page);
+        } else {
+            // Reset to default page size (PAGINATION_LIMIT) if not in URL
+            UIPaginationState::set_page_size(crate::api::consts::PAGINATION_LIMIT as u32);
         }
     }
 }

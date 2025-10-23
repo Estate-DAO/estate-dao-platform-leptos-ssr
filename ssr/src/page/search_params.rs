@@ -3,7 +3,7 @@
 //! This module implements the "UI as a function of URL" pattern where all search
 //! state is derived from URL query parameters with sensible defaults for missing values.
 
-use crate::api::client_side_api::Place;
+use crate::api::{client_side_api::Place, consts::PAGINATION_LIMIT};
 use crate::utils::query_params::individual_params;
 use chrono::{Datelike, Duration, Local, NaiveDate};
 use leptos::*;
@@ -72,7 +72,7 @@ impl Default for SearchParamsV2 {
             amenities: Vec::new(),
             property_types: Vec::new(),
             page: Some(1),
-            page_size: Some(20),
+            page_size: Some(500),
         }
     }
 }
@@ -387,7 +387,7 @@ impl SearchParamsV2 {
 
     /// Get page size
     pub fn current_page_size(&self) -> u32 {
-        self.page_size.unwrap_or(20)
+        self.page_size.unwrap_or(PAGINATION_LIMIT as u32)
     }
 
     /// Check if there could be a next page (based on result count)
