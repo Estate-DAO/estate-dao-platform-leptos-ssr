@@ -543,7 +543,7 @@ pub fn HotelListPage() -> impl IntoView {
             // Desktop layout (lg screens and up)
             <div class="hidden lg:flex h-[calc(100vh-12rem)]">
                 // Fixed aside on left (desktop only)
-                <aside class="w-72 shrink-0 bg-slate-50 border-r border-slate-200">
+                <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
                     <div class="h-full overflow-y-auto p-4">
                         <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div class="flex items-center gap-2">
