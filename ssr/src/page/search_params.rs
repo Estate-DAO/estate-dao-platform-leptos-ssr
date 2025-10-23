@@ -47,7 +47,7 @@ pub struct SearchParamsV2 {
 
     // Pagination
     pub page: Option<u32>,
-    pub per_page: Option<u32>,
+    pub page_size: Option<u32>,
 }
 
 impl Default for SearchParamsV2 {
@@ -72,7 +72,7 @@ impl Default for SearchParamsV2 {
             amenities: Vec::new(),
             property_types: Vec::new(),
             page: Some(1),
-            per_page: Some(20),
+            page_size: Some(20),
         }
     }
 }
@@ -154,10 +154,11 @@ impl SearchParamsV2 {
                 .get("page")
                 .and_then(|s| s.parse().ok())
                 .or(defaults.page),
-            per_page: map
-                .get("perPage")
+            page_size: map
+                .get("pageSize")
                 .and_then(|s| s.parse().ok())
-                .or(defaults.per_page),
+                .or(map.get("perPage").and_then(|s| s.parse().ok()))
+                .or(defaults.page_size),
         }
     }
 
@@ -262,9 +263,9 @@ impl SearchParamsV2 {
                 params.push(("page", page.to_string()));
             }
         }
-        if self.per_page != defaults.per_page {
-            if let Some(per_page) = self.per_page {
-                params.push(("perPage", per_page.to_string()));
+        if self.page_size != defaults.page_size {
+            if let Some(page_size) = self.page_size {
+                params.push(("pageSize", page_size.to_string()));
             }
         }
 
@@ -372,6 +373,31 @@ impl SearchParamsV2 {
     pub fn with_page(mut self, page: u32) -> Self {
         self.page = Some(page);
         self
+    }
+
+    pub fn with_page_size(mut self, page_size: u32) -> Self {
+        self.page_size = Some(page_size);
+        self
+    }
+
+    /// Get current page (1-indexed)
+    pub fn current_page(&self) -> u32 {
+        self.page.unwrap_or(1)
+    }
+
+    /// Get page size
+    pub fn current_page_size(&self) -> u32 {
+        self.page_size.unwrap_or(20)
+    }
+
+    /// Check if there could be a next page (based on result count)
+    pub fn has_next_page(&self, result_count: usize) -> bool {
+        result_count >= self.current_page_size() as usize
+    }
+
+    /// Check if there is a previous page
+    pub fn has_previous_page(&self) -> bool {
+        self.current_page() > 1
     }
 
     /// Toggle an amenity (add if not present, remove if present)

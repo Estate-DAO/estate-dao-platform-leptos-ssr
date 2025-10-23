@@ -382,9 +382,12 @@ impl HotelListParams {
             }
         }
 
-        // Pagination
+        // Pagination - support both pageSize and perPage (perPage for backward compat)
         let page = params.get("page").and_then(|s| s.parse().ok());
-        let per_page = params.get("perPage").and_then(|s| s.parse().ok());
+        let per_page = params
+            .get("pageSize")
+            .and_then(|s| s.parse().ok())
+            .or_else(|| params.get("perPage").and_then(|s| s.parse().ok()));
 
         // Coordinates (optional)
         let latitude = params.get("lat").and_then(|s| s.parse().ok());
@@ -482,7 +485,13 @@ impl HotelListParams {
                 params.insert("page".to_string(), page.to_string());
             }
         }
-        // perPage is typically always 20, so skip it to keep URL minimal
+
+        // Include pageSize if different from default (20)
+        if let Some(per_page) = self.per_page {
+            if per_page != 20 {
+                params.insert("pageSize".to_string(), per_page.to_string());
+            }
+        }
 
         // NOTE: Removed lat/lng/placeAddress - these can be derived from placeId via API
 
@@ -600,6 +609,19 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
 
         UISearchCtx::set_filters(filters);
         log!("[sync_to_app_state] Filters set in context");
+
+        // Sync pagination state from URL
+        use crate::view_state_layer::ui_search_state::UIPaginationState;
+
+        if let Some(page) = self.page {
+            UIPaginationState::set_current_page(page);
+            log!("[sync_to_app_state] Set current page to: {}", page);
+        }
+
+        if let Some(per_page) = self.per_page {
+            UIPaginationState::set_page_size(per_page);
+            log!("[sync_to_app_state] Set page size to: {}", per_page);
+        }
     }
 }
 
