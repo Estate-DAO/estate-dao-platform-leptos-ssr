@@ -45,25 +45,27 @@ pub async fn lookup_place_by_id(place_id: String) -> Result<PlaceData, ServerFnE
 
 /// Helper to extract display name from PlaceData address components
 pub fn get_display_name_from_place_data(place_data: &PlaceData) -> String {
-    // Try to find locality (city) first
-    if let Some(locality) = place_data
-        .address_components
-        .iter()
-        .find(|c| c.types.contains(&"locality".to_string()))
-    {
-        return locality.long_text.clone();
+    // Define the hierarchy of place types to search for the display name.
+    // More specific types come first.
+    let type_hierarchy = [
+        "neighborhood",
+        "sublocality_level_1",
+        "sublocality",
+        "locality",
+        "administrative_area_level_1",
+    ];
+
+    for place_type in &type_hierarchy {
+        if let Some(component) = place_data
+            .address_components
+            .iter()
+            .find(|c| c.types.contains(&place_type.to_string()))
+        {
+            return component.long_text.clone();
+        }
     }
 
-    // Fallback to administrative_area_level_1 (state/province)
-    if let Some(admin) = place_data
-        .address_components
-        .iter()
-        .find(|c| c.types.contains(&"administrative_area_level_1".to_string()))
-    {
-        return admin.long_text.clone();
-    }
-
-    // Last resort: use first component
+    // Fallback to the first component if no preferred types are found.
     place_data
         .address_components
         .first()
@@ -72,9 +74,42 @@ pub fn get_display_name_from_place_data(place_data: &PlaceData) -> String {
 }
 
 /// Helper to build formatted address from PlaceData address components
-/// Note: Does NOT include locality since it's already in display_name
+/// Note: Does NOT include the component used for the display_name to avoid duplication.
 pub fn get_formatted_address_from_place_data(place_data: &PlaceData) -> String {
-    // Find relevant components: admin_area, country (skip locality to avoid duplication)
+    let display_name = get_display_name_from_place_data(place_data);
+
+    // Collect address parts, excluding the one used for the display name.
+    let parts: Vec<&str> = place_data
+        .address_components
+        .iter()
+        .filter_map(|c| {
+            // Exclude the component if its long_text matches the display_name
+            if c.long_text != display_name {
+                Some(c.long_text.as_str())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // A more robust way to join parts, removing duplicates that might still appear
+    // (e.g. "Jaipur", "Jaipur").
+    let mut unique_parts = Vec::new();
+    for part in parts {
+        if !unique_parts.contains(&part) {
+            unique_parts.push(part);
+        }
+    }
+
+    // Let's try to build a sensible address from what's left.
+    // A common pattern is City, State, Country.
+    // We can try to find these components.
+    let locality = place_data
+        .address_components
+        .iter()
+        .find(|c| c.types.contains(&"locality".to_string()))
+        .map(|c| c.long_text.as_str());
+
     let admin_area = place_data
         .address_components
         .iter()
@@ -87,16 +122,24 @@ pub fn get_formatted_address_from_place_data(place_data: &PlaceData) -> String {
         .find(|c| c.types.contains(&"country".to_string()))
         .map(|c| c.long_text.as_str());
 
-    // Build formatted address without locality (to avoid "Jaipur, Jaipur, ...")
-    let mut parts = Vec::new();
+    let mut address_parts = Vec::new();
+    if let Some(loc) = locality {
+        if loc != display_name && !address_parts.contains(&loc) {
+            address_parts.push(loc);
+        }
+    }
     if let Some(admin) = admin_area {
-        parts.push(admin);
+        if admin != display_name && !address_parts.contains(&admin) {
+            address_parts.push(admin);
+        }
     }
     if let Some(cnt) = country {
-        parts.push(cnt);
+        if cnt != display_name && !address_parts.contains(&cnt) {
+            address_parts.push(cnt);
+        }
     }
 
-    parts.join(", ")
+    address_parts.join(", ")
 }
 
 /// Hotel List page state that can be encoded in URL via base64
