@@ -1,7 +1,10 @@
 use crate::{
-    api::client_side_api::{Place, PlaceData},
+    api::client_side_api::{ClientSideApiClient, Place, PlaceData},
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     domain::DomainHotelSearchCriteria,
+    page::hotel_list_params::{
+        get_display_name_from_place_data, get_formatted_address_from_place_data,
+    },
     utils::query_params::{
         build_query_string, individual_params, update_url_with_params, update_url_with_state,
         QueryParamsSync,
@@ -25,8 +28,8 @@ pub struct HotelDetailsParams {
     // pub destination_city_name: String,
     // pub destination_country_code: String,
     // pub destination_country_name: String,
-    pub place: Place,
-    pub place_details: PlaceData,
+    pub place: Option<Place>,
+    pub place_details: Option<PlaceData>,
     pub destination_latitude: Option<f64>,
     pub destination_longitude: Option<f64>,
 
@@ -41,6 +44,10 @@ pub struct HotelDetailsParams {
     pub rooms: u32,
     pub children_ages: Vec<u32>,
     pub guest_nationality: String,
+
+    // Place name to search (when placeId is not available in URL)
+    #[serde(skip)]
+    pub place_name_to_search: Option<String>,
 }
 
 impl HotelDetailsParams {
@@ -49,15 +56,13 @@ impl HotelDetailsParams {
         let search_ctx: UISearchCtx = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-        let place = search_ctx.place.get_untracked()?;
-        let place_details = search_ctx.place_details.get_untracked()?;
+        let place = search_ctx.place.get_untracked();
+        let place_details = search_ctx.place_details.get_untracked();
 
         let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
         if hotel_code.is_empty() {
             return None;
         }
-
-        let place = search_ctx.place.get_untracked()?;
         let date_range = search_ctx.date_range.get_untracked();
 
         // Use next week as fallback if dates are not available
@@ -91,8 +96,8 @@ impl HotelDetailsParams {
             // we don't need hotel code for serach query. only destination, date range and guests are needed
             // latitude and longitude help with search query
             hotel_code: hotel_code.clone(),
-            destination_latitude: Some(place_details.location.latitude),
-            destination_longitude: Some(place_details.location.longitude),
+            destination_latitude: place_details.as_ref().map(|pd| pd.location.latitude),
+            destination_longitude: place_details.as_ref().map(|pd| pd.location.longitude),
             place,
             place_details,
             checkin: format!(
@@ -106,6 +111,7 @@ impl HotelDetailsParams {
             rooms: guests.rooms.get_untracked(),
             children_ages: guests.children_ages.get_untracked().into(),
             guest_nationality: "US".to_string(), // Default nationality
+            place_name_to_search: None,
         })
     }
 
@@ -133,7 +139,11 @@ impl HotelDetailsParams {
             },
         }];
 
-        let place_id = self.place.place_id.clone();
+        let place_id = self
+            .place
+            .as_ref()
+            .map(|p| p.place_id.clone())
+            .unwrap_or_default();
 
         DomainHotelSearchCriteria {
             // destination_city_id: self.destination_city_id,
@@ -203,37 +213,121 @@ impl HotelDetailsParams {
     pub fn from_query_params(params: &HashMap<String, String>) -> Option<Self> {
         use individual_params::*;
 
+        crate::log!(
+            "[HotelDetailsParams::from_query_params] Parsing URL params: {:?}",
+            params
+        );
+        crate::log!(
+            "[HotelDetailsParams::from_query_params] Has placeName: {}, Has placeAddress: {}, Has placeId: {}",
+            params.contains_key("placeName"),
+            params.contains_key("placeAddress"),
+            params.contains_key("placeId")
+        );
+
         // Check for legacy format first
         if params.contains_key("state") {
+            crate::log!("[HotelDetailsParams] Found legacy base64 state param");
             return Self::from_url_params(params);
         }
 
         // Parse hotel code (required)
         let hotel_code = params.get("hotelCode")?.clone();
+        crate::log!("[HotelDetailsParams] hotelCode: {}", hotel_code);
 
-        // Parse Place from placeId (required)
-        let place_id = params.get("placeId")?.clone();
-        let place = Place {
-            place_id: place_id.clone(),
-            display_name: params.get("placeName").cloned().unwrap_or_default(),
-            formatted_address: params.get("placeAddress").cloned().unwrap_or_default(),
+        // Parse placeId and placeName
+        let place_id_opt = params.get("placeId");
+        let place_name_opt = params.get("placeName");
+
+        let (place, place_details, place_name_to_search) = match (place_id_opt, place_name_opt) {
+            // Case 1: Both placeId and placeName present (normal case)
+            (Some(place_id), name_opt) => {
+                let display_name = name_opt.cloned().unwrap_or_default();
+                let formatted_address = params.get("placeAddress").cloned().unwrap_or_default();
+
+                crate::log!(
+                    "[HotelDetailsParams::from_query_params] Case 1: placeId='{}', display_name='{}', formatted_address='{}'",
+                    place_id,
+                    display_name,
+                    formatted_address
+                );
+
+                let place = Place {
+                    place_id: place_id.clone(),
+                    display_name,
+                    formatted_address,
+                };
+
+                // Parse coordinates (optional)
+                let destination_latitude = params.get("lat").and_then(|s| s.parse().ok());
+                let destination_longitude = params.get("lng").and_then(|s| s.parse().ok());
+
+                // Create minimal PlaceData structure (will be enriched via lookup if needed)
+                let place_details = PlaceData {
+                    address_components: Vec::new(),
+                    location: crate::api::client_side_api::Location {
+                        latitude: destination_latitude.unwrap_or(0.0),
+                        longitude: destination_longitude.unwrap_or(0.0),
+                    },
+                    viewport: crate::api::client_side_api::Viewport::default(),
+                };
+
+                (Some(place), Some(place_details), None)
+            }
+
+            // Case 2: Only placeName present - need to search for placeId
+            (None, Some(place_name)) => {
+                crate::log!(
+                    "[HotelDetailsParams] Only placeName provided: '{}', will search for placeId",
+                    place_name
+                );
+                (None, None, Some(place_name.clone()))
+            }
+
+            // Case 3: Neither present - invalid
+            (None, None) => {
+                crate::log!(
+                    "[HotelDetailsParams] Missing both placeId and placeName, cannot proceed"
+                );
+                return None;
+            }
         };
 
-        // Parse dates (required)
-        let checkin = params.get("checkin")?.clone();
-        let checkout = params.get("checkout")?.clone();
+        // Parse dates with defaults if missing (next week + 1 night)
+        use chrono::{Duration, Local};
+
+        let checkin = params
+            .get("checkin")
+            .cloned()
+            .or_else(|| {
+                let date = Local::now().date_naive() + Duration::days(7);
+                Some(date.format("%Y-%m-%d").to_string())
+            })
+            .unwrap();
+
+        let checkout = params
+            .get("checkout")
+            .cloned()
+            .or_else(|| {
+                let date = Local::now().date_naive() + Duration::days(8);
+                Some(date.format("%Y-%m-%d").to_string())
+            })
+            .unwrap();
 
         // Calculate nights from dates
         let no_of_nights =
             if let (Some(start), Some(end)) = (parse_date(&checkin), parse_date(&checkout)) {
-                let start_date = chrono::NaiveDate::from_ymd_opt(start.0 as i32, start.1, start.2)?;
-                let end_date = chrono::NaiveDate::from_ymd_opt(end.0 as i32, end.1, end.2)?;
-                (end_date - start_date).num_days().max(1) as u32
+                let start_date = chrono::NaiveDate::from_ymd_opt(start.0 as i32, start.1, start.2);
+                let end_date = chrono::NaiveDate::from_ymd_opt(end.0 as i32, end.1, end.2);
+                if let (Some(s), Some(e)) = (start_date, end_date) {
+                    (e - s).num_days().max(1) as u32
+                } else {
+                    1
+                }
             } else {
                 1
             };
 
-        // Parse guest information (required)
+        // Parse guest information with defaults
         let adults = params
             .get("adults")
             .and_then(|s| s.parse().ok())
@@ -253,7 +347,7 @@ impl HotelDetailsParams {
             .map(|s| parse_comma_separated_u32(&s))
             .unwrap_or_default();
 
-        // Parse coordinates (optional)
+        // Parse coordinates (optional) - used for both cases
         let destination_latitude = params.get("lat").and_then(|s| s.parse().ok());
         let destination_longitude = params.get("lng").and_then(|s| s.parse().ok());
 
@@ -263,16 +357,10 @@ impl HotelDetailsParams {
             .cloned()
             .unwrap_or_else(|| "US".to_string());
 
-        // Note: PlaceData will need to be fetched separately via API if not in cache
-        // For now, create a minimal PlaceData structure
-        let place_details = PlaceData {
-            address_components: Vec::new(),
-            location: crate::api::client_side_api::Location {
-                latitude: destination_latitude.unwrap_or(0.0),
-                longitude: destination_longitude.unwrap_or(0.0),
-            },
-            viewport: crate::api::client_side_api::Viewport::default(),
-        };
+        crate::log!(
+            "[HotelDetailsParams] Parsed: checkin={}, checkout={}, adults={}, children={}, rooms={}",
+            checkin, checkout, adults, children, rooms
+        );
 
         Some(Self {
             hotel_code,
@@ -288,6 +376,7 @@ impl HotelDetailsParams {
             rooms,
             children_ages,
             guest_nationality,
+            place_name_to_search,
         })
     }
 
@@ -299,16 +388,15 @@ impl HotelDetailsParams {
         // Hotel code
         params.insert("hotelCode".to_string(), self.hotel_code.clone());
 
-        // Place information
-        params.insert("placeId".to_string(), self.place.place_id.clone());
-        if !self.place.display_name.is_empty() {
-            params.insert("placeName".to_string(), self.place.display_name.clone());
-        }
-        if !self.place.formatted_address.is_empty() {
-            params.insert(
-                "placeAddress".to_string(),
-                self.place.formatted_address.clone(),
-            );
+        // Place information (only if available)
+        if let Some(ref place) = self.place {
+            params.insert("placeId".to_string(), place.place_id.clone());
+            if !place.display_name.is_empty() {
+                params.insert("placeName".to_string(), place.display_name.clone());
+            }
+            if !place.formatted_address.is_empty() {
+                params.insert("placeAddress".to_string(), place.formatted_address.clone());
+            }
         }
 
         // Dates
@@ -353,8 +441,75 @@ impl QueryParamsSync<HotelDetailsParams> for HotelDetailsParams {
         // Set hotel code
         hotel_info_ctx.hotel_code.set(self.hotel_code.clone());
 
-        UISearchCtx::set_place(self.place.clone());
-        UISearchCtx::set_place_details(Some(self.place_details.clone()));
+        // Only sync place data if available (might be None during place search)
+        if let Some(ref place) = self.place {
+            crate::log!(
+                "[HotelDetailsParams::sync_to_app_state] Setting place: display_name='{}', formatted_address='{}', place_id='{}'",
+                place.display_name,
+                place.formatted_address,
+                place.place_id
+            );
+            // Set place immediately (even if place_details needs to be fetched)
+            UISearchCtx::set_place(place.clone());
+
+            // If place_details not already available OR has invalid coordinates (0,0), fetch from API
+            let needs_fetch = self.place_details.is_none()
+                || self
+                    .place_details
+                    .as_ref()
+                    .map(|pd| pd.location.latitude == 0.0 && pd.location.longitude == 0.0)
+                    .unwrap_or(false);
+
+            if needs_fetch {
+                crate::log!(
+                    "[HotelDetailsParams::sync_to_app_state] Fetching place_details for placeId: {}",
+                    place.place_id
+                );
+                let place_id = place.place_id.clone();
+                let place_for_update = place.clone();
+                spawn_local(async move {
+                    let api_client = ClientSideApiClient::new();
+                    if let Ok(place_details) = api_client.get_place_details_by_id(place_id).await {
+                        crate::log!(
+                            "[HotelDetailsParams::sync_to_app_state] Fetched place_details successfully"
+                        );
+                        // Update the Place with proper display_name and formatted_address from place_details
+                        let updated_place = Place {
+                            place_id: place_for_update.place_id.clone(),
+                            display_name: get_display_name_from_place_data(&place_details),
+                            formatted_address: get_formatted_address_from_place_data(
+                                &place_details,
+                            ),
+                        };
+
+                        crate::log!(
+                            "[HotelDetailsParams::sync_to_app_state] Updating place with fetched details: display_name='{}', formatted_address='{}'",
+                            updated_place.display_name,
+                            updated_place.formatted_address
+                        );
+                        // Set both place (for DestinationPicker display) and place_details
+                        UISearchCtx::set_place(updated_place);
+                        UISearchCtx::set_place_details(Some(place_details));
+                    }
+                });
+            } else {
+                // If we already have place_details, update the place with proper names
+                if let Some(ref details) = self.place_details {
+                    let updated_place = Place {
+                        place_id: place.place_id.clone(),
+                        display_name: get_display_name_from_place_data(details),
+                        formatted_address: get_formatted_address_from_place_data(details),
+                    };
+                    crate::log!(
+                        "[HotelDetailsParams::sync_to_app_state] Updating place with existing details: display_name='{}', formatted_address='{}'",
+                        updated_place.display_name,
+                        updated_place.formatted_address
+                    );
+                    UISearchCtx::set_place(updated_place);
+                }
+                UISearchCtx::set_place_details(self.place_details.clone());
+            }
+        }
 
         // Set date range
         if let (Some(start_date), Some(end_date)) = (

@@ -44,7 +44,7 @@ pub async fn lookup_place_by_id(place_id: String) -> Result<PlaceData, ServerFnE
 }
 
 /// Helper to extract display name from PlaceData address components
-fn get_display_name_from_place_data(place_data: &PlaceData) -> String {
+pub fn get_display_name_from_place_data(place_data: &PlaceData) -> String {
     // Try to find locality (city) first
     if let Some(locality) = place_data
         .address_components
@@ -73,7 +73,7 @@ fn get_display_name_from_place_data(place_data: &PlaceData) -> String {
 
 /// Helper to build formatted address from PlaceData address components
 /// Note: Does NOT include locality since it's already in display_name
-fn get_formatted_address_from_place_data(place_data: &PlaceData) -> String {
+pub fn get_formatted_address_from_place_data(place_data: &PlaceData) -> String {
     // Find relevant components: admin_area, country (skip locality to avoid duplication)
     let admin_area = place_data
         .address_components

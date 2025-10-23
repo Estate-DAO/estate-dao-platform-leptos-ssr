@@ -41,16 +41,32 @@ pub fn DestinationPickerV6() -> impl IntoView {
     // Initialize search text with current selection
     create_effect(move |_| {
         if let Some(place) = search_ctx.place.get() {
+            crate::log!(
+                "[DestinationPickerV6] Place detected: display_name='{}', formatted_address='{}', is_open={}",
+                place.display_name,
+                place.formatted_address,
+                is_open.get()
+            );
             if !is_open.get() {
                 let search_text = if place.formatted_address.trim().is_empty() {
                     place.display_name.clone()
                 } else {
                     format!("{}, {}", place.display_name, place.formatted_address)
                 };
+                crate::log!(
+                    "[DestinationPickerV6] Setting search_text to: '{}'",
+                    search_text
+                );
                 set_search_text.set(search_text);
             }
-        } else if !is_open.get() {
-            set_search_text.set(String::new());
+        } else {
+            crate::log!(
+                "[DestinationPickerV6] No place in context, is_open={}",
+                is_open.get()
+            );
+            if !is_open.get() {
+                set_search_text.set(String::new());
+            }
         }
     });
 
@@ -64,10 +80,27 @@ pub fn DestinationPickerV6() -> impl IntoView {
     let _cleanup = on_click_outside(container_ref, move |_| {
         if is_open.get_untracked() {
             set_is_open.set(false);
-            // Restore display text
-            if let Some(dest) = search_ctx.destination.get() {
+            // Restore display text from place (new) or destination (legacy fallback)
+            if let Some(place) = search_ctx.place.get() {
+                let search_text = if place.formatted_address.trim().is_empty() {
+                    place.display_name.clone()
+                } else {
+                    format!("{}, {}", place.display_name, place.formatted_address)
+                };
+                crate::log!(
+                    "[DestinationPickerV6] Click outside: Restoring from place: '{}'",
+                    search_text
+                );
+                set_search_text.set(search_text);
+            } else if let Some(dest) = search_ctx.destination.get() {
+                crate::log!(
+                    "[DestinationPickerV6] Click outside: Restoring from destination (legacy)"
+                );
                 set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
             } else {
+                crate::log!(
+                    "[DestinationPickerV6] Click outside: No place or destination, clearing"
+                );
                 set_search_text.set(String::new());
             }
         }
@@ -216,8 +249,15 @@ pub fn DestinationPickerV6() -> impl IntoView {
                 if is_open.get() {
                     ev.prevent_default();
                     set_is_open.set(false);
-                    // Restore display text
-                    if let Some(dest) = search_ctx.destination.get() {
+                    // Restore display text from place (new) or destination (legacy fallback)
+                    if let Some(place) = search_ctx.place.get() {
+                        let search_text = if place.formatted_address.trim().is_empty() {
+                            place.display_name.clone()
+                        } else {
+                            format!("{}, {}", place.display_name, place.formatted_address)
+                        };
+                        set_search_text.set(search_text);
+                    } else if let Some(dest) = search_ctx.destination.get() {
                         set_search_text.set(format!("{}, {}", dest.city, dest.country_name));
                     } else {
                         set_search_text.set(String::new());
