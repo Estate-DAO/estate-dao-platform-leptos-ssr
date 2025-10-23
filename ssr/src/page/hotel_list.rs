@@ -187,83 +187,38 @@ pub fn HotelListPage() -> impl IntoView {
     // Hotel search resource - triggers when search context or pagination changes
     let hotel_search_resource = create_resource(
         move || {
+            // Depend on query_map to re-run when URL params change
+            query_map.get();
+
             // Track search context changes reactively
             let place = search_ctx_for_resource.place.get();
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
-            let children = search_ctx_for_resource.guests.children.get();
             let rooms = search_ctx_for_resource.guests.rooms.get();
 
             // Track pagination changes reactively
             let current_page = pagination_state.current_page.get();
             let page_size = pagination_state.page_size.get();
 
-            // log!("[PAGINATION-DEBUG] [hotel_search_resource] current_page: {}, page_size: {}", current_page, page_size);
-            // log!("[PAGINATION-DEBUG] [hotel_search_resource] destination: {:?}", destination);
-            // log!("[PAGINATION-DEBUG] [hotel_search_resource] date_range: {:?}", date_range);
-            // log!("[PAGINATION-DEBUG] [hotel_search_resource] adults: {:?}", adults);
-            // log!("[PAGINATION-DEBUG] [hotel_search_resource] children: {:?}", children);
-            // log!("[PAGINATION-DEBUG] [hotel_search_resource] rooms: {:?}", rooms);
-
-            // Get fresh context each time (this makes it reactive to context changes)
-            let previous_search_ctx = expect_context::<PreviousSearchContext>();
-
-            // log!("[hotel_search_resource] previous_search_ctx: {:?}", previous_search_ctx);
-
-            let previous_place = previous_search_ctx.place.clone();
-            let previous_adults = previous_search_ctx.adults;
-            let previous_children = previous_search_ctx.children;
-            let previous_rooms = previous_search_ctx.rooms;
-
-            let is_same_place = place == previous_place;
-            let is_same_adults = adults == previous_adults;
-            let is_same_children = children == previous_children;
-            let is_same_rooms = rooms == previous_rooms;
-            let is_same_search_criteria =
-                is_same_place && is_same_adults && is_same_children && is_same_rooms;
-
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
             let has_valid_search_data = place.is_some() && adults > 0 && rooms > 0;
-            let is_first_load =
-                previous_place.is_none() && previous_adults == 0 && previous_rooms == 0;
-
-            // Reset pagination to first page when search criteria change
-            if !is_same_search_criteria && !is_first_load {
-                UIPaginationState::reset_to_first_page();
-            }
 
             // Return true when ready to search
-            let is_ready = has_valid_dates
-                && has_valid_search_data
-                && (is_first_load || // First load with valid data - always search
-                    is_same_search_criteria); // Always search for same criteria (includes pagination changes)
+            let is_ready = has_valid_dates && has_valid_search_data;
 
-            // log!(
-            //     "[PAGINATION-DEBUG] [hotel_search_resource] readiness: current_page={}, is_same_destination={}, is_same_adults={}, is_same_children={}, is_same_rooms={}, is_same_search_criteria={}, has_valid_dates={}, has_valid_search_data={}, is_first_load={}, ready={}",
-            //     current_page,
-            //     is_same_destination,
-            //     is_same_adults,
-            //     is_same_children,
-            //     is_same_rooms,
-            //     is_same_search_criteria,
-            //     has_valid_dates,
-            //     has_valid_search_data,
-            //     is_first_load,
-            //     is_ready
-            // );
-
-            // Return a tuple that changes when pagination changes, not just a boolean
-            // This ensures the resource re-runs when pagination state changes
+            // Return a tuple that changes when pagination or other key fields change
             if is_ready {
-                (true, current_page, page_size)
+                (place, date_range, adults, rooms, current_page, page_size)
             } else {
-                (false, 0, 0)
+                // Return a default/non-ready state
+                (None, Default::default(), 0, 0, 0, 0)
             }
         },
-        move |(is_ready, current_page, page_size)| {
+        move |(is_ready_place, _date_range, _adults, _rooms, current_page, page_size)| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             async move {
+                let is_ready = is_ready_place.is_some();
                 log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
 
                 if !is_ready {
