@@ -94,6 +94,7 @@ impl AccountTabs {
         }
     }
 }
+
 #[component]
 pub fn MyAccountPage() -> impl IntoView {
     let query = use_query_map();
@@ -124,12 +125,24 @@ pub fn MyAccountPage() -> impl IntoView {
                     </svg>
                 </button>
 
+                {/* Overlay for mobile */}
+                {move || if sidebar_open.get() {
+                    view! {
+                        <div
+                            class="fixed inset-0 bg-black/50 z-50 lg:hidden"
+                            on:click=move |_| set_sidebar_open.set(false)
+                        />
+                    }.into_any()
+                } else {
+                    view! { <></> }.into_any()
+                }}
+
                 {/* Sidebar (lg screens inline, sm screens as modal) */}
                 <aside
                     class=move || {
                         if sidebar_open.get() {
-                            // Mobile modal mode
-                            "fixed inset-0 z-30 flex items-center justify-center lg:inset-auto"
+                            // Mobile modal mode - centered without blocking overlay
+                            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 lg:static lg:translate-x-0 lg:translate-y-0 lg:w-64"
                                 .to_string()
                         } else {
                             // Hidden on mobile, visible inline on lg
@@ -137,7 +150,7 @@ pub fn MyAccountPage() -> impl IntoView {
                         }
                     }
                 >
-                    <div class="bg-white rounded-xl border p-6 w-64 shadow-sm">
+                    <div class="bg-white rounded-xl border p-6 w-64 shadow-sm relative">
                         {/* Close button (mobile only) */}
                         <button
                             class="lg:hidden top-4 right-4 text-gray-600"
@@ -205,18 +218,6 @@ pub fn MyAccountPage() -> impl IntoView {
                         </nav>
                     </div>
                 </aside>
-
-                {/* Overlay for mobile */}
-                {move || if sidebar_open.get() {
-                    view! {
-                        <div
-                            class="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
-                            on:click=move |_| set_sidebar_open.set(false)
-                        />
-                    }.into_any()
-                } else {
-                    view! { <div/> }.into_any()
-                }}
 
                 {/* Main content */}
                 <section class="flex-1 bg-white rounded-xl border p-8 overflow-y-auto">
