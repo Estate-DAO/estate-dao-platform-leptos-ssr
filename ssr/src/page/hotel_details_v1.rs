@@ -173,10 +173,19 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         if !params.0.is_empty() {
             log!("Found query params in URL: {:?}", params);
 
-            if let Some(hotel_params) =
-                HotelDetailsParams::from_url_params(&params.0.into_iter().collect())
-            {
-                log!("Parsed hotel params from URL: {:?}", hotel_params);
+            // Convert leptos_router params to HashMap
+            let params_map: std::collections::HashMap<String, String> = params
+                .0
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
+
+            // Try new format first (individual params), then fall back to legacy (base64)
+            if let Some(hotel_params) = HotelDetailsParams::from_query_params(&params_map) {
+                log!(
+                    "Parsed hotel params from URL (new format): {:?}",
+                    hotel_params
+                );
                 hotel_params.sync_to_app_state();
             }
         }
@@ -186,9 +195,9 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // This can be called when navigating to this page from hotel list
     let update_url_with_current_state = move || {
         if let Some(current_params) = HotelDetailsParams::from_current_context() {
-            current_params.update_url();
+            current_params.update_url(); // Now uses individual query params
             log!(
-                "Updated URL with current hotel details state: {:?}",
+                "Updated URL with current hotel details state (individual params): {:?}",
                 current_params
             );
         }
@@ -231,7 +240,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Return true when ready to call API
             let is_ready = has_hotel_code && has_place_details && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}", 
+            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}",
                 has_hotel_code, has_place_details, has_valid_dates, is_ready);
 
             is_ready

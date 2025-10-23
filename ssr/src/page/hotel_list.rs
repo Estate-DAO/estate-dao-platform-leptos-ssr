@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos_router::use_navigate;
+use std::collections::HashMap;
 use web_sys::MouseEvent;
 
 use crate::api::auth::auth_state::AuthStateSignal;
@@ -87,16 +88,30 @@ pub fn HotelListPage() -> impl IntoView {
     let pagination_state: UIPaginationState = expect_context();
 
     // Sync query params with state on page load (URL → State)
+    // Parse URL params and sync to app state (URL → State)
     // This leverages use_query_map's built-in reactivity for browser navigation
     create_effect(move |_| {
         let params = query_map.get();
         if !params.0.is_empty() {
-            // log!("Found query params in URL: {:?}", params);
+            let params_map: HashMap<String, String> = params
+                .0
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect();
 
-            if let Some(hotel_params) =
-                HotelListParams::from_url_params(&params.0.into_iter().collect())
-            {
-                // log!("Parsed hotel params from URL: {:?}", hotel_params);
+            // Try individual query params first (NEW format), then fall back to base64 state (LEGACY)
+            if let Some(hotel_params) = HotelListParams::from_query_params(&params_map) {
+                log!(
+                    "Parsed hotel params from URL (individual params): {:?}",
+                    hotel_params
+                );
+                hotel_params.sync_to_app_state();
+                PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+            } else if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
+                log!(
+                    "Parsed hotel params from URL (legacy base64 state): {:?}",
+                    hotel_params
+                );
                 hotel_params.sync_to_app_state();
                 PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
             }
@@ -227,14 +242,14 @@ pub fn HotelListPage() -> impl IntoView {
 
     // Example: Manual URL updates (State → URL) when user performs actions
     // This function can be called from search form submissions, filter changes, etc.
-    let update_url_with_current_state = move || {
+    let update_url_with_current_state = Callback::new(move |_: ()| {
         let current_params = HotelListParams::from_search_context(&search_ctx_for_url_update);
         current_params.update_url();
         log!(
             "Updated URL with current search state: {:?}",
             current_params
         );
-    };
+    });
 
     // Example usage - this could be called from:
     // - Search form submission: update_url_with_current_state();
@@ -365,6 +380,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
+            update_url_with_current_state.call(());
         })
     };
 
@@ -372,6 +388,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.amenities = None);
+            update_url_with_current_state.call(());
         })
     };
 
@@ -389,6 +406,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
+            update_url_with_current_state.call(());
         })
     };
 
@@ -396,6 +414,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.property_types = None);
+            update_url_with_current_state.call(());
         })
     };
 
@@ -407,6 +426,7 @@ pub fn HotelListPage() -> impl IntoView {
                     filters.min_star_rating = next;
                 }
             });
+            update_url_with_current_state.call(());
         })
     };
 
@@ -434,6 +454,7 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
             });
+            update_url_with_current_state.call(());
         })
     };
 
@@ -441,11 +462,24 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = filters_signal;
         Callback::new(move |_| {
             filters_signal.set(UISearchFilters::default());
+            update_url_with_current_state.call(());
         })
     };
 
     let disabled_filters = Signal::derive(move || false);
     let filters_collapsed = create_rw_signal(false);
+
+    // Watch for pagination changes and update URL
+    let search_list_page_for_effect = search_list_page.clone();
+    create_effect(move |_| {
+        let _ = pagination_state.current_page.get();
+        let _ = pagination_state.page_size.get();
+
+        // Only update URL if we have search results (prevents initial load URL spam)
+        if search_list_page_for_effect.search_result.get().is_some() {
+            update_url_with_current_state.call(());
+        }
+    });
 
     view! {
         // Fixed header section at top
@@ -704,6 +738,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                     filters_signal.update(|filters| {
                                                                         filters.min_star_rating = None;
                                                                     });
+                                                                    update_url_with_current_state.call(());
                                                                 }
                                                             >
                                                                 "Clear star filter"
@@ -721,6 +756,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         filters.min_price_per_night = None;
                                                                         filters.max_price_per_night = None;
                                                                     });
+                                                                    update_url_with_current_state.call(());
                                                                 }
                                                             >
                                                                 "Clear price filter"

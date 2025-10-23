@@ -2,7 +2,10 @@ use crate::{
     api::client_side_api::{Place, PlaceData},
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     domain::DomainHotelSearchCriteria,
-    utils::query_params::{update_url_with_state, QueryParamsSync},
+    utils::query_params::{
+        build_query_string, individual_params, update_url_with_params, update_url_with_state,
+        QueryParamsSync,
+    },
     view_state_layer::{ui_search_state::UISearchCtx, view_state::HotelInfoCtx},
 };
 use chrono::Datelike;
@@ -160,26 +163,18 @@ impl HotelDetailsParams {
         }
     }
 
-    /// Manual update URL with current state (call this when you want to update the URL)
-    pub fn update_url(&self) {
-        update_url_with_state(self);
-    }
-
-    /// Generate a shareable URL for this hotel with all search parameters
+    /// Generate a shareable URL for this hotel with all search parameters (NEW - human-readable)
     /// This can be called from hotel list or other pages to create deep links
     pub fn to_shareable_url(&self) -> String {
         use crate::app::AppRoutes;
-        use url::form_urlencoded;
 
-        let params = self.to_url_params();
-        let query_string = form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(&params)
-            .finish();
+        let query_params = self.to_query_params();
+        let query_string = build_query_string(&query_params);
 
         format!("{}?{}", AppRoutes::HotelDetails.to_string(), query_string)
     }
 
-    /// Create from URL query parameters
+    /// Create from URL query parameters (LEGACY - base64 encoded state)
     pub fn from_url_params(params: &HashMap<String, String>) -> Option<Self> {
         let encoded_state = params.get("state").cloned();
         if let Some(encoded) = encoded_state {
@@ -189,11 +184,163 @@ impl HotelDetailsParams {
         }
     }
 
-    /// Convert to URL query parameters
-    pub fn to_url_params(&self) -> HashMap<String, String> {
+    /// Convert to URL query parameters (LEGACY - base64 encoded state)
+    pub fn to_url_params_legacy(&self) -> HashMap<String, String> {
         let mut params = HashMap::new();
         let encoded = crate::utils::query_params::encode_state(self);
         params.insert("state".to_string(), encoded);
+        params
+    }
+
+    /// Manual update URL with current state (call this when you want to update the URL)
+    pub fn update_url(&self) {
+        let params = self.to_query_params();
+        update_url_with_params("/hotel-details", &params);
+    }
+
+    /// Create from individual query parameters (NEW - human-readable format)
+    /// Accepts HashMap<String, String> which is converted from leptos_router params
+    pub fn from_query_params(params: &HashMap<String, String>) -> Option<Self> {
+        use individual_params::*;
+
+        // Check for legacy format first
+        if params.contains_key("state") {
+            return Self::from_url_params(params);
+        }
+
+        // Parse hotel code (required)
+        let hotel_code = params.get("hotelCode")?.clone();
+
+        // Parse Place from placeId (required)
+        let place_id = params.get("placeId")?.clone();
+        let place = Place {
+            place_id: place_id.clone(),
+            display_name: params.get("placeName").cloned().unwrap_or_default(),
+            formatted_address: params.get("placeAddress").cloned().unwrap_or_default(),
+        };
+
+        // Parse dates (required)
+        let checkin = params.get("checkin")?.clone();
+        let checkout = params.get("checkout")?.clone();
+
+        // Calculate nights from dates
+        let no_of_nights =
+            if let (Some(start), Some(end)) = (parse_date(&checkin), parse_date(&checkout)) {
+                let start_date = chrono::NaiveDate::from_ymd_opt(start.0 as i32, start.1, start.2)?;
+                let end_date = chrono::NaiveDate::from_ymd_opt(end.0 as i32, end.1, end.2)?;
+                (end_date - start_date).num_days().max(1) as u32
+            } else {
+                1
+            };
+
+        // Parse guest information (required)
+        let adults = params
+            .get("adults")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(2);
+        let children = params
+            .get("children")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let rooms = params
+            .get("rooms")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1);
+
+        // Parse children ages
+        let children_ages = params
+            .get("childAges")
+            .map(|s| parse_comma_separated_u32(&s))
+            .unwrap_or_default();
+
+        // Parse coordinates (optional)
+        let destination_latitude = params.get("lat").and_then(|s| s.parse().ok());
+        let destination_longitude = params.get("lng").and_then(|s| s.parse().ok());
+
+        // Guest nationality (optional)
+        let guest_nationality = params
+            .get("nationality")
+            .cloned()
+            .unwrap_or_else(|| "US".to_string());
+
+        // Note: PlaceData will need to be fetched separately via API if not in cache
+        // For now, create a minimal PlaceData structure
+        let place_details = PlaceData {
+            address_components: Vec::new(),
+            location: crate::api::client_side_api::Location {
+                latitude: destination_latitude.unwrap_or(0.0),
+                longitude: destination_longitude.unwrap_or(0.0),
+            },
+            viewport: crate::api::client_side_api::Viewport::default(),
+        };
+
+        Some(Self {
+            hotel_code,
+            place,
+            place_details,
+            destination_latitude,
+            destination_longitude,
+            checkin,
+            checkout,
+            no_of_nights,
+            adults,
+            children,
+            rooms,
+            children_ages,
+            guest_nationality,
+        })
+    }
+
+    /// Convert to individual query parameters (NEW - human-readable format)
+    pub fn to_query_params(&self) -> HashMap<String, String> {
+        use individual_params::*;
+        let mut params = HashMap::new();
+
+        // Hotel code
+        params.insert("hotelCode".to_string(), self.hotel_code.clone());
+
+        // Place information
+        params.insert("placeId".to_string(), self.place.place_id.clone());
+        if !self.place.display_name.is_empty() {
+            params.insert("placeName".to_string(), self.place.display_name.clone());
+        }
+        if !self.place.formatted_address.is_empty() {
+            params.insert(
+                "placeAddress".to_string(),
+                self.place.formatted_address.clone(),
+            );
+        }
+
+        // Dates
+        params.insert("checkin".to_string(), self.checkin.clone());
+        params.insert("checkout".to_string(), self.checkout.clone());
+
+        // Guest information
+        params.insert("adults".to_string(), self.adults.to_string());
+        params.insert("children".to_string(), self.children.to_string());
+        params.insert("rooms".to_string(), self.rooms.to_string());
+
+        // Children ages
+        if !self.children_ages.is_empty() {
+            params.insert(
+                "childAges".to_string(),
+                join_comma_separated_u32(&self.children_ages),
+            );
+        }
+
+        // Coordinates (if available)
+        if let Some(lat) = self.destination_latitude {
+            params.insert("lat".to_string(), lat.to_string());
+        }
+        if let Some(lng) = self.destination_longitude {
+            params.insert("lng".to_string(), lng.to_string());
+        }
+
+        // Guest nationality (only if not default)
+        if self.guest_nationality != "US" {
+            params.insert("nationality".to_string(), self.guest_nationality.clone());
+        }
+
         params
     }
 }
