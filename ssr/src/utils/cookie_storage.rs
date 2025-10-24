@@ -21,14 +21,18 @@ const BOOKING_ID_COOKIE: &str = "estatedao_booking_id";
 pub struct CookieBookingStorage;
 
 impl CookieBookingStorage {
-    /// **Get cookie domain configuration (same as OAuth system)**
+    /// **Get cookie domain configuration (environment-aware)**
     fn get_cookie_domain() -> Option<String> {
-        // Use same logic as oauth.rs for consistent domain handling
-        let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
-        if app_url.contains("nofeebooking.com") {
-            Some(".nofeebooking.com".to_string()) // Covers nofeebooking.com and www.nofeebooking.com
-        } else {
+        // Use the existing domain utility from consts.rs - works for all environments
+        use crate::api::consts::{get_app_domain_with_dot, APP_URL};
+
+        let domain_with_dot = get_app_domain_with_dot();
+
+        // Skip domain setting for localhost to avoid cookie issues
+        if domain_with_dot.contains("localhost") || domain_with_dot.contains("127.0.0.1") {
             None
+        } else {
+            Some(domain_with_dot)
         }
     }
 

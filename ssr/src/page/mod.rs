@@ -2,6 +2,9 @@
 mod root;
 pub use root::*;
 
+mod search_params;
+pub use search_params::*;
+
 mod hotel_details;
 pub use hotel_details::*;
 

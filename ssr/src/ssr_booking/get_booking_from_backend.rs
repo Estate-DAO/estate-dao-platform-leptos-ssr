@@ -28,8 +28,6 @@ impl GetBookingFromBackend {
     ) -> Result<ServerSideBookingEvent, String> {
         // extract user email
         let user_email = event.user_email.clone();
-        // extract booking id
-        // let booking_id = event.booking_id.clone();
 
         // ---------------------------
         // 1a. Derive BookingId from order_id and user_email
@@ -44,6 +42,16 @@ impl GetBookingFromBackend {
             app_reference,
             email: event.user_email.clone(),
         };
+
+        // Check if we're refreshing existing booking data
+        if let Some(ref existing_booking) = event.backend_booking_struct {
+            info!(
+                "Refreshing existing booking data with current payment status: {:?}",
+                existing_booking.payment_details.payment_status
+            );
+        } else {
+            info!("Loading booking data from backend for the first time");
+        }
 
         // get booking from backend
         let bookings_opt = get_user_booking_backend(user_email.clone())
@@ -61,7 +69,12 @@ impl GetBookingFromBackend {
             })
             .ok_or_else(|| "No matching booking found for user".to_string())?;
 
-        // return event with booking
+        info!(
+            "Loaded booking from backend with payment status: {:?}",
+            booking.payment_details.payment_status
+        );
+
+        // return event with updated booking
         let mut updated_event = event;
         updated_event.backend_booking_struct = Some(booking.clone());
 
@@ -104,6 +117,28 @@ impl PipelineValidator for GetBookingFromBackend {
         err(Debug)
     )]
     async fn validate(&self, event: &ServerSideBookingEvent) -> Result<PipelineDecision, String> {
+        // Check if booking is already loaded from a previous step (e.g., PaymentStatusV2)
+        if let Some(ref backend_booking) = event.backend_booking_struct {
+            // Check if payment status is problematic - if so, we need to refresh
+            match &backend_booking.payment_details.payment_status {
+                crate::canister::backend::BackendPaymentStatus::Unpaid(_) => {
+                    info!(
+                        "Booking loaded but payment status is Unpaid({:?}), refreshing from backend to get latest status",
+                        backend_booking.payment_details.payment_status
+                    );
+                    // Don't skip - run to get fresh payment status
+                    return Ok(PipelineDecision::Run);
+                }
+                _ => {
+                    info!(
+                        "Booking already loaded from previous step with good payment status: {:?}, skipping GetBookingFromBackend",
+                        backend_booking.payment_details.payment_status
+                    );
+                    return Ok(PipelineDecision::Skip);
+                }
+            }
+        }
+
         // ensure user email is non empty
         if event.user_email.is_empty() {
             return Err("User email is missing".to_string());

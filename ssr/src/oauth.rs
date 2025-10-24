@@ -24,6 +24,21 @@ use crate::{
 const CSRF_COOKIE: &str = "g_csrf";
 const SESSION_COOKIE: &str = "session"; // signed session cookie
 
+/// Get OAuth cookie domain configuration (environment-aware)
+/// Uses the same logic as cookie_storage for consistency
+fn get_oauth_cookie_domain() -> Option<String> {
+    use crate::api::consts::get_app_domain_with_dot;
+
+    let domain_with_dot = get_app_domain_with_dot();
+
+    // Skip domain setting for localhost to avoid cookie issues
+    if domain_with_dot.contains("localhost") || domain_with_dot.contains("127.0.0.1") {
+        None
+    } else {
+        Some(domain_with_dot)
+    }
+}
+
 pub async fn get_app_url() -> Json<AppUrl> {
     let env_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
     let const_url = APP_URL.to_string();
@@ -62,20 +77,17 @@ pub async fn google_auth(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    // Determine cookie domain based on APP_URL
+    // Determine cookie domain based on APP_URL (environment-aware)
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
-    let cookie_domain = if app_url.contains("nofeebooking.com") {
-        Some(".nofeebooking.com".to_string()) // Covers nofeebooking.com and www.nofeebooking.com
-    } else {
-        None
-    };
+    let cookie_domain = get_oauth_cookie_domain();
+    let is_secure = app_url.starts_with("https://");
 
     // Build CSRF cookie
     let mut csrf_cookie_builder = Cookie::build((CSRF_COOKIE, csrf.secret().to_string()))
         .path("/")
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
-        .secure(app_url.starts_with("https://"));
+        .secure(is_secure);
 
     if let Some(domain) = cookie_domain.clone() {
         csrf_cookie_builder = csrf_cookie_builder.domain(domain);
@@ -91,7 +103,7 @@ pub async fn google_auth(
             .path("/")
             .http_only(true)
             .same_site(axum_extra::extract::cookie::SameSite::Lax)
-            .secure(app_url.starts_with("https://"));
+            .secure(is_secure);
 
     if let Some(domain) = cookie_domain.clone() {
         pkce_cookie_builder = pkce_cookie_builder.domain(domain);
@@ -185,11 +197,7 @@ pub async fn google_callback(
     };
 
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
-    let cookie_domain = if app_url.contains("nofeebooking.com") {
-        Some(".nofeebooking.com".to_string())
-    } else {
-        None
-    };
+    let cookie_domain = get_oauth_cookie_domain();
     let is_secure = app_url.starts_with("https://");
 
     let session_json = match serde_json::to_string(&userinfo) {
@@ -257,13 +265,9 @@ pub async fn google_callback(
 
 /// POST /auth/logout
 pub async fn logout(State(_state): State<AppState>, jar: SignedCookieJar) -> impl IntoResponse {
-    // Determine cookie domain and secure attribute based on APP_URL
+    // Determine cookie domain and secure attribute based on APP_URL (environment-aware)
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3002/".into());
-    let cookie_domain = if app_url.contains("nofeebooking.com") {
-        Some(".nofeebooking.com".to_string())
-    } else {
-        None
-    };
+    let cookie_domain = get_oauth_cookie_domain();
     let is_secure = app_url.starts_with("https://");
 
     // Create a removal cookie for session with matching attributes
