@@ -31,10 +31,10 @@ jobs:
           toolchain: "nightly-2025-10-10"
           targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
-          
+
       - name: Override Rust toolchain
         run: rustup override set nightly-2025-10-10
-          
+
       - name: Verify Rust version
         run: rustc --version && cargo --version
 
@@ -109,7 +109,7 @@ jobs:
       #       echo "ERROR: hash.txt not found in either location!"
       #       exit 1
       #     fi
-      
+
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
@@ -120,6 +120,5 @@ jobs:
             target/release/estate-fe
             target/site
             .empty
-            target/release/hash.txt
             city.json
             city.parquet

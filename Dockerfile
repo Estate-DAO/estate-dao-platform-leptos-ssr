@@ -14,7 +14,6 @@ RUN apt-get update && apt-get install -y \
 
 COPY target/release/estate-fe .
 RUN chmod +x ./estate-fe
-COPY target/release/hash.txt .
 COPY target/site ./site
 COPY city.json ./city.json
 COPY city.parquet ./city.parquet
@@ -23,7 +22,7 @@ ENV LEPTOS_ENV="production"
 ENV RUST_LOG="debug,hyper=info,tower=info"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
 ENV LEPTOS_SITE_ROOT="site"
-ENV LEPTOS_HASH_FILES="true"
+ENV LEPTOS_HASH_FILES="false"
 
 EXPOSE 3000
 
