@@ -1075,3 +1075,108 @@ error[E0275]: overflow normalizing the opaque type `<leptos::tachys::view::stati
 - Leptos 0.8 tachys renderer: https://github.com/leptos-rs/leptos/tree/main/tachys
 - Related Leptos issue: https://github.com/leptos-rs/leptos/issues/3433
 
+
+## LEPTOS_HASH_FILES Docker Build Fix
+### Date: 2025-01-22
+
+#### Problem: Docker Build Failing with Missing hash.txt
+When `LEPTOS_HASH_FILES=false` was set in CI, the Docker build failed:
+```
+#10 ERROR: failed to calculate checksum: "/target/release/hash.txt": not found
+```
+
+#### Root Cause
+The Dockerfile was trying to copy `hash.txt` regardless of whether `LEPTOS_HASH_FILES` was enabled:
+```dockerfile
+COPY target/release/hash.txt .
+```
+
+When `LEPTOS_HASH_FILES=false`, cargo-leptos doesn't generate this file, causing the build to fail.
+
+#### The Fix
+Made the configuration consistent across build and deployment:
+
+**1. Dockerfile Changes:**
+```dockerfile
+# Removed:
+# COPY target/release/hash.txt .
+
+# Updated env var:
+ENV LEPTOS_HASH_FILES="false"
+```
+
+**2. CI Artifact Upload Changes (.github/workflows/build-check.yml):**
+```yaml
+# Removed hash.txt from artifact list:
+path: |
+  target/release/estate-fe
+  target/site
+  .empty
+  # target/release/hash.txt  <- Removed
+  city.json
+  city.parquet
+```
+
+#### What LEPTOS_HASH_FILES Does
+
+**When `true` (recommended for production):**
+- ✅ Adds content hashes to asset filenames (e.g., `app.abc123.js`)
+- ✅ Generates `hash.txt` mapping file
+- ✅ Better browser caching - assets can be cached forever
+- ✅ Automatic cache invalidation when content changes
+- ⚠️ Requires hash.txt to be deployed with the app
+
+**When `false` (useful for debugging):**
+- ✅ Simple, predictable filenames (e.g., `app.js`)
+- ✅ No hash.txt file needed
+- ✅ Easier to debug asset loading issues
+- ❌ Less efficient browser caching
+- ❌ May cause cache issues when updating
+
+#### Configuration Consistency
+
+All three places must match:
+
+| Location | Setting |
+|----------|---------|
+| Build Time (CI) | `LEPTOS_HASH_FILES: false` |
+| Runtime (Dockerfile) | `ENV LEPTOS_HASH_FILES="false"` |
+| Deployment | No hash.txt required |
+
+#### Files Modified
+- `Dockerfile` - Removed hash.txt copy, updated env var
+- `.github/workflows/build-check.yml` - Removed hash.txt from artifacts
+
+#### Key Lessons
+1. **Configuration must be consistent** - Build-time and runtime settings must match
+2. **COPY in Dockerfile doesn't support optional files** - Can't use wildcards or conditionals easily
+3. **Artifact upload paths must match what's built** - Don't reference files that won't exist
+4. **LEPTOS_HASH_FILES affects file generation** - Not just a runtime flag
+
+#### Re-enabling Asset Hashing (Future)
+
+If you want to enable asset hashing later:
+
+```bash
+# 1. Update build-check.yml
+LEPTOS_HASH_FILES: true
+
+# 2. Update Dockerfile
+COPY target/release/hash.txt .
+ENV LEPTOS_HASH_FILES="true"
+
+# 3. Update artifact upload
+path: |
+  target/release/estate-fe
+  target/site
+  target/release/hash.txt
+  city.json
+  city.parquet
+```
+
+#### Status: ✅ **RESOLVED** - Docker builds now work with LEPTOS_HASH_FILES=false
+
+#### References
+- Leptos cargo-leptos docs: https://github.com/leptos-rs/cargo-leptos
+- Docker COPY documentation: https://docs.docker.com/reference/dockerfile/#copy
+
