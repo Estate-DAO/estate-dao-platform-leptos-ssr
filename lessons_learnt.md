@@ -977,15 +977,17 @@ Leptos 0.8 uses a new rendering system (tachys) that creates more complex type s
 The default type-length-limit was insufficient for the compiler to handle these complex types.
 
 #### The Fix
-Added `#![type_length_limit]` crate attribute to `ssr/src/lib.rs`:
+Added both `#![type_length_limit]` and increased `#![recursion_limit]` crate attributes to both `ssr/src/lib.rs` and `ssr/src/main.rs`:
 
 ```rust
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(non_snake_case)]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]  // Increased from 512
 #![type_length_limit = "10000000"]
 ```
+
+**Important:** Both the library crate (`lib.rs`) and binary crate (`main.rs`) need these attributes!
 
 #### Why This Works
 - The `type_length_limit` is a **crate-level attribute**, not a rustc flag
@@ -1001,7 +1003,8 @@ Added `#![type_length_limit]` crate attribute to `ssr/src/lib.rs`:
 4. **Memory pressure**: CI environments have different memory characteristics
 
 #### Files Modified
-- `ssr/src/lib.rs`: Added `#![type_length_limit = "10000000"]` crate attribute
+- `ssr/src/lib.rs`: Added `#![type_length_limit = "10000000"]` and increased `#![recursion_limit = "1024"]`
+- `ssr/src/main.rs`: Added both attributes (binary crate also needs them!)
 
 #### Key Lessons
 1. **Leptos 0.8's tachys renderer creates more complex types** than the old renderer
@@ -1010,6 +1013,8 @@ Added `#![type_length_limit]` crate attribute to `ssr/src/lib.rs`:
 4. **The type-length-limit is a compile-time limit**, not a runtime one - no performance impact on the final binary
 5. **`type_length_limit` is a crate attribute**, not a rustc flag - it must be added to source code with `#![type_length_limit = "N"]`
 6. **Similar to `recursion_limit`** - both are crate-level attributes that control compiler limits
+7. **Both lib.rs and main.rs need these attributes** - the binary crate has its own compilation limits separate from the library
+8. **Leptos 0.8 needs higher recursion limits** - the tachys renderer creates deeply nested type normalizations
 
 #### Long-term Solutions (To Consider)
 For better maintainability and faster compile times, consider:
@@ -1052,6 +1057,15 @@ view! {
     </div>
 }
 ```
+
+#### Common Follow-up Errors
+After adding `type_length_limit`, you may also see:
+```
+error[E0275]: overflow normalizing the opaque type `<leptos::tachys::view::static_types::Static<...> as IntoClass>::resolve::{opaque#0}`
+  = help: consider increasing the recursion limit by adding a `#![recursion_limit = "256"]` attribute to your crate
+```
+
+**Solution:** Increase `recursion_limit` in both `lib.rs` and `main.rs` to at least 1024.
 
 #### Status: ✅ **RESOLVED** - CI now builds successfully
 
