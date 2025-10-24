@@ -52,12 +52,31 @@ impl GlobalStateForLeptos for PreviousSearchContext {}
 impl PreviousSearchContext {
     pub fn update(new_ctx: UISearchCtx) {
         let mut this: Self = expect_context();
-        // let mut this = Self::get();
-        this.place = new_ctx.place.get_untracked();
-        this.place_details = new_ctx.place_details.get_untracked();
-        this.rooms = new_ctx.guests.rooms.get_untracked();
-        this.children = new_ctx.guests.children.get_untracked();
-        this.adults = new_ctx.guests.adults.get_untracked();
+
+        // *** KEY FIX: Only update if values have actually changed ***
+        let new_place = new_ctx.place.get_untracked();
+        let new_place_details = new_ctx.place_details.get_untracked();
+        let new_rooms = new_ctx.guests.rooms.get_untracked();
+        let new_children = new_ctx.guests.children.get_untracked();
+        let new_adults = new_ctx.guests.adults.get_untracked();
+
+        let has_changes = this.place != new_place
+            || this.place_details != new_place_details
+            || this.rooms != new_rooms
+            || this.children != new_children
+            || this.adults != new_adults;
+
+        if !has_changes {
+            log!("[PreviousSearchContext] No changes detected, skipping update to prevent unnecessary reactivity");
+            return;
+        }
+
+        log!("[PreviousSearchContext] Changes detected, updating context");
+        this.place = new_place;
+        this.place_details = new_place_details;
+        this.rooms = new_rooms;
+        this.children = new_children;
+        this.adults = new_adults;
         log!("[PreviousSearchContext] updated: {:?}", this);
 
         provide_context(this);

@@ -55,6 +55,22 @@ impl UISearchCtx {
 
     pub fn set_place(place: Place) {
         let this: Self = expect_context();
+
+        // *** KEY FIX: Check if the place has actually changed before setting ***
+        let current_place = this.place.get_untracked();
+        if current_place.as_ref() == Some(&place) {
+            log!(
+                "UISearchCtx::set_place - Place unchanged, skipping update to prevent loop: {}",
+                place.display_name
+            );
+            return;
+        }
+
+        log!(
+            "UISearchCtx::set_place - Place changed: {:?} -> {}",
+            current_place.as_ref().map(|p| &p.display_name),
+            place.display_name
+        );
         this.place.set(Some(place));
     }
 
@@ -64,24 +80,66 @@ impl UISearchCtx {
             log::warn!("UISearchCtx::set_place_details called but place is None. This may indicate inconsistent state.");
             return;
         }
+
+        // *** KEY FIX: Check if place_details have actually changed ***
+        let current_place_details = this.place_details.get_untracked();
+        if current_place_details == place_details {
+            log!("UISearchCtx::set_place_details - Place details unchanged, skipping update to prevent loop");
+            return;
+        }
+
+        log!("UISearchCtx::set_place_details - Place details changed, updating");
         this.place_details.set(place_details);
     }
 
     pub fn set_date_range(date_range: SelectedDateRange) {
         let this: Self = expect_context();
 
+        // *** KEY FIX: Check if date range has actually changed ***
+        let current_date_range = this.date_range.get_untracked();
+        if current_date_range == date_range {
+            log!("UISearchCtx::set_date_range - Date range unchanged, skipping update to prevent loop");
+            return;
+        }
+
+        log!(
+            "UISearchCtx::set_date_range - Date range changed, updating: {:?} -> {:?}",
+            current_date_range,
+            date_range
+        );
         this.date_range.set(date_range);
     }
 
     pub fn set_guests(guests: GuestSelection) {
         let this: Self = expect_context();
 
-        this.guests.adults.set(guests.adults.get_untracked());
-        this.guests.children.set(guests.children.get_untracked());
-        this.guests.rooms.set(guests.rooms.get_untracked());
-        this.guests
-            .children_ages
-            .set_vec(guests.children_ages.get_untracked());
+        // *** KEY FIX: Check if guests have actually changed ***
+        let current_adults = this.guests.adults.get_untracked();
+        let current_children = this.guests.children.get_untracked();
+        let current_rooms = this.guests.rooms.get_untracked();
+        let current_children_ages = this.guests.children_ages.get_untracked();
+
+        let new_adults = guests.adults.get_untracked();
+        let new_children = guests.children.get_untracked();
+        let new_rooms = guests.rooms.get_untracked();
+        let new_children_ages = guests.children_ages.get_untracked();
+
+        if current_adults == new_adults
+            && current_children == new_children
+            && current_rooms == new_rooms
+            && current_children_ages == new_children_ages
+        {
+            log!("UISearchCtx::set_guests - Guests unchanged, skipping update to prevent loop");
+            return;
+        }
+
+        log!("UISearchCtx::set_guests - Guests changed, updating: adults:{}->{}, children:{}->{}, rooms:{}->{}", 
+            current_adults, new_adults, current_children, new_children, current_rooms, new_rooms);
+
+        this.guests.adults.set(new_adults);
+        this.guests.children.set(new_children);
+        this.guests.rooms.set(new_rooms);
+        this.guests.children_ages.set_vec(new_children_ages);
     }
 
     pub fn set_filters(filters: UISearchFilters) {

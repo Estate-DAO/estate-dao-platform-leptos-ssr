@@ -698,9 +698,24 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                                 ),
                             };
 
-                            // Set both place (for DestinationPicker display) and place_details
-                            UISearchCtx::set_place(updated_place);
-                            UISearchCtx::set_place_details(Some(place_details));
+                            // *** KEY FIX: Check if the place has actually changed before setting ***
+                            let search_ctx: UISearchCtx = expect_context();
+                            let current_place = search_ctx.place.get_untracked();
+
+                            // Only update if the place has actually changed
+                            if current_place.as_ref() != Some(&updated_place) {
+                                log!("[hotel_list_params.rs] Place lookup complete, updating place: {} -> {}", 
+                                    current_place.as_ref().map(|p| &p.display_name).unwrap_or(&"None".to_string()),
+                                    updated_place.display_name);
+                                UISearchCtx::set_place(updated_place);
+                                UISearchCtx::set_place_details(Some(place_details));
+                            } else {
+                                log!("[hotel_list_params.rs] Place lookup complete, but place unchanged - skipping update to prevent loop");
+                                // Still update place_details if it's missing
+                                if search_ctx.place_details.get_untracked().is_none() {
+                                    UISearchCtx::set_place_details(Some(place_details));
+                                }
+                            }
                         }
                     });
                 } else {
