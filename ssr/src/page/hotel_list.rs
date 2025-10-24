@@ -162,19 +162,29 @@ pub fn HotelListPage() -> impl IntoView {
             }
 
             // Normal case: we have complete params with placeId
-            log!(
-                "Parsed hotel params from URL (individual params): {:?}",
-                hotel_params
-            );
-            hotel_params.sync_to_app_state();
-            PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+            // *** KEY FIX: Only sync if params actually differ from current state ***
+            if hotel_params.differs_from_current_state() {
+                log!(
+                    "URL params differ from state, syncing to app state: {:?}",
+                    hotel_params
+                );
+                hotel_params.sync_to_app_state();
+                PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+            } else {
+                log!("URL params match current state, skipping sync to prevent loop");
+            }
         } else if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
-            log!(
-                "Parsed hotel params from URL (legacy base64 state): {:?}",
-                hotel_params
-            );
-            hotel_params.sync_to_app_state();
-            PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+            // Legacy base64 format
+            if hotel_params.differs_from_current_state() {
+                log!(
+                    "Parsed hotel params from URL (legacy base64 state): {:?}",
+                    hotel_params
+                );
+                hotel_params.sync_to_app_state();
+                PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+            } else {
+                log!("Legacy URL params match current state, skipping sync");
+            }
         }
     });
 
@@ -491,6 +501,7 @@ pub fn HotelListPage() -> impl IntoView {
 
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_effect.search_result.get().is_some() {
+            log!("[PAGINATION-DEBUG] Updating URL with pagination state");
             update_url_with_current_state.run(());
         }
     });

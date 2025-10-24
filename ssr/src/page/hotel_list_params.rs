@@ -604,45 +604,119 @@ impl HotelListParams {
     }
 }
 
+impl HotelListParams {
+    /// Check if these params differ from current app state
+    /// Uses get_untracked() to avoid creating reactive dependencies
+    pub fn differs_from_current_state(&self) -> bool {
+        let search_ctx: UISearchCtx = expect_context();
+        let pagination_state: UIPaginationState = expect_context();
+
+        // Use get_untracked to avoid creating dependencies
+        let current_place = search_ctx.place.get_untracked();
+        let current_dates = search_ctx.date_range.get_untracked();
+        let current_adults = search_ctx.guests.adults.get_untracked();
+        let current_children = search_ctx.guests.children.get_untracked();
+        let current_rooms = search_ctx.guests.rooms.get_untracked();
+        let current_filters = search_ctx.filters.get_untracked();
+        let current_page = pagination_state.current_page.get_untracked();
+        let current_page_size = pagination_state.page_size.get_untracked();
+
+        // Check place
+        if self.place.as_ref() != current_place.as_ref() {
+            return true;
+        }
+
+        // Check dates
+        if let (Some(checkin), Some(checkout)) = (&self.checkin, &self.checkout) {
+            if let (Ok(start_date), Ok(end_date)) = (
+                chrono::NaiveDate::parse_from_str(checkin, "%Y-%m-%d"),
+                chrono::NaiveDate::parse_from_str(checkout, "%Y-%m-%d"),
+            ) {
+                let url_date_range = SelectedDateRange {
+                    start: (
+                        start_date.year() as u32,
+                        start_date.month(),
+                        start_date.day(),
+                    ),
+                    end: (end_date.year() as u32, end_date.month(), end_date.day()),
+                };
+                if url_date_range != current_dates {
+                    return true;
+                }
+            }
+        }
+
+        // Check guests
+        if self.adults != Some(current_adults)
+            || self.children != Some(current_children)
+            || self.rooms != Some(current_rooms)
+        {
+            return true;
+        }
+
+        // Check pagination
+        if self.page != Some(current_page) || self.per_page != Some(current_page_size) {
+            return true;
+        }
+
+        // Check filters
+        let url_filters = if self.filters.is_empty() {
+            UISearchFilters::default()
+        } else {
+            UISearchFilters::from_filter_map(&self.filters)
+        };
+
+        if url_filters != current_filters {
+            return true;
+        }
+
+        false
+    }
+}
+
 impl QueryParamsSync<HotelListParams> for HotelListParams {
     fn sync_to_app_state(&self) {
         let search_ctx: UISearchCtx = expect_context();
+        let pagination_state: UIPaginationState = expect_context();
 
         // Set destination if available
         if let Some(place) = &self.place {
-            // If place_details not already available, fetch from API using placeId
-            if self.place_details.is_none() {
-                let place_id = place.place_id.clone();
-                let place_for_update = place.clone();
-                spawn_local(async move {
-                    if let Ok(place_details) = lookup_place_by_id(place_id).await {
-                        // Update the Place with proper display_name and formatted_address from place_details
-                        let updated_place = Place {
-                            place_id: place_for_update.place_id.clone(),
-                            display_name: get_display_name_from_place_data(&place_details),
-                            formatted_address: get_formatted_address_from_place_data(
-                                &place_details,
-                            ),
-                        };
+            // Only update if different from current
+            if search_ctx.place.get_untracked().as_ref() != Some(place) {
+                // If place_details not already available, fetch from API using placeId
+                if self.place_details.is_none() {
+                    let place_id = place.place_id.clone();
+                    let place_for_update = place.clone();
+                    spawn_local(async move {
+                        if let Ok(place_details) = lookup_place_by_id(place_id).await {
+                            // Update the Place with proper display_name and formatted_address from place_details
+                            let updated_place = Place {
+                                place_id: place_for_update.place_id.clone(),
+                                display_name: get_display_name_from_place_data(&place_details),
+                                formatted_address: get_formatted_address_from_place_data(
+                                    &place_details,
+                                ),
+                            };
 
-                        // Set both place (for DestinationPicker display) and place_details
-                        UISearchCtx::set_place(updated_place);
-                        UISearchCtx::set_place_details(Some(place_details));
-                    }
-                });
-            } else {
-                // If we already have place_details, update the place with proper names
-                if let Some(ref details) = self.place_details {
-                    let updated_place = Place {
-                        place_id: place.place_id.clone(),
-                        display_name: get_display_name_from_place_data(details),
-                        formatted_address: get_formatted_address_from_place_data(details),
-                    };
-                    UISearchCtx::set_place(updated_place);
+                            // Set both place (for DestinationPicker display) and place_details
+                            UISearchCtx::set_place(updated_place);
+                            UISearchCtx::set_place_details(Some(place_details));
+                        }
+                    });
                 } else {
-                    UISearchCtx::set_place(place.clone());
+                    // If we already have place_details, update the place with proper names
+                    if let Some(ref details) = self.place_details {
+                        let updated_place = Place {
+                            place_id: place.place_id.clone(),
+                            display_name: get_display_name_from_place_data(details),
+                            formatted_address: get_formatted_address_from_place_data(details),
+                        };
+                        UISearchCtx::set_place(updated_place);
+                    } else {
+                        UISearchCtx::set_place(place.clone());
+                    }
+                    UISearchCtx::set_place_details(self.place_details.clone());
                 }
-                UISearchCtx::set_place_details(self.place_details.clone());
             }
         }
 
@@ -660,28 +734,44 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                     ),
                     end: (end_date.year() as u32, end_date.month(), end_date.day()),
                 };
-                UISearchCtx::set_date_range(date_range);
+
+                // Only update if different
+                if search_ctx.date_range.get_untracked() != date_range {
+                    UISearchCtx::set_date_range(date_range);
+                }
             }
         }
 
-        // Set guest information
-        let guest_selection = GuestSelection::default();
-        if let Some(adults) = self.adults {
-            guest_selection.adults.set(adults);
-        }
-        if let Some(children) = self.children {
-            guest_selection.children.set(children);
-        }
-        if let Some(rooms) = self.rooms {
-            guest_selection.rooms.set(rooms);
-        }
-        guest_selection
-            .children_ages
-            .set_ages(self.children_ages.clone());
+        // Set guest information (only if different)
+        let current_adults = search_ctx.guests.adults.get_untracked();
+        let current_children = search_ctx.guests.children.get_untracked();
+        let current_rooms = search_ctx.guests.rooms.get_untracked();
 
-        UISearchCtx::set_guests(guest_selection);
+        let needs_guest_update = self.adults != Some(current_adults)
+            || self.children != Some(current_children)
+            || self.rooms != Some(current_rooms);
 
-        let filters = if self.filters.is_empty() {
+        if needs_guest_update {
+            let guest_selection = GuestSelection::default();
+            if let Some(adults) = self.adults {
+                guest_selection.adults.set(adults);
+            }
+            if let Some(children) = self.children {
+                guest_selection.children.set(children);
+            }
+            if let Some(rooms) = self.rooms {
+                guest_selection.rooms.set(rooms);
+            }
+            guest_selection
+                .children_ages
+                .set_ages(self.children_ages.clone());
+
+            UISearchCtx::set_guests(guest_selection);
+        }
+
+        // Filters
+        let current_filters = search_ctx.filters.get_untracked();
+        let new_filters = if self.filters.is_empty() {
             log!("[sync_to_app_state] No filters in URL params");
             UISearchFilters::default()
         } else {
@@ -700,26 +790,40 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
             parsed_filters
         };
 
-        UISearchCtx::set_filters(filters);
-        log!("[sync_to_app_state] Filters set in context");
+        // Only update if different
+        if current_filters != new_filters {
+            UISearchCtx::set_filters(new_filters);
+            log!("[sync_to_app_state] Filters updated in context");
+        }
 
         // Sync pagination state from URL
         use crate::view_state_layer::ui_search_state::UIPaginationState;
 
+        let current_page = pagination_state.current_page.get_untracked();
+        let current_page_size = pagination_state.page_size.get_untracked();
+
         if let Some(page) = self.page {
-            UIPaginationState::set_current_page(page);
-            log!("[sync_to_app_state] Set current page to: {}", page);
+            if current_page != page {
+                UIPaginationState::set_current_page(page);
+                log!("[sync_to_app_state] Set current page to: {}", page);
+            }
         } else {
             // Reset to page 1 if not in URL
-            UIPaginationState::set_current_page(1);
+            if current_page != 1 {
+                UIPaginationState::set_current_page(1);
+            }
         }
 
         if let Some(per_page) = self.per_page {
-            UIPaginationState::set_page_size(per_page);
-            log!("[sync_to_app_state] Set page size to: {}", per_page);
+            if current_page_size != per_page {
+                UIPaginationState::set_page_size(per_page);
+                log!("[sync_to_app_state] Set page size to: {}", per_page);
+            }
         } else {
             // Reset to default page size (PAGINATION_LIMIT) if not in URL
-            UIPaginationState::set_page_size(crate::api::consts::PAGINATION_LIMIT as u32);
+            if current_page_size != crate::api::consts::PAGINATION_LIMIT as u32 {
+                UIPaginationState::set_page_size(crate::api::consts::PAGINATION_LIMIT as u32);
+            }
         }
     }
 }
