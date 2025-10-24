@@ -25,36 +25,28 @@ pub fn InputGroupContainer(
     });
 
     view! {
-            <Show when=move || show_full_input.get()>
-                // Mobile: show full InputGroup when expanded
-                // <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/20 backdrop-blur-sm">
-                //     <div class="w-full max-w-xl mx-auto">
-                        <InputGroup given_disabled=given_disabled />
-                    // </div>
-                    <Show when=move || allow_outside_click_collapse.get()>
-                        <div
-                            class="fixed inset-0"
-                            style="pointer-events: none;"
-                            on:click=move |ev| {
-                                // ev.prevent_default();
-                                // ev.stop_propagation();
-                                log!("[input_group_container.rs] Overlay clicked");
-                                InputGroupState::set_show_full_input(false);
-                            }
-                        ></div>
-                    </Show>
-                // </div>
-            </Show>
-            <Show when=move || !show_full_input.get()>
-                // Mobile: show compact InputGroupMobile by default
-                <div
-                    on:click=move |_| {
-                        log!("[input_group_container.rs] Mobile view clicked, setting show_full_input to true");
-                        InputGroupState::set_show_full_input(true);
-                    }
-                >
-                    <InputGroupMobile />
-                </div>
-            </Show>
+        <Show when=move || show_full_input.get()>
+            {view! {
+                <InputGroup given_disabled=given_disabled />
+                <Show when=move || allow_outside_click_collapse.get()>
+                    <div
+                        class="fixed inset-0"
+                        style="pointer-events: none;"
+                        on:click=move |_| {
+                            InputGroupState::set_show_full_input(false);
+                        }
+                    ></div>
+                </Show>
+            }.into_any()}
+        </Show>
+        <Show when=move || !show_full_input.get()>
+            <div
+                on:click=move |_| {
+                    InputGroupState::set_show_full_input(true);
+                }
+            >
+                <InputGroupMobile />
+            </div>
+        </Show>
     }
 }
