@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(non_snake_case)]
-#![recursion_limit = "1024"]
+#![recursion_limit = "512"]
 
 use std::future::Future;
 
