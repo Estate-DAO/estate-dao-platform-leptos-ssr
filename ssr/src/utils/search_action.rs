@@ -96,17 +96,17 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
             UISearchCtx::set_place_details(Some(place_details.clone()));
 
             let hotel_list_url = if config.navigate_with_params {
-                // Generate URL with query params (recommended approach)
+                // Generate URL with individual query params (recommended approach)
                 // This preserves search state in the URL for shareable links and page reloads
                 let hotel_list_params = HotelListParams::from_search_context(&search_ctx);
 
-                // Use safe URL joining helper function
+                // Use individual query params instead of base64 state
                 match join_path_and_query_params(
                     AppRoutes::HotelList.to_string(),
-                    &hotel_list_params.to_url_params(),
+                    &hotel_list_params.to_query_params(),
                 ) {
                     Ok(url) => {
-                        log!("Generated hotel list URL with params: {}", url);
+                        log!("Generated hotel list URL with individual params: {}", url);
                         url
                     }
                     Err(e) => {

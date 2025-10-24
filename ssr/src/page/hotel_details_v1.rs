@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::hooks::{use_navigate, use_query_map};
 
-use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::client_side_api::{ClientSideApiClient, Place};
 use crate::app::AppRoutes;
 use crate::component::ImageLightbox;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
@@ -177,9 +177,11 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         if !params_map.is_empty() {
             log!("Found query params in URL: {:?}", params_map);
 
-            if let Some(hotel_params) = HotelDetailsParams::from_url_params(&params_map) {
+            if let Some(hotel_params) = HotelDetailsParams::from_query_params(&params_map) {
                 log!("Parsed hotel params from URL: {:?}", hotel_params);
                 hotel_params.sync_to_app_state();
+            } else {
+                log!("[HotelDetailsV1Page] Could not parse hotel params from URL.");
             }
         }
     });
@@ -188,9 +190,9 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // This can be called when navigating to this page from hotel list
     let update_url_with_current_state = move || {
         if let Some(current_params) = HotelDetailsParams::from_current_context() {
-            current_params.update_url();
+            current_params.update_url(); // Now uses individual query params
             log!(
-                "Updated URL with current hotel details state: {:?}",
+                "Updated URL with current hotel details state (individual params): {:?}",
                 current_params
             );
         }
@@ -199,13 +201,10 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // <!-- Auto-update URL when essential data becomes available -->
     Effect::new(move |_| {
         let hotel_code = hotel_info_ctx.hotel_code.get();
-        let destination = ui_search_ctx.destination.get();
         let date_range = ui_search_ctx.date_range.get();
 
-        let has_essential_data = !hotel_code.is_empty()
-            && destination.is_some()
-            && date_range.start != (0, 0, 0)
-            && date_range.end != (0, 0, 0);
+        let has_essential_data =
+            !hotel_code.is_empty() && date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
         if has_essential_data {
             // Only update URL if query params are empty (to avoid infinite loops)
@@ -220,6 +219,35 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         }
     });
 
+    // Effect to update URL when dates or guests change from UI (State → URL)
+    create_effect(move |_| {
+        // Depend on all relevant signals
+        let hotel_code = hotel_info_ctx.hotel_code.get();
+        let date_range = ui_search_ctx.date_range.get();
+        let adults = ui_search_ctx.guests.adults.get();
+        let children = ui_search_ctx.guests.children.get();
+        let rooms = ui_search_ctx.guests.rooms.get();
+
+        // Only update URL if we have essential data and URL params are not empty
+        // (to avoid updating on initial load)
+        let has_essential_data =
+            !hotel_code.is_empty() && date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
+
+        let current_params = query_map.get();
+        let has_url_params = !current_params.0.is_empty();
+
+        if has_essential_data && has_url_params {
+            log!(
+                "[HotelDetailsV1Page] UI state changed, updating URL: dates={:?}, adults={}, children={}, rooms={}",
+                date_range,
+                adults,
+                children,
+                rooms,
+            );
+            update_url_with_current_state();
+        }
+    });
+
     // Create resource to fetch hotel details when page loads
     // Following the pattern from block_room_v1.rs prebook_resource
     // Enhanced to work with query params for shareable URLs
@@ -229,14 +257,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
-            let place_details = ui_search_ctx.place_details.get();
             let date_range = ui_search_ctx.date_range.get();
             let has_hotel_code = !hotel_code.is_empty();
-            let has_place_details = place_details.is_some();
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
-            // Return true when ready to call API
-            let is_ready = has_hotel_code && has_place_details && has_valid_dates;
+            // Return true when ready to call API - removed dependency on place_details
+            let is_ready = has_hotel_code && has_valid_dates;
 
             log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}",
                 has_hotel_code, has_place_details, has_valid_dates, is_ready);
@@ -261,64 +287,41 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 return None;
             }
 
-            // Create search criteria from UI context
-            // This will work whether data came from direct navigation or URL query params
-            let place_details = ui_search_ctx.place_details.get_untracked();
-            let place = ui_search_ctx.place.get_untracked();
-            let date_range = ui_search_ctx.date_range.get_untracked();
-            let guests = &guests_clone;
+                // Create search criteria from UI context
+                // This will work whether data came from direct navigation or URL query params
+                let date_range = ui_search_ctx.date_range.get_untracked();
+                let guests = &guests_clone;
 
-            if place_details.is_none() {
-                HotelDetailsUIState::set_error(Some("Search criteria not available".to_string()));
-                HotelDetailsUIState::set_loading(false);
-                return None;
-            }
+                // Create room guests
+                let room_guests = vec![DomainRoomGuest {
+                    no_of_adults: guests.adults.get_untracked(),
+                    no_of_children: guests.children.get_untracked(),
+                    children_ages: if guests.children.get_untracked() > 0 {
+                        Some(
+                            guests
+                                .children_ages
+                                .get_untracked()
+                                .into_iter()
+                                .map(|age| age.to_string())
+                                .collect(),
+                        )
+                    } else {
+                        None
+                    },
+                }];
 
-            if place.is_none() {
-                HotelDetailsUIState::set_error(Some("Search criteria not available".to_string()));
-                HotelDetailsUIState::set_loading(false);
-                return None;
-            }
-
-            let place_details = place_details.unwrap();
-            let place = place.unwrap();
-
-            // Create room guests
-            let room_guests = vec![DomainRoomGuest {
-                no_of_adults: guests.adults.get_untracked(),
-                no_of_children: guests.children.get_untracked(),
-                children_ages: if guests.children.get_untracked() > 0 {
-                    Some(
-                        guests
-                            .children_ages
-                            .get_untracked()
-                            .into_iter()
-                            .map(|age| age.to_string())
-                            .collect(),
-                    )
-                } else {
-                    None
-                },
-            }];
-
-            // Create search criteria
-            let search_criteria = DomainHotelSearchCriteria {
-                // destination_city_id: destination.city_id.parse().unwrap_or(0),
-                // destination_city_name: destination.city.clone(),
-                // destination_country_code: destination.country_code.clone(),
-                // destination_country_name: destination.country_name.clone(),
-                // destination_latitude: Some(place.location.latitude),
-                // destination_longitude: Some(place.location.longitude),
-                place_id: place.place_id.clone(),
-                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                no_of_nights: date_range.no_of_nights(),
-                no_of_rooms: guests.rooms.get_untracked(),
-                room_guests,
-                guest_nationality: "US".to_string(), // Default for now
-                pagination: None,                    // No pagination for hotel details
-                ..Default::default()
-            };
+                // Create search criteria
+                let search_criteria = DomainHotelSearchCriteria {
+                    place_id: "".to_string(), // No longer dependent on place
+                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                    no_of_nights: date_range.no_of_nights(),
+                    no_of_rooms: guests.rooms.get_untracked(),
+                    room_guests,
+                    guest_nationality: "US".to_string(), // Default for now
+                    pagination: None,                    // No pagination for hotel details
+                    ..Default::default()
+                };
 
             log!(
                 "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",

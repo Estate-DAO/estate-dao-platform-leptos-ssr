@@ -219,7 +219,7 @@ impl UIPaginationState {
 
     pub fn set_page_size(size: u32) {
         let this: Self = expect_context();
-        this.page_size.set(size.clamp(1, 200)); // Enforce reasonable limits
+        this.page_size.set(size.clamp(1, PAGINATION_LIMIT as u32)); // Enforce reasonable limits
     }
 
     pub fn set_pagination_meta(meta: Option<DomainPaginationMeta>) {
