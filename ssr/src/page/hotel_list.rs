@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_query_map};
 use reqwest::Client;
 use web_sys::MouseEvent;
@@ -92,91 +95,86 @@ pub fn HotelListPage() -> impl IntoView {
     // This leverages use_query_map's built-in reactivity for browser navigation
     Effect::new(move |_| {
         let params = query_map.get();
-        if !params.0.is_empty() {
-            let params_map: HashMap<String, String> = params
-                .0
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
+        let params_map: HashMap<String, String> = params
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect();
 
-            // Try individual query params first (NEW format), then fall back to base64 state (LEGACY)
-            if let Some(hotel_params) = HotelListParams::from_query_params(&params_map) {
-                // Check if we need to search for place by name (placeId missing)
-                if hotel_params.place.is_none() && hotel_params.place_name_to_search.is_some() {
-                    let place_name = hotel_params.place_name_to_search.clone().unwrap();
-                    log!(
-                        "[HotelListPage] Only placeName in URL: '{}', searching for placeId...",
-                        place_name
-                    );
+        // Try individual query params first (NEW format), then fall back to base64 state (LEGACY)
+        if let Some(hotel_params) = HotelListParams::from_query_params(&params_map) {
+            // Check if we need to search for place by name (placeId missing)
+            if hotel_params.place.is_none() && hotel_params.place_name_to_search.is_some() {
+                let place_name = hotel_params.place_name_to_search.clone().unwrap();
+                log!(
+                    "[HotelListPage] Only placeName in URL: '{}', searching for placeId...",
+                    place_name
+                );
 
-                    // Clone params_map for async closure
-                    let params_map_clone = params_map.clone();
-                    let place_name_clone = place_name.clone();
+                // Clone params_map for async closure
+                let params_map_clone = params_map.clone();
+                let place_name_clone = place_name.clone();
 
-                    // Spawn async task to search for place
-                    spawn_local(async move {
-                        let api_client = ClientSideApiClient::new();
-                        match api_client.search_places(place_name_clone.clone()).await {
-                            Ok(results) => {
-                                if let Some(first_result) = results.first() {
-                                    log!(
-                                        "[HotelListPage] Found place: {} (ID: {})",
-                                        first_result.display_name,
-                                        first_result.place_id
-                                    );
-
-                                    // Update URL with fetched placeId
-                                    let mut new_params = params_map_clone.clone();
-                                    new_params.insert(
-                                        "placeId".to_string(),
-                                        first_result.place_id.clone(),
-                                    );
-
-                                    // Keep the placeName for display
-                                    new_params.insert("placeName".to_string(), place_name_clone);
-
-                                    // Navigate to updated URL (this will trigger the effect again)
-                                    use crate::utils::query_params::update_url_with_params;
-                                    update_url_with_params("/hotel-list", &new_params);
-                                } else {
-                                    log!(
-                                        "[HotelListPage] No results found for place name: {}",
-                                        place_name_clone
-                                    );
-                                    // TODO: Show error message to user
-                                }
-                            }
-                            Err(e) => {
+                // Spawn async task to search for place
+                spawn_local(async move {
+                    let api_client = ClientSideApiClient::new();
+                    match api_client.search_places(place_name_clone.clone()).await {
+                        Ok(results) => {
+                            if let Some(first_result) = results.first() {
                                 log!(
-                                    "[HotelListPage] Place search failed for '{}': {}",
-                                    place_name_clone,
-                                    e
+                                    "[HotelListPage] Found place: {} (ID: {})",
+                                    first_result.display_name,
+                                    first_result.place_id
+                                );
+
+                                // Update URL with fetched placeId
+                                let mut new_params = params_map_clone.clone();
+                                new_params
+                                    .insert("placeId".to_string(), first_result.place_id.clone());
+
+                                // Keep the placeName for display
+                                new_params.insert("placeName".to_string(), place_name_clone);
+
+                                // Navigate to updated URL (this will trigger the effect again)
+                                use crate::utils::query_params::update_url_with_params;
+                                update_url_with_params("/hotel-list", &new_params);
+                            } else {
+                                log!(
+                                    "[HotelListPage] No results found for place name: {}",
+                                    place_name_clone
                                 );
                                 // TODO: Show error message to user
                             }
                         }
-                    });
+                        Err(e) => {
+                            log!(
+                                "[HotelListPage] Place search failed for '{}': {}",
+                                place_name_clone,
+                                e
+                            );
+                            // TODO: Show error message to user
+                        }
+                    }
+                });
 
-                    // Don't sync to app state yet - wait for place search to complete
-                    // The URL update above will trigger this effect again with complete params
-                    return;
-                }
-
-                // Normal case: we have complete params with placeId
-                log!(
-                    "Parsed hotel params from URL (individual params): {:?}",
-                    hotel_params
-                );
-                hotel_params.sync_to_app_state();
-                PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
-            } else if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
-                log!(
-                    "Parsed hotel params from URL (legacy base64 state): {:?}",
-                    hotel_params
-                );
-                hotel_params.sync_to_app_state();
-                PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+                // Don't sync to app state yet - wait for place search to complete
+                // The URL update above will trigger this effect again with complete params
+                return;
             }
+
+            // Normal case: we have complete params with placeId
+            log!(
+                "Parsed hotel params from URL (individual params): {:?}",
+                hotel_params
+            );
+            hotel_params.sync_to_app_state();
+            PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+        } else if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
+            log!(
+                "Parsed hotel params from URL (legacy base64 state): {:?}",
+                hotel_params
+            );
+            hotel_params.sync_to_app_state();
+            PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
         }
     });
 
@@ -203,10 +201,7 @@ pub fn HotelListPage() -> impl IntoView {
             let has_valid_search_data = place.is_some() && adults > 0 && rooms > 0;
 
             // Return true when ready to search
-            let is_ready = has_valid_dates
-                && has_valid_search_data
-                && (is_first_load || // First load with valid data - always search
-                    is_same_search_criteria); // Always search for same criteria (includes pagination changes)
+            let is_ready = has_valid_dates && has_valid_search_data; // Always search for same criteria (includes pagination changes)
 
             // log!(
             //     "[PAGINATION-DEBUG] [hotel_search_resource] readiness: current_page={}, is_same_destination={}, is_same_adults={}, is_same_children={}, is_same_rooms={}, is_same_search_criteria={}, has_valid_dates={}, has_valid_search_data={}, is_first_load={}, ready={}",
@@ -399,7 +394,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -407,7 +402,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.amenities = None);
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -425,7 +420,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -433,7 +428,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.property_types = None);
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -445,7 +440,7 @@ pub fn HotelListPage() -> impl IntoView {
                     filters.min_star_rating = next;
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -473,7 +468,7 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -481,7 +476,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = filters_signal;
         Callback::new(move |_| {
             filters_signal.set(UISearchFilters::default());
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -490,13 +485,13 @@ pub fn HotelListPage() -> impl IntoView {
 
     // Watch for pagination changes and update URL
     let search_list_page_for_effect = search_list_page.clone();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = pagination_state.current_page.get();
         let _ = pagination_state.page_size.get();
 
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_effect.search_result.get().is_some() {
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         }
     });
 
@@ -760,7 +755,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                     filters_signal.update(|filters| {
                                                                         filters.min_star_rating = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    update_url_with_current_state.run(());
                                                                 }
                                                             >
                                                                 "Clear star filter"
@@ -778,7 +773,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         filters.min_price_per_night = None;
                                                                         filters.max_price_per_night = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    update_url_with_current_state.run(());
                                                                 }
                                                             >
                                                                 "Clear price filter"

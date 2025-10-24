@@ -14,7 +14,7 @@ use crate::{
     view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
 };
 use chrono::Datelike;
-use leptos::prelude::*;
+use leptos::{prelude::*, task::spawn_local};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

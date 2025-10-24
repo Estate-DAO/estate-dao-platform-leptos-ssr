@@ -234,7 +234,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             !hotel_code.is_empty() && date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
         let current_params = query_map.get();
-        let has_url_params = !current_params.0.is_empty();
+        let has_url_params = !current_params.into_iter().collect::<Vec<_>>().is_empty();
 
         if has_essential_data && has_url_params {
             log!(
@@ -264,8 +264,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Return true when ready to call API - removed dependency on place_details
             let is_ready = has_hotel_code && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}",
-                has_hotel_code, has_place_details, has_valid_dates, is_ready);
+            log!(
+                "Hotel details resource readiness check: hotel_code={}, dates={}, ready={}",
+                has_hotel_code,
+                has_valid_dates,
+                is_ready
+            );
 
             if !is_ready {
                 log!("Hotel details resource: Not ready yet, waiting for data...");
