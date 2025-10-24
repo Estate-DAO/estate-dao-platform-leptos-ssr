@@ -956,3 +956,108 @@ Now `APP_URL` will use the fallback `LOCALHOST_APP_URL` constant ("http://localh
 
 **Status:** ✅ **FIXED** - OAuth should now work correctly
 
+## Leptos 0.8 Migration - Type Layout Query Depth Issue in CI
+### Date: 2025-01-22
+
+#### Problem: CI Build Failing with Query Depth Error
+After upgrading to Leptos 0.8, the build worked locally but failed in CI with:
+```
+= note: query depth increased by 258 when computing layout of `{async block@<T as tachys::view::any_view::IntoAny>::into_any::hydrate_async<leptos::into_view::View<...>>`
+```
+
+This massive type signature indicated the Rust compiler was struggling to compute the memory layout of deeply nested component types.
+
+#### Root Cause
+Leptos 0.8 uses a new rendering system (tachys) that creates more complex type signatures, especially with:
+- Deeply nested components (e.g., `HeroSection` → `InputGroupContainer` → `DestinationPickerV6` → `DateTimeRangePickerCustom` → `GuestQuantity`)
+- Multiple nested `Show` components with complex fallback closures
+- Large view macros with many child elements
+- Complex HTML structures with many attributes and event handlers
+
+The default type-length-limit was insufficient for the compiler to handle these complex types.
+
+#### The Fix
+Added `#![type_length_limit]` crate attribute to `ssr/src/lib.rs`:
+
+```rust
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(non_snake_case)]
+#![recursion_limit = "512"]
+#![type_length_limit = "10000000"]
+```
+
+#### Why This Works
+- The `type_length_limit` is a **crate-level attribute**, not a rustc flag
+- It tells the Rust compiler to allow more complex type computations during monomorphization
+- Default limit is 1048576, we increased it to 10000000
+- This is set at the crate level (in `lib.rs`) and applies to the entire crate
+- The limit needs to be high enough to handle the deeply nested component tree
+
+#### Why It Worked Locally But Not in CI
+1. **Different compilation modes**: CI uses `--release` which triggers different code paths
+2. **Cache differences**: Local builds might have cached intermediate types
+3. **Rust version**: Even with the same nightly version, CI might use different LLVM settings
+4. **Memory pressure**: CI environments have different memory characteristics
+
+#### Files Modified
+- `ssr/src/lib.rs`: Added `#![type_length_limit = "10000000"]` crate attribute
+
+#### Key Lessons
+1. **Leptos 0.8's tachys renderer creates more complex types** than the old renderer
+2. **Type complexity scales with component nesting depth** - deeply nested components create exponentially complex types
+3. **CI environments can expose type system limits** that don't appear locally
+4. **The type-length-limit is a compile-time limit**, not a runtime one - no performance impact on the final binary
+5. **`type_length_limit` is a crate attribute**, not a rustc flag - it must be added to source code with `#![type_length_limit = "N"]`
+6. **Similar to `recursion_limit`** - both are crate-level attributes that control compiler limits
+
+#### Long-term Solutions (To Consider)
+For better maintainability and faster compile times, consider:
+
+1. **Break down large components**: Split `HeroSection`, `InputGroupContainer` into smaller pieces
+2. **Use `dyn` trait objects for callbacks**: Replace `impl Fn()` with `Callback<()>` from Leptos
+3. **Simplify conditional rendering**: Reduce nested `Show` components where possible
+4. **Box complex async operations**: Wrap large async blocks in `Box::pin()`
+5. **Component boundaries**: More granular components = simpler types
+
+#### Example of Component Refactoring
+Instead of:
+```rust
+view! {
+    <div>
+        <Show when=cond1>
+            <Show when=cond2>
+                <ComplexComponent>
+                    <NestedComponent />
+                </ComplexComponent>
+            </Show>
+        </Show>
+    </div>
+}
+```
+
+Consider:
+```rust
+#[component]
+fn ConditionalComplex() -> impl IntoView {
+    // Simpler type boundary
+    view! { <ComplexComponent><NestedComponent /></ComplexComponent> }
+}
+
+view! {
+    <div>
+        <Show when=move || cond1.get() && cond2.get()>
+            <ConditionalComplex />
+        </Show>
+    </div>
+}
+```
+
+#### Status: ✅ **RESOLVED** - CI now builds successfully
+
+#### References
+- Rust Reference on Limits: https://doc.rust-lang.org/reference/attributes/limits.html
+- Rust issue on type-length-limit: https://github.com/rust-lang/rust/issues/54540
+- Leptos 0.8 tachys renderer: https://github.com/leptos-rs/leptos/tree/main/tachys
+- Related Leptos issue: https://github.com/leptos-rs/leptos/issues/3433
+

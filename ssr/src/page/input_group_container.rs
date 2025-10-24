@@ -26,18 +26,16 @@ pub fn InputGroupContainer(
 
     view! {
         <Show when=move || show_full_input.get()>
-            {view! {
-                <InputGroup given_disabled=given_disabled />
-                <Show when=move || allow_outside_click_collapse.get()>
-                    <div
-                        class="fixed inset-0"
-                        style="pointer-events: none;"
-                        on:click=move |_| {
-                            InputGroupState::set_show_full_input(false);
-                        }
-                    ></div>
-                </Show>
-            }.into_any()}
+            <InputGroup given_disabled=given_disabled />
+            <Show when=move || allow_outside_click_collapse.get()>
+                <div
+                    class="fixed inset-0"
+                    style="pointer-events: none;"
+                    on:click=move |_| {
+                        InputGroupState::set_show_full_input(false);
+                    }
+                ></div>
+            </Show>
         </Show>
         <Show when=move || !show_full_input.get()>
             <div
