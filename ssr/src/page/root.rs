@@ -43,7 +43,7 @@ pub fn RootPage() -> impl IntoView {
     view! {
         <main>
             // <FullScreenBannerForMobileModeNotReady>
-                <HeroSection />
+                {view! { <HeroSection /> }.into_any()}
                 // <LiveSelectExample />
                 <FeaturesSection />
                 <DestinationsSection />
