@@ -287,41 +287,41 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 return None;
             }
 
-                // Create search criteria from UI context
-                // This will work whether data came from direct navigation or URL query params
-                let date_range = ui_search_ctx.date_range.get_untracked();
-                let guests = &guests_clone;
+            // Create search criteria from UI context
+            // This will work whether data came from direct navigation or URL query params
+            let date_range = ui_search_ctx.date_range.get_untracked();
+            let guests = &guests_clone;
 
-                // Create room guests
-                let room_guests = vec![DomainRoomGuest {
-                    no_of_adults: guests.adults.get_untracked(),
-                    no_of_children: guests.children.get_untracked(),
-                    children_ages: if guests.children.get_untracked() > 0 {
-                        Some(
-                            guests
-                                .children_ages
-                                .get_untracked()
-                                .into_iter()
-                                .map(|age| age.to_string())
-                                .collect(),
-                        )
-                    } else {
-                        None
-                    },
-                }];
+            // Create room guests
+            let room_guests = vec![DomainRoomGuest {
+                no_of_adults: guests.adults.get_untracked(),
+                no_of_children: guests.children.get_untracked(),
+                children_ages: if guests.children.get_untracked() > 0 {
+                    Some(
+                        guests
+                            .children_ages
+                            .get_untracked()
+                            .into_iter()
+                            .map(|age| age.to_string())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+            }];
 
-                // Create search criteria
-                let search_criteria = DomainHotelSearchCriteria {
-                    place_id: "".to_string(), // No longer dependent on place
-                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                    no_of_nights: date_range.no_of_nights(),
-                    no_of_rooms: guests.rooms.get_untracked(),
-                    room_guests,
-                    guest_nationality: "US".to_string(), // Default for now
-                    pagination: None,                    // No pagination for hotel details
-                    ..Default::default()
-                };
+            // Create search criteria
+            let search_criteria = DomainHotelSearchCriteria {
+                place_id: "".to_string(), // No longer dependent on place
+                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                no_of_nights: date_range.no_of_nights(),
+                no_of_rooms: guests.rooms.get_untracked(),
+                room_guests,
+                guest_nationality: "US".to_string(), // Default for now
+                pagination: None,                    // No pagination for hotel details
+                ..Default::default()
+            };
 
             log!(
                 "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",

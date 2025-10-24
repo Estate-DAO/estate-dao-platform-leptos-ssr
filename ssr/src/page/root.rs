@@ -80,6 +80,7 @@ pub fn HeroSection() -> impl IntoView {
                     </h6>
 
                     <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click />
+                        .into_any()
                     <br />
                     // todo: uncomment in v2 when implementing filtering and sorting
                     // <FilterAndSortBy />
