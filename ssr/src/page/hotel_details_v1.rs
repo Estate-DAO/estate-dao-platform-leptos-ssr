@@ -171,7 +171,10 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     create_effect(move |_| {
         let params = query_map.get();
         if !params.0.is_empty() {
-            log!("Found query params in URL: {:?}", params);
+            log!(
+                "[HotelDetailsV1Page] Found query params in URL: {:?}",
+                params
+            );
 
             // Convert leptos_router params to HashMap
             let params_map: std::collections::HashMap<String, String> = params
@@ -180,254 +183,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect();
 
-            // Try new format first (individual params), then fall back to legacy (base64)
+            // Parse params and sync to app state.
+            // The logic is now much simpler and completely decoupled from 'place' searching.
             if let Some(hotel_params) = HotelDetailsParams::from_query_params(&params_map) {
-                // Check if we need to search for place by name (placeId missing)
-                if hotel_params.place.is_none() && hotel_params.place_name_to_search.is_some() {
-                    let place_name = hotel_params.place_name_to_search.clone().unwrap();
-                    log!(
-                        "[HotelDetailsV1Page] Only placeName in URL: '{}', searching for placeId...",
-                        place_name
-                    );
-
-                    // Clone params_map for async closure
-                    let params_map_clone = params_map.clone();
-                    let place_name_clone = place_name.clone();
-
-                    // Spawn async task to search for place
-                    spawn_local(async move {
-                        let api_client = ClientSideApiClient::new();
-                        match api_client.search_places(place_name_clone.clone()).await {
-                            Ok(results) => {
-                                if let Some(first_result) = results.first() {
-                                    log!(
-                                        "[HotelDetailsV1Page] Found place: {} (ID: {})",
-                                        first_result.display_name,
-                                        first_result.place_id
-                                    );
-
-                                    let place_id = first_result.place_id.clone();
-
-                                    // IMMEDIATELY fetch place_details to get proper display name and address
-                                    log!(
-                                        "[HotelDetailsV1Page] Fetching place_details for placeId: {}",
-                                        place_id
-                                    );
-
-                                    match api_client.get_place_details_by_id(place_id.clone()).await
-                                    {
-                                        Ok(place_details) => {
-                                            use crate::page::hotel_list_params::{
-                                                get_display_name_from_place_data,
-                                                get_formatted_address_from_place_data,
-                                            };
-
-                                            log!(
-                                                "[HotelDetailsV1Page] place_details.address_components count: {}",
-                                                place_details.address_components.len()
-                                            );
-
-                                            let display_name =
-                                                get_display_name_from_place_data(&place_details);
-                                            let formatted_address =
-                                                get_formatted_address_from_place_data(
-                                                    &place_details,
-                                                );
-
-                                            log!(
-                                                "[HotelDetailsV1Page] After extraction: display_name='{}' (len={}), formatted_address='{}' (len={})",
-                                                display_name,
-                                                display_name.len(),
-                                                formatted_address,
-                                                formatted_address.len()
-                                            );
-
-                                            if display_name.is_empty() {
-                                                log!(
-                                                    "[HotelDetailsV1Page] WARNING: display_name is empty! address_components: {:?}",
-                                                    place_details.address_components
-                                                );
-                                            }
-
-                                            // Set place in context IMMEDIATELY with proper display name
-                                            let updated_place = Place {
-                                                place_id: place_id.clone(),
-                                                display_name: display_name.clone(),
-                                                formatted_address: formatted_address.clone(),
-                                            };
-                                            UISearchCtx::set_place(updated_place);
-                                            UISearchCtx::set_place_details(Some(
-                                                place_details.clone(),
-                                            ));
-
-                                            log!(
-                                                "[HotelDetailsV1Page] Set place in context with display_name: '{}'",
-                                                display_name
-                                            );
-
-                                            // Update URL with fetched placeId and proper display info
-                                            let mut new_params = params_map_clone.clone();
-                                            new_params.insert("placeId".to_string(), place_id);
-                                            new_params.insert(
-                                                "placeName".to_string(),
-                                                display_name.clone(),
-                                            );
-
-                                            log!(
-                                                "[HotelDetailsV1Page] Inserting into URL: placeName='{}', placeAddress='{}'",
-                                                display_name,
-                                                formatted_address
-                                            );
-
-                                            if !formatted_address.is_empty() {
-                                                new_params.insert(
-                                                    "placeAddress".to_string(),
-                                                    formatted_address.clone(),
-                                                );
-                                            }
-
-                                            // Add coordinates from place_details
-                                            new_params.insert(
-                                                "lat".to_string(),
-                                                place_details.location.latitude.to_string(),
-                                            );
-                                            new_params.insert(
-                                                "lng".to_string(),
-                                                place_details.location.longitude.to_string(),
-                                            );
-
-                                            // Add default dates if not present (next week + 1 night)
-                                            if !new_params.contains_key("checkin") {
-                                                use chrono::{Duration, Local};
-                                                let checkin_date =
-                                                    Local::now().date_naive() + Duration::days(7);
-                                                new_params.insert(
-                                                    "checkin".to_string(),
-                                                    checkin_date.format("%Y-%m-%d").to_string(),
-                                                );
-                                            }
-                                            if !new_params.contains_key("checkout") {
-                                                use chrono::{Duration, Local};
-                                                let checkout_date =
-                                                    Local::now().date_naive() + Duration::days(8);
-                                                new_params.insert(
-                                                    "checkout".to_string(),
-                                                    checkout_date.format("%Y-%m-%d").to_string(),
-                                                );
-                                            }
-
-                                            // Add default guest info if not present
-                                            if !new_params.contains_key("adults") {
-                                                new_params
-                                                    .insert("adults".to_string(), "2".to_string());
-                                            }
-                                            if !new_params.contains_key("children") {
-                                                new_params.insert(
-                                                    "children".to_string(),
-                                                    "0".to_string(),
-                                                );
-                                            }
-                                            if !new_params.contains_key("rooms") {
-                                                new_params
-                                                    .insert("rooms".to_string(), "1".to_string());
-                                            }
-
-                                            log!(
-                                                "[HotelDetailsV1Page] Updating URL with complete params: {:?}",
-                                                new_params
-                                            );
-
-                                            // Navigate to updated URL (this will trigger the effect again)
-                                            use crate::utils::query_params::update_url_with_params;
-                                            update_url_with_params("/hotel-details", &new_params);
-                                        }
-                                        Err(e) => {
-                                            log!(
-                                                "[HotelDetailsV1Page] Failed to fetch place_details: {}",
-                                                e
-                                            );
-                                            // Fallback: use basic info from search result
-                                            let mut new_params = params_map_clone.clone();
-                                            new_params.insert("placeId".to_string(), place_id);
-                                            new_params.insert(
-                                                "placeName".to_string(),
-                                                first_result.display_name.clone(),
-                                            );
-                                            if !first_result.formatted_address.is_empty() {
-                                                new_params.insert(
-                                                    "placeAddress".to_string(),
-                                                    first_result.formatted_address.clone(),
-                                                );
-                                            }
-
-                                            // Add defaults
-                                            if !new_params.contains_key("checkin") {
-                                                use chrono::{Duration, Local};
-                                                let checkin_date =
-                                                    Local::now().date_naive() + Duration::days(7);
-                                                new_params.insert(
-                                                    "checkin".to_string(),
-                                                    checkin_date.format("%Y-%m-%d").to_string(),
-                                                );
-                                            }
-                                            if !new_params.contains_key("checkout") {
-                                                use chrono::{Duration, Local};
-                                                let checkout_date =
-                                                    Local::now().date_naive() + Duration::days(8);
-                                                new_params.insert(
-                                                    "checkout".to_string(),
-                                                    checkout_date.format("%Y-%m-%d").to_string(),
-                                                );
-                                            }
-                                            if !new_params.contains_key("adults") {
-                                                new_params
-                                                    .insert("adults".to_string(), "2".to_string());
-                                            }
-                                            if !new_params.contains_key("children") {
-                                                new_params.insert(
-                                                    "children".to_string(),
-                                                    "0".to_string(),
-                                                );
-                                            }
-                                            if !new_params.contains_key("rooms") {
-                                                new_params
-                                                    .insert("rooms".to_string(), "1".to_string());
-                                            }
-
-                                            use crate::utils::query_params::update_url_with_params;
-                                            update_url_with_params("/hotel-details", &new_params);
-                                        }
-                                    }
-                                } else {
-                                    log!(
-                                        "[HotelDetailsV1Page] No results found for place name: {}",
-                                        place_name_clone
-                                    );
-                                    // TODO: Show error message to user
-                                }
-                            }
-                            Err(e) => {
-                                log!(
-                                    "[HotelDetailsV1Page] Place search failed for '{}': {}",
-                                    place_name_clone,
-                                    e
-                                );
-                                // TODO: Show error message to user
-                            }
-                        }
-                    });
-
-                    // Don't sync to app state yet - wait for place search to complete
-                    // The URL update above will trigger this effect again with complete params
-                    return;
-                }
-
-                // Normal case: we have complete params with placeId
                 log!(
-                    "Parsed hotel params from URL (new format): {:?}",
+                    "[HotelDetailsV1Page] Parsed hotel params from URL: {:?}",
                     hotel_params
                 );
                 hotel_params.sync_to_app_state();
+            } else {
+                log!("[HotelDetailsV1Page] Could not parse hotel params from URL.");
             }
         }
     });
@@ -447,41 +212,25 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // <!-- Auto-update URL when essential data becomes available -->
     create_effect(move |_| {
         let hotel_code = hotel_info_ctx.hotel_code.get();
-        let destination = ui_search_ctx.destination.get();
         let date_range = ui_search_ctx.date_range.get();
 
-        let has_essential_data = !hotel_code.is_empty()
-            && destination.is_some()
-            && date_range.start != (0, 0, 0)
-            && date_range.end != (0, 0, 0);
+        let has_essential_data =
+            !hotel_code.is_empty() && date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
         if has_essential_data {
             // Only update URL if query params are empty (to avoid infinite loops)
             let current_params = query_map.get();
             if current_params.0.is_empty() {
-                // Also check that we have a place with display_name before updating
-                let place_opt = ui_search_ctx.place.get();
-                let has_place_name = place_opt
-                    .as_ref()
-                    .map(|p| !p.display_name.is_empty())
-                    .unwrap_or(false);
-
-                if has_place_name {
-                    log!("[HotelDetailsV1Page] Auto-update: URL is empty, updating with current state");
-                    update_url_with_current_state();
-                } else {
-                    log!(
-                        "[HotelDetailsV1Page] Auto-update: Skipping - place has empty display_name"
-                    );
-                }
+                log!("[HotelDetailsV1Page] Auto-update: URL is empty, updating with current state");
+                update_url_with_current_state();
             }
         }
     });
 
     // Effect to update URL when dates or guests change from UI (State → URL)
     create_effect(move |_| {
+        // Depend on all relevant signals
         let hotel_code = hotel_info_ctx.hotel_code.get();
-        let place = ui_search_ctx.place.get();
         let date_range = ui_search_ctx.date_range.get();
         let adults = ui_search_ctx.guests.adults.get();
         let children = ui_search_ctx.guests.children.get();
@@ -489,34 +238,21 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
         // Only update URL if we have essential data and URL params are not empty
         // (to avoid updating on initial load)
-        let has_essential_data = !hotel_code.is_empty()
-            && place.is_some()
-            && date_range.start != (0, 0, 0)
-            && date_range.end != (0, 0, 0);
+        let has_essential_data =
+            !hotel_code.is_empty() && date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
         let current_params = query_map.get();
         let has_url_params = !current_params.0.is_empty();
 
-        // IMPORTANT: Only update if place has display_name (to avoid overwriting with empty data)
-        let place_has_name = place
-            .as_ref()
-            .map(|p| !p.display_name.is_empty())
-            .unwrap_or(false);
-
-        if has_essential_data && has_url_params && place_has_name {
+        if has_essential_data && has_url_params {
             log!(
-                "[HotelDetailsV1Page] UI state changed, updating URL: dates={:?}, adults={}, children={}, rooms={}, place_name='{}'",
+                "[HotelDetailsV1Page] UI state changed, updating URL: dates={:?}, adults={}, children={}, rooms={}",
                 date_range,
                 adults,
                 children,
                 rooms,
-                place.as_ref().map(|p| p.display_name.as_str()).unwrap_or("")
             );
             update_url_with_current_state();
-        } else if !place_has_name {
-            log!(
-                "[HotelDetailsV1Page] Skipping URL update - place has empty display_name (waiting for place_details fetch)"
-            );
         }
     });
 
@@ -528,21 +264,24 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
-            let place_details = ui_search_ctx.place_details.get();
             let date_range = ui_search_ctx.date_range.get();
             let has_hotel_code = !hotel_code.is_empty();
-            let has_place_details = place_details.is_some();
             let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
-            // Return true when ready to call API
-            let is_ready = has_hotel_code && has_place_details && has_valid_dates;
+            // Return true when ready to call API - removed dependency on place_details
+            let is_ready = has_hotel_code && has_valid_dates;
 
-            log!("Hotel details resource readiness check: hotel_code={}, place_details={}, dates={}, ready={}",
-                has_hotel_code, has_place_details, has_valid_dates, is_ready);
+            log!(
+                "Hotel details resource readiness check: hotel_code={}, dates={}, ready={}",
+                has_hotel_code,
+                has_valid_dates,
+                is_ready
+            );
 
-            is_ready
+            // Pass a tuple of reactive values to ensure the resource reruns on change
+            (is_ready, hotel_code, date_range)
         },
-        move |is_ready| {
+        move |(is_ready, _, _)| {
             let guests_for_details = ui_search_ctx.guests.clone();
             async move {
                 if !is_ready {
@@ -567,29 +306,8 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria from UI context
                 // This will work whether data came from direct navigation or URL query params
-                let place_details = ui_search_ctx.place_details.get_untracked();
-                let place = ui_search_ctx.place.get_untracked();
                 let date_range = ui_search_ctx.date_range.get_untracked();
                 let guests = &guests_clone;
-
-                if place_details.is_none() {
-                    HotelDetailsUIState::set_error(Some(
-                        "Search criteria not available".to_string(),
-                    ));
-                    HotelDetailsUIState::set_loading(false);
-                    return None;
-                }
-
-                if place.is_none() {
-                    HotelDetailsUIState::set_error(Some(
-                        "Search criteria not available".to_string(),
-                    ));
-                    HotelDetailsUIState::set_loading(false);
-                    return None;
-                }
-
-                let place_details = place_details.unwrap();
-                let place = place.unwrap();
 
                 // Create room guests
                 let room_guests = vec![DomainRoomGuest {
@@ -611,13 +329,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
                 // Create search criteria
                 let search_criteria = DomainHotelSearchCriteria {
-                    // destination_city_id: destination.city_id.parse().unwrap_or(0),
-                    // destination_city_name: destination.city.clone(),
-                    // destination_country_code: destination.country_code.clone(),
-                    // destination_country_name: destination.country_name.clone(),
-                    // destination_latitude: Some(place.location.latitude),
-                    // destination_longitude: Some(place.location.longitude),
-                    place_id: place.place_id.clone(),
+                    place_id: "".to_string(), // No longer dependent on place
                     check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
                     check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
                     no_of_nights: date_range.no_of_nights(),
