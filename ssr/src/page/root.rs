@@ -41,17 +41,20 @@ use std::time::Duration;
 #[component]
 pub fn RootPage() -> impl IntoView {
     view! {
-        <main>
+                <main>
             // <FullScreenBannerForMobileModeNotReady>
-                {view! { <HeroSection /> }.into_any()}
-                // <LiveSelectExample />
-                <FeaturesSection />
-                <DestinationsSection />
-                <CryptoCarousel />
+            {view! { <HeroSection/> }.into_any()}
+            // <LiveSelectExample />
+            {view! {
+                <FeaturesSection/>
+                <DestinationsSection/>
+                <CryptoCarousel/>
                 // <MostPopular />
-                <FeedbackSection />
+                <FeedbackSection/>
+            }
+                .into_any()}
             // </FullScreenBannerForMobileModeNotReady>
-                <Footer />
+            <Footer/>
         </main>
     }
 }
