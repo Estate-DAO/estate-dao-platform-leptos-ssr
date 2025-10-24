@@ -31,7 +31,14 @@ where
                                     }
                                 }
                             };
-                            { move || view! { < Icon icon=icon()  /> } }
+                            let icon_class = move || {
+                                if i < rating_clone {
+                                    "w-3 h-3 text-yellow-400"
+                                } else {
+                                    "w-3 h-3 text-gray-300"
+                                }
+                            };
+                            { move || view! { <div class=icon_class()><Icon icon=icon() /></div> } }
                         })
                         .collect::<Vec<_>>()
                 }}
@@ -103,13 +110,15 @@ pub fn StarRatingFilter(
                                     format!("{} {}", base_span_classes, label_class.get())
                                 }}>
                                     {rating}
-                                    {move || {
+                                    <div class=move || {
                                         if is_selected.get() {
-                                            view! { <Icon icon=icondata::BiStarSolid /> }
+                                            "h-3 w-3 transition-colors duration-150 text-white"
                                         } else {
-                                            view! { <Icon icon=icondata::BiStarSolid /> }
+                                            "h-3 w-3 transition-colors duration-150 text-yellow-400"
                                         }
-                                    }}
+                                    }>
+                                        <Icon icon=icondata::BiStarSolid />
+                                    </div>
                                 </span>
 
                             </button>
