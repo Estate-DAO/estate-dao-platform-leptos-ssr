@@ -68,7 +68,7 @@ pub fn LoadingButton<F>(
 
     /// Whether the button is disabled (in addition to loading)
     #[prop(optional, into)]
-    disabled: MaybeSignal<bool>,
+    disabled: Signal<bool>,
 
     /// Button content (children)
     children: ChildrenFn,

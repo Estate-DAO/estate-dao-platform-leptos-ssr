@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 use leptos_icons::Icon;
-use leptos_router::hooks::{use_navigate, use_query_map};
+use leptos_router::hooks::{use_location, use_navigate, use_query_map};
 
 use crate::api::client_side_api::{ClientSideApiClient, Place};
 use crate::app::AppRoutes;
@@ -220,7 +220,18 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     });
 
     // Effect to update URL when dates or guests change from UI (State → URL)
-    create_effect(move |_| {
+    // Only run this effect when we're actually on the hotel details page
+    Effect::new(move |_| {
+        // Check if we're currently on the hotel details page by checking the current location
+        // This prevents the effect from running after navigation starts
+        let current_location = use_location();
+        let pathname = current_location.pathname.get();
+
+        // Only proceed if we're on the hotel details page
+        if !pathname.contains("/hotel-details") {
+            return;
+        }
+
         // Depend on all relevant signals
         let hotel_code = hotel_info_ctx.hotel_code.get();
         let date_range = ui_search_ctx.date_range.get();
@@ -875,7 +886,6 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             // Navigate to block room page
             let block_room_url = AppRoutes::BlockRoom.to_string();
             navigate(block_room_url, Default::default());
-
             booking_loading.set(false);
         }
     });
