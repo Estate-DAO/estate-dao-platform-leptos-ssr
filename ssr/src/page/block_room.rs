@@ -40,7 +40,7 @@
 // use crate::utils::pluralize;
 // use leptos::*;
 // use leptos_icons::*;
-// use leptos_router::use_navigate;
+// use leptos_router::hooks::use_navigate;
 // // use web_sys::localStorage;
 // use serde::{Deserialize, Serialize};
 // use serde_json::Value;
@@ -59,7 +59,7 @@
 //     // ================ SETUP context  ================
 //     let search_ctx: SearchCtx = expect_context();
 //     let search_list_results: SearchListResults = expect_context();
-//     let search_list_results = store_value(search_list_results); // Store it so we can clone inside closure
+//     let search_list_results = StoredValue::new(search_list_results); // Store it so we can clone inside closure
 
 //     let hotel_info_results: HotelInfoResults = expect_context();
 //     let hotel_info_ctx: HotelInfoCtx = expect_context();
@@ -79,7 +79,7 @@
 
 //     let num_nights = Signal::derive(move || search_ctx.date_range.get().no_of_nights());
 
-//     // let total_price = create_memo(move |_| {
+//     // let total_price = Memo::new(move |_| {
 //     let total_price = Signal::derive(move || {
 //         let room_price = room_price.get();
 //         let nights = num_nights.get();
@@ -90,11 +90,11 @@
 
 //     // ================  Form Fields signals  ================
 
-//     let is_form_valid: RwSignal<bool> = create_rw_signal(false);
+//     let is_form_valid: RwSignal<bool> = RwSignal::new(false);
 
-//     let adult_count = create_memo(move |_| search_ctx.guests.get().adults.get());
+//     let adult_count = Memo::new(move |_| search_ctx.guests.get().adults.get());
 
-//     let child_count = create_memo(move |_| search_ctx.guests.get().children.get());
+//     let child_count = Memo::new(move |_| search_ctx.guests.get().children.get());
 
 //     let children_ages = search_ctx.guests.get().children_ages.clone();
 
@@ -104,7 +104,7 @@
 //     BlockRoomCtx::create_children(child_count.get() as usize);
 //     BlockRoomCtx::set_terms_accepted(false);
 
-//     let (trigger_validation, set_trigger_validation) = create_signal(0);
+//     let (trigger_validation, set_trigger_validation) = signal(0);
 
 //     let update_adult = move |index: usize, field: &str, value: String| {
 //         BlockRoomCtx::update_adult(index, field, value);
@@ -190,7 +190,7 @@
 //     };
 
 //     // Call the validation function whenever inputs change
-//     let _ = create_effect(move |_| {
+//     let _ = Effect::new(move |_| {
 //         validate_form();
 //     });
 
@@ -206,7 +206,7 @@
 //     let hotel_code = hotel_info_ctx.hotel_code.get();
 //     let search_list_results = search_list_results.get_value();
 
-//     let confirmation_action = create_action(move |()| {
+//     let confirmation_action = Action::new(move |()| {
 //         let nav = nav.clone(); // Use the cloned version here
 
 //         async move {
@@ -216,13 +216,13 @@
 
 //     // ================  Confirmation Modal signals  ================
 
-//     let show_modal = create_rw_signal(false);
-//     let block_room_called = create_rw_signal(false);
+//     let show_modal = RwSignal::new(false);
+//     let block_room_called = RwSignal::new(false);
 //     let open_modal = move |_| {
 //         show_modal.set(true);
 //     };
 
-//     let payment_button_enabled = create_rw_signal(true);
+//     let payment_button_enabled = RwSignal::new(true);
 
 //     let should_not_have_loading_spinner: Signal<bool> = Signal::derive(move || {
 //         log!(
@@ -236,7 +236,7 @@
 //         block_room_called.get() && payment_button_enabled.get()
 //     });
 
-//     let _block_room_call = create_resource(show_modal, move |modal_value| {
+//     let _block_room_call = Resource::new(show_modal, move |modal_value| {
 //         let hotel_info_results = expect_context::<HotelInfoResults>();
 //         // let room_counters = hotel_info_results.block_room_counters.get_untracked();
 //         block_room_called.set(false);
@@ -291,7 +291,7 @@
 //         }
 //     });
 
-//     let handle_pay_signal = create_rw_signal(String::new());
+//     let handle_pay_signal = RwSignal::new(String::new());
 
 //     let images_signal = move || {
 //         if let Some(hotel_info_api_response) = hotel_info_results.search_result.get() {
@@ -317,7 +317,7 @@
 //         }
 //     };
 
-//     let call_add_booking_backend_action = create_action(
+//     let call_add_booking_backend_action = Action::new(
 //         move |invoice_response_ref: &Option<CreateInvoiceResponse>| {
 //             // Clone the input reference for use in the async block
 //             let invoice_response = invoice_response_ref.clone();
@@ -454,8 +454,8 @@
 //         },
 //     );
 
-//     let handle_pay_click = create_action(move |payment_method: &String| {
-//         // let handle_pay_click = create_resource(handle_pay_signal, move |payment_method: String| {
+//     let handle_pay_click = Action::new(move |payment_method: &String| {
+//         // let handle_pay_click = Resource::new(handle_pay_signal, move |payment_method: String| {
 //         let hotel_code_cloned = hotel_code.clone();
 //         let search_list_results_cloned = search_list_results.clone();
 //         let payment_method = payment_method.clone();
@@ -567,7 +567,7 @@
 //         }
 //     });
 
-//     // let is_form_valid = create_memo(move |_| {
+//     // let is_form_valid = Memo::new(move |_| {
 //     //     trigger_validation.get();
 
 //     //     let adult_list = adults.get();
@@ -598,7 +598,7 @@
 //     //     primary_adult_valid && other_adults_valid && children_valid && terms_valid
 //     // });
 
-//     let destination = create_memo(move |_| search_ctx.destination.get().unwrap_or_default());
+//     let destination = Memo::new(move |_| search_ctx.destination.get().unwrap_or_default());
 
 //     let insert_real_image_or_default = {
 //         move || {
@@ -630,7 +630,7 @@
 //         <div class="max-w-5xl mx-auto px-2 sm:px-6">
 //             <div class="flex items-center py-8">
 //                 <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
-//                     <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
+//                     <Icon icon=icondata::AiArrowLeftOutlined />
 //                 </span>
 //                 <h1 class="ml-2 sm:ml-4 text-2xl sm:text-3xl font-bold">"You're just one step away!"</h1>
 //             </div>
@@ -676,7 +676,7 @@
 //                     </div>
 //                     <hr class="my-3 border-gray-200" />
 //                     <div class="flex items-center gap-2 mt-2">
-//                         <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-lg" />
+//                         <Icon icon=icondata::AiUserOutlined />
 //                         <span class="text-xs text-gray-400 font-semibold">Guests & Rooms</span>
 //                         <span class="font-bold text-sm ml-2 text-right">{move || format!("{} Room{}{} {} Adult{}{} {} child{}", num_rooms.get(), if num_rooms.get() == 1 { "" } else { "s" }, if num_rooms.get() > 0 { "," } else { "" }, adult_count.get(), if adult_count.get() == 1 { "" } else { "s" }, if child_count.get() > 0 { "," } else { "" }, child_count.get(), if child_count.get() == 1 { "" } else { "ren" })}</span>
 //                     </div>
@@ -772,9 +772,9 @@
 //                                                     />
 //                                                 </div>
 //                                             }
-//                                                 .into_view()
+//                                                 .into_any()
 //                                         } else {
-//                                             view! { <div></div> }.into_view()
+//                                             view! { <div></div> }.into_any()
 //                                         }
 //                                     }}
 //                                 </div>
@@ -1019,7 +1019,7 @@
 //     passengers
 // }
 
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn BlockRoomPage() -> impl IntoView {

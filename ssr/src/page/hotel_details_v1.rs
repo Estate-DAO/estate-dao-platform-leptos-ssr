@@ -1,6 +1,6 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
-use leptos_router::{use_navigate, use_query_map};
+use leptos_router::hooks::{use_location, use_navigate, use_query_map};
 
 use crate::api::client_side_api::{ClientSideApiClient, Place};
 use crate::app::AppRoutes;
@@ -168,28 +168,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
     // <!-- Query params handling for shareable URLs -->
     // Sync query params with state on page load (URL → State)
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let params = query_map.get();
-        if !params.0.is_empty() {
-            log!(
-                "[HotelDetailsV1Page] Found query params in URL: {:?}",
-                params
-            );
+        let params_map: std::collections::HashMap<String, String> = params
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
+        if !params_map.is_empty() {
+            log!("Found query params in URL: {:?}", params_map);
 
-            // Convert leptos_router params to HashMap
-            let params_map: std::collections::HashMap<String, String> = params
-                .0
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
-
-            // Parse params and sync to app state.
-            // The logic is now much simpler and completely decoupled from 'place' searching.
             if let Some(hotel_params) = HotelDetailsParams::from_query_params(&params_map) {
-                log!(
-                    "[HotelDetailsV1Page] Parsed hotel params from URL: {:?}",
-                    hotel_params
-                );
+                log!("Parsed hotel params from URL: {:?}", hotel_params);
                 hotel_params.sync_to_app_state();
             } else {
                 log!("[HotelDetailsV1Page] Could not parse hotel params from URL.");
@@ -210,7 +199,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     // <!-- Auto-update URL when essential data becomes available -->
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let hotel_code = hotel_info_ctx.hotel_code.get();
         let date_range = ui_search_ctx.date_range.get();
 
@@ -220,15 +209,29 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         if has_essential_data {
             // Only update URL if query params are empty (to avoid infinite loops)
             let current_params = query_map.get();
-            if current_params.0.is_empty() {
-                log!("[HotelDetailsV1Page] Auto-update: URL is empty, updating with current state");
+            let params_map: std::collections::HashMap<String, String> = current_params
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v))
+                .collect();
+            if params_map.is_empty() {
                 update_url_with_current_state();
             }
         }
     });
 
     // Effect to update URL when dates or guests change from UI (State → URL)
-    create_effect(move |_| {
+    // Only run this effect when we're actually on the hotel details page
+    Effect::new(move |_| {
+        // Check if we're currently on the hotel details page by checking the current location
+        // This prevents the effect from running after navigation starts
+        let current_location = use_location();
+        let pathname = current_location.pathname.get();
+
+        // Only proceed if we're on the hotel details page
+        if !pathname.contains("/hotel-details") {
+            return;
+        }
+
         // Depend on all relevant signals
         let hotel_code = hotel_info_ctx.hotel_code.get();
         let date_range = ui_search_ctx.date_range.get();
@@ -242,7 +245,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             !hotel_code.is_empty() && date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
 
         let current_params = query_map.get();
-        let has_url_params = !current_params.0.is_empty();
+        let has_url_params = !current_params.into_iter().collect::<Vec<_>>().is_empty();
 
         if has_essential_data && has_url_params {
             log!(
@@ -259,8 +262,9 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // Create resource to fetch hotel details when page loads
     // Following the pattern from block_room_v1.rs prebook_resource
     // Enhanced to work with query params for shareable URLs
-    let hotel_details_resource = create_resource(
-        move || {
+    let hotel_details_resource = LocalResource::new(move || {
+        let guests_for_details = ui_search_ctx.guests.clone();
+        async move {
             // Wait for essential data to be ready before calling API
             // Data can come from either UI state or URL query params
             let hotel_code = hotel_info_ctx.hotel_code.get();
@@ -278,103 +282,96 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 is_ready
             );
 
-            // Pass a tuple of reactive values to ensure the resource reruns on change
-            (is_ready, hotel_code, date_range)
-        },
-        move |(is_ready, _, _)| {
-            let guests_for_details = ui_search_ctx.guests.clone();
-            async move {
-                if !is_ready {
-                    log!("Hotel details resource: Not ready yet, waiting for data...");
-                    return None;
-                }
+            if !is_ready {
+                log!("Hotel details resource: Not ready yet, waiting for data...");
+                return None;
+            }
 
-                log!("Hotel details resource: Page data ready, fetching hotel details...");
-                HotelDetailsUIState::set_loading(true);
-                HotelDetailsUIState::set_error(None);
+            log!("Hotel details resource: Page data ready, fetching hotel details...");
+            HotelDetailsUIState::set_loading(true);
+            HotelDetailsUIState::set_error(None);
 
-                let client = ClientSideApiClient::new();
-                let guests_clone = guests_for_details.clone();
+            let client = ClientSideApiClient::new();
+            let guests_clone = guests_for_details.clone();
 
-                // Get hotel code from context
-                let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
-                if hotel_code.is_empty() {
-                    HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
+            // Get hotel code from context
+            let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
+            if hotel_code.is_empty() {
+                HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
+                HotelDetailsUIState::set_loading(false);
+                return None;
+            }
+
+            // Create search criteria from UI context
+            // This will work whether data came from direct navigation or URL query params
+            let date_range = ui_search_ctx.date_range.get_untracked();
+            let guests = &guests_clone;
+
+            // Create room guests
+            let room_guests = vec![DomainRoomGuest {
+                no_of_adults: guests.adults.get_untracked(),
+                no_of_children: guests.children.get_untracked(),
+                children_ages: if guests.children.get_untracked() > 0 {
+                    Some(
+                        guests
+                            .children_ages
+                            .get_untracked()
+                            .into_iter()
+                            .map(|age| age.to_string())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+            }];
+
+            // Create search criteria
+            let search_criteria = DomainHotelSearchCriteria {
+                place_id: "".to_string(), // No longer dependent on place
+                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                no_of_nights: date_range.no_of_nights(),
+                no_of_rooms: guests.rooms.get_untracked(),
+                room_guests,
+                guest_nationality: "US".to_string(), // Default for now
+                pagination: None,                    // No pagination for hotel details
+                ..Default::default()
+            };
+
+            log!(
+                "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
+                // search_criteria.destination_city_name,
+                search_criteria.check_in_date,
+                search_criteria.check_out_date,
+                search_criteria.room_guests[0].no_of_adults,
+                search_criteria.room_guests[0].no_of_children,
+                search_criteria.no_of_rooms
+            );
+
+            // Create hotel info criteria
+            let criteria = DomainHotelInfoCriteria {
+                token: hotel_code.clone(),
+                hotel_ids: vec![hotel_code],
+                search_criteria,
+            };
+
+            // Call API
+            match client.get_hotel_info(criteria).await {
+                Ok(details) => {
+                    log!("Hotel details resource: Success - {}", details.hotel_name);
+                    HotelDetailsUIState::set_hotel_details(Some(details.clone()));
                     HotelDetailsUIState::set_loading(false);
-                    return None;
+                    Some(details)
                 }
-
-                // Create search criteria from UI context
-                // This will work whether data came from direct navigation or URL query params
-                let date_range = ui_search_ctx.date_range.get_untracked();
-                let guests = &guests_clone;
-
-                // Create room guests
-                let room_guests = vec![DomainRoomGuest {
-                    no_of_adults: guests.adults.get_untracked(),
-                    no_of_children: guests.children.get_untracked(),
-                    children_ages: if guests.children.get_untracked() > 0 {
-                        Some(
-                            guests
-                                .children_ages
-                                .get_untracked()
-                                .into_iter()
-                                .map(|age| age.to_string())
-                                .collect(),
-                        )
-                    } else {
-                        None
-                    },
-                }];
-
-                // Create search criteria
-                let search_criteria = DomainHotelSearchCriteria {
-                    place_id: "".to_string(), // No longer dependent on place
-                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                    no_of_nights: date_range.no_of_nights(),
-                    no_of_rooms: guests.rooms.get_untracked(),
-                    room_guests,
-                    guest_nationality: "US".to_string(), // Default for now
-                    pagination: None,                    // No pagination for hotel details
-                    ..Default::default()
-                };
-
-                log!(
-                    "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
-                    // search_criteria.destination_city_name,
-                    search_criteria.check_in_date,
-                    search_criteria.check_out_date,
-                    search_criteria.room_guests[0].no_of_adults,
-                    search_criteria.room_guests[0].no_of_children,
-                    search_criteria.no_of_rooms
-                );
-
-                // Create hotel info criteria
-                let criteria = DomainHotelInfoCriteria {
-                    token: hotel_code.clone(),
-                    hotel_ids: vec![hotel_code],
-                    search_criteria,
-                };
-
-                // Call API
-                match client.get_hotel_info(criteria).await {
-                    Ok(details) => {
-                        log!("Hotel details resource: Success - {}", details.hotel_name);
-                        HotelDetailsUIState::set_hotel_details(Some(details.clone()));
-                        HotelDetailsUIState::set_loading(false);
-                        Some(details)
-                    }
-                    Err(error_msg) => {
-                        log!("Hotel details resource: Error - {}", error_msg);
-                        HotelDetailsUIState::set_error(Some(error_msg));
-                        HotelDetailsUIState::set_loading(false);
-                        None
-                    }
+                Err(error_msg) => {
+                    log!("Hotel details resource: Error - {}", error_msg);
+                    HotelDetailsUIState::set_error(Some(error_msg));
+                    HotelDetailsUIState::set_loading(false);
+                    None
                 }
             }
-        },
-    );
+        }
+    });
 
     let loaded = move || hotel_details_state.hotel_details.get().is_some();
     let is_loading = move || hotel_details_state.loading.get();
@@ -481,7 +478,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                                                     "Please try different dates or check other hotels in the area."
                                                 </div>
                                             </div>
-                                        }
+                                        }.into_any()
                                     } else {
                                         view! {
                                             <div>
@@ -490,7 +487,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                                                     {error}
                                                 </div>
                                             </div>
-                                        }
+                                        }.into_any()
                                     }
                                 }
                             </div>
@@ -581,10 +578,10 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    // let (show_viewer, set_show_viewer) = create_signal(false);
-    let (selected_index, set_selected_index) = create_signal(0);
+    // let (show_viewer, set_show_viewer) = signal(false);
+    let (selected_index, set_selected_index) = signal(0);
 
-    let images_signal = create_memo(move |_| {
+    let images_signal = Memo::new(move |_| {
         if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
             let mut images = hotel_details.images.clone();
             if images.len() < 6 {
@@ -601,6 +598,7 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     move || {
         if images_signal().is_empty() {
             view! { <div class="text-gray-500 text-center py-8">No images available</div> }
+                .into_any()
         } else {
             view! {
                 <div>
@@ -691,7 +689,7 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
                         }
                     })}
                 </div>
-            }
+            }.into_any()
         }
     }
 }
@@ -701,7 +699,7 @@ pub fn AmenitiesIconText(icon: icondata::Icon, #[prop(into)] text: String) -> im
     view! {
         <div class="flex items-center">
         // todo: for now, we are showing a bullet only
-            <Icon class="inline text-xl text-gray-600" icon=icondata::BsDot />
+            < Icon icon=icondata::BsDot  />
             <span class="inline ml-2 text-sm text-gray-700">{text}</span>
         </div>
     }
@@ -721,7 +719,7 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
     // **Reactive State Management**:
     // Tracks room count for this specific room type using room_unique_id as key
     // Uses create_memo for efficient reactivity - only updates when selection changes
-    let room_count = create_memo({
+    let room_count = Memo::new({
         let room_key = room_unique_id.clone();
         move |_| {
             hotel_details_state
@@ -736,7 +734,7 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
     let is_at_minimum = move || room_count() == 0;
 
     // <!-- Room validation signals -->
-    let is_at_maximum = create_memo(move |_| {
+    let is_at_maximum = Memo::new(move |_| {
         // Disable increment if we're at the global room limit
         HotelDetailsUIState::is_at_room_selection_limit()
     });
@@ -804,7 +802,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     let navigate = use_navigate();
 
     // Create loading state for the Book Now button
-    let booking_loading = create_rw_signal(false);
+    let booking_loading = RwSignal::new(false);
 
     // Reactive signals for pricing calculations
     let date_range = move || ui_search_ctx.date_range.get();
@@ -822,10 +820,10 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     let has_rooms_selected = move || total_selected_rooms() > 0;
 
     // Create memo for button disabled state
-    let button_disabled = create_memo(move |_| !has_rooms_selected() || booking_loading.get());
+    let button_disabled = Memo::new(move |_| !has_rooms_selected() || booking_loading.get());
 
     // Create action for Book Now button
-    let book_now_action = create_action(move |_: &()| {
+    let book_now_action = Action::new(move |_: &()| {
         let navigate = navigate.clone();
         async move {
             booking_loading.set(true);
@@ -888,7 +886,6 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             // Navigate to block room page
             let block_room_url = AppRoutes::BlockRoom.to_string();
             navigate(block_room_url, Default::default());
-
             booking_loading.set(false);
         }
     });
@@ -1024,8 +1021,8 @@ pub fn PricingBookNowV1() -> impl IntoView {
     let is_rooms_loading = move || hotel_details_state.loading.get();
 
     // Reactive signals for display
-    let total_price = create_memo(move |_| HotelDetailsUIState::total_room_price());
-    let has_price = create_memo(move |_| total_price.get() > 0.0);
+    let total_price = Memo::new(move |_| HotelDetailsUIState::total_room_price());
+    let has_price = Memo::new(move |_| total_price.get() > 0.0);
     let date_range = move || ui_search_ctx.date_range.get();
     let guests = ui_search_ctx.guests;
 
@@ -1070,7 +1067,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 
                 // <!-- Dates -->
                 <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::BiCalendarRegular />
+                    < Icon icon=icondata::BiCalendarRegular  />
                     <span class="text-gray-700">
                         {check_in_display} " to " {check_out_display}
                     </span>
@@ -1078,7 +1075,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 
                 // <!-- Adults -->
                 <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::BiUserRegular />
+                    < Icon icon=icondata::BiUserRegular  />
                     <span class="text-gray-700">
                         {adults_count} {move || if adults_count() == 1 { "adult" } else { "adults" }}
                     </span>
@@ -1086,7 +1083,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 
                 // <!-- Rooms -->
                 <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::RiHomeSmile2BuildingsLine />
+                    < Icon icon=icondata::RiHomeSmile2BuildingsLine  />
                     <span class="text-gray-700">
                         {rooms_count} {move || if rooms_count() == 1 { "room" } else { "rooms" }}
                     </span>

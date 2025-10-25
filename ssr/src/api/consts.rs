@@ -36,16 +36,16 @@ pub const GTAG_MEASUREMENT_ID: Lazy<&str> = Lazy::new(|| "G-BPRVSPTP2T");
 pub fn get_host() -> String {
     #[cfg(feature = "hydrate")]
     {
-        leptos_use::use_window()
+        return leptos_use::use_window()
             .as_ref()
             .unwrap()
             .location()
             .host()
             .unwrap()
-            .to_string()
+            .to_string();
     }
 
-    #[cfg(not(feature = "hydrate"))]
+    #[cfg(feature = "ssr")]
     {
         use leptos::prelude::*;
 
@@ -100,7 +100,7 @@ pub fn get_default_provab_base_url() -> &'static str {
 use crate::{app::AppRoutes, utils::route::join_base_and_path_url};
 use cfg_if::cfg_if;
 use colored::Colorize;
-use leptos::use_context;
+use leptos::prelude::use_context;
 use once_cell::sync::Lazy;
 // use dotenvy::dotenv;
 // use leptos::logging::log;

@@ -1,7 +1,7 @@
 use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::{SendOtpResponse, VerifyOtpResponse};
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct EmailVerificationState {

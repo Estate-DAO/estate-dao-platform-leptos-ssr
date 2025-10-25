@@ -2,7 +2,7 @@ use crate::canister::backend;
 use crate::component::NotificationData;
 use crate::utils::backend_integration_helpers::BookingDisplayInfo;
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 
 /// **Phase 1: State Management for Confirmation Page V1**
 ///

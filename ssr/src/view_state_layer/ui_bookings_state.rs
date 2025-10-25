@@ -1,5 +1,5 @@
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

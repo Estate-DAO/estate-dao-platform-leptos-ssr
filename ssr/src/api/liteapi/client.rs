@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use colored::Colorize;
-use leptos::{expect_context, use_context};
+use leptos::prelude::{expect_context, use_context};
 
 use crate::api::api_client::ApiClient;
 use crate::api::consts::EnvVarConfig;

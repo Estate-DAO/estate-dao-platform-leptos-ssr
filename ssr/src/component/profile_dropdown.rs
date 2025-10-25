@@ -3,9 +3,9 @@
 
 // #[component]
 // pub fn ProfileDropdown(children: Children) -> impl IntoView {
-//     let dropdown_ref = create_node_ref::<html::Div>();
-//     let trigger_ref = create_node_ref::<html::Div>();
-//     let (is_open, set_is_open) = create_signal(false);
+//     let dropdown_ref = create_node_ref::<leptos::html::Div>();
+//     let trigger_ref = create_node_ref::<leptos::html::Div>();
+//     let (is_open, set_is_open) = signal(false);
 
 //     // <!-- Close dropdown when clicking outside -->
 //     let _ = on_click_outside(dropdown_ref, move |_| set_is_open.set(false));

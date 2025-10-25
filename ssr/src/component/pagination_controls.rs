@@ -1,6 +1,6 @@
 use crate::utils::browser;
 use crate::view_state_layer::ui_search_state::UIPaginationState;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn PaginationControls() -> impl IntoView {
@@ -52,9 +52,9 @@ pub fn PaginationControls() -> impl IntoView {
                 //                 <span class="text-gray-500 text-sm">
                 //                     "(" {meta.page_size} " per page)"
                 //                 </span>
-                //             }.into_view()
+                //             }.into_any()
                 //         })
-                //         .unwrap_or_else(|| view! { <span></span> }.into_view())
+                //         .unwrap_or_else(|| view! { <span></span> }.into_any())
                 // }}
             </div>
 
@@ -97,9 +97,9 @@ pub fn PaginationInfo() -> impl IntoView {
                                     .map(|total| format!(" of {}", total))
                                     .unwrap_or_default()}
                             </span>
-                        }.into_view()
+                        }.into_any()
                     })
-                    .unwrap_or_else(|| view! { <span></span> }.into_view())
+                    .unwrap_or_else(|| view! { <span></span> }.into_any())
             }}
         </div>
     }

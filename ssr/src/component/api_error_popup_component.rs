@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 // Import the state and the specific modal component
 use crate::component::modal::ErrorModalWithHome;
 use crate::log;
@@ -28,7 +28,7 @@ pub fn GlobalApiErrorPopup(
             // #[cfg(debug_assertions)]
             log!("GlobalApiErrorPopup: ApiErrorState context not found! Make sure it's provided higher up in the component tree.");
             // Render nothing if the context is missing
-            return view! { <></> }.into_view();
+            return view! { <></> }.into_any();
         }
     };
 
@@ -61,6 +61,7 @@ pub fn GlobalApiErrorPopup(
             // on_retry=on_retry         // Pass optional retry callback through
         />
     }
+    .into_any()
 }
 
 /*
@@ -80,7 +81,7 @@ fn App() -> impl IntoView {
     provide_context(global_error_state.clone()); // Clone is cheap (RwSignals are Copy)
 
     // Example: A button somewhere else in the app that triggers an error
-    let trigger_err_action = create_action(move |_: &()| {
+    let trigger_err_action = Action::new(move |_: &()| {
         let state = global_error_state.clone(); // Clone state for the action
         async move {
             // Simulate an API call failure

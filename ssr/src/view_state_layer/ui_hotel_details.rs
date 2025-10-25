@@ -2,7 +2,7 @@ use crate::{
     domain::{DomainHotelDetails, DomainRoomData, DomainRoomOption},
     error, log, warn,
 };
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::GlobalStateForLeptos;

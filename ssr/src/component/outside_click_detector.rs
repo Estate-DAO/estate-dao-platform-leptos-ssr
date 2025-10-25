@@ -10,9 +10,9 @@
 //     #[prop(optional, into)] exclude_selectors: Option<Vec<String>>,
 //     children: Children,
 // ) -> impl IntoView {
-//     let div_ref = create_node_ref::<html::Div>();
+//     let div_ref = create_node_ref::<leptos::html::Div>();
 
-//     create_effect(move |_| {
+//     Effect::new(move |_| {
 //         let div = div_ref.get_untracked();
 //         if let Some(div) = div {
 //             let div_clone = div.clone();
@@ -83,7 +83,7 @@
 //                         log!("Clicked outside the div");
 //                     }
 //                     log!("[outside_click_detector.rs] About to call outside click callback");
-//                     leptos::Callable::call(&on_outside_click, ());
+//                     on_outside_click(());
 //                     log!("[outside_click_detector.rs] After calling outside click callback");
 //                 } else {
 //                     log!("[outside_click_detector.rs] Click was inside the div, ignoring");

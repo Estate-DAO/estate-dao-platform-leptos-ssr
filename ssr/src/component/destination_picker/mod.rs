@@ -3,7 +3,7 @@ mod destination_picker_v6;
 pub use destination_picker_v6::DestinationPickerV6;
 
 use leptos::html::Input;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::on_click_outside;
 use serde::{Deserialize, Serialize};
 
@@ -20,24 +20,26 @@ use crate::log;
 use leptos_icons::*;
 use std::time::Duration;
 
-use leptos_query::{query_persister, *};
+// use leptos_query::{query_persister, *};
 
-pub fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
-    // log!("destinations_query called");
-    leptos_query::create_query(
-        |_| async move {
-            // log!("will call read_destinations_from_file in async move");
-            read_destinations_from_file("city.json".into()).await.ok()
-        },
-        QueryOptions {
-            default_value: None,
-            refetch_interval: None,
-            resource_option: Some(ResourceOption::NonBlocking),
-            stale_time: Some(Duration::from_secs(2 * 60)),
-            gc_time: Some(Duration::from_secs(5 * 60)),
-        },
-    )
-}
+// NOTE: leptos_query is incompatible with Leptos 0.8, temporarily commented out
+// TODO: Migrate to leptos-fetch or use LocalResource instead
+// pub fn destinations_query() -> QueryScope<bool, Option<Vec<Destination>>> {
+//     // log!("destinations_query called");
+//     leptos_query::create_query(
+//         |_| async move {
+//             // log!("will call read_destinations_from_file in async move");
+//             read_destinations_from_file("city.json".into()).await.ok()
+//         },
+//         QueryOptions {
+//             default_value: None,
+//             refetch_interval: None,
+//             resource_option: Some(ResourceOption::NonBlocking),
+//             stale_time: Some(Duration::from_secs(2 * 60)),
+//             gc_time: Some(Duration::from_secs(5 * 60)),
+//         },
+//     )
+// }
 
 #[server(GetCityList)]
 pub async fn read_destinations_from_file(

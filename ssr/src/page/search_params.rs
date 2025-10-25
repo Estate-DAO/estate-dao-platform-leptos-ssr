@@ -1,8 +1,8 @@
 use crate::api::{client_side_api::Place, consts::PAGINATION_LIMIT};
 use crate::utils::query_params::individual_params;
 use chrono::{Datelike, Duration, Local, NaiveDate};
-use leptos::*;
-use leptos_router::use_query_map;
+use leptos::prelude::*;
+use leptos_router::hooks::use_query_map;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use url::form_urlencoded;
@@ -80,9 +80,8 @@ impl SearchParamsV2 {
         let query_map = use_query_map();
         let params = query_map.get();
         let map: HashMap<String, String> = params
-            .0
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
             .collect();
 
         Self::from_map(&map)
@@ -448,9 +447,8 @@ impl HotelDetailsParamsV2 {
         let query_map = use_query_map();
         let params = query_map.get();
         let map: HashMap<String, String> = params
-            .0
-            .iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
             .collect();
 
         Self::from_map(&map)

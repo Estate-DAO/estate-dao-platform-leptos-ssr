@@ -1,5 +1,5 @@
-use codee::string::JsonSerdeCodec;
-use leptos::*;
+use ::codee::string::JsonSerdeCodec;
+use leptos::prelude::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
 use crate::{

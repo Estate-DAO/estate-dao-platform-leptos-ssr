@@ -37,7 +37,7 @@
 //     // let hotel_info_ctx = expect_context::<HotelInfoCtx>();
 //     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
-//     let book_room_api_call = create_resource(
+//     let book_room_api_call = Resource::new(
 //         move || payment_booking_step_signals.p03_call_book_room_api.get(),
 //         move |p03_call_book_room_api| async move {
 //             if !p03_call_book_room_api {
@@ -184,7 +184,7 @@
 //         },
 //     );
 
-//     let book_room_canister_call = create_resource(
+//     let book_room_canister_call = Resource::new(
 //         move || {
 //             payment_booking_step_signals
 //                 .p04_update_booking_details_to_backend
@@ -264,7 +264,7 @@
 //     //                                     {format!("details: {book_room_response:#?}")}
 //     //                                 </div>
 //     //                             }
-//     //                                 .into_view()
+//     //                                 .into_any()
 //     //                         }
 //     //                         any_other => {
 //     //                             view! {
@@ -274,13 +274,13 @@
 //     //                                     {format!("details: {any_other:#?}")}
 //     //                                 </div>
 //     //                             }
-//     //                                 .into_view()
+//     //                                 .into_any()
 //     //                         }
 //     //                     }
 //     //                 } else {
 
 //     //                     view! { "Booking not started yet!" }
-//     //                         .into_view()
+//     //                         .into_any()
 //     //                 }
 //     //             }}
 //     //         </Suspense>
@@ -298,7 +298,7 @@
 //     //                             {format!("details: {book_room_response:?}")}
 //     //                         </p>
 //     //                     }
-//     //                         .into_view()
+//     //                         .into_any()
 //     //                 } else {
 //     //                     view! {
 //     //                         // todo [UAT] = None can be obtained due to any of the follwoing going wrong
@@ -307,7 +307,7 @@
 //     //                         // 3. could not save to backend
 //     //                         "Could not save booking details to database"
 //     //                     }
-//     //                         .into_view()
+//     //                         .into_any()
 //     //                 }
 //     //             }}
 //     //         </Suspense>
@@ -325,7 +325,7 @@
 // //     // let hotel_info_ctx = expect_context::<HotelInfoCtx>();
 // //     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
-// //     let book_room_api_call = create_resource(
+// //     let book_room_api_call = Resource::new(
 // //         move || payment_booking_step_signals.p03_call_book_room_api.get(),
 // //         move |p03_call_book_room_api| async move {
 // //             if !p03_call_book_room_api {
@@ -472,7 +472,7 @@
 // //         },
 // //     );
 
-// //     let book_room_canister_call = create_resource(
+// //     let book_room_canister_call = Resource::new(
 // //         move || {
 // //             payment_booking_step_signals
 // //                 .p04_update_booking_details_to_backend
@@ -552,7 +552,7 @@
 // //     //                                     {format!("details: {book_room_response:#?}")}
 // //     //                                 </div>
 // //     //                             }
-// //     //                                 .into_view()
+// //     //                                 .into_any()
 // //     //                         }
 // //     //                         any_other => {
 // //     //                             view! {
@@ -562,13 +562,13 @@
 // //     //                                     {format!("details: {any_other:#?}")}
 // //     //                                 </div>
 // //     //                             }
-// //     //                                 .into_view()
+// //     //                                 .into_any()
 // //     //                         }
 // //     //                     }
 // //     //                 } else {
 
 // //     //                     view! { "Booking not started yet!" }
-// //     //                         .into_view()
+// //     //                         .into_any()
 // //     //                 }
 // //     //             }}
 // //     //         </Suspense>
@@ -586,7 +586,7 @@
 // //     //                             {format!("details: {book_room_response:?}")}
 // //     //                         </p>
 // //     //                     }
-// //     //                         .into_view()
+// //     //                         .into_any()
 // //     //                 } else {
 // //     //                     view! {
 // //     //                         // todo [UAT] = None can be obtained due to any of the follwoing going wrong
@@ -595,7 +595,7 @@
 // //     //                         // 3. could not save to backend
 // //     //                         "Could not save booking details to database"
 // //     //                     }
-// //     //                         .into_view()
+// //     //                         .into_any()
 // //     //                 }
 // //     //             }}
 // //     //         </Suspense>

@@ -1,9 +1,9 @@
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::HtmlElement; // Import HtmlElement for type casting
 
 #[component]
 pub fn ShadowOverlay(#[prop(into)] show: RwSignal<bool>, children: ChildrenFn) -> impl IntoView {
-    let children = store_value(children); // Store children for potential re-rendering
+    let children = StoredValue::new(children); // Store children for potential re-rendering
 
     // This outer closure handles the conditional rendering based on `show`
     move || {

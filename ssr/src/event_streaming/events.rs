@@ -1,7 +1,7 @@
+use ::codee::string::FromToStringCodec;
+use ::codee::string::JsonSerdeCodec;
 use candid::Principal;
-use codee::string::FromToStringCodec;
-use codee::string::JsonSerdeCodec;
-use leptos::*;
+use leptos::prelude::*;
 use serde_json::json;
 // use ic_agent::Identity;
 // use leptos_use::storage::use_local_storage;

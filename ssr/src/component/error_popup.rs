@@ -53,8 +53,8 @@
 ///   - Configurable error type
 ///
 use crate::view_state_layer::api_error_state::{ApiErrorState, ApiErrorType};
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 
 #[component]
@@ -110,7 +110,7 @@ pub fn NavigatingErrorPopup(
     let show_popup = api_error_state.show_popup;
 
     // Set up auto-navigation after 5 seconds
-    let (countdown, set_countdown) = create_signal(5);
+    let (countdown, set_countdown) = signal(5);
 
     let dismiss_and_navigate = move |_: ()| {
         api_error_state.dismiss_popup();
@@ -136,7 +136,7 @@ pub fn NavigatingErrorPopup(
     // let countdown_timer = use_timeout_fn(tick, 1000.0);
 
     // Start the countdown when the popup is shown
-    // create_effect(move |_| {
+    // Effect::new(move |_| {
     //     if show_popup.get() {
     //         set_countdown.set(5);
     //         (countdown_timer.start)(());
@@ -144,9 +144,9 @@ pub fn NavigatingErrorPopup(
     //         (countdown_timer.stop)();
     //     }
     // });
-    let can_navigate = create_rw_signal(false);
+    let can_navigate = RwSignal::new(false);
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
             move |_: ()| {
                 // if countdown.get() > 0 {

@@ -1,6 +1,6 @@
 // use leptos::*;
 // use leptos_icons::Icon;
-// use leptos_router::{use_navigate, use_query_map};
+// use leptos_router::hooks::{use_navigate, use_query_map};
 // use std::collections::HashMap;
 
 // use crate::api::client_side_api::{ClientSideApiClient, ConfirmationProcessRequest};
@@ -30,7 +30,7 @@
 //     let query_map = use_query_map();
 
 //     // **Phase 1: Initialize state on component mount**
-//     create_effect(move |_| {
+//     Effect::new(move |_| {
 //         // Initialize confirmation page state
 //         ConfirmationPageUIState::initialize();
 
@@ -183,13 +183,13 @@
 //                             ConfirmationPageUIState::set_sse_connected(true);
 //                         })}
 //                     />
-//                 }.into_view()
+//                 }.into_any()
 //             } else {
 //                 view! {
 //                     <div class="text-sm text-yellow-600 mb-4">
 //                         "No payment ID found - manual confirmation only"
 //                     </div>
-//                 }.into_view()
+//                 }.into_any()
 //             }
 //         }}
 //     }
@@ -245,12 +245,12 @@
 //                                         <div class=circle_classes>
 //                                             {if is_completed {
 //                                                 view! {
-//                                                     <Icon icon=icondata::AiCheckOutlined class="w-3 h-3 sm:w-4 sm:h-4" />
-//                                                 }.into_view()
+//                                                     <Icon icon=icondata::AiCheckOutlined />
+//                                                 }.into_any()
 //                                             } else {
 //                                                 view! {
 //                                                     <span class="text-xs sm:text-sm">{step_num.to_string()}</span>
-//                                                 }.into_view()
+//                                                 }.into_any()
 //                                             }}
 //                                         </div>
 //                                         <span class="mt-2 sm:mt-3 md:mt-4 text-[10px] sm:text-xs text-gray-600 text-center break-words max-w-[80px] sm:max-w-[100px] md:max-w-[120px]">
@@ -260,9 +260,9 @@
 //                                     {if index < 2 {
 //                                         view! {
 //                                             <div class=format!("h-[1px] w-12 sm:w-16 md:w-24 lg:w-40 transition-colors mt-3 sm:mt-4 mx-1 sm:mx-2 {}", line_color) />
-//                                         }.into_view()
+//                                         }.into_any()
 //                                     } else {
-//                                         view! { <div /> }.into_view()
+//                                         view! { <div /> }.into_any()
 //                                     }}
 //                                 </div>
 //                             }
@@ -324,7 +324,7 @@
 
 //             // **Error Header**
 //             <div class="text-center">
-//                 <Icon icon=icondata::AiCloseCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-red-500" />
+//                 <Icon icon=icondata::AiCloseCircleOutlined />
 //                 <h2 class="text-lg sm:text-xl md:text-2xl font-semibold text-red-600 mb-2">
 //                     "Booking Processing Error"
 //                 </h2>
@@ -419,7 +419,7 @@
 
 //             // **Success Header**
 //             <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-green-600">
-//                 <Icon icon=icondata::AiCheckCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
+//                 <Icon icon=icondata::AiCheckCircleOutlined />
 //                 "Your Booking has been confirmed!"
 //             </div>
 
@@ -483,7 +483,7 @@
 //                                     </p>
 //                                 </div>
 //                             </div>
-//                         }.into_view()
+//                         }.into_any()
 //                     }
 //                     None => {
 //                         view! {
@@ -491,7 +491,7 @@
 //                                 <SpinnerGray />
 //                                 <p class="mt-2">"Loading booking details..."</p>
 //                             </div>
-//                         }.into_view()
+//                         }.into_any()
 //                     }
 //                 }
 //             }}
@@ -518,12 +518,12 @@
 //                             view! {
 //                                 <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
 //                                 <span class="text-xs text-green-700 font-medium">"Connected"</span>
-//                             }.into_view()
+//                             }.into_any()
 //                         } else {
 //                             view! {
 //                                 <div class="w-2 h-2 bg-red-500 rounded-full"></div>
 //                                 <span class="text-xs text-red-700 font-medium">"Disconnected"</span>
-//                             }.into_view()
+//                             }.into_any()
 //                         }
 //                     }}
 //                 </div>

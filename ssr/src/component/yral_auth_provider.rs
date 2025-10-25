@@ -1,12 +1,16 @@
-use codee::string::{FromToStringCodec, JsonSerdeCodec};
+use ::codee::string::{FromToStringCodec, JsonSerdeCodec};
 use ic_agent::identity::DelegatedIdentity;
-use leptos::*;
+use leptos::ev;
+use leptos::prelude::*;
+use leptos::task::spawn_local;
 // use leptos::{ev, prelude::*, component, view, server, ServerFnError, expect_context, create_action, window, IntoView, Children, Oco};
+use gloo_net::http::Request;
 use leptos_use::{
     storage::{use_local_storage, use_local_storage_with_options, UseStorageOptions},
     use_cookie, use_cookie_with_options, use_event_listener, use_interval_fn, use_window,
     UseCookieOptions,
 };
+use reqwest::Client;
 use web_sys::Window;
 
 use crate::{
@@ -31,74 +35,70 @@ pub async fn get_app_url_server() -> Result<String, ServerFnError> {
 
 #[component]
 pub fn YralAuthProvider() -> impl IntoView {
-    let profile_details = Resource::local(
-        move || AuthStateSignal::auth_state().get(),
-        move |auth| async move {
-            if auth.is_authenticated() {
-                return Some(auth);
-            }
+    let profile_details = LocalResource::new(move || async move {
+        let auth = AuthStateSignal::auth_state().get();
+        if auth.is_authenticated() {
+            return Some(auth);
+        }
 
-            let url = format!("/api/user-info");
-            match gloo_net::http::Request::get(&url).send().await {
-                Ok(response) => {
-                    if response.status() == 200 {
-                        if let Ok(user_data) = response.json::<AuthState>().await {
-                            logging::log!("Fetched user info: {:?}", user_data);
-                            AuthStateSignal::auth_set(user_data.clone());
-                            return Some(user_data);
-                        }
+        let url = format!("/api/user-info");
+        match Client::new().get(&url).send().await {
+            Ok(response) => {
+                if response.status() == 200 {
+                    if let Ok(user_data) = response.json::<AuthState>().await {
+                        crate::log!("Fetched user info: {:?}", user_data);
+                        AuthStateSignal::auth_set(user_data.clone());
+                        return Some(user_data);
                     }
                 }
-                Err(e) => {
-                    logging::log!("Failed to fetch user info: {:?}", e);
-                }
             }
-            None
-        },
-    );
-
-    let wishlist_details = Resource::local(
-        move || AuthStateSignal::auth_state().get(),
-        move |auth| async move {
-            if auth.is_authenticated() {
-                return Some(auth);
+            Err(e) => {
+                crate::log!("Failed to fetch user info: {:?}", e);
             }
+        }
+        None
+    });
 
-            let url = format!("/api/user-wishlist");
-            match gloo_net::http::Request::get(&url).send().await {
-                Ok(response) => {
-                    if response.status() == 200 {
-                        if let Ok(user_data) = response.json::<Vec<String>>().await {
-                            logging::log!("Fetched wishlist: {:?}", user_data);
-                            AuthStateSignal::wishlist_set(Some(user_data));
-                        }
+    let wishlist_details = LocalResource::new(move || async move {
+        let auth = AuthStateSignal::auth_state().get();
+        if auth.is_authenticated() {
+            return Some(auth);
+        }
+
+        let url = format!("/api/user-wishlist");
+        match Client::new().get(&url).send().await {
+            Ok(response) => {
+                if response.status() == 200 {
+                    if let Ok(user_data) = response.json::<Vec<String>>().await {
+                        crate::log!("Fetched wishlist: {:?}", user_data);
+                        AuthStateSignal::wishlist_set(Some(user_data));
                     }
                 }
-                Err(e) => {
-                    logging::log!("Failed to fetch wishlist: {:?}", e);
-                }
             }
-            None
-        },
-    );
+            Err(e) => {
+                crate::log!("Failed to fetch wishlist: {:?}", e);
+            }
+        }
+        None
+    });
 
     // Cookie-based check for session
     let (session_cookie, _) = use_cookie::<String, FromToStringCodec>("session");
 
     Effect::new(move |_| {
         if session_cookie.get().is_some() {
-            logging::log!("Session cookie detected, fetching user info");
+            crate::log!("Session cookie detected, fetching user info");
             wasm_bindgen_futures::spawn_local(async move {
                 let url = format!("/api/user-info");
-                match gloo_net::http::Request::get(&url).send().await {
+                match Client::new().get(&url).send().await {
                     Ok(resp) if resp.status() == 200 => {
                         if let Ok(user_data) = resp.json::<AuthState>().await {
-                            logging::log!("User info from cookie: {:?}", user_data);
+                            crate::log!("User info from cookie: {:?}", user_data);
                             AuthStateSignal::auth_set(user_data);
                         }
                     }
                     _ => {
-                        logging::log!("Failed to fetch user info from cookie check");
+                        crate::log!("Failed to fetch user info from cookie check");
                     }
                 }
             });
@@ -114,12 +114,12 @@ pub fn YralAuthProvider() -> impl IntoView {
                 <div>
                     <UserAvatar user />
                 </div>
-            }
-        }).or_else(|| view! {
+            }.into_any()
+        }).or_else(|| Some(view! {
             <div>
                 <LoginButton />
             </div>
-        }.into())}
+        }.into_any()))}
     }
 }
 
@@ -128,20 +128,20 @@ fn LoginButton() -> impl IntoView {
     let _ = use_event_listener(use_window(), ev::message, move |msg| {
         if let Some(data) = msg.data().as_string() {
             if data == "oauth-success" {
-                logging::log!("Received oauth-success message");
-                wasm_bindgen_futures::spawn_local(async move {
+                crate::log!("Received oauth-success message");
+                spawn_local(async move {
                     let url = format!("/api/user-info");
-                    match gloo_net::http::Request::get(&url).send().await {
+                    match Client::new().get(&url).send().await {
                         Ok(resp) if resp.status() == 200 => {
                             if let Ok(user_data) = resp.json::<AuthState>().await {
-                                logging::log!("User info from postMessage: {:?}", user_data);
+                                crate::log!("User info from postMessage: {:?}", user_data);
                                 AuthStateSignal::auth_set(user_data);
                             }
                         }
                         Err(e) => {
-                            logging::log!("Failed to fetch user info from postMessage: {:?}", e);
+                            crate::log!("Failed to fetch user info from postMessage: {:?}", e);
                         }
-                        _ => logging::log!("Unexpected response when fetching user info"),
+                        _ => crate::log!("Unexpected response when fetching user info"),
                     }
                 });
             }

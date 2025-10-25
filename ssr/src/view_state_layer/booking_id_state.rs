@@ -1,7 +1,7 @@
 use crate::log;
 use crate::utils::app_reference::{generate_app_reference, BookingId};
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct BookingIdState {

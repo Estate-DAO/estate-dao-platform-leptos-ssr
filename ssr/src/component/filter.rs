@@ -1,6 +1,6 @@
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::component::{Divider, HSettingIcon};
 use leptos_icons::*;
@@ -10,7 +10,7 @@ use web_sys::MouseEvent;
 /// Filter component (button)
 #[component]
 pub fn Filter() -> impl IntoView {
-    let (is_open, set_is_open) = create_signal(false);
+    let (is_open, set_is_open) = signal(false);
 
     view! {
         <div class="">
@@ -18,7 +18,7 @@ pub fn Filter() -> impl IntoView {
                 class="bg-white text-black px-4 py-2 rounded-lg flex items-center border border-gray-300"
                 on:click=move |_| set_is_open.update(|open| *open = !*open)
             >
-                <Icon class="w-5 h-5 mr-2" icon=HSettingIcon />
+                < Icon icon=HSettingIcon  />
                 Filters
             </button>
 
@@ -33,12 +33,12 @@ pub fn Filter() -> impl IntoView {
 
 #[component]
 fn FilterOptions() -> impl IntoView {
-    let selected_filter = create_rw_signal("PriceRange".to_string());
+    let selected_filter = RwSignal::new("PriceRange".to_string());
     let set_filter = move |filter: String| {
         selected_filter.set(filter);
     };
 
-    let (is_open, set_is_open) = create_signal(true);
+    let (is_open, set_is_open) = signal(true);
 
     view! {
         <Show when=move || is_open()>
@@ -123,11 +123,11 @@ fn FilterOptions() -> impl IntoView {
 
 #[component]
 fn PriceRange() -> impl IntoView {
-    let (min_value, set_min_value) = create_signal(10);
-    let (max_value, set_max_value) = create_signal(20000);
-    let (dragging, set_dragging) = create_signal(None);
+    let (min_value, set_min_value) = signal(10);
+    let (max_value, set_max_value) = signal(20000);
+    let (dragging, set_dragging) = signal(None);
 
-    let slider_ref = create_node_ref::<html::Div>();
+    let slider_ref = create_node_ref::<leptos::html::Div>();
 
     let on_mouse_down = move |e: MouseEvent, handle: &str| {
         set_dragging.set(Some(handle.to_string()));
@@ -159,7 +159,7 @@ fn PriceRange() -> impl IntoView {
                 on:mousemove=on_mouse_move
                 on:mouseup=on_mouse_up
                 on:mouseleave=on_mouse_up
-                ref=slider_ref
+                node_ref=slider_ref
             >
                 <div class="absolute w-full top-1/2 h-1 bg-gray-300 rounded"></div>
                 <div
@@ -240,7 +240,7 @@ fn Amenities() -> impl IntoView {
 
 #[component]
 fn PropertyType() -> impl IntoView {
-    let selected_type = create_rw_signal(None::<String>);
+    let selected_type = RwSignal::new(None::<String>);
 
     let toggle_selection = move |property_type: &str| {
         selected_type.set(Some(property_type.to_string()));
@@ -264,7 +264,7 @@ fn PropertyType() -> impl IntoView {
                     }
                     on:click=move |_| toggle_selection("House")
                 >
-                    <Icon icon=icondata::IoHomeOutline class="text-xl" />
+                    <Icon icon=icondata::IoHomeOutline />
                     <span class="ml-2">House</span>
                 </button>
                 <button
@@ -280,7 +280,7 @@ fn PropertyType() -> impl IntoView {
                     }
                     on:click=move |_| toggle_selection("Flat")
                 >
-                    <Icon icon=icondata::BsBuilding class="text-xl" />
+                    <Icon icon=icondata::BsBuilding />
                     <span class="ml-2">Flat</span>
                 </button>
             </div>
@@ -298,7 +298,7 @@ fn PropertyType() -> impl IntoView {
                     }
                     on:click=move |_| toggle_selection("Guest house")
                 >
-                    <Icon icon=icondata::SiHomeassistantcommunitystore class="text-xl" />
+                    <Icon icon=icondata::SiHomeassistantcommunitystore />
                     <span class="ml-2">Guest house</span>
                 </button>
                 <button
@@ -314,7 +314,7 @@ fn PropertyType() -> impl IntoView {
                     }
                     on:click=move |_| toggle_selection("Hotel")
                 >
-                    <Icon icon=icondata::RiHotelBedMapLine class="text-xl" />
+                    <Icon icon=icondata::RiHotelBedMapLine />
                     <span class="ml-2">Hotel</span>
                 </button>
             </div>

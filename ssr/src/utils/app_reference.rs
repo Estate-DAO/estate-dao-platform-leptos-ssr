@@ -1,7 +1,6 @@
+use ::codee::string::JsonSerdeCodec;
 use chrono::Local;
-use codee::string::JsonSerdeCodec;
-use leptos::SignalGetUntracked;
-use leptos::{Signal, SignalGet, SignalSet};
+use leptos::prelude::*;
 use leptos_use::storage::{use_local_storage, UseStorageOptions};
 use log::info;
 // Import necessary modules
@@ -87,7 +86,7 @@ impl BookingId {
         use crate::utils::cookie_storage::CookieBookingStorage;
 
         CookieBookingStorage::store_booking_id(self);
-        leptos::logging::log!(
+        crate::log!(
             "Successfully stored BookingId in cookies: {}",
             self.app_reference
         );

@@ -161,7 +161,7 @@ Here are your booking details:
 🆔 Booking ID / App Reference: {booking_id}
 📅 Stay Dates: {check_in_date} to {check_out_date}
 👥 Guests: {number_of_adults} Adults, {number_of_children} Children
-💳 Amount Paid: {amount_paid}
+💳 Amount Paid: ${amount_paid}
 
 ⚡ Note: This booking is non-cancellable!! So pack those bags and bring your best vacay mode vibes! 😎
 

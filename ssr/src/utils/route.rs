@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use leptos_router::use_navigate;
+use leptos_router::hooks::use_navigate;
 use reqwest::Url;
 
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};

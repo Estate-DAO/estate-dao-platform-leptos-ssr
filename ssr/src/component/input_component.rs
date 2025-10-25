@@ -13,8 +13,8 @@
 //             validator: V,
 //         ) -> impl IntoView {
 //             let ctx: UISearchCtx = expect_context();
-//             let error = create_rw_signal(initial_value.is_none());
-//             let show_error = create_rw_signal(false);
+//             let error = RwSignal::new(initial_value.is_none());
+//             let show_error = RwSignal::new(false);
 //             // if error.get_untracked() {
 //             //     ctx.invalid_cnt.update(|c| *c += 1);
 //             // }
@@ -42,7 +42,7 @@
 //                         }
 //                     }
 //             };
-//             // create_effect(move |prev| {
+//             // Effect::new(move |prev| {
 //             //     ctx.on_form_reset.track();
 //             //     // Do not trigger on render
 //             //     if prev.is_none() {

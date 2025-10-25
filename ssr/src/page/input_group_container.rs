@@ -2,21 +2,21 @@ use crate::log;
 use crate::page::{InputGroup, InputGroupMobile};
 use crate::utils::responsive::use_is_desktop;
 use crate::view_state_layer::input_group_state::InputGroupState;
-use leptos::*;
+use leptos::prelude::*;
 use web_sys;
 
 #[component]
 pub fn InputGroupContainer(
-    #[prop(optional, into)] given_disabled: MaybeSignal<bool>,
-    #[prop(optional, into)] default_expanded: MaybeSignal<bool>,
-    #[prop(optional, into)] allow_outside_click_collapse: MaybeSignal<bool>, // New prop
+    #[prop(optional, into)] given_disabled: Signal<bool>,
+    #[prop(optional, into)] default_expanded: Signal<bool>,
+    #[prop(optional, into)] allow_outside_click_collapse: Signal<bool>, // New prop
 ) -> impl IntoView {
     // Signal to track if the detailed input group is open on mobile
     let is_desktop = use_is_desktop();
 
     InputGroupState::set_show_full_input(default_expanded.get());
 
-    let show_full_input = create_memo(move |_prev| {
+    let show_full_input = Memo::new(move |_prev| {
         log!(
             "[input_group_container.rs] Derived show_full_input: {}",
             is_desktop.get() || default_expanded.get()
@@ -25,36 +25,26 @@ pub fn InputGroupContainer(
     });
 
     view! {
-            <Show when=move || show_full_input.get()>
-                // Mobile: show full InputGroup when expanded
-                // <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/20 backdrop-blur-sm">
-                //     <div class="w-full max-w-xl mx-auto">
-                        <InputGroup given_disabled=given_disabled />
-                    // </div>
-                    <Show when=move || allow_outside_click_collapse.get()>
-                        <div
-                            class="fixed inset-0"
-                            style="pointer-events: none;"
-                            on:click=move |ev| {
-                                // ev.prevent_default();
-                                // ev.stop_propagation();
-                                log!("[input_group_container.rs] Overlay clicked");
-                                InputGroupState::set_show_full_input(false);
-                            }
-                        ></div>
-                    </Show>
-                // </div>
-            </Show>
-            <Show when=move || !show_full_input.get()>
-                // Mobile: show compact InputGroupMobile by default
+        <Show when=move || show_full_input.get()>
+            <InputGroup given_disabled=given_disabled />
+            <Show when=move || allow_outside_click_collapse.get()>
                 <div
+                    class="fixed inset-0"
+                    style="pointer-events: none;"
                     on:click=move |_| {
-                        log!("[input_group_container.rs] Mobile view clicked, setting show_full_input to true");
-                        InputGroupState::set_show_full_input(true);
+                        InputGroupState::set_show_full_input(false);
                     }
-                >
-                    <InputGroupMobile />
-                </div>
+                ></div>
             </Show>
+        </Show>
+        <Show when=move || !show_full_input.get()>
+            <div
+                on:click=move |_| {
+                    InputGroupState::set_show_full_input(true);
+                }
+            >
+                <InputGroupMobile />
+            </div>
+        </Show>
     }
 }

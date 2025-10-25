@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 
 use crate::{app::AppRoutes, page::AccountTabs};
@@ -58,15 +58,16 @@ pub fn SocialLinks(
     #[prop(optional, into)] class: String,
     #[prop(optional, into)] icon_class: String,
 ) -> impl IntoView {
+    let icon_class_clone = icon_class.clone();
     view! {
-        <div clone:icon_class class=format!("{} flex space-x-4", class) >
-            <a href="https://x.com/estatedao_icp?s=11" target="_blank" class=icon_class.clone()>
+        <div class=format!("{} flex space-x-4", class) >
+            <a href="https://x.com/estatedao_icp?s=11" target="_blank" class=icon_class_clone.clone()>
                 <Icon icon=icondata::BiTwitter />
             </a>
-            <a clone:icon_class href="https://www.facebook.com/profile.php?id=61576590939204" target="_blank" class=icon_class.clone()>
+            <a href="https://www.facebook.com/profile.php?id=61576590939204" target="_blank" class=icon_class_clone.clone()>
                 <Icon icon=icondata::BiFacebook />
             </a>
-            <a clone:icon_class href="https://www.instagram.com/estatedao_/" target="_blank" class=icon_class>
+            <a href="https://www.instagram.com/estatedao_/" target="_blank" class=icon_class_clone>
                 <Icon icon=icondata::IoLogoInstagram />
             </a>
         </div>

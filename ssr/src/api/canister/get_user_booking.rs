@@ -2,7 +2,7 @@ use crate::canister::backend::{self, Booking};
 use crate::utils::admin::admin_canister;
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 
 // #[server(GreetBackend)]
 pub async fn get_user_booking_backend(

@@ -20,7 +20,7 @@
 // };
 use colored::Colorize;
 use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 // use crate::log;
 use std::collections::HashMap;
 
@@ -394,7 +394,7 @@ use std::collections::HashMap;
 
 //     let payment_booking_step_signals: PaymentBookingStatusUpdates = expect_context();
 
-//     let backend_booking_res = create_resource(
+//     let backend_booking_res = Resource::new(
 //         move || booking_id_signal_read.get(),
 //         move |booking_id_signal_read| async move {
 //             println!("booking_id_signal_read in create_resource - {booking_id_signal_read:?}");
@@ -453,7 +453,7 @@ use std::collections::HashMap;
 //     );
 
 //     // Handle booking action
-//     // let booking_action = create_action(move |_| {
+//     // let booking_action = Action::new(move |_| {
 //     //     let app_reference = booking_id_signal_read
 //     //         .get_untracked()
 //     //         .and_then(|booking| Some(booking.get_app_reference()))
@@ -496,7 +496,7 @@ use std::collections::HashMap;
 //     // });
 
 //     // // Watch payment confirmation to trigger booking
-//     // create_effect(move |_| {
+//     // Effect::new(move |_| {
 //     //     if confirmation_ctx.payment_confirmed.get() {
 //     //         booking_action.dispatch(());
 //     //     }
@@ -519,12 +519,12 @@ use std::collections::HashMap;
 //     //                             )}
 //     //                         </p>
 //     //                     }
-//     //                         .into_view()
+//     //                         .into_any()
 //     //                 } else {
 //     //                     let any_else = backend_booking_res.get();
 
 //     //                     view! { {{ format!("else - {any_else:#?}") }} }
-//     //                         .into_view()
+//     //                         .into_any()
 //     //                 }
 //     //             }}
 //     //         </Suspense>

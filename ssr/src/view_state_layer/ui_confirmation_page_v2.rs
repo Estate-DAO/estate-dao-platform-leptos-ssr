@@ -3,7 +3,7 @@ use crate::component::NotificationData;
 use crate::log;
 use crate::utils::backend_integration_helpers::BookingDisplayInfo;
 use crate::view_state_layer::GlobalStateForLeptos;
-use leptos::*;
+use leptos::prelude::*;
 
 #[cfg(feature = "ssr")]
 use chrono::{DateTime, Utc};

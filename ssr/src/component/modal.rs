@@ -1,7 +1,7 @@
 use crate::{app::AppRoutes, component::overlay::ShadowOverlay}; // Or super::overlay::ShadowOverlay if in same dir
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon; // Specific imports are slightly clearer
-use leptos_router::use_navigate;
+use leptos_router::hooks::use_navigate;
 
 #[component]
 pub fn Modal(
@@ -43,8 +43,8 @@ pub fn ErrorModal(
     #[prop(into)] error_message: MaybeSignal<String>, // MaybeSignal<String> is NOT Copy
     #[prop(optional)] on_retry: Option<Callback<()>>, // Callback is Clone
 ) -> impl IntoView {
-    let error_title = store_value(error_title);
-    let error_message = store_value(error_message);
+    let error_title = StoredValue::new(error_title);
+    let error_message = StoredValue::new(error_message);
 
     view! {
         // Use the generic Modal component
@@ -102,8 +102,8 @@ pub fn ErrorModalWithHome(
 
     // Store non-Copy prop values to ensure they live long enough and can be accessed
     // (Following the pattern from your reference ErrorModal)
-    let error_title = store_value(error_title);
-    let error_message = store_value(error_message);
+    let error_title = StoredValue::new(error_title);
+    let error_message = StoredValue::new(error_message);
 
     let route_str = home_route.get();
 
@@ -123,7 +123,7 @@ pub fn ErrorModalWithHome(
                     // // Optional "Try Again" button (logic copied from ErrorModal)
                     // {move || {
                     //     on_retry.map(|retry| { // `retry` is Callback (Clone)
-                    //         let retry = store_value(retry); // Store if needed inside further nested closures
+                    //         let retry = StoredValue::new(retry); // Store if needed inside further nested closures
                     //         view! {
                     //             <button
                     //                 on:click=move |_| {

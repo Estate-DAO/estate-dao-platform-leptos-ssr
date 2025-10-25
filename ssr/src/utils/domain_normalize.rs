@@ -36,7 +36,7 @@ pub fn ensure_canonical_domain() {
                         let canonical_url =
                             format!("{}://{}{}{}{}", protocol, canonical, pathname, search, hash);
 
-                        leptos::logging::log!(
+                        crate::log!(
                             "Client-side domain normalization: Redirecting {} to {}",
                             hostname,
                             canonical_url

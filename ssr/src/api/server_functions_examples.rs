@@ -1,6 +1,6 @@
 // <!-- Example server functions demonstrating the new hexagonal architecture -->
 
-use leptos::*;
+use leptos::prelude::*;
 use std::sync::Arc;
 
 use crate::domain::DomainHotelSearchCriteria;
@@ -117,10 +117,10 @@ pub fn SearchComponent() -> impl IntoView {
                     match result {
                         Ok(response) => view! { 
                             <div>"Found hotels: " {response.hotel_results().len()}</div>
-                        }.into_view(),
+                        }.into_any(),
                         Err(e) => view! { 
                             <div>"Error: " {e.to_string()}</div>
-                        }.into_view(),
+                        }.into_any(),
                     }
                 })
             }}

@@ -10,7 +10,7 @@ use crate::utils::app_reference::BookingId;
 use crate::view_state_layer::ui_block_room::{AdultDetail, ChildDetail, RoomSelectionSummary};
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
-use leptos::*;
+use leptos::prelude::*;
 
 /// Trait for converting UI state to Domain types
 pub trait UIToDomain<T> {

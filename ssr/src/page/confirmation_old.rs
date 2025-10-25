@@ -30,10 +30,10 @@ use crate::{
     utils::app_reference::BookingId,
 };
 use chrono::NaiveDate;
-use codee::string::JsonSerdeCodec;
+use ::codee::string::JsonSerdeCodec;
 use leptos::logging::log;
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use leptos_router::*;
 use leptos_use::{
     storage::use_local_storage, use_interval_fn, use_interval_fn_with_options, utils::Pausable,
@@ -72,7 +72,7 @@ pub fn ConfirmationPageOld() -> impl IntoView {
     });
 
     // whenever the payment ID changes, we update the value in local storage as well
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let (payment_store, set_payment_store, _) = use_payment_store();
         if payment_store.get().is_some() {
             return;
@@ -84,7 +84,7 @@ pub fn ConfirmationPageOld() -> impl IntoView {
 
     // user data
     // if in context, => go ahead
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let (state, set_state, _) = use_booking_id_store();
 
         let app_reference_string = state
@@ -205,7 +205,7 @@ pub fn ConfirmationPageOld() -> impl IntoView {
     // else get it from backend
 
     let booking_action =
-        create_action(move |booking_id_signal_read: &Signal<Option<BookingId>>| {
+        Action::new(move |booking_id_signal_read: &Signal<Option<BookingId>>| {
             // let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
             // let (state, set_state, _) = use_local_storage::<BookingId, JsonSerdeCodec>("booking_id");
             let app_reference = booking_id_signal_read
@@ -297,7 +297,7 @@ pub fn ConfirmationPageOld() -> impl IntoView {
         },
     );
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let (booking_id_signal_read, booking_id_signal_write, _) = use_booking_id_store();
         let confirmation_ctx = expect_context::<ConfirmationResults>();
         let block_room_ctx = expect_context::<BlockRoomResults>();

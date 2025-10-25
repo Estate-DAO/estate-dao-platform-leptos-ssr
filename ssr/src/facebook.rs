@@ -1,16 +1,19 @@
-use leptos::{leptos_dom::is_browser, *};
-use leptos_router::use_location;
+use leptos::ev;
+use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use web_sys::js_sys;
+
+use crate::logging::{is_browser, is_server};
 
 const FACEBOOK_PIXEL_ID: &str = "1720214695361495";
 
 #[component]
 pub fn FacebookPixel() -> impl IntoView {
     // Signal to ensure initialization happens only once
-    let (initialized, set_initialized) = create_signal(false);
+    let (initialized, set_initialized) = signal(false);
 
     // Run once on browser
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if is_browser() && !initialized.get() {
             let js_code = format!(
                 r#"
@@ -43,7 +46,7 @@ pub fn FacebookPixel() -> impl IntoView {
     // Track route changes
     #[cfg(feature = "hydrate")]
     {
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let location = use_location();
             _ = location.pathname.get();
 

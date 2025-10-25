@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use axum_extra::extract::cookie::Key;
 use axum_extra::extract::PrivateCookieJar;
 use base64::{engine::general_purpose, Engine as _};
-use leptos::LeptosOptions;
+use leptos::prelude::LeptosOptions;
+use leptos_axum::AxumRouteListing;
 use leptos_router::RouteListing;
 
 use crate::{
@@ -39,13 +40,13 @@ pub fn get_notifier() -> &'static Notifier {
 
 pub struct AppStateBuilder {
     leptos_options: LeptosOptions,
-    routes: Vec<RouteListing>,
+    routes: Vec<AxumRouteListing>,
     liteapi_client: &'static LiteApiHTTPClient,
     notifier_for_pipeline: &'static Notifier,
 }
 
 impl AppStateBuilder {
-    pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
+    pub fn new(leptos_options: LeptosOptions, routes: Vec<AxumRouteListing>) -> Self {
         initialize_liteapi_client();
         initialize_notifier();
 

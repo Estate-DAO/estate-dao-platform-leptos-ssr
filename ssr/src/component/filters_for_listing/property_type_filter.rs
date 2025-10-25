@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn PropertyTypeFilter(
@@ -17,7 +17,7 @@ pub fn PropertyTypeFilter(
                     type="button"
                     class="text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:hover:text-gray-400"
                     disabled=move || !has_selection()
-                    on:click=move |_| { leptos::Callable::call(&on_clear, ()); }
+                    on:click=move |_| { on_clear.run(()); }
                 >
                     "Clear"
                 </button>
@@ -38,7 +38,7 @@ pub fn PropertyTypeFilter(
                                         class="form-checkbox h-4 w-4 text-blue-600"
                                         prop:checked=checked
                                         on:change=move |_| {
-                                            leptos::Callable::call(&on_toggle, lbl.clone());
+                                            on_toggle.run(lbl.clone());
                                         }
                                     />
                                     <span class="text-gray-700">{label}</span>

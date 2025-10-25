@@ -1,6 +1,6 @@
 // use console_log::log;
 use crate::view_state_layer::input_group_state::OpenDialogComponent;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 // use leptos_use::use_timestamp;
 use crate::utils::date::*;
@@ -219,10 +219,10 @@ impl SelectedDateRange {
 
 #[component]
 pub fn DateTimeRangePickerCustom() -> impl IntoView {
-    let is_open = create_memo(move |_| InputGroupState::is_date_open());
+    let is_open = Memo::new(move |_| InputGroupState::is_date_open());
     let search_ctx: UISearchCtx = expect_context();
     let selected_range = search_ctx.date_range;
-    let (initial_date, set_initial_date) = create_signal((2024_u32, 1_u32));
+    let (initial_date, set_initial_date) = signal((2024_u32, 1_u32));
     let calendar_ref = create_node_ref::<leptos::html::Div>();
 
     let next_month_date = Signal::derive(move || {
@@ -230,7 +230,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
         next_date(current_year, current_month)
     });
 
-    let date_range_display = create_memo(move |_prev| {
+    let date_range_display = Memo::new(move |_prev| {
         let range = selected_range.get();
         range.display_string()
     });
@@ -239,7 +239,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     let UseScrollReturn { y, .. } = use_scroll(calendar_ref);
 
     // Track last scroll position
-    let last_scroll_position = create_rw_signal(0.0);
+    let last_scroll_position = RwSignal::new(0.0);
 
     // Throttle scroll changes
     let throttled_scroll = use_throttle_fn(
@@ -266,7 +266,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
         300.0,
     );
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // reactive dependency on scroll position
         let _ = y.get();
         throttled_scroll();
@@ -287,7 +287,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
 
     // --- Calendar Modal Scroll Lock Effect ---
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         log!("[Dialog] open state = {:?}", is_open.get());
         use web_sys::window;
         let is_open = is_open.get();
@@ -308,7 +308,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     });
 
     // Touch swipe handling for mobile
-    let touch_start_y = create_rw_signal(0.0);
+    let touch_start_y = RwSignal::new(0.0);
     let touch_throttled = move |delta: f64| {
         if delta.abs() > 50.0 {
             let (year, month) = initial_date.get_untracked();
@@ -337,7 +337,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     view! {
         <div class="relative">
             <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::AiCalendarOutlined class="text-blue-500 font-extralight" />
+                <Icon icon=icondata::AiCalendarOutlined />
             </div>
 
             <button
@@ -365,7 +365,7 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                 }
                                 class="p-2 rounded-full hover:bg-gray-50 transition-colors"
                             >
-                                <Icon icon=icondata::BiChevronLeftRegular class="text-gray-600 text-2xl" />
+                                <Icon icon=icondata::BiChevronLeftRegular />
                             </button>
 
                             <button
@@ -375,12 +375,12 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                 }
                                 class="p-2 rounded-full hover:bg-gray-50 transition-colors"
                             >
-                                <Icon icon=icondata::BiChevronRightRegular class="text-gray-600 text-2xl" />
+                                <Icon icon=icondata::BiChevronRightRegular />
                             </button>
                         </div>
 
                         <div
-                            _ref=calendar_ref
+                            node_ref=calendar_ref
                             class="rounded-b-lg flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
                             style="max-height: 70vh; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;"
                             on:touchstart=move |ev: TouchEvent| {
@@ -464,9 +464,9 @@ fn DateCells(
 
     let month_signal: Signal<u32> = Signal::derive(move || year_month.get().1);
 
-    let start_month_day = create_rw_signal(0_u32);
+    let start_month_day = RwSignal::new(0_u32);
 
-    let days_in_month = create_memo(move |_| match month_signal() {
+    let days_in_month = Memo::new(move |_| match month_signal() {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
         2 => {

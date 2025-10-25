@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{breakpoints_tailwind, use_breakpoints, BreakpointsTailwind};
 
 /// Signal that is true when the screen is at least `sm` (Tailwind breakpoint, >=640px), i.e. desktop/tablet.

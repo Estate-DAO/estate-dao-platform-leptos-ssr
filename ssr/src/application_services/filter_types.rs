@@ -10,7 +10,7 @@ const FILTER_KEY_MIN_PRICE: &str = "min_price_per_night";
 const FILTER_KEY_AMENITIES: &str = "amenities";
 const FILTER_KEY_PROPERTY_TYPES: &str = "property_types";
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct UISearchFilters {
     pub min_star_rating: Option<u8>,
     pub max_price_per_night: Option<f64>,
