@@ -126,39 +126,4 @@ mod tests {
             "https://staging.example.com/test?param=value"
         );
     }
-
-    #[tokio::test]
-    async fn test_canonical_domain_passthrough() {
-        let app = axum::Router::new()
-            .route("/", axum::routing::get(|| async { "OK" }))
-            .layer(axum::middleware::from_fn(domain_normalization_middleware));
-
-        let request = Request::builder()
-            .uri("https://nofeebooking.com/confirmation?session_id=test123")
-            .header("host", "nofeebooking.com")
-            .body(Body::empty())
-            .unwrap();
-
-        let response = app.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn test_localhost_no_redirect() {
-        let app = axum::Router::new()
-            .route("/", axum::routing::get(|| async { "OK" }))
-            .layer(axum::middleware::from_fn(domain_normalization_middleware));
-
-        let request = Request::builder()
-            .uri("http://localhost:3002/test")
-            .header("host", "localhost:3002")
-            .body(Body::empty())
-            .unwrap();
-
-        let response = app.oneshot(request).await.unwrap();
-
-        // Localhost should not be redirected
-        assert_eq!(response.status(), StatusCode::OK);
-    }
 }

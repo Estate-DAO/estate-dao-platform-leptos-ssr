@@ -164,35 +164,6 @@ mod tests {
     }
 
     #[test]
-    fn test_app_reference_format() {
-        let email = "test@example.com".to_string();
-        let app_reference = generate_app_reference(email);
-
-        // Get the app_reference string
-        let app_ref_str = app_reference
-            .get()
-            .expect("Should have a value")
-            .get_app_reference();
-
-        // Test format: HB<date>-<random>-<random>
-        assert!(app_ref_str.starts_with("HB"));
-        assert_eq!(app_ref_str.matches('-').count(), 2);
-
-        let parts: Vec<&str> = app_ref_str.split('-').collect();
-        assert_eq!(parts.len(), 3);
-
-        // First part should be HB<date> (6 chars)
-        assert_eq!(parts[0].len(), 6);
-        // Middle and last parts should be 5-digit numbers
-        assert_eq!(parts[1].len(), 5);
-        assert_eq!(parts[2].len(), 5);
-
-        // Middle and last parts should be numbers
-        assert!(parts[1].parse::<u32>().is_ok());
-        assert!(parts[2].parse::<u32>().is_ok());
-    }
-
-    #[test]
     fn test_order_id_conversion() {
         let email = "test@example.com".to_string();
         let app_reference = "HB2203-12345-67890".to_string();

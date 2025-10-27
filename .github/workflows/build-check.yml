@@ -83,6 +83,10 @@ jobs:
         run: |
           cargo fmt --check
 
+      - name: test check
+        run: |
+          cargo test --lib --features "local-lib,mock-provab,debug_display" && cargo test --bin estate-fe --features "local-bin,mock-provab,debug_display"
+
       - name: Build the Leptos project
         run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
