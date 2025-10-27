@@ -1,6 +1,6 @@
 use crate::api::auth::auth_state::AuthStateSignal;
 use crate::facebook::FacebookPixel;
-use crate::page::{AboutUsPage, MyAccountPage};
+use crate::page::{AboutUsPage, MyAccountPage, PaymentCancelledPage};
 use crate::{
     api::{
         consts::{EnvVarConfig, APP_URL},
@@ -66,6 +66,7 @@ pub enum AppRoutes {
     HotelDetails,
     BlockRoom,
     Confirmation,
+    PaymentCancelled,
     // ConfirmationV1,
     // ConfirmationV2,
     AdminPanel,
@@ -84,6 +85,7 @@ impl AppRoutes {
             AppRoutes::HotelDetails => "/hotel-details",
             AppRoutes::BlockRoom => "/block_room",
             AppRoutes::Confirmation => "/confirmation",
+            AppRoutes::PaymentCancelled => "/payment-cancelled",
             // AppRoutes::ConfirmationV1 => "/confirmation-v1",
             // AppRoutes::ConfirmationV2 => "/confirmation-v2",
             AppRoutes::AdminPanel => "/admin-panel",
@@ -103,6 +105,7 @@ impl AppRoutes {
             Self::HotelDetails,
             Self::BlockRoom,
             Self::Confirmation,
+            Self::PaymentCancelled,
             // Self::ConfirmationV1,
             // Self::ConfirmationV2,
             Self::AdminPanel,
@@ -283,6 +286,7 @@ pub fn App() -> impl IntoView {
                         <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
                         <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
                         <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPageV2 />
+                        <Route path=AppRoutes::PaymentCancelled.to_string() view=PaymentCancelledPage />
                         // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
                         // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
                         <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />

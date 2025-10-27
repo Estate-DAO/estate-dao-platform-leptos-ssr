@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::use_navigate;
+use leptos_router::{use_navigate, use_query_map};
 use leptos_use::{use_interval_fn, utils::Pausable};
 
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
@@ -41,9 +41,20 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let auth_state_signal: AuthStateSignal = expect_context();
     let navigate = use_navigate();
+    let navigate_clone = use_navigate();
+    let query_map = use_query_map();
 
     // Initialize form data on mount - only once
     let (initialized, set_initialized) = create_signal(false);
+
+    // Check for retry_payment parameter
+    let should_auto_show_payment = Signal::derive(move || {
+        query_map.with(|params| {
+            params
+                .get("retry_payment")
+                .map_or(false, |val| val == "true")
+        })
+    });
 
     // Create booking ID signal - uses centralized BookingIdState
     let booking_id_signal = create_memo(move |_| {
@@ -338,6 +349,50 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let checkin_date = move || ui_search_ctx.date_range.get().dd_month_yyyy_start();
     let checkout_date = move || ui_search_ctx.date_range.get().dd_month_yyyy_end();
     let formatted_nights = move || ui_search_ctx.date_range.get().formatted_nights();
+
+    // Effect to handle auto-show payment modal when retry_payment parameter is present
+    create_effect(move |_| {
+        if should_auto_show_payment.get() {
+            // Check if we have booking context and block room has been called
+            let has_booking_id = booking_id_signal.get().is_some();
+            let has_block_room_id = BlockRoomUIState::get_block_room_id_untracked().is_some();
+            let has_valid_pricing = BlockRoomUIState::get_total_price() > 0.0;
+
+            log!("Retry payment auto-trigger check:");
+            log!("  has_booking_id: {}", has_booking_id);
+            log!("  has_block_room_id: {}", has_block_room_id);
+            log!("  has_valid_pricing: {}", has_valid_pricing);
+
+            if has_booking_id && has_block_room_id && has_valid_pricing {
+                log!("Auto-showing payment modal for retry payment");
+
+                // Try to restore booking state for retry payment flow
+                use crate::utils::booking_state_storage::BookingStateStorage;
+                if let Some(restored_state) = BookingStateStorage::restore_state() {
+                    log!("Found persisted booking state, attempting restoration");
+                    BlockRoomUIState::restore_state_from_persisted(restored_state);
+                    log!("Booking state restored successfully for retry payment");
+                } else {
+                    log!("No persisted booking state found for retry payment");
+                }
+
+                BlockRoomUIState::set_show_payment_modal(true);
+
+                // Clear the retry_payment parameter from URL to avoid re-triggering
+                #[cfg(feature = "hydrate")]
+                {
+                    use web_sys::window;
+                    if let Some(window) = window() {
+                        if let Ok(pathname) = window.location().pathname() {
+                            let _ = navigate_clone(&pathname, Default::default());
+                        }
+                    }
+                }
+            } else {
+                log!("Not ready to show payment modal yet - missing requirements");
+            }
+        }
+    });
 
     view! {
         <section class="relative min-h-screen bg-gray-50">
@@ -1836,6 +1891,12 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                         "Payment invoice created successfully: {}",
                         response.payment_url
                     );
+
+                    // Store booking state before redirect to survive external payment flow
+                    use crate::utils::booking_state_storage::BookingStateStorage;
+                    BookingStateStorage::store_current_state();
+                    log!("Booking state stored before payment redirect");
+
                     // Redirect to payment URL
                     let window = web_sys::window().expect("no global `window` exists");
                     let location = window.location();

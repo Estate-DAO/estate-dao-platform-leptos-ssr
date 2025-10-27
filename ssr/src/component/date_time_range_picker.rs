@@ -16,7 +16,7 @@ use web_sys::{Element, TouchEvent};
 
 /// year,  month, day
 /// Struct is stored in the global search state - SearchCtx and accessed from there
-#[derive(Clone, Debug, Default, PartialEq, serde::Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SelectedDateRange {
     pub start: (u32, u32, u32),
     // start: RwSignal<(u32, u32, u32)>,

@@ -29,6 +29,9 @@ pub use block_room_v1::*;
 mod confirm_booking;
 pub use confirm_booking::*;
 
+mod cancel_page;
+pub use cancel_page::*;
+
 mod confirmation_page_v1;
 pub use confirmation_page_v1::*;
 

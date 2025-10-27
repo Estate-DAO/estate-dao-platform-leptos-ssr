@@ -15,7 +15,7 @@ pub struct DomainDestination {
     // pub country_name: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DomainSelectedDateRange {
     pub end: (u32, u32, u32),
     pub start: (u32, u32, u32),
@@ -189,7 +189,7 @@ pub struct DomainFirstRoomDetails {
     pub room_data: DomainRoomData,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 
 pub struct DomainDetailedPrice {
     pub published_price: f64,
@@ -204,7 +204,7 @@ pub struct DomainDetailedPrice {
     pub currency_code: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 
 pub struct DomainRoomData {
     pub room_name: String,
@@ -213,7 +213,7 @@ pub struct DomainRoomData {
     pub offer_id: String, // LiteAPI: offerId, Provab: empty string
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DomainRoomOption {
     pub price: DomainDetailedPrice,
     pub room_data: DomainRoomData,
@@ -221,14 +221,14 @@ pub struct DomainRoomOption {
     pub occupancy_info: Option<DomainRoomOccupancy>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct DomainRoomOccupancy {
     pub max_occupancy: Option<u32>,
     pub adult_count: Option<u32>,
     pub child_count: Option<u32>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
 
 pub struct DomainHotelDetails {
     pub checkin: String,

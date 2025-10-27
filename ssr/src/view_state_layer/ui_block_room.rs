@@ -1,10 +1,11 @@
 use crate::domain::{DomainHotelDetails, DomainRoomData};
 use crate::view_state_layer::GlobalStateForLeptos;
 use leptos::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Domain types for form data
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AdultDetail {
     pub first_name: String,
     pub last_name: Option<String>,
@@ -12,7 +13,7 @@ pub struct AdultDetail {
     pub phone: Option<String>, // Only for first adult
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ChildDetail {
     pub first_name: String,
     pub last_name: Option<String>,
@@ -20,7 +21,7 @@ pub struct ChildDetail {
 }
 
 // <!-- Room selection summary for block room page -->
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct RoomSelectionSummary {
     pub room_id: String,
     pub room_name: String,
@@ -407,7 +408,16 @@ impl BlockRoomUIState {
         this.api_error_type.get()
     }
 
+    pub fn get_block_room_id() -> Option<String> {
+        let this: Self = expect_context();
+        this.block_room_id.get()
+    }
+
     // Getter methods for untracked access
+    pub fn get_block_room_id_untracked() -> Option<String> {
+        let this: Self = expect_context();
+        this.block_room_id.get_untracked()
+    }
     pub fn get_adults_untracked() -> Vec<AdultDetail> {
         let this: Self = expect_context();
         this.adults.get_untracked()
@@ -577,6 +587,166 @@ impl BlockRoomUIState {
         this.api_error_type.set(None);
         this.error_details.set(None);
         this.retry_count.set(0);
+    }
+
+    // <!-- State persistence and restoration methods -->
+
+    /// Store current state to persistent cookie storage
+    /// Call this before redirecting to external payment providers
+    pub fn store_state_to_cookies() {
+        use crate::utils::booking_state_storage::BookingStateStorage;
+
+        if let Some(persisted_state) = BookingStateStorage::create_from_ui_state() {
+            BookingStateStorage::store_booking_state(&persisted_state);
+            leptos::logging::log!("BlockRoomUIState: Successfully stored state to cookies");
+        } else {
+            leptos::logging::log!(
+                "BlockRoomUIState: Failed to create persistent state - missing essential data"
+            );
+        }
+    }
+
+    /// Restore state from persistent cookie storage
+    /// Returns true if state was successfully restored, false otherwise
+    pub fn restore_state_from_cookies() -> bool {
+        use crate::utils::booking_state_storage::BookingStateStorage;
+
+        if let Some(persisted_state) = BookingStateStorage::get_booking_state_untracked() {
+            if persisted_state.has_essential_data() {
+                let this: Self = expect_context();
+
+                leptos::logging::log!(
+                    "BlockRoomUIState: Restoring state from cookies - {} adults, {} children, total: ${:.2}",
+                    persisted_state.adults.len(),
+                    persisted_state.children.len(),
+                    persisted_state.total_price
+                );
+
+                // Store references before moving
+                let adults_empty = persisted_state.adults.is_empty();
+
+                // Restore all state using untracked sets to avoid triggering effects
+                this.adults.set(persisted_state.adults);
+                this.children.set(persisted_state.children);
+                this.hotel_context.set(persisted_state.hotel_context);
+                this.room_selection_summary
+                    .set(persisted_state.room_selection_summary);
+                this.room_price.set(persisted_state.room_price);
+                this.total_price.set(persisted_state.total_price);
+                this.num_nights.set(persisted_state.num_nights);
+                this.block_room_id.set(persisted_state.block_room_id);
+                this.block_room_called
+                    .set(persisted_state.block_room_called);
+                this.terms_accepted.set(persisted_state.terms_accepted);
+
+                // Also update search context if available
+                if let Some(date_range) = persisted_state.date_range {
+                    if let Ok(ui_search_ctx) = std::panic::catch_unwind(|| {
+                        expect_context::<crate::view_state_layer::ui_search_state::UISearchCtx>()
+                    }) {
+                        ui_search_ctx.date_range.set(date_range);
+                        ui_search_ctx
+                            .guests
+                            .adults
+                            .set(persisted_state.adults_count as u32);
+                        ui_search_ctx
+                            .guests
+                            .children
+                            .set(persisted_state.children_count as u32);
+                    }
+                }
+
+                // Set form as valid if it was valid before
+                if persisted_state.terms_accepted && !adults_empty {
+                    this.form_valid.set(true);
+                }
+
+                // Clear any previous errors
+                this.error.set(None);
+                this.api_error_type.set(None);
+                this.error_details.set(None);
+
+                leptos::logging::log!("BlockRoomUIState: State restoration completed successfully");
+                true
+            } else {
+                leptos::logging::log!(
+                    "BlockRoomUIState: Persisted state lacks essential data, cannot restore"
+                );
+                BookingStateStorage::remove_booking_state();
+                false
+            }
+        } else {
+            leptos::logging::log!("BlockRoomUIState: No valid persisted state found in cookies");
+            false
+        }
+    }
+
+    /// Check if there is valid persisted state available for restoration
+    pub fn has_restorable_state() -> bool {
+        use crate::utils::booking_state_storage::BookingStateStorage;
+        BookingStateStorage::has_valid_booking_state()
+    }
+
+    /// Clear persisted state from cookies
+    pub fn clear_persisted_state() {
+        use crate::utils::booking_state_storage::BookingStateStorage;
+        BookingStateStorage::remove_booking_state();
+        leptos::logging::log!("BlockRoomUIState: Cleared persisted state from cookies");
+    }
+
+    /// Restore state from a persisted booking state object
+    pub fn restore_state_from_persisted(
+        persisted_state: crate::utils::booking_state_storage::PersistedBookingState,
+    ) {
+        let this = Self::from_leptos_context();
+
+        // Store references before moving
+        let adults_empty = persisted_state.adults.is_empty();
+
+        // Restore all state using untracked sets to avoid triggering effects
+        this.adults.set(persisted_state.adults);
+        this.children.set(persisted_state.children);
+        this.hotel_context.set(persisted_state.hotel_context);
+        this.room_selection_summary
+            .set(persisted_state.room_selection_summary);
+        this.room_price.set(persisted_state.room_price);
+        this.total_price.set(persisted_state.total_price);
+        this.num_nights.set(persisted_state.num_nights);
+        this.block_room_id.set(persisted_state.block_room_id);
+        this.block_room_called
+            .set(persisted_state.block_room_called);
+        this.terms_accepted.set(persisted_state.terms_accepted);
+
+        // Also update search context if available
+        if let Some(date_range) = persisted_state.date_range {
+            if let Ok(ui_search_ctx) = std::panic::catch_unwind(|| {
+                expect_context::<crate::view_state_layer::ui_search_state::UISearchCtx>()
+            }) {
+                ui_search_ctx.date_range.set(date_range);
+                ui_search_ctx
+                    .guests
+                    .adults
+                    .set(persisted_state.adults_count as u32);
+                ui_search_ctx
+                    .guests
+                    .children
+                    .set(persisted_state.children_count as u32);
+            }
+        }
+
+        // Set form as valid if it was valid before
+        if persisted_state.terms_accepted && !adults_empty {
+            this.form_valid.set(true);
+        }
+
+        // Clear any previous errors
+        this.error.set(None);
+        this.api_error_type.set(None);
+        this.error_details.set(None);
+
+        leptos::logging::log!(
+            "BlockRoomUIState: Direct state restoration completed from persisted object"
+        );
     }
 }
 

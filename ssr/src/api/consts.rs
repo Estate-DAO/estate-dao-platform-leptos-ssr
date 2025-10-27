@@ -168,17 +168,32 @@ pub fn get_payments_url(status: &str) -> String {
 #[cfg(not(feature = "mock-provab"))]
 pub fn get_payments_url_v2(status: &str, provider: PaymentProvider) -> String {
     let base_url = APP_URL.as_str();
-    let confirmation_url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
-        .unwrap_or_else(|e| {
-            eprintln!("Error joining URL: {}", e);
-            base_url.to_string() // Fallback to base URL if joining fails
-        });
+
+    let target_url = match (status, &provider) {
+        // For Stripe cancel, redirect to payment-cancelled page
+        ("cancel", PaymentProvider::Stripe) => {
+            join_base_and_path_url(base_url, &AppRoutes::PaymentCancelled.to_string())
+                .unwrap_or_else(|e| {
+                    eprintln!("Error joining cancel URL: {}", e);
+                    base_url.to_string()
+                })
+        }
+        // For all other cases, use confirmation page
+        _ => {
+            join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string()).unwrap_or_else(
+                |e| {
+                    eprintln!("Error joining URL: {}", e);
+                    base_url.to_string() // Fallback to base URL if joining fails
+                },
+            )
+        }
+    };
 
     let url = match provider {
         PaymentProvider::Stripe => {
-            format!("{}?session_id={{CHECKOUT_SESSION_ID}}", confirmation_url)
+            format!("{}?session_id={{CHECKOUT_SESSION_ID}}", target_url)
         }
-        PaymentProvider::NowPayments => format!("{}?payment={}", confirmation_url, status),
+        PaymentProvider::NowPayments => format!("{}?payment={}", target_url, status),
     };
 
     println!(
@@ -193,17 +208,32 @@ pub fn get_payments_url_v2(status: &str, provider: PaymentProvider) -> String {
 #[cfg(feature = "mock-provab")]
 pub fn get_payments_url_v2(_status: &str, provider: PaymentProvider) -> String {
     let base_url = APP_URL.as_str();
-    let url = join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string())
-        .unwrap_or_else(|e| {
-            eprintln!("Error joining URL: {}", e);
-            base_url.to_string() // Fallback to base URL if joining fails
-        });
+
+    let target_url = match (_status, &provider) {
+        // For Stripe cancel, redirect to payment-cancelled page
+        ("cancel", PaymentProvider::Stripe) => {
+            join_base_and_path_url(base_url, &AppRoutes::PaymentCancelled.to_string())
+                .unwrap_or_else(|e| {
+                    eprintln!("Error joining cancel URL: {}", e);
+                    base_url.to_string()
+                })
+        }
+        // For all other cases, use confirmation page
+        _ => {
+            join_base_and_path_url(base_url, &AppRoutes::Confirmation.to_string()).unwrap_or_else(
+                |e| {
+                    eprintln!("Error joining URL: {}", e);
+                    base_url.to_string() // Fallback to base URL if joining fails
+                },
+            )
+        }
+    };
 
     // For mock,  return NP_id=4766973829 for nowpayments
     // for stripe, return session_id={CHECKOUT_SESSION_ID}
     match provider {
-        PaymentProvider::Stripe => format!("{}?session_id={{CHECKOUT_SESSION_ID}}", url),
-        PaymentProvider::NowPayments => format!("{}?NP_id={}", url, "4766973829"),
+        PaymentProvider::Stripe => format!("{}?session_id={{CHECKOUT_SESSION_ID}}", target_url),
+        PaymentProvider::NowPayments => format!("{}?NP_id={}", target_url, "4766973829"),
     }
 }
 
