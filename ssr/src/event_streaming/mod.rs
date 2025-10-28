@@ -67,6 +67,10 @@ pub async fn send_event_ssr(event_name: String, params: String) -> Result<(), Se
 
     if let Err(e) = res {
         log::error!("Error sending event to GA4: {:?}", e);
+        return Err(ServerFnError::ServerError(format!(
+            "Error sending event to GA4: {:?}",
+            e
+        )));
     }
 
     Ok(())
