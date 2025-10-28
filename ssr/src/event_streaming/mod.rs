@@ -78,7 +78,10 @@ pub fn send_event_ssr_spawn(event_name: String, params: String) {
     use leptos::*;
 
     let mut params = serde_json::from_str::<serde_json::Value>(&params).unwrap();
-    params["page_location"] = json!(window().location().href().unwrap().to_string());
+    let loc = window().location().href().unwrap().to_string();
+    params["page_location"] = json!(loc);
+    params["is_production"] = json!(loc.contains("nofeebooking"));
+
     let params = serde_json::to_string(&params).unwrap();
 
     spawn_local(async move {
