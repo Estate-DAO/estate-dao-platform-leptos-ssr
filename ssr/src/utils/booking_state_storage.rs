@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use codee::string::JsonSerdeCodec;
 use leptos::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
@@ -39,7 +40,7 @@ pub struct PersistedBookingState {
     pub terms_accepted: bool,
 
     // Timestamp for expiration
-    pub created_at: u64, // Unix timestamp
+    pub created_at: i64, // Unix timestamp in seconds
 }
 
 impl Default for PersistedBookingState {
@@ -58,25 +59,17 @@ impl Default for PersistedBookingState {
             block_room_id: None,
             block_room_called: false,
             terms_accepted: false,
-            created_at: 0,
+            created_at: Utc::now().timestamp(),
         }
     }
 }
 
 impl PersistedBookingState {
-    /// Check if the persisted state is expired (older than 2 hours)
+    /// Check if the persisted state is expired (older than 8 hours)
     pub fn is_expired(&self) -> bool {
-        #[cfg(feature = "hydrate")]
-        {
-            use web_sys::js_sys::Date;
-            let now = Date::now() as u64 / 1000; // Convert to seconds
-            let two_hours = 2 * 60 * 60; // 2 hours in seconds
-            now > self.created_at + two_hours
-        }
-        #[cfg(not(feature = "hydrate"))]
-        {
-            false // On server, don't consider expired
-        }
+        let now = Utc::now().timestamp();
+        let eight_hours = 8 * 60 * 60; // 8 hours in seconds
+        now > self.created_at + eight_hours
     }
 
     /// Check if the state has essential booking information
@@ -89,16 +82,7 @@ impl PersistedBookingState {
 
     /// Update the timestamp to current time
     pub fn refresh_timestamp(&mut self) {
-        #[cfg(feature = "hydrate")]
-        {
-            use web_sys::js_sys::Date;
-            self.created_at = Date::now() as u64 / 1000; // Current time in seconds
-        }
-        #[cfg(not(feature = "hydrate"))]
-        {
-            // On server, use a reasonable default or system time
-            self.created_at = 0;
-        }
+        self.created_at = Utc::now().timestamp();
     }
 }
 
@@ -108,19 +92,17 @@ pub struct BookingStateStorage;
 impl BookingStateStorage {
     /// Get cookie domain configuration (environment-aware)
     fn get_cookie_domain() -> Option<String> {
-        // Use the same domain logic as CookieBookingStorage
-        #[cfg(feature = "hydrate")]
-        {
-            use leptos_use::use_window;
-            if let Some(window) = use_window().as_ref() {
-                if let Ok(hostname) = window.location().hostname() {
-                    if hostname.contains("estatedao.org") {
-                        return Some(".estatedao.org".to_string());
-                    }
-                }
-            }
+        // Use the same domain logic as CookieBookingStorage for consistency
+        use crate::api::consts::{get_app_domain_with_dot, APP_URL};
+
+        let domain_with_dot = get_app_domain_with_dot();
+
+        // Skip domain setting for localhost to avoid cookie issues
+        if domain_with_dot.contains("localhost") || domain_with_dot.contains("127.0.0.1") {
+            None
+        } else {
+            Some(domain_with_dot)
         }
-        None // Use default for localhost and other environments
     }
 
     /// Get or create a cookie store for booking state
@@ -130,10 +112,9 @@ impl BookingStateStorage {
     ) {
         let mut cookie_options = UseCookieOptions::default()
             .path("/")
-            .same_site(leptos_use::SameSite::Lax)
-            .max_age(8 * 60 * 60); // 8 hours in seconds
+            .same_site(leptos_use::SameSite::Lax);
 
-        // Apply domain configuration if needed
+        // Apply domain configuration if needed (same as CookieBookingStorage)
         if let Some(domain) = Self::get_cookie_domain() {
             cookie_options = cookie_options.domain(&domain);
         }
@@ -146,52 +127,84 @@ impl BookingStateStorage {
 
     /// Store booking state in cookie
     pub fn store_booking_state(state: &PersistedBookingState) {
-        let (_, set_state) = Self::use_booking_state_cookie();
         let mut state_with_timestamp = state.clone();
         state_with_timestamp.refresh_timestamp();
-        set_state.set(Some(state_with_timestamp));
 
         leptos::logging::log!(
-            "BookingStateStorage: Stored booking state - hotel: {}, rooms: {}, total: ${:.2}",
-            state
+            "BookingStateStorage: Attempting to store booking state - hotel: {}, rooms: {}, total: ${:.2}, timestamp: {}",
+            state_with_timestamp
                 .hotel_context
                 .as_ref()
                 .map(|h| &h.hotel_name)
                 .unwrap_or(&"None".to_string()),
-            state.room_selection_summary.len(),
-            state.total_price
+            state_with_timestamp.room_selection_summary.len(),
+            state_with_timestamp.total_price,
+            state_with_timestamp.created_at
         );
+
+        // Get the cookie getter/setter once
+        let (getter, setter) = Self::use_booking_state_cookie();
+
+        // Use setter to update the cookie
+        setter.set(Some(state_with_timestamp.clone()));
+
+        // Verify storage immediately after setting using the same getter
+        if let Some(stored) = getter.get_untracked() {
+            leptos::logging::log!(
+                "BookingStateStorage: Successfully verified stored state - timestamp: {}, hotel: {}",
+                stored.created_at,
+                stored.hotel_context.as_ref().map(|h| &h.hotel_name).unwrap_or(&"None".to_string())
+            );
+        } else {
+            leptos::logging::log!("BookingStateStorage: WARNING - Failed to verify stored state immediately after setting");
+        }
     }
 
     /// Get booking state from cookie
     pub fn get_booking_state() -> Signal<Option<PersistedBookingState>> {
-        let (state, _) = Self::use_booking_state_cookie();
-        state
+        let (getter, _) = Self::use_booking_state_cookie();
+        getter
     }
 
     /// Get booking state from cookie (non-reactive)
     pub fn get_booking_state_untracked() -> Option<PersistedBookingState> {
-        let (state, _) = Self::use_booking_state_cookie();
-        let stored_state = state.get_untracked();
+        leptos::logging::log!(
+            "BookingStateStorage: Attempting to retrieve booking state from cookie"
+        );
 
-        // Check if expired and return None if so
-        if let Some(ref state) = stored_state {
-            if state.is_expired() {
+        let (getter, _) = Self::use_booking_state_cookie();
+        let stored_state = getter.get_untracked();
+
+        match stored_state {
+            Some(ref state) => {
                 leptos::logging::log!(
-                    "BookingStateStorage: Stored state is expired, returning None"
+                    "BookingStateStorage: Found stored state - timestamp: {}, hotel: {}, is_expired: {}",
+                    state.created_at,
+                    state.hotel_context.as_ref().map(|h| &h.hotel_name).unwrap_or(&"None".to_string()),
+                    state.is_expired()
                 );
-                Self::remove_booking_state();
-                return None;
+
+                if state.is_expired() {
+                    leptos::logging::log!(
+                        "BookingStateStorage: Stored state is expired, removing and returning None"
+                    );
+                    Self::remove_booking_state();
+                    return None;
+                }
+
+                stored_state
+            }
+            None => {
+                leptos::logging::log!("BookingStateStorage: No stored state found in cookie");
+                None
             }
         }
-
-        stored_state
     }
 
     /// Remove booking state from cookie
     pub fn remove_booking_state() {
-        let (_, set_state) = Self::use_booking_state_cookie();
-        set_state.set(None);
+        let (_, setter) = Self::use_booking_state_cookie();
+        setter.set(None);
         leptos::logging::log!("BookingStateStorage: Removed expired/invalid booking state");
     }
 
@@ -209,10 +222,17 @@ impl BookingStateStorage {
         use crate::view_state_layer::ui_block_room::BlockRoomUIState;
         use crate::view_state_layer::ui_search_state::UISearchCtx;
 
+        leptos::logging::log!("BookingStateStorage: create_from_ui_state() called");
+
         // Try to get UI contexts
         let block_room_state =
             match std::panic::catch_unwind(|| BlockRoomUIState::from_leptos_context()) {
-                Ok(state) => state,
+                Ok(state) => {
+                    leptos::logging::log!(
+                        "BookingStateStorage: Successfully got BlockRoomUIState context"
+                    );
+                    state
+                }
                 Err(_) => {
                     leptos::logging::log!(
                         "BookingStateStorage: BlockRoomUIState context not available"
@@ -222,7 +242,10 @@ impl BookingStateStorage {
             };
 
         let ui_search_ctx = match std::panic::catch_unwind(|| expect_context::<UISearchCtx>()) {
-            Ok(ctx) => ctx,
+            Ok(ctx) => {
+                leptos::logging::log!("BookingStateStorage: Successfully got UISearchCtx context");
+                ctx
+            }
             Err(_) => {
                 leptos::logging::log!("BookingStateStorage: UISearchCtx context not available");
                 return None;
@@ -247,6 +270,14 @@ impl BookingStateStorage {
         let children_count = ui_search_ctx.guests.children.get_untracked() as usize;
 
         // Validate essential data
+        leptos::logging::log!(
+            "BookingStateStorage: Validating data - adults: {}, hotel_context: {}, room_selection: {}, total_price: {}",
+            adults.len(),
+            hotel_context.is_some(),
+            room_selection_summary.len(),
+            total_price
+        );
+
         if adults.is_empty() || hotel_context.is_none() || room_selection_summary.is_empty() {
             leptos::logging::log!(
                 "BookingStateStorage: Essential data missing, cannot create persisted state"
@@ -278,7 +309,19 @@ impl BookingStateStorage {
 
     /// Store current UI state (wrapper for easier API)
     pub fn store_current_state() {
+        leptos::logging::log!("BookingStateStorage: store_current_state() called");
+
         if let Some(state) = Self::create_from_ui_state() {
+            leptos::logging::log!(
+                "BookingStateStorage: Created state from UI - hotel: {}, adults: {}, total: ${:.2}",
+                state
+                    .hotel_context
+                    .as_ref()
+                    .map(|h| &h.hotel_name)
+                    .unwrap_or(&"None".to_string()),
+                state.adults.len(),
+                state.total_price
+            );
             Self::store_booking_state(&state);
         } else {
             leptos::logging::log!(
