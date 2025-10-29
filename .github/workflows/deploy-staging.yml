@@ -37,6 +37,7 @@ jobs:
           flyctl secrets set  GOOGLE_REDIRECT_URL="https://estatefe.fly.dev/auth/google/callback" --app "estatefe" --stage
           flyctl secrets set  GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" --app "estatefe" --stage
           flyctl secrets set  GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" --app "estatefe" --stage
+          flyctl secrets set  GA4_API_SECRET="$GA4_API_SECRET" --app "estatefe" --stage
         env:
           PROVAB_HEADERS: ${{ secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           FLY_API_TOKEN: ${{ secrets.FLY_IO_PRODUCTION_ENVIRONMENT_DEPLOY_TOKEN }}
@@ -59,6 +60,7 @@ jobs:
           YRAL_AUTH_REDIRECT_URL: ${{secrets.YRAL_AUTH_REDIRECT_URL_STAGING}}
           GOOGLE_CLIENT_SECRET: ${{secrets.GOOGLE_CLIENT_SECRET}}
           GOOGLE_CLIENT_ID: ${{secrets.GOOGLE_CLIENT_ID}}
+          GA4_API_SECRET: ${{secrets.GA4_API_SECRET}}
       
       # - name: Check where artifacts were downloaded
       #   run: |
