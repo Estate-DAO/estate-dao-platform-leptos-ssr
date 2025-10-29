@@ -181,6 +181,7 @@ impl ConfirmationPageState {
                     ConfirmationStep::BookingProcessing,
                     "Hotel reservation created successfully".to_string(),
                 );
+                Self::send_booking_completed_ga_event();
             }
             (Some("GetBookingFromBackend"), "OnStepCompleted") => {
                 Self::update_step_message("Loading booking details...".to_string());
@@ -195,7 +196,6 @@ impl ConfirmationPageState {
                         );
 
                         // Send GA booking completion event when booking details are first retrieved
-                        Self::send_booking_completed_ga_event();
                     } else {
                         Self::add_step_detail(
                             "Booking details confirmed via real-time updates".to_string(),
