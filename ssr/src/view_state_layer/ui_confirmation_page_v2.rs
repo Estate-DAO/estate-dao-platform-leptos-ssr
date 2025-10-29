@@ -319,7 +319,7 @@ impl ConfirmationPageState {
                     Self::add_step_detail("Booking data received from API".to_string());
 
                     // Send GA booking completion event when booking details are loaded
-                    Self::send_booking_completed_ga_event();
+                    // Self::send_booking_completed_ga_event();
                 }
                 Err(e) => {
                     log!("Failed to parse booking data from JSON: {}", e);
