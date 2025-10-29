@@ -181,9 +181,6 @@ impl ConfirmationPageState {
                     ConfirmationStep::BookingProcessing,
                     "Hotel reservation created successfully".to_string(),
                 );
-
-                // Send GA booking completion event only when booking is actually created
-                Self::send_booking_completed_ga_event();
             }
             (Some("GetBookingFromBackend"), "OnStepCompleted") => {
                 Self::update_step_message("Loading booking details...".to_string());
@@ -196,6 +193,9 @@ impl ConfirmationPageState {
                         Self::add_step_detail(
                             "Booking details retrieved via real-time updates".to_string(),
                         );
+
+                        // Send GA booking completion event when booking details are first retrieved
+                        Self::send_booking_completed_ga_event();
                     } else {
                         Self::add_step_detail(
                             "Booking details confirmed via real-time updates".to_string(),
@@ -222,7 +222,7 @@ impl ConfirmationPageState {
                 );
                 Self::get().loading.set(false);
 
-                // Send GA booking completion event for mock step completion (testing only)
+                // Send GA booking completion event for mock step completion
                 Self::send_booking_completed_ga_event();
             }
             (Some(step), "OnStepFailed") => {
@@ -317,7 +317,8 @@ impl ConfirmationPageState {
                     Self::set_booking_details(Some(booking));
                     Self::add_step_detail("Booking data received from API".to_string());
 
-                    // Don't send GA event here - only when booking is actually created (MakeBookingFromBookingProvider)
+                    // Send GA booking completion event when booking details are loaded
+                    Self::send_booking_completed_ga_event();
                 }
                 Err(e) => {
                     log!("Failed to parse booking data from JSON: {}", e);
@@ -329,17 +330,14 @@ impl ConfirmationPageState {
 
     /// **Send GA4 booking completion event**
     /// This sends a Google Analytics event when booking is successfully completed
-    /// Only called when MakeBookingFromBookingProvider step completes (actual booking creation)
     #[cfg(feature = "ga4")]
     pub fn send_booking_completed_ga_event() {
         use crate::event_streaming::send_booking_completed_event;
         use crate::view_state_layer::cookie_booking_context_state::CookieBookingContextState;
 
-        let this = Self::get();
-
         // Get booking details and user context
-        let display_info = this.display_info.get_untracked();
-        let app_reference = this.app_reference.get_untracked();
+        let display_info = Self::get().display_info.get_untracked();
+        let app_reference = Self::get().app_reference.get_untracked();
         let user_email = CookieBookingContextState::get_email_untracked();
 
         if let Some(info) = display_info {
@@ -355,8 +353,6 @@ impl ConfirmationPageState {
         } else if let Some(booking_ref) = app_reference {
             // Fallback: send minimal event with just booking reference
             send_booking_completed_event(booking_ref, None, user_email, None, None);
-        } else {
-            log!("No booking reference available - cannot send GA booking completion event");
         }
     }
 
