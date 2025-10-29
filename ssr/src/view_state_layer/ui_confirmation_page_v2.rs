@@ -181,7 +181,6 @@ impl ConfirmationPageState {
                     ConfirmationStep::BookingProcessing,
                     "Hotel reservation created successfully".to_string(),
                 );
-                Self::send_booking_completed_ga_event();
             }
             (Some("GetBookingFromBackend"), "OnStepCompleted") => {
                 Self::update_step_message("Loading booking details...".to_string());
@@ -213,6 +212,8 @@ impl ConfirmationPageState {
                 } else {
                     Self::add_step_detail("Confirmation email sent successfully".to_string());
                 }
+                Self::send_booking_completed_ga_event();
+
                 Self::get().loading.set(false);
             }
             (Some("MockStep"), "OnStepCompleted") => {
