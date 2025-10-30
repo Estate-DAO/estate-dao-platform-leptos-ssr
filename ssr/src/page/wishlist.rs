@@ -95,7 +95,7 @@ pub fn WishlistComponent() -> impl IntoView {
     );
 
     view! {
-        <div class="container mx-auto px-4 py-8">
+        <div class="md:container md:mx-auto md:px-4 py-8">
                 {move || wishlist_details.get().map(|_| view! {
                     <></>
                 })}
