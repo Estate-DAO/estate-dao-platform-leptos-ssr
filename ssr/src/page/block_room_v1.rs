@@ -1799,7 +1799,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             let order_id = booking_id.to_order_id();
 
             // Get price information
-            let price_amount = total_price() as u32;
+            let price_amount = total_price();
 
             // Create domain request using proper URL helper functions
             let hotel_name = hotel_info_ctx.selected_hotel_name.get_untracked();

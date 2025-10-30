@@ -586,11 +586,12 @@ pub fn HotelListPage() -> impl IntoView {
         }></div>
 
         // Main scrollable section
-        <section class="min-h-screen bg-slate-50 p-8">
-            // Desktop layout (lg screens and up)
-            <div class="hidden lg:flex h-[calc(100vh-12rem)]">
-                // Fixed aside on left (desktop only)
-                <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
+        <section class="min-h-screen bg-slate-50 px-4">
+            // Desktop layout (lg screens and up) - centered with 85% width
+            <div class="hidden lg:flex justify-center">
+                <div class="w-[85%] max-w-7xl flex h-[calc(100vh-12rem)]">
+                    // Fixed aside on left (desktop only)
+                    <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
                     <div class="h-full overflow-y-auto p-4">
                         <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div class="flex items-center gap-2">
@@ -891,6 +892,7 @@ pub fn HotelListPage() -> impl IntoView {
                         </div>
                     </div>
                 </div>
+            </div>
 
             // Mobile layout (lg screens and below)
             <div class="lg:hidden min-h-screen pb-20">
@@ -1295,15 +1297,15 @@ pub fn HotelCardTile(
 
                     // review block
                     // on small screens it becomes full width (so it won't force overflow); on md it becomes a small right column
-                    <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
-                        <div class="flex-1 space-x-1 flex items-center">
-                            <p class="text-sm font-medium text-gray-700">{review_text}</p>
-                            <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
-                                {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
-                            </div>
-                            // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
-                        </div>
-                    </div>
+                    // <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
+                    //     <div class="flex-1 space-x-1 flex items-center">
+                    //         <p class="text-sm font-medium text-gray-700">{review_text}</p>
+                    //         <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
+                    //             {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
+                    //         </div>
+                    //         // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
+                    //     </div>
+                    // </div>
                 </div>
 
                 // price + CTA
@@ -1341,7 +1343,7 @@ pub fn HotelCardTile(
                                         </p>
                                     }.into_any()
                                 } else {
-                                    view! { <p class="text-sm font-bold">"Check Availability"</p> }.into_any()
+                                    view! { <p class="text-sm font-bold"></p> }
                                 }
                             }}
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>

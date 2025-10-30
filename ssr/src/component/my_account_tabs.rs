@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use crate::{component::*, page::WishlistComponent};
+use crate::{api::auth::auth_state::AuthStateSignal, component::*, page::WishlistComponent};
 
 // ---------------- Tabs ----------------
 
@@ -26,9 +26,15 @@ pub fn WalletView() -> impl IntoView {
 
 #[component]
 pub fn WishlistView() -> impl IntoView {
+    let count = move || AuthStateSignal::wishlist_count();
     view! {
         <div>
-            <h1 class="text-xl font-semibold mb-4">"My Favorites"</h1>
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-xl font-semibold">"My Favorites"</h1>
+                <Show when=move || count().is_some()>
+                    <p class="text-gray-600">{move || format!("{} properties liked", count().unwrap_or(0))}</p>
+                </Show>
+            </div>
             <WishlistComponent />
         </div>
     }

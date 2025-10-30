@@ -43,7 +43,7 @@ pub fn AboutUsPage() -> impl IntoView {
                     </div>
 
                     <div class="flex flex-col items-center lg:items-start text-center lg:text-left mr-4">
-                        <h2 class="font-figtree font-semibold text-[40px] lg:text-[64px] leading-[1.4] tracking-[-0.03em] mb-6">
+                        <h2 class="font-figtree font-semibold text-[40px] lg:text-[64px] leading-[1.4] tracking-[-0.03em] mb-6 max-w-[720px]">
                             "Trusted by Travelers, Backed by Data"
                         </h2>
                         <p class="font-figtree text-[20px] leading-[1.4] text-[#45556C] mb-10 max-w-[520px]">

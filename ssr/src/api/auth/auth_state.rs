@@ -73,6 +73,10 @@ impl AuthStateSignal {
         Self::get().wishlist
     }
 
+    pub fn wishlist_count() -> Option<usize> {
+        Self::get().wishlist.get().map(|wishlist| wishlist.len())
+    }
+
     pub fn wishlist_set(wishlist: Option<Vec<String>>) {
         let this = Self::get();
         if this.auth.get_untracked().is_authenticated() {
