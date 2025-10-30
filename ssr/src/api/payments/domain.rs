@@ -31,7 +31,7 @@ impl From<PaymentProvider> for crate::api::consts::PaymentProvider {
 /// Domain struct for invoice creation request (provider-agnostic)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DomainCreateInvoiceRequest {
-    pub price_amount: u32,
+    pub price_amount: f64,
     pub price_currency: String,
     pub order_id: String,
     pub order_description: String,
