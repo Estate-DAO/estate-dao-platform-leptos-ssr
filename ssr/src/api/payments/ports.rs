@@ -16,7 +16,7 @@ use std::fmt::Debug;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CreateInvoiceRequest {
-    pub price_amount: u32,
+    pub price_amount: f64,
     pub price_currency: String,
     pub order_id: String,
     pub order_description: String,

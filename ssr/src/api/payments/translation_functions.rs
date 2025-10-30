@@ -5,7 +5,7 @@ use crate::api::payments::domain::{
 /// Helper function to create a domain request from UI parameters
 /// This can be used by UI components to construct the request
 pub fn create_domain_request(
-    price_amount: u32,
+    price_amount: f64,
     price_currency: String,
     order_id: String,
     order_description: String,
@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn test_create_domain_request() {
         let request = create_domain_request(
-            10000,
+            10000.,
             "USD".to_string(),
             "test_order".to_string(),
             "Test booking".to_string(),
@@ -62,7 +62,7 @@ mod tests {
             PaymentProvider::NowPayments,
         );
 
-        assert_eq!(request.price_amount, 10000);
+        assert_eq!(request.price_amount, 10000.);
         assert_eq!(request.provider, PaymentProvider::NowPayments);
         assert_eq!(request.order_id, "test_order");
         assert_eq!(request.customer_email, "customer@example.com");
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn test_request_serialization() {
         let request = create_domain_request(
-            5000,
+            5000.0,
             "USD".to_string(),
             "order_123".to_string(),
             "Hotel booking".to_string(),
