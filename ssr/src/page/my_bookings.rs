@@ -243,10 +243,10 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
     let bookings_for_filter = bookings_rc.clone();
     let bookings_for_count = bookings_rc.clone();
 
-    // Filter bookings by current tab
+    // Filter and sort bookings by current tab
     let filtered_bookings = Signal::derive(move || {
         let active_tab = current_tab.get();
-        bookings_for_filter
+        let mut filtered = bookings_for_filter
             .iter()
             .filter(|booking| match active_tab {
                 BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
@@ -254,7 +254,13 @@ fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
                 BookingTab::Cancelled => booking.status == BookingStatus::Cancelled,
             })
             .cloned()
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+
+        if active_tab == BookingTab::Upcoming {
+            filtered.sort_by_key(|b| b.check_in_date);
+        }
+
+        filtered
     });
 
     // Get tab counts
