@@ -67,6 +67,10 @@ pub async fn send_event_ssr(event_name: String, params: String) -> Result<(), Se
 
     if let Err(e) = res {
         log::error!("Error sending event to GA4: {:?}", e);
+        return Err(ServerFnError::ServerError(format!(
+            "Error sending event to GA4: {:?}",
+            e
+        )));
     }
 
     Ok(())
@@ -78,7 +82,10 @@ pub fn send_event_ssr_spawn(event_name: String, params: String) {
     use leptos::*;
 
     let mut params = serde_json::from_str::<serde_json::Value>(&params).unwrap();
-    params["page_location"] = json!(window().location().href().unwrap().to_string());
+    let loc = window().location().href().unwrap().to_string();
+    params["page_location"] = json!(loc);
+    params["is_production"] = json!(loc.contains("nofeebooking"));
+
     let params = serde_json::to_string(&params).unwrap();
 
     spawn_local(async move {
@@ -97,6 +104,52 @@ pub fn send_user_id(user_id: String) {
             "user_id": user_id,
         }))
         .unwrap(),
+    );
+}
+
+/// **Send booking completion GA4 event**
+/// This function sends a 'booking_completed' event to GA4 with booking details
+#[cfg(feature = "ga4")]
+pub fn send_booking_completed_event(
+    booking_reference: String,
+    hotel_name: Option<String>,
+    user_email: Option<String>,
+    total_nights: Option<u32>,
+    number_of_adults: Option<u32>,
+) {
+    use crate::utils::backend_integration_helpers::BookingDisplayInfo;
+
+    let mut params = json!({
+        "event_category": "booking",
+        "event_label": "booking_completed",
+        "booking_reference": booking_reference,
+        "user_id": user_email.clone().unwrap_or_else(|| "anonymous".to_string()),
+    });
+
+    // Add optional hotel information
+    if let Some(hotel) = hotel_name {
+        params["hotel_name"] = json!(hotel);
+    }
+
+    if let Some(nights) = total_nights {
+        params["total_nights"] = json!(nights);
+    }
+
+    if let Some(adults) = number_of_adults {
+        params["number_of_adults"] = json!(adults);
+    }
+
+    if let Some(email) = user_email {
+        params["customer_email"] = json!(email);
+    }
+
+    let params_string = serde_json::to_string(&params).unwrap_or_default();
+
+    send_event_ssr_spawn("booking_completed".to_string(), params_string);
+
+    leptos::logging::log!(
+        "GA4 booking_completed event sent for booking reference: {}",
+        booking_reference
     );
 }
 

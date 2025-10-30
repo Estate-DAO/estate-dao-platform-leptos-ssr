@@ -44,6 +44,21 @@ pub fn ConfirmationPageV2() -> impl IntoView {
         // Initialize cookie-based booking context state (loads from cookies automatically)
         CookieBookingContextState::initialize();
 
+        // Debug: Log domain information for troubleshooting
+        #[cfg(feature = "hydrate")]
+        {
+            if let Some(window) = leptos_use::use_window().as_ref() {
+                let location = window.location();
+                if let (Ok(hostname), Ok(href)) = (location.hostname(), location.href()) {
+                    log!(
+                        "ConfirmationPageV2 - Domain debug: hostname={}, full_url={}",
+                        hostname,
+                        href
+                    );
+                }
+            }
+        }
+
         log!("ConfirmationPageV2 - payment_id: {:?}", payment_id);
 
         ConfirmationPageState::set_payment_id(payment_id.clone());

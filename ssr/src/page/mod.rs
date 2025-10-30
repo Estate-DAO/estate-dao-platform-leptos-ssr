@@ -2,6 +2,9 @@
 mod root;
 pub use root::*;
 
+mod search_params;
+pub use search_params::*;
+
 mod hotel_details;
 pub use hotel_details::*;
 
@@ -52,3 +55,6 @@ pub use my_accounts::*;
 
 mod wishlist;
 pub use wishlist::*;
+
+mod about_us;
+pub use about_us::*;

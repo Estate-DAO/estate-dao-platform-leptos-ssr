@@ -21,15 +21,34 @@ const BOOKING_ID_COOKIE: &str = "estatedao_booking_id";
 pub struct CookieBookingStorage;
 
 impl CookieBookingStorage {
+    /// **Get cookie domain configuration (environment-aware)**
+    fn get_cookie_domain() -> Option<String> {
+        // Use the existing domain utility from consts.rs - works for all environments
+        use crate::api::consts::{get_app_domain_with_dot, APP_URL};
+
+        let domain_with_dot = get_app_domain_with_dot();
+
+        // Skip domain setting for localhost to avoid cookie issues
+        if domain_with_dot.contains("localhost") || domain_with_dot.contains("127.0.0.1") {
+            None
+        } else {
+            Some(domain_with_dot)
+        }
+    }
+
     /// **Get or create a cookie store for BookingId**
     /// Returns (getter_signal, setter)
     pub fn use_booking_id_cookie() -> (Signal<Option<BookingId>>, WriteSignal<Option<BookingId>>) {
-        use_cookie_with_options::<BookingId, JsonSerdeCodec>(
-            BOOKING_ID_COOKIE,
-            UseCookieOptions::default()
-                .path("/")
-                .same_site(leptos_use::SameSite::Lax),
-        )
+        let mut cookie_options = UseCookieOptions::default()
+            .path("/")
+            .same_site(leptos_use::SameSite::Lax);
+
+        // Apply domain configuration if needed (same as OAuth system)
+        if let Some(domain) = Self::get_cookie_domain() {
+            cookie_options = cookie_options.domain(&domain);
+        }
+
+        use_cookie_with_options::<BookingId, JsonSerdeCodec>(BOOKING_ID_COOKIE, cookie_options)
     }
 
     /// **Store BookingId in cookie**

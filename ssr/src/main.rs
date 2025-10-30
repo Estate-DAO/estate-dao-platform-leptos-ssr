@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
+#![allow(non_snake_case)]
 
 use cfg_if::cfg_if;
 use estate_fe::{
@@ -84,9 +85,13 @@ cfg_if! {
         mod basic_auth;
         use basic_auth::*;
         mod server_functions_impl_custom_routes;
+        mod domain_middleware;
+        mod debug_routes;
 
         use server_functions_impl_custom_routes::api_routes;
         use estate_fe::oauth::*;
+        use domain_middleware::domain_normalization_middleware;
+        use debug_routes::debug_routes;
 
         // Helper: verify NowPayments HMAC-SHA512 signature (gated by feature)
         #[cfg(not(feature = "debug_log"))]
@@ -420,10 +425,13 @@ cfg_if! {
                 .route("/stream/events", get(event_stream_handler))
                 .route("/sitemap-index.xml", get(sitemap_handler))
                 .nest("/server_fn_api", api_routes())
+                .nest("/", debug_routes()) // Debug routes for testing domain normalization
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .fallback(file_and_error_handler)
                 .layer(cors)
                 .layer(trace_layer)
+                // Domain normalization: redirect www.nofeebooking.com -> nofeebooking.com
+                .layer(middleware::from_fn(domain_normalization_middleware))
                 // Protect admin routes with browser challenge
                 .layer(
                     middleware::from_fn_with_state(res.clone(),selective_auth_middleware)

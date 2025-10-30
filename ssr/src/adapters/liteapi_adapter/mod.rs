@@ -184,7 +184,7 @@ impl LiteApiAdapter {
                 let page = params.page.unwrap_or(1).max(1);
                 let page_size = params
                     .page_size
-                    .unwrap_or(20)
+                    .unwrap_or(PAGINATION_LIMIT as u32)
                     .clamp(1, PAGINATION_LIMIT as u32);
                 let offset = (page - 1) * page_size;
                 (offset as i32, page_size as i32)
@@ -466,7 +466,9 @@ impl LiteApiAdapter {
         // Add pagination metadata if pagination params are provided
         if let Some(ref pagination_params) = search_criteria.pagination {
             let page = pagination_params.page.unwrap_or(1);
-            let page_size = pagination_params.page_size.unwrap_or(200);
+            let page_size = pagination_params
+                .page_size
+                .unwrap_or(PAGINATION_LIMIT as u32);
             let returned_count = domain_results.hotel_results.len();
 
             // Check if we got the full requested amount from LiteAPI (before filtering)
@@ -845,7 +847,7 @@ impl LiteApiAdapter {
             })?;
 
         // Extract all rooms and rates from LiteAPI response
-        let mut all_rooms = Vec::new();
+        // let mut all_rooms = Vec::new();
         let mut room_type_map: std::collections::HashMap<String, DomainRoomOption> =
             std::collections::HashMap::new();
 
@@ -922,7 +924,7 @@ impl LiteApiAdapter {
         }
 
         // Convert the deduplicated map back to a vector
-        all_rooms = room_type_map.into_values().collect();
+        let mut all_rooms: Vec<DomainRoomOption> = room_type_map.into_values().collect();
 
         // Sort rooms: unique names first, then repeated names at the end
         let mut name_counts: std::collections::HashMap<String, usize> =

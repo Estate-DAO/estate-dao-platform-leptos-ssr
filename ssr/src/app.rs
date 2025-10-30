@@ -1,6 +1,6 @@
 use crate::api::auth::auth_state::AuthStateSignal;
 use crate::facebook::FacebookPixel;
-use crate::page::MyAccountPage;
+use crate::page::{AboutUsPage, MyAccountPage};
 use crate::{
     api::{
         consts::{EnvVarConfig, APP_URL},
@@ -73,6 +73,7 @@ pub enum AppRoutes {
     MyBookings,
     MyAccount, // Notifications
     Wishlist,
+    AboutUs,
 }
 
 impl AppRoutes {
@@ -90,6 +91,7 @@ impl AppRoutes {
             AppRoutes::MyBookings => "/my-bookings",
             AppRoutes::MyAccount => "/account",
             AppRoutes::Wishlist => "/wishlist",
+            AppRoutes::AboutUs => "/about-us",
             // AppRoutes::Notifications => "/notifications"
         }
     }
@@ -107,6 +109,7 @@ impl AppRoutes {
             Self::AdminEditPanel,
             Self::MyBookings,
             Self::Wishlist,
+            Self::AboutUs,
             // Self::Notifications,
         ]
         .into_iter()
@@ -187,6 +190,9 @@ pub fn App() -> impl IntoView {
     // provide_context(get_yral_oauth_client());
 
     let _ = AuthStateSignal::init();
+
+    // Ensure canonical domain (redirect www.nofeebooking.com -> nofeebooking.com)
+    crate::utils::domain_normalize::ensure_canonical_domain();
 
     provide_context(InputGroupState::default());
 
@@ -284,6 +290,7 @@ pub fn App() -> impl IntoView {
                         <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
                         <Route path=AppRoutes::MyAccount.to_string() view=MyAccountPage />
                         <Route path=AppRoutes::Wishlist.to_string() view=WishlistPage />
+                        <Route path=AppRoutes::AboutUs.to_string() view=AboutUsPage />
                         // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
                         // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
                 </Routes>

@@ -206,6 +206,7 @@ jobs:
           flyctl secrets set GOOGLE_REDIRECT_URL="https://$APP_NAME.fly.dev/auth/google/callback" --app "$APP_NAME" --stage || echo "Warning: Failed to set GOOGLE_REDIRECT_URL"
           flyctl secrets set GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set GOOGLE_CLIENT_SECRET"
           flyctl secrets set GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set GOOGLE_CLIENT_ID"
+          flyctl secrets set GA4_API_SECRET="$GA4_API_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set GA4_API_SECRET"
 
           echo "✅ Secrets setup completed for $APP_NAME"
         env:
@@ -230,6 +231,7 @@ jobs:
           YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
 
       - name: Deploy preview app
         id: deploy

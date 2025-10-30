@@ -213,6 +213,8 @@ impl ConfirmationPageState {
                         Self::add_step_detail(
                             "Booking details retrieved via real-time updates".to_string(),
                         );
+
+                        // Send GA booking completion event when booking details are first retrieved
                     } else {
                         Self::add_step_detail(
                             "Booking details confirmed via real-time updates".to_string(),
@@ -234,10 +236,9 @@ impl ConfirmationPageState {
                 } else {
                     Self::add_step_detail("Confirmation email sent successfully".to_string());
                 }
+                Self::send_booking_completed_ga_event();
 
-                // Mark email step as completed and finish the workflow
-                Self::mark_step_completed("SendEmailAfterSuccessfullBooking");
-                Self::check_and_handle_completion_fallback();
+                Self::get().loading.set(false);
             }
             (Some("MockStep"), "OnStepCompleted") => {
                 Self::advance_to_step(
@@ -245,6 +246,9 @@ impl ConfirmationPageState {
                     "Your booking is confirmed!".to_string(),
                 );
                 Self::get().loading.set(false);
+
+                // Send GA booking completion event for mock step completion
+                Self::send_booking_completed_ga_event();
             }
             (Some(step), "OnStepFailed") => {
                 Self::set_step_error(format!("Failed at step: {}", step));
@@ -399,6 +403,9 @@ impl ConfirmationPageState {
                     log!("Successfully parsed booking data from API response");
                     Self::set_booking_details(Some(booking));
                     Self::add_step_detail("Booking data received from API".to_string());
+
+                    // Send GA booking completion event when booking details are loaded
+                    // Self::send_booking_completed_ga_event();
                 }
                 Err(e) => {
                     log!("Failed to parse booking data from JSON: {}", e);
@@ -406,6 +413,40 @@ impl ConfirmationPageState {
                 }
             }
         }
+    }
+
+    /// **Send GA4 booking completion event**
+    /// This sends a Google Analytics event when booking is successfully completed
+    #[cfg(feature = "ga4")]
+    pub fn send_booking_completed_ga_event() {
+        use crate::event_streaming::send_booking_completed_event;
+        use crate::view_state_layer::cookie_booking_context_state::CookieBookingContextState;
+
+        // Get booking details and user context
+        let display_info = Self::get().display_info.get_untracked();
+        let app_reference = Self::get().app_reference.get_untracked();
+        let user_email = CookieBookingContextState::get_email_untracked();
+
+        if let Some(info) = display_info {
+            let booking_ref = app_reference.unwrap_or_else(|| info.booking_reference.clone());
+
+            send_booking_completed_event(
+                booking_ref,
+                Some(info.hotel_name),
+                user_email,
+                Some(info.number_of_nights as u32),
+                Some(info.number_of_adults as u32),
+            );
+        } else if let Some(booking_ref) = app_reference {
+            // Fallback: send minimal event with just booking reference
+            send_booking_completed_event(booking_ref, None, user_email, None, None);
+        }
+    }
+
+    #[cfg(not(feature = "ga4"))]
+    pub fn send_booking_completed_ga_event() {
+        // No-op when GA4 feature is not enabled
+        log!("GA4 feature not enabled - skipping booking completion event");
     }
 
     // **Getters for reactive UI**

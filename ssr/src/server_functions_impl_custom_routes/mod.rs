@@ -136,7 +136,7 @@ pub async fn call_block_room_api(
 
 // Helper function to filter hotels with valid pricing
 pub fn filter_hotels_with_valid_pricing(
-    mut search_result: DomainHotelListAfterSearch,
+    search_result: DomainHotelListAfterSearch,
 ) -> DomainHotelListAfterSearch {
     let original_count = search_result.hotel_results.len();
     let hotels_without_pricing = search_result
