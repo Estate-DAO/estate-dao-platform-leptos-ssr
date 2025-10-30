@@ -1343,7 +1343,7 @@ pub fn HotelCardTile(
                                         </p>
                                     }.into_any()
                                 } else {
-                                    view! { <p class="text-sm font-bold"></p> }
+                                    view! { <p class="text-sm font-bold"></p> }.into_any()
                                 }
                             }}
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
