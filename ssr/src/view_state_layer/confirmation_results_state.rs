@@ -1,7 +1,7 @@
 use crate::api::payments::ports::GetPaymentStatusResponse;
 // use crate::api::provab::{BookRoomResponse, HotelResult};
 use crate::canister::backend::{self};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::component::SelectedDateRange;
 // use crate::page::SortedRoom;

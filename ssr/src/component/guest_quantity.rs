@@ -9,10 +9,10 @@ use crate::{
     component::{Divider, HSettingIcon},
     view_state_layer::ui_search_state::UISearchCtx,
 };
-use ev::{InputEvent, MouseEvent};
+use leptos::ev::{InputEvent, MouseEvent};
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use std::ops::Index;
 
@@ -272,9 +272,9 @@ impl ChildrenAgesSignalExt for ChildrenAges {
 /// Guest quantity component (button)
 #[component]
 pub fn GuestQuantity() -> impl IntoView {
-    let is_open = create_memo(move |_| InputGroupState::is_guest_open());
+    let is_open = Memo::new(move |_| InputGroupState::is_guest_open());
 
-    let icon = create_memo(move |_| {
+    let icon = Memo::new(move |_| {
         if is_open() {
             icondata::BiChevronUpRegular
         } else {
@@ -309,7 +309,7 @@ pub fn GuestQuantity() -> impl IntoView {
     //     children_ages_signal.get_untracked()
     // );
 
-    let guest_count_display = create_memo(move |_prev| {
+    let guest_count_display = Memo::new(move |_prev| {
         let adults = adults_signal.get();
         let children = children_signal.get();
         // log!(
@@ -327,7 +327,7 @@ pub fn GuestQuantity() -> impl IntoView {
     view! {
         <div class="relative flex items-center w-full">
             <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight" />
+                <Icon icon=icondata::BiUserRegular />
             </div>
 
             <button
@@ -337,7 +337,7 @@ pub fn GuestQuantity() -> impl IntoView {
                 <div class="text-black font-medium">{guest_count_display}</div>
                 <div>
                 // <div class="absolute inset-y-0 right-3 flex items-center">
-                    <Icon icon=icon() class="text-gray-600 text-sm" />
+                    <Icon icon=icon() />
                 </div>
             </button>
 

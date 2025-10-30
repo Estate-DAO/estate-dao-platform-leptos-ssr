@@ -1,6 +1,6 @@
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
 
 const MAX_STARS: u8 = 5;
@@ -8,10 +8,10 @@ const MAX_STARS: u8 = 5;
 #[component]
 pub fn StarRating<T>(rating: T) -> impl IntoView
 where
-    T: Fn() -> u8 + 'static,
+    T: Fn() -> u8 + 'static + Send + Sync,
 {
     let derived_rating = Signal::derive(move || rating());
-    create_effect(move |_| {
+    Effect::new(move |_| {
         // log!("derived_rating: {}", derived_rating.get());
     });
 
@@ -31,7 +31,14 @@ where
                                     }
                                 }
                             };
-                            { move || view! { <Icon class="w-3 h-3 text-blue-500" icon=icon() /> } }
+                            let icon_class = move || {
+                                if i < rating_clone {
+                                    "w-3 h-3 text-yellow-400"
+                                } else {
+                                    "w-3 h-3 text-gray-300"
+                                }
+                            };
+                            { move || view! { <div class=icon_class()><Icon icon=icon() /></div> } }
                         })
                         .collect::<Vec<_>>()
                 }}
@@ -95,7 +102,7 @@ pub fn StarRatingFilter(
                                     } else {
                                         Some(rating)
                                     };
-                                    leptos::Callable::call(&on_select, next);
+                                    on_select.run(next);
                                 }
                             >
                                 <span class={move || {
@@ -103,13 +110,15 @@ pub fn StarRatingFilter(
                                     format!("{} {}", base_span_classes, label_class.get())
                                 }}>
                                     {rating}
-                                    {move || {
+                                    <div class=move || {
                                         if is_selected.get() {
-                                            view! { <Icon icon=icondata::BiStarSolid class="h-3 w-3 transition-colors duration-150 text-white" /> }
+                                            "h-3 w-3 transition-colors duration-150 text-white"
                                         } else {
-                                            view! { <Icon icon=icondata::BiStarSolid class="h-3 w-3 transition-colors duration-150 text-yellow-400" /> }
+                                            "h-3 w-3 transition-colors duration-150 text-yellow-400"
                                         }
-                                    }}
+                                    }>
+                                        <Icon icon=icondata::BiStarSolid />
+                                    </div>
                                 </span>
 
                             </button>

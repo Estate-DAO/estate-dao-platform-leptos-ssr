@@ -28,13 +28,13 @@ jobs:
       - name: Rust Setup
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "nightly-2025-04-15"
+          toolchain: "nightly-2025-10-10"
           targets: "wasm32-unknown-unknown"
           components: "clippy,rustfmt"
-          
+
       - name: Override Rust toolchain
-        run: rustup override set nightly-2025-04-15
-          
+        run: rustup override set nightly-2025-10-10
+
       - name: Verify Rust version
         run: rustc --version && cargo --version
 
@@ -42,7 +42,7 @@ jobs:
 
       - name: Install cargo-leptos
         run: |
-          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/download/v0.2.31/cargo-leptos-installer.sh | sh
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/download/v0.2.46/cargo-leptos-installer.sh | sh
 
       - name: Cache rust dependencies and build output
         uses: Swatinem/rust-cache@v2
@@ -86,7 +86,7 @@ jobs:
       - name: Build the Leptos project
         run: cargo leptos build --release --lib-features "release-lib" --bin-features "release-bin"
         env:
-          LEPTOS_HASH_FILES: true
+          LEPTOS_HASH_FILES: false
           PROVAB_HEADERS: ${{ secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
           NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
           APP_URL: ${{ inputs.app-url }}
@@ -109,7 +109,7 @@ jobs:
       #       echo "ERROR: hash.txt not found in either location!"
       #       exit 1
       #     fi
-      
+
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
@@ -120,6 +120,5 @@ jobs:
             target/release/estate-fe
             target/site
             .empty
-            target/release/hash.txt
             city.json
             city.parquet

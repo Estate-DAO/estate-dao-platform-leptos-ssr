@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn ImageLightbox(
@@ -7,7 +7,7 @@ pub fn ImageLightbox(
     #[prop(optional)] loop_images: bool,
     on_close: Callback<()>,
 ) -> impl IntoView {
-    let (current_index, set_current_index) = create_signal(initial_index);
+    let (current_index, set_current_index) = signal(initial_index);
     let image_len = images.len();
     let current_image = move || images.get(current_index.get()).cloned();
 
@@ -37,7 +37,7 @@ pub fn ImageLightbox(
         <div class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
             <button
                 class="absolute top-4 right-4 text-white text-3xl"
-                on:click=move |_| on_close(())
+                on:click=move |_| on_close.run(())
             >
                 "×"
             </button>

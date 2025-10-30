@@ -4,7 +4,7 @@ use crate::utils::app_reference::BookingId;
 use colored::Colorize;
 // use leptos::logging::log;
 use crate::{log, warn};
-use leptos::*;
+use leptos::prelude::*;
 
 #[server(GreetBackend)]
 pub async fn update_book_room_details_backend(

@@ -275,7 +275,7 @@ pub trait ApiClient: Clone + Debug + Default {
             .http_client()
             .execute(request)
             .await
-            .map_err(|e| (ApiError::RequestFailed(e.into())))?;
+            .map_err(|e| ApiError::RequestFailed(e.into()))?;
 
         let status = response.status();
 

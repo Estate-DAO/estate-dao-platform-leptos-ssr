@@ -287,7 +287,7 @@ pub struct LiteApiCancelPolicyInfo {
 
 // <!-- API Implementation following LiteAPI pattern -->
 
-use leptos::*;
+use leptos::prelude::*;
 use reqwest::header::HeaderMap;
 use reqwest::Method;
 

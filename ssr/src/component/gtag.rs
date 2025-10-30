@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::Script;
 
 use crate::api::consts::GTAG_MEASUREMENT_ID;
@@ -20,7 +20,7 @@ pub fn GoogleTagManagerIFrame() -> impl IntoView {
 // #[component]
 // pub fn GoogleTagManagerScriptAsync() -> impl IntoView {
 //     // Analytics
-//     let enable_ga4_script = create_rw_signal(false);
+//     let enable_ga4_script = RwSignal::new(false);
 //     #[cfg(feature = "ga4")]
 //     {
 //         enable_ga4_script.set(true);
@@ -48,7 +48,7 @@ pub fn GoogleTagManagerIFrame() -> impl IntoView {
 #[component]
 pub fn GA4ScriptAsync() -> impl IntoView {
     // Analytics
-    let enable_ga4_script = create_rw_signal(false);
+    let enable_ga4_script = RwSignal::new(false);
     #[cfg(feature = "ga4")]
     {
         enable_ga4_script.set(true);

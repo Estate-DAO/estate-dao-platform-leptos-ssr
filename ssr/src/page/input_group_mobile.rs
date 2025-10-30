@@ -1,6 +1,6 @@
 use crate::utils::pluralize;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
@@ -18,7 +18,7 @@ pub fn InputGroupMobile() -> impl IntoView {
     };
 
     // Format date range display
-    let date_range_display = create_memo(move |_| {
+    let date_range_display = Memo::new(move |_| {
         let date_range = search_ctx.date_range.get();
         if date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0) {
             "Add dates".to_string()
@@ -36,7 +36,7 @@ pub fn InputGroupMobile() -> impl IntoView {
     });
 
     // Format guest info display
-    let guest_info_display = create_memo(move |_| {
+    let guest_info_display = Memo::new(move |_| {
         let guest_selection = &search_ctx.guests;
         let adults = guest_selection.adults.get();
         let children = guest_selection.children.get();

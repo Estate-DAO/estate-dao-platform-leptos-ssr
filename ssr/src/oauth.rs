@@ -94,7 +94,7 @@ pub async fn google_auth(
     }
     let csrf_cookie = csrf_cookie_builder.build();
 
-    let jar = jar.add(csrf_cookie);
+    let jar = jar.add(csrf_cookie.clone());
 
     // Build PKCE cookie
     let pkce_key = format!("{CSRF_COOKIE}_pkce");
@@ -111,13 +111,13 @@ pub async fn google_auth(
     let pkce_cookie = pkce_cookie_builder.build();
 
     let jar = if jar.get(&pkce_key.clone()).is_none() {
-        jar.add(pkce_cookie)
+        jar.add(pkce_cookie.clone())
     } else {
         jar
     };
 
-    // tracing::debug!("Setting CSRF cookie: {:?}", csrf_cookie);
-    // tracing::debug!("Setting PKCE cookie: {:?}", pkce_cookie);
+    tracing::debug!("Setting CSRF cookie: {:?}", &csrf_cookie);
+    tracing::debug!("Setting PKCE cookie: {:?}", &pkce_cookie);
     tracing::debug!("Redirecting to: {}", auth_url.as_ref());
 
     (jar, axum::response::Redirect::to(auth_url.as_ref()))

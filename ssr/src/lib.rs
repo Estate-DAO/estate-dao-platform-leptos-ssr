@@ -1,6 +1,8 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 #![allow(non_snake_case)]
+#![recursion_limit = "1024"]
+#![type_length_limit = "10000000"]
 
 use std::future::Future;
 
@@ -34,18 +36,12 @@ cfg_if::cfg_if! {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "hydrate")] {
-        #[wasm_bindgen::prelude::wasm_bindgen]
-        pub fn hydrate() {
-            use crate::app::*;
-            // initializes logging using the `log` crate
-            _ = console_log::init_with_level(log::Level::Debug);
-            console_error_panic_hook::set_once();
-            leptos::mount_to_body(App);
-        }
-
-    }
+#[cfg(feature = "hydrate")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
+    use crate::app::App;
+    console_error_panic_hook::set_once();
+    leptos::mount::hydrate_body(App);
 }
 
 #[cfg(not(feature = "hydrate"))]

@@ -13,7 +13,7 @@
 // };
 use crate::log;
 use chrono::NaiveDate;
-use leptos::*;
+use leptos::prelude::*;
 
 // #[derive(Debug, Clone, Default)]
 // pub struct PaymentBookingStatusUpdates {
@@ -35,9 +35,9 @@ use leptos::*;
 
 //     let confirmation_page_state: ConfirmationResultsState = expect_context();
 
-//     let p01_sig = create_rw_signal("Confirming your payment");
-//     let p02_sig = create_rw_signal("Making your booking");
-//     let p03_sig = create_rw_signal("Payment processing... please wait");
+//     let p01_sig = RwSignal::new("Confirming your payment");
+//     let p02_sig = RwSignal::new("Making your booking");
+//     let p03_sig = RwSignal::new("Payment processing... please wait");
 
 //     let p01_sig_val = Signal::derive(move || {
 //         let status = move || status_updates.p01_fetch_payment_details_from_api.get();
@@ -183,7 +183,7 @@ use leptos::*;
 //                                     //     }
 //                                     //     </pre>
 
-//                                 }.into_view()
+//                                 }.into_any()
 //                                 }}</p>
 //                             </div>
 

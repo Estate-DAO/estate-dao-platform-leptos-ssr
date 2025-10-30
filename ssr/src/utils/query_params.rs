@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use chrono::Datelike;
-use leptos::*;
-use leptos_router::{use_navigate, use_query_map};
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -13,6 +13,7 @@ pub type ParamsMap = std::collections::BTreeMap<String, String>;
 /// Helper functions for parsing individual query parameters (non-base64)
 pub mod individual_params {
     use chrono::{Datelike, NaiveDate};
+    use leptos_router::params::ParamsMap;
 
     /// Parse a date string in YYYY-MM-DD format to (year, month, day) tuple
     pub fn parse_date(date_str: &str) -> Option<(u32, u32, u32)> {
@@ -63,22 +64,22 @@ pub mod individual_params {
     }
 
     /// Get optional string parameter from ParamsMap
-    pub fn get_param(params: &leptos_router::ParamsMap, key: &str) -> Option<String> {
-        params.get(key).cloned()
+    pub fn get_param(params: &ParamsMap, key: &str) -> Option<String> {
+        params.get(key)
     }
 
     /// Get optional u32 parameter from ParamsMap
-    pub fn get_param_u32(params: &leptos_router::ParamsMap, key: &str) -> Option<u32> {
+    pub fn get_param_u32(params: &ParamsMap, key: &str) -> Option<u32> {
         params.get(key).and_then(|s| s.parse().ok())
     }
 
     /// Get optional f64 parameter from ParamsMap
-    pub fn get_param_f64(params: &leptos_router::ParamsMap, key: &str) -> Option<f64> {
+    pub fn get_param_f64(params: &ParamsMap, key: &str) -> Option<f64> {
         params.get(key).and_then(|s| s.parse().ok())
     }
 
     /// Get optional bool parameter from ParamsMap
-    pub fn get_param_bool(params: &leptos_router::ParamsMap, key: &str) -> Option<bool> {
+    pub fn get_param_bool(params: &ParamsMap, key: &str) -> Option<bool> {
         params
             .get(key)
             .and_then(|s| match s.to_lowercase().as_str() {

@@ -5,7 +5,7 @@ use crate::domain::{
 };
 use crate::utils::app_reference::BookingId;
 use crate::view_state_layer::booking_conversions::BookingConversions;
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Request structure for the integrated block room server function

@@ -1,6 +1,9 @@
-use leptos::*;
-use leptos_router::use_navigate;
 use std::collections::HashMap;
+
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use leptos_router::hooks::{use_navigate, use_query_map};
+use reqwest::Client;
 use web_sys::MouseEvent;
 
 use crate::api::auth::auth_state::AuthStateSignal;
@@ -49,12 +52,31 @@ impl GlobalStateForLeptos for PreviousSearchContext {}
 impl PreviousSearchContext {
     pub fn update(new_ctx: UISearchCtx) {
         let mut this: Self = expect_context();
-        // let mut this = Self::get();
-        this.place = new_ctx.place.get_untracked();
-        this.place_details = new_ctx.place_details.get_untracked();
-        this.rooms = new_ctx.guests.rooms.get_untracked();
-        this.children = new_ctx.guests.children.get_untracked();
-        this.adults = new_ctx.guests.adults.get_untracked();
+
+        // *** KEY FIX: Only update if values have actually changed ***
+        let new_place = new_ctx.place.get_untracked();
+        let new_place_details = new_ctx.place_details.get_untracked();
+        let new_rooms = new_ctx.guests.rooms.get_untracked();
+        let new_children = new_ctx.guests.children.get_untracked();
+        let new_adults = new_ctx.guests.adults.get_untracked();
+
+        let has_changes = this.place != new_place
+            || this.place_details != new_place_details
+            || this.rooms != new_rooms
+            || this.children != new_children
+            || this.adults != new_adults;
+
+        if !has_changes {
+            log!("[PreviousSearchContext] No changes detected, skipping update to prevent unnecessary reactivity");
+            return;
+        }
+
+        log!("[PreviousSearchContext] Changes detected, updating context");
+        this.place = new_place;
+        this.place_details = new_place_details;
+        this.rooms = new_rooms;
+        this.children = new_children;
+        this.adults = new_adults;
         log!("[PreviousSearchContext] updated: {:?}", this);
 
         provide_context(this);
@@ -80,7 +102,7 @@ impl PreviousSearchContext {
 pub fn HotelListPage() -> impl IntoView {
     let search_ctx: UISearchCtx = expect_context();
     let navigate = use_navigate();
-    let query_map = leptos_router::use_query_map();
+    let query_map = use_query_map();
 
     let search_ctx2: UISearchCtx = expect_context();
 
@@ -90,92 +112,97 @@ pub fn HotelListPage() -> impl IntoView {
     // Sync query params with state on page load (URL → State)
     // Parse URL params and sync to app state (URL → State)
     // This leverages use_query_map's built-in reactivity for browser navigation
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let params = query_map.get();
-        if !params.0.is_empty() {
-            let params_map: HashMap<String, String> = params
-                .0
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect();
+        let params_map: HashMap<String, String> = params
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect();
 
-            // Try individual query params first (NEW format), then fall back to base64 state (LEGACY)
-            if let Some(hotel_params) = HotelListParams::from_query_params(&params_map) {
-                // Check if we need to search for place by name (placeId missing)
-                if hotel_params.place.is_none() && hotel_params.place_name_to_search.is_some() {
-                    let place_name = hotel_params.place_name_to_search.clone().unwrap();
-                    log!(
-                        "[HotelListPage] Only placeName in URL: '{}', searching for placeId...",
-                        place_name
-                    );
+        // Try individual query params first (NEW format), then fall back to base64 state (LEGACY)
+        if let Some(hotel_params) = HotelListParams::from_query_params(&params_map) {
+            // Check if we need to search for place by name (placeId missing)
+            if hotel_params.place.is_none() && hotel_params.place_name_to_search.is_some() {
+                let place_name = hotel_params.place_name_to_search.clone().unwrap();
+                log!(
+                    "[HotelListPage] Only placeName in URL: '{}', searching for placeId...",
+                    place_name
+                );
 
-                    // Clone params_map for async closure
-                    let params_map_clone = params_map.clone();
-                    let place_name_clone = place_name.clone();
+                // Clone params_map for async closure
+                let params_map_clone = params_map.clone();
+                let place_name_clone = place_name.clone();
 
-                    // Spawn async task to search for place
-                    spawn_local(async move {
-                        let api_client = ClientSideApiClient::new();
-                        match api_client.search_places(place_name_clone.clone()).await {
-                            Ok(results) => {
-                                if let Some(first_result) = results.first() {
-                                    log!(
-                                        "[HotelListPage] Found place: {} (ID: {})",
-                                        first_result.display_name,
-                                        first_result.place_id
-                                    );
-
-                                    // Update URL with fetched placeId
-                                    let mut new_params = params_map_clone.clone();
-                                    new_params.insert(
-                                        "placeId".to_string(),
-                                        first_result.place_id.clone(),
-                                    );
-
-                                    // Keep the placeName for display
-                                    new_params.insert("placeName".to_string(), place_name_clone);
-
-                                    // Navigate to updated URL (this will trigger the effect again)
-                                    use crate::utils::query_params::update_url_with_params;
-                                    update_url_with_params("/hotel-list", &new_params);
-                                } else {
-                                    log!(
-                                        "[HotelListPage] No results found for place name: {}",
-                                        place_name_clone
-                                    );
-                                    // TODO: Show error message to user
-                                }
-                            }
-                            Err(e) => {
+                // Spawn async task to search for place
+                spawn_local(async move {
+                    let api_client = ClientSideApiClient::new();
+                    match api_client.search_places(place_name_clone.clone()).await {
+                        Ok(results) => {
+                            if let Some(first_result) = results.first() {
                                 log!(
-                                    "[HotelListPage] Place search failed for '{}': {}",
-                                    place_name_clone,
-                                    e
+                                    "[HotelListPage] Found place: {} (ID: {})",
+                                    first_result.display_name,
+                                    first_result.place_id
+                                );
+
+                                // Update URL with fetched placeId
+                                let mut new_params = params_map_clone.clone();
+                                new_params
+                                    .insert("placeId".to_string(), first_result.place_id.clone());
+
+                                // Keep the placeName for display
+                                new_params.insert("placeName".to_string(), place_name_clone);
+
+                                // Navigate to updated URL (this will trigger the effect again)
+                                use crate::utils::query_params::update_url_with_params;
+                                update_url_with_params("/hotel-list", &new_params);
+                            } else {
+                                log!(
+                                    "[HotelListPage] No results found for place name: {}",
+                                    place_name_clone
                                 );
                                 // TODO: Show error message to user
                             }
                         }
-                    });
+                        Err(e) => {
+                            log!(
+                                "[HotelListPage] Place search failed for '{}': {}",
+                                place_name_clone,
+                                e
+                            );
+                            // TODO: Show error message to user
+                        }
+                    }
+                });
 
-                    // Don't sync to app state yet - wait for place search to complete
-                    // The URL update above will trigger this effect again with complete params
-                    return;
-                }
+                // Don't sync to app state yet - wait for place search to complete
+                // The URL update above will trigger this effect again with complete params
+                return;
+            }
 
-                // Normal case: we have complete params with placeId
+            // Normal case: we have complete params with placeId
+            // *** KEY FIX: Only sync if params actually differ from current state ***
+            if hotel_params.differs_from_current_state() {
                 log!(
-                    "Parsed hotel params from URL (individual params): {:?}",
+                    "URL params differ from state, syncing to app state: {:?}",
                     hotel_params
                 );
                 hotel_params.sync_to_app_state();
                 PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
-            } else if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
+            } else {
+                log!("URL params match current state, skipping sync to prevent loop");
+            }
+        } else if let Some(hotel_params) = HotelListParams::from_url_params(&params_map) {
+            // Legacy base64 format
+            if hotel_params.differs_from_current_state() {
                 log!(
                     "Parsed hotel params from URL (legacy base64 state): {:?}",
                     hotel_params
                 );
                 hotel_params.sync_to_app_state();
                 PreviousSearchContext::update_first_time_filled(search_ctx2.clone());
+            } else {
+                log!("Legacy URL params match current state, skipping sync");
             }
         }
     });
@@ -185,11 +212,10 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx_for_url_update = search_ctx.clone();
 
     // Hotel search resource - triggers when search context or pagination changes
-    let hotel_search_resource = create_resource(
-        move || {
-            // Depend on query_map to re-run when URL params change
-            query_map.get();
-
+    let hotel_search_resource = LocalResource::new(move || {
+        let search_ctx_clone = search_ctx_for_resource.clone();
+        let search_ctx_clone2 = search_ctx_for_resource.clone();
+        async move {
             // Track search context changes reactively
             let place = search_ctx_for_resource.place.get();
             let date_range = search_ctx_for_resource.date_range.get();
@@ -204,58 +230,58 @@ pub fn HotelListPage() -> impl IntoView {
             let has_valid_search_data = place.is_some() && adults > 0 && rooms > 0;
 
             // Return true when ready to search
-            let is_ready = has_valid_dates && has_valid_search_data;
+            let is_ready = has_valid_dates && has_valid_search_data; // Always search for same criteria (includes pagination changes)
 
-            // Return a tuple that changes when pagination or other key fields change
-            if is_ready {
-                (place, date_range, adults, rooms, current_page, page_size)
+            // log!(
+            //     "[PAGINATION-DEBUG] [hotel_search_resource] readiness: current_page={}, is_same_destination={}, is_same_adults={}, is_same_children={}, is_same_rooms={}, is_same_search_criteria={}, has_valid_dates={}, has_valid_search_data={}, is_first_load={}, ready={}",
+            //     current_page,
+            //     is_same_destination,
+            //     is_same_adults,
+            //     is_same_children,
+            //     is_same_rooms,
+            //     is_same_search_criteria,
+            //     has_valid_dates,
+            //     has_valid_search_data,
+            //     is_first_load,
+            //     is_ready
+            // );
+
+            log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
+
+            if !is_ready {
+                log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
+                return None;
+            }
+
+            log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
+
+            // Use the same API client as root.rs
+            let api_client = ClientSideApiClient::new();
+            let result = api_client.search_hotel(search_ctx_clone.into()).await;
+
+            log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
+
+            // Set results in the same way as root.rs
+            SearchListResults::set_search_results(result.clone());
+            PreviousSearchContext::update(search_ctx_clone2.clone());
+
+            // Update pagination metadata from search results
+            if let Some(ref response) = result {
+                log!(
+                    "🔄 Setting Pagination Metadata: pagination={:?}",
+                    response.pagination
+                );
+                UIPaginationState::set_pagination_meta(response.pagination.clone());
             } else {
-                // Return a default/non-ready state
-                (None, Default::default(), 0, 0, 0, 0)
+                log!("⚠️ No search result to extract pagination metadata from");
             }
-        },
-        move |(is_ready_place, _date_range, _adults, _rooms, current_page, page_size)| {
-            let search_ctx_clone = search_ctx_for_resource.clone();
-            let search_ctx_clone2 = search_ctx_for_resource.clone();
-            async move {
-                let is_ready = is_ready_place.is_some();
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
 
-                if !is_ready {
-                    log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
-                    return None;
-                }
+            // Reset first_time_filled flag after successful search
+            PreviousSearchContext::reset_first_time_filled();
 
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
-
-                // Use the same API client as root.rs
-                let api_client = ClientSideApiClient::new();
-                let result = api_client.search_hotel(search_ctx_clone.into()).await;
-
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
-
-                // Set results in the same way as root.rs
-                SearchListResults::set_search_results(result.clone());
-                PreviousSearchContext::update(search_ctx_clone2.clone());
-
-                // Update pagination metadata from search results
-                if let Some(ref response) = result {
-                    log!(
-                        "🔄 Setting Pagination Metadata: pagination={:?}",
-                        response.pagination
-                    );
-                    UIPaginationState::set_pagination_meta(response.pagination.clone());
-                } else {
-                    log!("⚠️ No search result to extract pagination metadata from");
-                }
-
-                // Reset first_time_filled flag after successful search
-                PreviousSearchContext::reset_first_time_filled();
-
-                Some(result)
-            }
-        },
-    );
+            Some(result)
+        }
+    });
 
     // Example: Manual URL updates (State → URL) when user performs actions
     // This function can be called from search form submissions, filter changes, etc.
@@ -397,7 +423,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -405,7 +431,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.amenities = None);
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -423,7 +449,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -431,7 +457,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.property_types = None);
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -443,7 +469,7 @@ pub fn HotelListPage() -> impl IntoView {
                     filters.min_star_rating = next;
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -471,7 +497,7 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
             });
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
@@ -479,22 +505,23 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = filters_signal;
         Callback::new(move |_| {
             filters_signal.set(UISearchFilters::default());
-            update_url_with_current_state.call(());
+            update_url_with_current_state.run(());
         })
     };
 
     let disabled_filters = Signal::derive(move || false);
-    let filters_collapsed = create_rw_signal(false);
+    let filters_collapsed = RwSignal::new(false);
 
     // Watch for pagination changes and update URL
     let search_list_page_for_effect = search_list_page.clone();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = pagination_state.current_page.get();
         let _ = pagination_state.page_size.get();
 
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_effect.search_result.get().is_some() {
-            update_url_with_current_state.call(());
+            log!("[PAGINATION-DEBUG] Updating URL with pagination state");
+            update_url_with_current_state.run(());
         }
     });
 
@@ -503,16 +530,19 @@ pub fn HotelListPage() -> impl IntoView {
         <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
             <div class={
                 let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-                move || format!(
-                    "bg-blue-600 relative transition-all duration-300 {}",
-                    if is_input_expanded() {
+                move || {
+                    let height = if is_input_expanded() {
                         // Expanded height on mobile/tablet when input group is open, normal on desktop
                         "h-96 sm:h-96 md:h-80 lg:h-32"
                     } else {
                         // Normal collapsed height for all screen sizes
                         "h-40 sm:h-40 md:h-36 lg:h-32"
-                    }
-                )
+                    };
+                    format!(
+                        "bg-blue-600 relative transition-all duration-300 {}",
+                        height
+                    )
+                }
             }>
                 <Navbar blue_header=true />
 
@@ -583,13 +613,13 @@ pub fn HotelListPage() -> impl IntoView {
                                                 <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 15l-7-7-7 7" />
                                                 </svg>
-                                            }.into_view()
+                                            }.into_any()
                                         } else {
                                             view! {
                                                 <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                                 </svg>
-                                            }.into_view()
+                                            }.into_any()
                                         }
                                     }}
                                 </button>
@@ -597,7 +627,7 @@ pub fn HotelListPage() -> impl IntoView {
                                     type="button"
                                     class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
                                     disabled=move || !has_active_filters.get()
-                                    on:click=clear_filters.clone()
+                                    on:click=move|ev| clear_filters.run(ev)
                                 >
                                     "Clear filters"
                                 </button>
@@ -685,7 +715,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                         Go to First Page
                                                     </button>
                                                 </div>
-                                            }
+                                            }.into_any()
                                         } else {
                                             // Show regular "No hotels found" message on page 1
                                             view! {
@@ -694,9 +724,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                         No hotels found for your search criteria.
                                                     </p>
                                                 </div>
-                                            }
+                                            }.into_any()
                                         }
-                                            .into_view()
+                                            .into_any()
                                     } else if filtered_hotels.is_empty() {
                                         if min_rating_filter.is_some()
                                             || min_price_filter.is_some()
@@ -756,7 +786,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                     filters_signal.update(|filters| {
                                                                         filters.min_star_rating = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    update_url_with_current_state.run(());
                                                                 }
                                                             >
                                                                 "Clear star filter"
@@ -774,7 +804,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         filters.min_price_per_night = None;
                                                                         filters.max_price_per_night = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    update_url_with_current_state.run(());
                                                                 }
                                                             >
                                                                 "Clear price filter"
@@ -783,9 +813,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                     </div>
                                                 </div>
                                             }
-                                                .into_view()
+                                                .into_any()
                                         } else {
-                                            view! { <></> }.into_view()
+                                            view! { <></> }.into_any()
                                         }
                                     } else {
                                         filtered_hotels
@@ -841,6 +871,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                 }
                                             })
                                             .collect_view()
+                                            .into_any()
                                     }
                                 }}
                             </Show>
@@ -897,7 +928,7 @@ pub fn HotelListPage() -> impl IntoView {
                                         type="button"
                                         class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
                                         disabled=move || !has_active_filters.get()
-                                        on:click=clear_filters.clone()
+                                        on:click=move|ev| {clear_filters.run(ev)}
                                     >
                                         "Clear filters"
                                     </button>
@@ -958,65 +989,65 @@ pub fn HotelListPage() -> impl IntoView {
                                         <div class="text-center py-8">
                                             <p class="text-gray-600">No hotels found</p>
                                         </div>
-                                    }
+                                    }.into_any()
                                 } else if filtered_hotels.is_empty() {
-                                    view! {
-                                        <div class="text-center py-8">
-                                            <p class="text-gray-600">No hotels match your filters</p>
-                                            <button
-                                                class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                                on:click=move |e| clear_filters.call(e)
-                                            >
-                                                Clear Filters
-                                            </button>
-                                        </div>
-                                    }
-                                } else {
-                                    view! {
-                                        <div>
-                                            { filtered_hotels
-                                            .into_iter()
-                                            .map(|hotel_result| {
-                                                let mut price = hotel_result
-                                                .price
-                                                .clone()
-                                                .map(|p| p.room_price);
-                                            let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                            if is_disabled {
-                                                price = None;
-                                            }
-                                            let img = if hotel_result.hotel_picture.is_empty() {
-                                                "https://via.placeholder.com/300x200?text=No+Image".into()
-                                            } else {
-                                                hotel_result.hotel_picture.clone()
-                                            };
-                                            let res = hotel_result.clone();
-                                            let hotel_address = hotel_result.hotel_address.clone();
-                                            let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-                                            view! {
-                                                <HotelCardTile
-                                                img
-                                                guest_score=None
-                                                rating=hotel_result.star_rating
-                                                hotel_name=hotel_result.hotel_name.clone()
-                                                hotel_code=hotel_result.hotel_code.clone()
-                                                price=price
-                                                discount_percent=None
-                                                amenities=amenities.get()
-                                                property_type=hotel_result.property_type.clone()
-                                                class=format!(
-                                                    "w-full mb-4 {}",
-                                                    if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
-                                                )
-                                                hotel_address
-                                                disabled=is_disabled
-                                                />
-                                            }
-                                        })
-                                        .collect_view()}
+                                view! {
+                                    <div class="text-center py-8">
+                                        <p class="text-gray-600">No hotels match your filters</p>
+                                        <button
+                                            class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
+                                            on:click=move |e| clear_filters.run(e)
+                                        >
+                                            Clear Filters
+                                        </button>
                                     </div>
-                                    }
-                                }
+                                }.into_any()
+                            } else {
+                                view! {
+                                    <div>
+                                        { filtered_hotels
+                                        .into_iter()
+                                        .map(|hotel_result| {
+                                            let mut price = hotel_result
+                                            .price
+                                            .clone()
+                                            .map(|p| p.room_price);
+                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                        if is_disabled {
+                                            price = None;
+                                        }
+                                        let img = if hotel_result.hotel_picture.is_empty() {
+                                            "https://via.placeholder.com/300x200?text=No+Image".into()
+                                        } else {
+                                            hotel_result.hotel_picture.clone()
+                                        };
+                                        let res = hotel_result.clone();
+                                        let hotel_address = hotel_result.hotel_address.clone();
+                                        let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+                                        view! {
+                                            <HotelCardTile
+                                            img
+                                            guest_score=None
+                                            rating=hotel_result.star_rating
+                                            hotel_name=hotel_result.hotel_name.clone()
+                                            hotel_code=hotel_result.hotel_code.clone()
+                                            price=price
+                                            discount_percent=None
+                                            amenities=amenities.get()
+                                            property_type=hotel_result.property_type.clone()
+                                            class=format!(
+                                                "w-full mb-4 {}",
+                                                if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
+                                            )
+                                            hotel_address
+                                            disabled=is_disabled
+                                            />
+                                        }
+                                    })
+                                    .collect_view()}
+                                </div>
+                                }.into_any()
+                            }
                             }}
                         </Show>
 
@@ -1051,7 +1082,7 @@ pub fn HotelCard(
     hotel_name: String,
     class: String,
 ) -> impl IntoView {
-    let price = create_rw_signal(price);
+    let price = RwSignal::new(price);
 
     let search_list_page: SearchListResults = expect_context();
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
@@ -1156,7 +1187,7 @@ pub fn HotelCardTile(
 ) -> impl IntoView {
     let price_copy = price.clone();
 
-    let price = create_rw_signal(price);
+    let price = RwSignal::new(price);
 
     let wishlist_hotel_code = hotel_code.clone();
 
@@ -1241,9 +1272,9 @@ pub fn HotelCardTile(
             }
             class=format!("flex flex-col md:max-h-80  md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
             // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
-            <div clone:hotel_code class="relative w-full md:basis-[30%] md:flex-shrink-0">
+            <div class="relative w-full md:basis-[30%] md:flex-shrink-0">
                 <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
-                <Wishlist hotel_code />
+                <Wishlist hotel_code=hotel_code.clone() />
             </div>
 
             // RIGHT CONTENT
@@ -1259,7 +1290,7 @@ pub fn HotelCardTile(
                         // amenities
                         <div class="flex flex-wrap gap-2 mt-3">
                             {amenities.iter().take(8).map(|a| view! {
-                                <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a}</span>
+                                <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a.clone()}</span>
                             }).collect_view()}
                         </div>
                     </div>
@@ -1305,14 +1336,14 @@ pub fn HotelCardTile(
                     }>
                         <div class="text-right">
                             {move || {
-                                if let Some(p) = price_copy {
+                                if let Some(p) = price() {
                                     view! {
                                         <p class="text-xl font-bold">
                                             ${format!("{:.0}", p)} <span class="text-sm font-normal text-gray-500">"/ night"</span>
                                         </p>
-                                    }
+                                    }.into_any()
                                 } else {
-                                    view! { <p class="text-sm font-bold"></p> }
+                                    view! { <p class="text-sm font-bold"></p> }.into_any()
                                 }
                             }}
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
@@ -1335,7 +1366,8 @@ pub fn HotelCardTile(
 #[component]
 fn Wishlist(hotel_code: String) -> impl IntoView {
     let wishlist_hotel_code = hotel_code.clone();
-    let add_to_wishlist_action = Action::new(move |_: &()| {
+
+    let add_to_wishlist_action = Action::new_local(move |_: &()| {
         let check_present =
             AuthStateSignal::check_if_added_to_wishlist_untracked(&wishlist_hotel_code);
         let toggle_action = if check_present { "remove" } else { "add" };
@@ -1343,14 +1375,14 @@ fn Wishlist(hotel_code: String) -> impl IntoView {
         let hotel_code = wishlist_hotel_code.clone();
         async move {
             let url = format!("/api/user-wishlist/{toggle_action}/{hotel_code}");
-            match gloo_net::http::Request::post(&url).send().await {
+            match Client::new().post(&url).send().await {
                 Ok(response) => {
                     if response.status() != 200 {
                         AuthStateSignal::toggle_wishlish(hotel_code.clone());
                     }
                 }
                 Err(_) => {
-                    logging::log!("Failed to fetch user info");
+                    crate::log!("Failed to fetch user info");
                 }
             }
         }

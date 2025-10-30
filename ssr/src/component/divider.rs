@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Divider(#[prop(optional)] class: MaybeSignal<String>) -> impl IntoView {

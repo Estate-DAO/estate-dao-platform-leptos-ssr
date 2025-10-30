@@ -2,7 +2,7 @@ use crate::canister::backend::{self, BookingSummary};
 use crate::utils::admin::admin_canister;
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 
 #[server(GetAllBookingsBackend)]
 pub async fn get_all_bookings_backend() -> Result<Vec<BookingSummary>, ServerFnError> {

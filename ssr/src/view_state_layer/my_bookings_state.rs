@@ -2,7 +2,7 @@ use crate::canister::backend;
 use crate::log;
 use crate::view_state_layer::GlobalStateForLeptos;
 use chrono::{DateTime, Utc};
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

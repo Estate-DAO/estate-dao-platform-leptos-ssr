@@ -1,5 +1,5 @@
 use leptos::html::Input;
-use leptos::*;
+use leptos::prelude::*;
 
 // Expose these so consuming pages can reuse defaults
 pub const MIN_PRICE: f64 = 0.0;
@@ -63,13 +63,13 @@ pub fn PriceRangeFilter(
     let max_slider_ref = create_node_ref::<Input>();
 
     // Keep DOM inputs in sync with external value changes
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(input) = min_slider_ref.get() {
             let target = min_value();
             input.set_value(&format!("{:.0}", target));
         }
     });
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(input) = max_slider_ref.get() {
             let target = max_value();
             input.set_value(&format!("{:.0}", target));
@@ -116,7 +116,7 @@ pub fn PriceRangeFilter(
                     class="text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:hover:text-gray-400"
                     disabled=move || value().is_none()
                     on:click=move |_| {
-                        leptos::Callable::call(&on_select_for_clear, None);
+                        on_select_for_clear.run(None);
                     }
                 >
                     "Clear"
@@ -155,7 +155,7 @@ pub fn PriceRangeFilter(
                                 let current_max = max_value();
                                 let clamped = raw.clamp(MIN_PRICE, current_max);
                                 let next = Some((clamped, current_max));
-                                leptos::Callable::call(&on_select_for_min, next);
+                                on_select_for_min.run(next);
                             }
                         }
                     />
@@ -174,7 +174,7 @@ pub fn PriceRangeFilter(
                                 let current_min = min_value();
                                 let clamped = raw.clamp(current_min, MAX_PRICE);
                                 let next = Some((current_min, clamped));
-                                leptos::Callable::call(&on_select_for_max, next);
+                                on_select_for_max.run(next);
                             }
                         }
                     />

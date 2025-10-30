@@ -12,7 +12,7 @@ use crate::{
     view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
 };
 use crate::{log, utils};
-use leptos::*;
+use leptos::prelude::*;
 
 impl From<UISearchCtx> for DomainHotelSearchCriteria {
     fn from(ctx: UISearchCtx) -> Self {

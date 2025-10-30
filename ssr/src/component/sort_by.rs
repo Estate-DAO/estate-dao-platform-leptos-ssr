@@ -1,13 +1,13 @@
 use crate::component::Divider;
 // use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use web_sys::*;
 
 #[component]
 pub fn SortBy() -> impl IntoView {
-    let (is_open, set_is_open) = create_signal(false);
-    let icon = create_memo(move |_| {
+    let (is_open, set_is_open) = signal(false);
+    let icon = Memo::new(move |_| {
         if is_open() {
             icondata::BiChevronUpRegular
         } else {
@@ -23,7 +23,7 @@ pub fn SortBy() -> impl IntoView {
                 on:click=move |_| set_is_open.update(|open| *open = !*open)
             >
                 "Sort by"
-                <Icon icon=icon class="w-6 h-6 ml-2" />
+                <Icon icon=icon />
             </button>
 
             <Show when=move || is_open()>
@@ -37,7 +37,7 @@ pub fn SortBy() -> impl IntoView {
 
 #[component]
 fn SortOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
-    let selected = create_rw_signal("Name");
+    let selected = RwSignal::new("Name");
 
     let apply_selection = move |_| {
         log::info!("Sort By: {}", selected());

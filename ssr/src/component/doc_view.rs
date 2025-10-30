@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::api::auth::auth_state::AuthStateSignal;
 /// A single document section: heading (without numeric prefix),
@@ -62,9 +62,9 @@ pub fn DocView(doc: Doc) -> impl IntoView {
                                         <li>{highlight_email(&b)}</li>
                                     }).collect_view() }
                                 </ul>
-                            }.into_view()
+                            }.into_any()
                         } else {
-                            view! {}.into_view()
+                            view! {}.into_any()
                         }}
                     </section>
                 }
@@ -87,13 +87,14 @@ fn highlight_email(text: &str) -> impl IntoView {
 
         // push text before email
         if start > last_end {
-            views.push(view! { <span>{text[last_end..start].to_string()}</span> });
+            views.push(view! { <span>{text[last_end..start].to_string()}</span> }.into_any());
         }
 
+        let auth = AuthStateSignal::auth_state().get();
         // push highlighted email
         views.push({
             let mail = m.as_str().to_string();
-            let is_logged_in = move || AuthStateSignal::auth_state().get().is_authenticated();
+            let is_logged_in = move || auth.is_authenticated();
             let mailto = if is_logged_in() {
                 format!(
                     "https://mail.google.com/mail/?view=cm&fs=1&to={}",
@@ -109,6 +110,7 @@ fn highlight_email(text: &str) -> impl IntoView {
                 </a>
                 </span>
             }
+            .into_any()
         });
 
         last_end = end;
@@ -116,7 +118,7 @@ fn highlight_email(text: &str) -> impl IntoView {
 
     // push remaining text
     if last_end < text.len() {
-        views.push(view! { <span>{text[last_end..].to_string()}</span> });
+        views.push(view! { <span>{text[last_end..].to_string()}</span> }.into_any());
     }
 
     views

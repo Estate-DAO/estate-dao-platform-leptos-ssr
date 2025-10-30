@@ -7,7 +7,7 @@ use ic_agent::{Agent, Identity};
 use super::ic::AgentWrapper;
 use crate::canister::backend::Backend;
 use crate::log;
-use leptos::{expect_context, use_context};
+use leptos::prelude::{expect_context, use_context};
 
 #[derive(Clone)]
 pub struct AdminCanisters {
@@ -31,7 +31,7 @@ impl AdminCanisters {
     //     Self::new(key)
     // }
 
-    pub async fn backend_canister(&self) -> Backend {
+    pub async fn backend_canister(&self) -> Backend<'_> {
         let agent = self.agent.get_agent().await;
         let principal = crate::canister::BACKEND_ID;
         #[cfg(feature = "debug_log")]

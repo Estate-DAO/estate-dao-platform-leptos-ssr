@@ -38,11 +38,12 @@ use crate::{
     },
 };
 use chrono::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_query::{query_persister, *};
-use leptos_query_devtools::LeptosQueryDevtools;
-use leptos_router::*;
+// use leptos_query::{query_persister, *};
+// use leptos_query_devtools::LeptosQueryDevtools;
+use leptos_router::components::{Route, Router, Routes, A};
+use leptos_router::{path, *};
 use sitewriter::{ChangeFreq, UrlEntry};
 use std::sync::{Arc, OnceLock};
 
@@ -156,27 +157,20 @@ impl AppRoutes {
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
-
-
-                // <script
-                //     inner_html=r#"
-                //         window.addEventListener('load', function() {
-                //         !function(f,b,e,v,n,t,s)
-                //         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                //         n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                //         if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                //         n.queue=[];t=b.createElement(e);t.async=!0;
-                //         t.src=v;s=b.getElementsByTagName(e)[0];
-                //         s.parentNode.insertBefore(t,s)}(window, document,'script',
-                //         'https://connect.facebook.net/en_US/fbevents.js');
-                //         fbq('init', '1720214695361495');
-                //         fbq('track', 'PageView');
-                //         });
-                //         "#
-                // ></script>
-
-
-            <App />
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <AutoReload options=options.clone() />
+                <HydrationScripts options />
+                <link rel="stylesheet" href="/pkg/estate-fe.css" />
+                <MetaTags />
+            </head>
+            <body>
+                <App />
+            </body>
+        </html>
     }
 }
 
@@ -237,67 +231,61 @@ pub fn App() -> impl IntoView {
     // provide_context(NotificationState::default());
 
     // Provides Query Client for entire app.
+    // NOTE: leptos_query 0.5.3 is incompatible with Leptos 0.8
+    // Commented out until migrated to leptos-fetch or alternative
     // leptos_query::provide_query_client();
-    provide_query_client_with_options_and_persister(
-        Default::default(),
-        query_persister::LocalStoragePersister,
-    );
+    // provide_query_client_with_options_and_persister(
+    //     Default::default(),
+    //     query_persister::LocalStoragePersister,
+    // );
 
     view! {
+        <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
+        <Meta property="og:image" content="/img/logo_white.svg" />
 
-        <meta charset="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-                <Meta property="og:title" content="NoFeeBooking - Book Hotels Without Hidden Fees" />
-                <Meta property="og:image" content="/img/logo_white.svg" />
+        <Link rel="preconnect" href="https://fonts.googleapis.com" />
+        <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
+        <Link
+            href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
+            rel="stylesheet"
+        />
 
-                <Stylesheet id="leptos" href="/pkg/estate-fe.css" />
-                <Link rel="preconnect" href="https://fonts.googleapis.com" />
-                <Link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="true" />
-                <Link
-                    href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
-                    rel="stylesheet"
-                />
-
-                <FacebookPixel />
-                 <noscript>
-                    <img
-                        height="1"
-                        width="1"
-                        style="display:none"
-                        src="https://www.facebook.com/tr?id=1720214695361495&ev=PageView&noscript=1"
-                    />
-                </noscript>
+        <FacebookPixel />
+        <noscript>
+            <img
+                height="1"
+                width="1"
+                style="display:none"
+                src="https://www.facebook.com/tr?id=1720214695361495&ev=PageView&noscript=1"
+            />
+        </noscript>
 
         <GA4ScriptAsync />
 
-        // <Body>
         <main>
             // <GoogleTagManagerIFrame />
 
         // content for this welcome page
-        <Router fallback=|| { view! { <NotFound /> }.into_view() }>
-                <Routes>
-                        <Route path=AppRoutes::Root.to_string() view=RootPage />
-                        <Route path=AppRoutes::HotelList.to_string() view=HotelListPage />
-                        <Route path=AppRoutes::HotelDetails.to_string() view=HotelDetailsV1Page />
-                        <Route path=AppRoutes::BlockRoom.to_string() view=BlockRoomV1Page />
-                        <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPageV2 />
-                        // <Route path=AppRoutes::ConfirmationV1.to_string() view=ConfirmationPageV1 />
-                        // <Route path=AppRoutes::ConfirmationV2.to_string() view=ConfirmationPageV2 />
-                        <Route path=AppRoutes::AdminPanel.to_string() view=AdminPanelPage />
-                        <Route path=AppRoutes::AdminEditPanel.to_string() view=AdminEditPanel />
-                        <Route path=AppRoutes::MyBookings.to_string() view=MyBookingsPage />
-                        <Route path=AppRoutes::MyAccount.to_string() view=MyAccountPage />
-                        <Route path=AppRoutes::Wishlist.to_string() view=WishlistPage />
-                        <Route path=AppRoutes::AboutUs.to_string() view=AboutUsPage />
-                        // <Route path=AppRoutes::Confirmation.to_string() view=ConfirmationPage />
-                        // <Route path=AppRoutes::Notifications.to_string() view=NotificationExample />
+        <Router>
+                <Routes fallback=|| view! { <NotFound /> }>
+                        <Route path=path!("") view=RootPage />
+                        <Route path=path!("/hotel-list") view=HotelListPage />
+                        <Route path=path!("/hotel-details") view=HotelDetailsV1Page />
+                        <Route path=path!("/block_room") view=BlockRoomV1Page />
+                        <Route path=path!("/confirmation") view=ConfirmationPageV2 />
+                        // <Route path=path!("/confirmation-v1") view=ConfirmationPageV1 />
+                        // <Route path=path!("/confirmation-v2") view=ConfirmationPageV2 />
+                        <Route path=path!("/admin-panel") view=AdminPanelPage />
+                        <Route path=path!("/admin-edit-panel") view=AdminEditPanel />
+                        <Route path=path!("/my-bookings") view=MyBookingsPage />
+                        <Route path=path!("/account") view=MyAccountPage />
+                        <Route path=path!("/wishlist") view=WishlistPage />
+                        <Route path=path!("/about-us") view=AboutUsPage />
+                        // <Route path=path!("/confirmation") view=ConfirmationPage />
+                        // <Route path=path!("/notifications") view=NotificationExample />
                 </Routes>
         </Router>
         </main>
-
-        // </Body>
-
     }
 }

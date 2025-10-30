@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::MouseEvent;
 
 /// A flexible button component that supports loading/disabled states
@@ -68,7 +68,7 @@ pub fn LoadingButton<F>(
 
     /// Whether the button is disabled (in addition to loading)
     #[prop(optional, into)]
-    disabled: MaybeSignal<bool>,
+    disabled: Signal<bool>,
 
     /// Button content (children)
     children: ChildrenFn,
@@ -95,24 +95,24 @@ where
             on:click=on_click
         >
             {move || if is_loading.get() {
+                let spinner_class = spinner_class.clone();
                 view! {
                     <span class={format!("inline-flex items-center justify-center {}", content_class.clone().unwrap_or_default())}>
-                        {if show_spinner {
-                            view! {
-                                <span class={format!("animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full {}", spinner_class.clone().unwrap_or_default())}></span>
-                            }.into_view()
-                        } else {
-                            ().into_view()
-                        }}
+                        <Show
+                            when=move || show_spinner
+                            fallback=|| ()
+                        >
+                            <span class={format!("animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full {}", spinner_class.clone().unwrap_or_default())}></span>
+                        </Show>
                         {loading_text.clone().unwrap_or_else(|| "Loading...".to_string())}
                     </span>
-                }
+                }.into_any()
             } else {
                 view! {
                     <span class={format!("inline-flex items-center justify-center {}", content_class.clone().unwrap_or_default())}>
                         {children()}
                     </span>
-                }
+                }.into_any()
             }}
         </button>
     }

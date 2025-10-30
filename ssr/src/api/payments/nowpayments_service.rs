@@ -7,7 +7,7 @@ use crate::cprintln;
 use colored::Colorize;
 // use leptos::logging::log;
 use crate::{error, log, warn};
-use leptos::*;
+use leptos::prelude::*;
 use reqwest::{IntoUrl, Method, RequestBuilder};
 use serde::{Deserialize, Serialize};
 

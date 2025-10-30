@@ -1,4 +1,6 @@
-use leptos::*;
+use leptos::prelude::*;
+use leptos_router::components::A;
+use leptos_router::hooks::use_query_map;
 use leptos_router::*;
 
 use crate::{
@@ -29,8 +31,8 @@ impl AccountTabs {
         AccountTabs::Faq,
     ];
 
-    pub fn from_str(s: &String) -> Self {
-        match s.as_str() {
+    pub fn from_str(s: &str) -> Self {
+        match s {
             "wallet" => AccountTabs::Wallet,
             "wishlist" => AccountTabs::Wishlist,
             "support" => AccountTabs::Support,
@@ -92,18 +94,19 @@ impl AccountTabs {
         }
     }
 }
+
 #[component]
 pub fn MyAccountPage() -> impl IntoView {
     let query = use_query_map();
     let active_tab = move || {
         query.with(|q| {
             q.get("page")
-                .map(AccountTabs::from_str)
+                .map(|s| AccountTabs::from_str(s.as_str()))
                 .unwrap_or(AccountTabs::PersonalInfo)
         })
     };
 
-    let (sidebar_open, set_sidebar_open) = create_signal(false);
+    let (sidebar_open, set_sidebar_open) = signal(false);
 
     view! {
         {/* Navbar */}
@@ -123,12 +126,24 @@ pub fn MyAccountPage() -> impl IntoView {
         <div class="min-h-screen bg-gray-50 flex flex-col">
             <main class="flex-1 container mx-auto px-4 py-8 flex gap-6">
 
+                {/* Overlay for mobile */}
+                {move || if sidebar_open.get() {
+                    view! {
+                        <div
+                            class="fixed inset-0 bg-black/50 z-50 lg:hidden"
+                            on:click=move |_| set_sidebar_open.set(false)
+                        />
+                    }.into_any()
+                } else {
+                    view! { <></> }.into_any()
+                }}
+
                 {/* Sidebar (lg screens inline, sm screens as modal) */}
                 <aside
                     class=move || {
                         if sidebar_open.get() {
-                            // Mobile modal mode
-                            "fixed inset-0 z-30 flex items-center justify-center lg:inset-auto"
+                            // Mobile modal mode - centered without blocking overlay
+                            "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 lg:static lg:translate-x-0 lg:translate-y-0 lg:w-64"
                                 .to_string()
                         } else {
                             // Hidden on mobile, visible inline on lg
@@ -136,7 +151,7 @@ pub fn MyAccountPage() -> impl IntoView {
                         }
                     }
                 >
-                    <div class="bg-white rounded-xl border p-6 w-64 shadow-sm">
+                    <div class="bg-white rounded-xl border p-6 w-64 shadow-sm relative">
                         {/* Close button (mobile only) */}
                         <button
                             class="lg:hidden top-4 right-4 text-gray-600"
@@ -177,12 +192,12 @@ pub fn MyAccountPage() -> impl IntoView {
                                                 <img src={tab.icon_src()} class={class} />
                                                 {tab.label()}
                                             </span>
-                                        }.into_view()
+                                        }.into_any()
                                     } else {
+                                        let tab_clone = tab;
                                         view! {
-                                            <A
-                                                clone:tab
-                                                href=tab.as_route()
+                                            <a
+                                                href=tab_clone.as_route()
                                                 class=move || {
                                                     format!(
                                                         "flex items-center gap-2 px-2 py-1 rounded-md transition-colors {}",
@@ -194,10 +209,10 @@ pub fn MyAccountPage() -> impl IntoView {
                                                     )
                                                 }
                                             >
-                                                <img src={tab.icon_src()} class={class} />
-                                                {tab.label()}
-                                            </A>
-                                        }.into_view()
+                                                <img src={tab_clone.icon_src()} class={class} />
+                                                {tab_clone.label()}
+                                            </a>
+                                        }.into_any()
                                     }
                                 })
                                 .collect_view()}
@@ -205,28 +220,16 @@ pub fn MyAccountPage() -> impl IntoView {
                     </div>
                 </aside>
 
-                // {/* Overlay for mobile */}
-                // {move || if sidebar_open.get() {
-                //     view! {
-                //         <div
-                //             class="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
-                //             on:click=move |_| set_sidebar_open.set(false)
-                //         />
-                //     }
-                // } else {
-                //     view! { <div></div> }
-                // }}
-
                 {/* Main content */}
                 <section class="flex-1 bg-white rounded-xl border p-4 lg:p-8 overflow-y-auto">
                     {move || match active_tab() {
-                        AccountTabs::PersonalInfo => view! { <PersonalInfoView/> }.into_view(),
-                        AccountTabs::Wallet => view! { <WalletView/> }.into_view(),
-                        AccountTabs::Wishlist => view! { <WishlistView/> }.into_view(),
-                        AccountTabs::Support => view! { <SupportView/> }.into_view(),
-                        AccountTabs::Terms => view! { <TermsView/> }.into_view(),
-                        AccountTabs::Privacy => view! { <PrivacyView/> }.into_view(),
-                        AccountTabs::Faq => view! { <FaqView/> }.into_view(),
+                        AccountTabs::PersonalInfo => view! { <PersonalInfoView/> }.into_any(),
+                        AccountTabs::Wallet => view! { <WalletView/> }.into_any(),
+                        AccountTabs::Wishlist => view! { <WishlistView/> }.into_any(),
+                        AccountTabs::Support => view! { <SupportView/> }.into_any(),
+                        AccountTabs::Terms => view! { <TermsView/> }.into_any(),
+                        AccountTabs::Privacy => view! { <PrivacyView/> }.into_any(),
+                        AccountTabs::Faq => view! { <FaqView/> }.into_any(),
                     }}
                 </section>
             </main>

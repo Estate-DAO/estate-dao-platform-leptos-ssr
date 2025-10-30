@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::{api::auth::auth_state::AuthStateSignal, component::*, page::WishlistComponent};
 

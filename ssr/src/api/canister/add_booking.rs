@@ -9,7 +9,7 @@ use crate::view_state_layer::ui_search_state::{
 };
 // use leptos::logging::log;
 use crate::log;
-use leptos::*;
+use leptos::prelude::*;
 
 // #[server]
 pub async fn add_booking_backend(email: String, booking: String) -> Result<String, ServerFnError> {

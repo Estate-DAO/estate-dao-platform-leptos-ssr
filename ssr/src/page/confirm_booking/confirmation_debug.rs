@@ -3,7 +3,7 @@ use crate::{
 	state::{search_state::SearchCtx, view_state::HotelInfoCtx},
 };
 use chrono::NaiveDate;
-use leptos::*;
+use leptos::prelude::*;
 
 /// prefix p01 is given to variable names to indicate the order
 /// they should be set true in.

@@ -1,5 +1,5 @@
 use crate::component::{CryptoCarousel, FeaturesSection, Footer, Navbar};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn AboutUsPage() -> impl IntoView {
