@@ -108,10 +108,8 @@ pub fn MyAccountPage() -> impl IntoView {
     view! {
         {/* Navbar */}
         <div class="sticky top-0 lg:z-40 bg-white"><Navbar /></div>
-
-        <div class="min-h-screen bg-gray-50 flex flex-col">
-            <main class="flex-1 container mx-auto px-4 py-8 flex gap-6">
-                {/* Sidebar toggle (mobile only) */}
+        {/* Sidebar toggle (mobile only) */}
+        <div class="p-4 m-2 lg:hidden flex items-center justify-end">
                 <button
                     class="lg:hidden p-2 bg-white rounded-md border h-10"
                     on:click=move |_| set_sidebar_open.set(true)
@@ -121,6 +119,9 @@ pub fn MyAccountPage() -> impl IntoView {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
+        </div>
+        <div class="min-h-screen bg-gray-50 flex flex-col">
+            <main class="flex-1 container mx-auto px-4 py-8 flex gap-6">
 
                 {/* Sidebar (lg screens inline, sm screens as modal) */}
                 <aside
@@ -204,20 +205,20 @@ pub fn MyAccountPage() -> impl IntoView {
                     </div>
                 </aside>
 
-                {/* Overlay for mobile */}
-                {move || if sidebar_open.get() {
-                    view! {
-                        <div
-                            class="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
-                            on:click=move |_| set_sidebar_open.set(false)
-                        />
-                    }
-                } else {
-                    view! { <div></div> }
-                }}
+                // {/* Overlay for mobile */}
+                // {move || if sidebar_open.get() {
+                //     view! {
+                //         <div
+                //             class="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
+                //             on:click=move |_| set_sidebar_open.set(false)
+                //         />
+                //     }
+                // } else {
+                //     view! { <div></div> }
+                // }}
 
                 {/* Main content */}
-                <section class="flex-1 bg-white rounded-xl border p-8 overflow-y-auto">
+                <section class="flex-1 bg-white rounded-xl border p-4 lg:p-8 overflow-y-auto">
                     {move || match active_tab() {
                         AccountTabs::PersonalInfo => view! { <PersonalInfoView/> }.into_view(),
                         AccountTabs::Wallet => view! { <WalletView/> }.into_view(),
