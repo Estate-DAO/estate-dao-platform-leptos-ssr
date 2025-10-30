@@ -162,7 +162,7 @@ impl PaymentServiceImpl {
                     description: Some("Hotel Room Booking".to_string()),
                     metadata: None,
                 },
-                unit_amount: domain_request.price_amount * 100, // stripe api exepects price in cents
+                unit_amount: (domain_request.price_amount * 100.0) as u32, // stripe api exepects price in cents
             },
             quantity: 1,
         };
@@ -380,7 +380,7 @@ mod tests {
 
     fn create_test_domain_request(provider: PaymentProvider) -> DomainCreateInvoiceRequest {
         DomainCreateInvoiceRequest {
-            price_amount: 10000, // $100.00
+            price_amount: 10000.0, // $100.00
             price_currency: "USD".to_string(),
             order_id: "test_order_123".to_string(),
             order_description: "Test Hotel Booking".to_string(),
@@ -409,7 +409,7 @@ mod tests {
     fn test_domain_request_creation() {
         let request = create_test_domain_request(PaymentProvider::NowPayments);
         assert_eq!(request.provider, PaymentProvider::NowPayments);
-        assert_eq!(request.price_amount, 10000);
+        assert_eq!(request.price_amount, 10000.0);
         assert_eq!(request.order_id, "test_order_123");
     }
 }
