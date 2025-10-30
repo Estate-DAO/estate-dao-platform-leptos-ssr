@@ -390,15 +390,22 @@ impl HotelListParams {
             }
         };
 
-        // Parse dates with defaults if missing (next week + 1 night)
-        let checkin = params.get("checkin").cloned().or_else(|| {
-            let date = Local::now().date_naive() + Duration::days(7);
-            Some(date.format("%Y-%m-%d").to_string())
-        });
-        let checkout = params.get("checkout").cloned().or_else(|| {
-            let date = Local::now().date_naive() + Duration::days(8);
-            Some(date.format("%Y-%m-%d").to_string())
-        });
+        // Parse dates, ensuring they are not in the past.
+        let today = Local::now().date_naive();
+
+        let checkin = params
+            .get("checkin")
+            .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
+            .filter(|&date| date >= today)
+            .map(|date| date.format("%Y-%m-%d").to_string())
+            .or_else(|| Some(today.format("%Y-%m-%d").to_string()));
+
+        let checkout = params
+            .get("checkout")
+            .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
+            .filter(|&date| date > today)
+            .map(|date| date.format("%Y-%m-%d").to_string())
+            .or_else(|| Some((today + Duration::days(1)).format("%Y-%m-%d").to_string()));
 
         // Parse guest information
         let adults = params.get("adults").and_then(|s| s.parse().ok());
