@@ -240,3 +240,11 @@ jobs:
           name: pr-${{ github.event.number }}-estate
           region: bom
           path: .
+
+  test_check:
+    if: ${{ github.event.pull_request.state != 'closed'}}
+    uses: ./.github/workflows/test-check.yml
+    with:
+      is-prod: false
+      app-url: https://pr-${{ github.event.number }}-estate.fly.dev/
+    secrets: inherit
