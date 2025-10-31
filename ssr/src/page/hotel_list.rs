@@ -10,7 +10,7 @@ use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
     format_price_range_value, AmenitiesFilter, Destination, Footer, GuestSelection, Navbar,
     PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards,
-    StarRatingFilter, MAX_PRICE, MIN_PRICE,
+    SortBy, StarRatingFilter, MAX_PRICE, MIN_PRICE,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -184,19 +184,20 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx_for_resource = search_ctx.clone();
     let search_ctx_for_url_update = search_ctx.clone();
 
-    // Hotel search resource - triggers when search context or pagination changes
+    // Hotel search resource - triggers only when core search criteria or pagination changes
+    // NOT when filters or sorting changes (those are applied client-side)
     let hotel_search_resource = create_resource(
         move || {
             // Depend on query_map to re-run when URL params change
             query_map.get();
 
-            // Track search context changes reactively
+            // Track search context changes reactively (but NOT filters/sorting)
             let place = search_ctx_for_resource.place.get();
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
             let rooms = search_ctx_for_resource.guests.rooms.get();
 
-            // Track pagination changes reactively
+            // Track pagination changes reactively (this should trigger new API calls)
             let current_page = pagination_state.current_page.get();
             let page_size = pagination_state.page_size.get();
 
@@ -206,7 +207,8 @@ pub fn HotelListPage() -> impl IntoView {
             // Return true when ready to search
             let is_ready = has_valid_dates && has_valid_search_data;
 
-            // Return a tuple that changes when pagination or other key fields change
+            // Return a tuple that changes when core search criteria or pagination changes
+            // NOTE: Removed sort_options from here to avoid unnecessary API calls
             if is_ready {
                 (place, date_range, adults, rooms, current_page, page_size)
             } else {
@@ -486,14 +488,34 @@ pub fn HotelListPage() -> impl IntoView {
     let disabled_filters = Signal::derive(move || false);
     let filters_collapsed = create_rw_signal(false);
 
-    // Watch for pagination changes and update URL
-    let search_list_page_for_effect = search_list_page.clone();
+    // Watch for pagination changes and update URL (pagination should trigger API calls)
+    let search_list_page_for_pagination_effect = search_list_page.clone();
     create_effect(move |_| {
         let _ = pagination_state.current_page.get();
         let _ = pagination_state.page_size.get();
 
         // Only update URL if we have search results (prevents initial load URL spam)
-        if search_list_page_for_effect.search_result.get().is_some() {
+        if search_list_page_for_pagination_effect
+            .search_result
+            .get()
+            .is_some()
+        {
+            update_url_with_current_state.call(());
+        }
+    });
+
+    // Watch for filter and sort changes and update URL (but don't trigger API calls)
+    let search_list_page_for_filter_effect = search_list_page.clone();
+    create_effect(move |_| {
+        let _ = search_ctx.filters.get(); // Watch for filter changes
+        let _ = search_ctx.sort_options.get(); // Watch for sort changes
+
+        // Only update URL if we have search results (prevents initial load URL spam)
+        if search_list_page_for_filter_effect
+            .search_result
+            .get()
+            .is_some()
+        {
             update_url_with_current_state.call(());
         }
     });
@@ -640,6 +662,11 @@ pub fn HotelListPage() -> impl IntoView {
                 // Right content area (desktop)
                 <div class="flex-1 min-w-0 overflow-y-auto">
                     <div class="p-4">
+                        // Sort by component for desktop
+                        <div class="mb-4 flex justify-end">
+                            <SortBy />
+                        </div>
+
                         // Use resource pattern with Suspense for automatic loading states
                         <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
                             {move || {
@@ -661,7 +688,8 @@ pub fn HotelListPage() -> impl IntoView {
                                         .unwrap()
                                         .hotel_list();
                                     let filters = filters_signal.get();
-                                    let filtered_hotels = filters.apply_filters(&hotel_results);
+                                    let sort_options = search_ctx.sort_options.get();
+                                    let filtered_hotels = filters.apply_filters_and_sort(&hotel_results, &sort_options);
                                     let min_rating_filter = filters.min_star_rating;
                                     let min_price_filter = filters.min_price_per_night;
                                     let max_price_filter = filters.max_price_per_night;
@@ -930,6 +958,11 @@ pub fn HotelListPage() -> impl IntoView {
                         </div>
                     </Show>
 
+                    // Sort by component for mobile
+                    <div class="mb-4 flex justify-end">
+                        <SortBy />
+                    </div>
+
                     // Mobile hotel listings
                     <div class="space-y-4">
                         <Suspense fallback=move || view! { <div class="space-y-4">{(0..5).map(|_| fallback()).collect_view()}</div> }>
@@ -951,7 +984,8 @@ pub fn HotelListPage() -> impl IntoView {
                                     .unwrap()
                                     .hotel_list();
                                 let filters = filters_signal.get();
-                                let filtered_hotels = filters.apply_filters(&hotel_results);
+                                let sort_options = search_ctx.sort_options.get();
+                                let filtered_hotels = filters.apply_filters_and_sort(&hotel_results, &sort_options);
 
                                 if hotel_results.is_empty() {
                                     view! {

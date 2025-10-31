@@ -213,6 +213,7 @@ impl LiteApiAdapter {
         returned_count: usize,
         original_count_from_api: usize,
         requested_limit: usize,
+        total: i32,
     ) -> crate::domain::DomainPaginationMeta {
         // Better logic: has_next_page based on original API response count
         // If LiteAPI returned exactly what we requested, there might be more
@@ -221,7 +222,7 @@ impl LiteApiAdapter {
         crate::domain::DomainPaginationMeta {
             page,
             page_size,
-            total_results: None, // LiteAPI doesn't provide total count
+            total_results: Some(total), // LiteAPI doesn't provide total count
             has_next_page,
             has_previous_page: page > 1,
         }
@@ -398,6 +399,7 @@ impl LiteApiAdapter {
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         // Track original count before any filtering
         let original_count_from_liteapi = liteapi_response.data.len();
+        let total_properties = liteapi_response.total;
 
         let mut domain_results = Self::map_liteapi_search_to_domain(liteapi_response.clone());
 
@@ -480,6 +482,7 @@ impl LiteApiAdapter {
                 returned_count,
                 original_count_from_liteapi,
                 requested_limit,
+                total_properties,
             );
 
             // Debug logging for pagination metadata
