@@ -84,6 +84,10 @@ pub fn HotelListPage() -> impl IntoView {
 
     let search_ctx2: UISearchCtx = expect_context();
 
+    let search_ctx3: UISearchCtx = expect_context();
+
+    let search_ctx4: UISearchCtx = expect_context();
+
     // Initialize pagination state
     let pagination_state: UIPaginationState = expect_context();
 
@@ -662,9 +666,54 @@ pub fn HotelListPage() -> impl IntoView {
                 // Right content area (desktop)
                 <div class="flex-1 min-w-0 overflow-y-auto">
                     <div class="p-4">
-                        // Sort by component for desktop
-                        <div class="mb-4 flex justify-end">
-                            <SortBy />
+                        // Results count and sort by component for desktop
+                        <div class="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-2 lg:gap-0">
+                            <div class="text-gray-700">
+                                {move || {
+                                    let search_ctx = search_ctx3.clone();
+                                    let pagination_state: UIPaginationState = expect_context();
+
+                                    // Get place name
+                                    let place_name = search_ctx.place.get()
+                                        .map(|place| place.display_name)
+                                        .unwrap_or_else(|| "this location".to_string());
+
+                                    // Get total results from pagination metadata
+                                    if let Some(pagination_meta) = pagination_state.pagination_meta.get() {
+                                        if let Some(total_results) = pagination_meta.total_results {
+                                            let formatted_count = if total_results >= 1000 {
+                                                format!("{}k+", total_results / 1000)
+                                            } else {
+                                                total_results.to_string()
+                                            };
+                                            view! {
+                                                <span>
+                                                    <span class="font-semibold">{formatted_count}</span>
+                                                    " Properties found in "
+                                                    <span class="font-semibold">{place_name}</span>
+                                                </span>
+                                            }.into_view()
+                                        } else {
+                                            view! {
+                                                <span>
+                                                    "Properties found in "
+                                                    <span class="font-semibold">{place_name}</span>
+                                                </span>
+                                            }.into_view()
+                                        }
+                                    } else {
+                                        view! {
+                                            <span>
+                                                "Properties found in "
+                                                <span class="font-semibold">{place_name}</span>
+                                            </span>
+                                        }.into_view()
+                                    }
+                                }}
+                            </div>
+                            <div class="flex justify-end lg:justify-start">
+                                <SortBy />
+                            </div>
                         </div>
 
                         // Use resource pattern with Suspense for automatic loading states
@@ -958,9 +1007,54 @@ pub fn HotelListPage() -> impl IntoView {
                         </div>
                     </Show>
 
-                    // Sort by component for mobile
-                    <div class="mb-4 flex justify-end">
-                        <SortBy />
+                    // Results count and sort by component for mobile
+                    <div class="mb-4 flex flex-col gap-2">
+                        <div class="text-gray-700 text-md">
+                            {move || {
+                                let search_ctx = search_ctx4.clone();
+                                let pagination_state: UIPaginationState = expect_context();
+
+                                // Get place name
+                                let place_name = search_ctx.place.get()
+                                    .map(|place| place.display_name)
+                                    .unwrap_or_else(|| "this location".to_string());
+
+                                // Get total results from pagination metadata
+                                if let Some(pagination_meta) = pagination_state.pagination_meta.get() {
+                                    if let Some(total_results) = pagination_meta.total_results {
+                                        let formatted_count = if total_results >= 1000 {
+                                            format!("{}k+", total_results / 1000)
+                                        } else {
+                                            total_results.to_string()
+                                        };
+                                        view! {
+                                            <span>
+                                                <span class="font-semibold">{formatted_count}</span>
+                                                " Properties found in "
+                                                <span class="font-semibold">{place_name}</span>
+                                            </span>
+                                        }.into_view()
+                                    } else {
+                                        view! {
+                                            <span>
+                                                "Properties found in "
+                                                <span class="font-semibold">{place_name}</span>
+                                            </span>
+                                        }.into_view()
+                                    }
+                                } else {
+                                    view! {
+                                        <span>
+                                            "Properties found in "
+                                            <span class="font-semibold">{place_name}</span>
+                                        </span>
+                                    }.into_view()
+                                }
+                            }}
+                        </div>
+                        <div class="flex justify-start">
+                            <SortBy />
+                        </div>
                     </div>
 
                     // Mobile hotel listings

@@ -21,7 +21,11 @@ pub fn SortBy() -> impl IntoView {
 
     let current_sort_display = Signal::derive(move || {
         let text = current_sort.get().get_display_name();
-        if text.is_empty() { "Select".to_string() } else { text }
+        if text.is_empty() {
+            "Select".to_string()
+        } else {
+            text
+        }
     });
 
     view! {
