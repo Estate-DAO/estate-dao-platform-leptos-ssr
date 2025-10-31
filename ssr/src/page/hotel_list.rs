@@ -1233,33 +1233,33 @@ pub fn HotelCardTile(
     };
 
     view! {
-        // keep overflow-hidden for rounded corners but allow children to expand naturally
+        // Smaller, more compact card design
         <div on:click=move |ev| {
                 ev.prevent_default();
                 ev.stop_propagation();
                 on_navigate();
             }
-            class=format!("flex flex-col md:max-h-80  md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full {}", class)>
-            // IMAGE: on small screens fixed height, on md+ let image height be auto (so content controls card height)
-            <div clone:hotel_code class="relative w-full md:basis-[30%] md:flex-shrink-0">
-                <img class="w-full h-full object-cover rounded-l-lg" src=img alt=hotel_name.clone() />
+            class=format!("flex flex-col md:flex-row rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition w-full min-h-[180px] md:h-64 {}", class)>
+            // IMAGE: smaller dimensions for more compact design
+            <div clone:hotel_code class="relative w-full h-40 md:h-full md:basis-[28%] md:flex-shrink-0">
+                <img class="w-full h-full object-cover md:rounded-l-lg rounded-t-lg md:rounded-t-none" src=img alt=hotel_name.clone() />
                 <Wishlist hotel_code />
             </div>
 
             // RIGHT CONTENT
-            // added min-w-0 so child truncation/wrapping behaves correctly inside flexbox
-            <div class="flex-1 min-w-0 flex flex-col justify-between p-4 md:p-6">
+            // Smaller padding and content area for more compact design
+            <div class="flex-1 min-w-0 flex flex-col justify-between p-3 md:p-4 min-h-[140px] md:min-h-0">
                 // title + reviews row
-                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                     <div class="min-w-0 flex-1">
-                        // allow wrapping (no truncate). whitespace-normal and break-words let the long hotel name wrap lines
-                        <h3 class="text-lg font-semibold leading-snug whitespace-normal break-words">{hotel_name.clone()}</h3>
-                        <p class="text-sm text-gray-600 mt-1 leading-snug whitespace-normal break-words">{hotel_address.clone().unwrap_or_default()}</p>
+                        // Smaller text and tighter spacing
+                        <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
+                        <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
 
-                        // amenities
-                        <div class="flex flex-wrap gap-2 mt-3">
-                            {amenities.iter().take(8).map(|a| view! {
-                                <span class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-md whitespace-nowrap">{a}</span>
+                        // Fewer amenities with smaller spacing
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            {amenities.iter().take(4).map(|a| view! {
+                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded whitespace-nowrap">{a}</span>
                             }).collect_view()}
                         </div>
                     </div>
@@ -1278,9 +1278,9 @@ pub fn HotelCardTile(
                 </div>
 
                 // price + CTA
-                // stack on mobile, row on sm+, button full width on mobile
-                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mt-4">
-                    <div>
+                // Compact spacing and smaller button
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mt-auto pt-2">
+                    <div class="flex-1">
                         // {property_type.clone().map(|pt| view! {
                         //     <p class="text-sm text-gray-500">{pt}</p>
                         // })}
@@ -1289,7 +1289,7 @@ pub fn HotelCardTile(
                         <div class="flex items-center justify-end text-red-600 gap-2">
                             // Info Icon
                             <svg xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5 flex-shrink-0"
+                                class="h-4 w-4 flex-shrink-0"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -1298,17 +1298,17 @@ pub fn HotelCardTile(
                                     d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
 
-                            <p>
+                            <p class="text-xs">
                                 This property is not available.
                             </p>
                         </div>
                     }>
-                        <div class="text-right">
+                        <div class="text-right flex-shrink-0">
                             {move || {
                                 if let Some(p) = price_copy {
                                     view! {
-                                        <p class="text-xl font-bold">
-                                            ${format!("{:.0}", p)} <span class="text-sm font-normal text-gray-500">"/ night"</span>
+                                        <p class="text-lg font-bold">
+                                            ${format!("{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
                                         </p>
                                     }
                                 } else {
@@ -1318,10 +1318,10 @@ pub fn HotelCardTile(
                             // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
 
                             {discount_percent.map(|d| view! {
-                                <p class="text-xs font-semibold text-green-600 mt-1">{format!("{d}% OFF")}</p>
+                                <p class="text-xs font-semibold text-green-600 mt-0.5">{format!("{d}% OFF")}</p>
                             })}
 
-                            <button class="mt-3 inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 text-sm w-full sm:w-auto">
+                            <button class="mt-1.5 inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
                                 "See Availability"
                             </button>
                         </div>
