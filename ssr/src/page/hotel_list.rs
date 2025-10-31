@@ -901,6 +901,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 ""
                                                             )
                                                         hotel_address
+                                                        distance_from_center_km=hotel_result.distance_from_center_km
                                                         disabled=is_disabled
                                                     />
                                                     // <HotelCard
@@ -1137,6 +1138,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                     if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
                                                 )
                                                 hotel_address
+                                                distance_from_center_km=hotel_result.distance_from_center_km
                                                 disabled=is_disabled
                                                 />
                                             }
@@ -1279,6 +1281,7 @@ pub fn HotelCardTile(
     amenities: Vec<String>,
     property_type: Option<String>,
     hotel_address: Option<String>,
+    #[prop(default = None)] distance_from_center_km: Option<f64>,
     #[prop(into)] class: String,
     disabled: bool,
 ) -> impl IntoView {
@@ -1384,9 +1387,22 @@ pub fn HotelCardTile(
                         <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
                         <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
 
+                        // Distance from center if available
+                        {distance_from_center_km.map(|distance| {
+                            let formatted_distance = if distance < 1.0 {
+                                format!("{:.0} m from centre", distance * 1000.0)
+                            } else {
+                                format!("{:.1} km from centre", distance)
+                            };
+                            view! {
+                                <p class="text-xs text-blue-600 mt-1 leading-snug">
+                                    {formatted_distance}
+                                </p>
+                            }
+                        })}
+
                         // Fewer amenities with smaller spacing
-                        <div class="flex flex-wrap gap-1 mt-2">
-                            {amenities.iter().take(4).map(|a| view! {
+                        <div class="flex flex-wrap gap-1 mt-2">{amenities.iter().take(4).map(|a| view! {
                                 <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded whitespace-nowrap">{a}</span>
                             }).collect_view()}
                         </div>

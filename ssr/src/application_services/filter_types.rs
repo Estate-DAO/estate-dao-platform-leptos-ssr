@@ -445,9 +445,14 @@ impl UISortOptions {
                 }
                 (Some(DomainSortField::Distance), _) => {
                     // Distance from center - ascending (closest first)
-                    // TODO: Implement when distance data is available
-                    // For now, sort by hotel name as fallback
-                    a.hotel_name.cmp(&b.hotel_name)
+                    match (a.distance_from_center_km, b.distance_from_center_km) {
+                        (Some(dist_a), Some(dist_b)) => {
+                            dist_a.partial_cmp(&dist_b).unwrap_or(Ordering::Equal)
+                        }
+                        (Some(_), None) => Ordering::Less, // Hotels with distance come first
+                        (None, Some(_)) => Ordering::Greater, // Hotels without distance come last
+                        (None, None) => a.hotel_name.cmp(&b.hotel_name), // Fallback to name sorting
+                    }
                 }
                 (Some(DomainSortField::Name), Some(direction)) => {
                     let cmp = a.hotel_name.cmp(&b.hotel_name);

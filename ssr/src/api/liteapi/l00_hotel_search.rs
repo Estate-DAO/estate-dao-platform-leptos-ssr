@@ -57,8 +57,8 @@ pub struct LiteApiHotelResult {
     pub currency: String,
     pub country: String,
     pub city: String,
-    // pub latitude: f64,
-    // pub longitude: f64,
+    pub latitude: f64,
+    pub longitude: f64,
     pub address: String,
     pub zip: String,
     #[serde(rename = "main_photo")]

@@ -162,6 +162,8 @@ pub struct DomainHotelAfterSearch {
     // <!-- Additional fields can be added later -->
     // pub hotel_description: Option<String>,
     pub hotel_address: Option<String>,
+    // Distance from center in kilometers (calculated if coordinates available)
+    pub distance_from_center_km: Option<f64>,
     // pub amenities: Option<Vec<String>>,
 }
 
