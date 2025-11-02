@@ -4,7 +4,7 @@ use crate::{
         client_side_api::{ClientSideApiClient, Place, PlaceData},
         consts::PAGINATION_LIMIT,
     },
-    application_services::filter_types::UISearchFilters,
+    application_services::filter_types::{UISearchFilters, UISortOptions},
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     log,
     utils::query_params::{
@@ -232,6 +232,26 @@ impl HotelListParams {
 
         let filters_map = search_ctx.filters.get_untracked().to_filter_map();
 
+        // Get sort options from context
+        let sort_options = search_ctx.sort_options.get_untracked();
+        let sort = if sort_options.has_sort() {
+            // Convert UISortOptions to the sort Vec format used by HotelListParams
+            vec![(
+                sort_options.to_string(),
+                match sort_options.sort_direction {
+                    Some(
+                        crate::application_services::filter_types::DomainSortDirection::Ascending,
+                    ) => SortDirection::Asc,
+                    Some(
+                        crate::application_services::filter_types::DomainSortDirection::Descending,
+                    ) => SortDirection::Desc,
+                    None => SortDirection::Desc, // Default to descending
+                },
+            )]
+        } else {
+            Vec::new()
+        };
+
         // Get pagination from context instead of hardcoding
         // Only include page/per_page if they differ from defaults to avoid polluting URLs
         let pagination_state: UIPaginationState = expect_context();
@@ -262,7 +282,7 @@ impl HotelListParams {
             rooms,
             children_ages,
             filters: filters_map,
-            sort: Vec::new(),
+            sort,
             page,
             per_page,
             latitude,
@@ -494,6 +514,14 @@ impl HotelListParams {
         let latitude = params.get("lat").and_then(|s| s.parse().ok());
         let longitude = params.get("lng").and_then(|s| s.parse().ok());
 
+        // Sort options
+        let sort = if let Some(sort_str) = params.get("sort") {
+            // Parse sort string like "price_low_to_high" to sort vector
+            vec![(sort_str.clone(), SortDirection::Desc)] // Default direction, will be inferred from sort_str
+        } else {
+            Vec::new()
+        };
+
         log!("[from_query_params] Parsed {} filters", filters.len());
         log!(
             "[from_query_params] Filter keys: {:?}",
@@ -510,7 +538,7 @@ impl HotelListParams {
             rooms,
             children_ages,
             filters,
-            sort: Vec::new(), // Could be extended in future
+            sort,
             page,
             per_page,
             latitude,
@@ -591,6 +619,13 @@ impl HotelListParams {
         // Don't include if it's None - let backend use its default
         if let Some(per_page) = self.per_page {
             params.insert("pageSize".to_string(), per_page.to_string());
+        }
+
+        // Sort options - only include if not default/empty
+        if !self.sort.is_empty() {
+            if let Some((sort_field, _)) = self.sort.first() {
+                params.insert("sort".to_string(), sort_field.clone());
+            }
         }
 
         // NOTE: Removed lat/lng/placeAddress - these can be derived from placeId via API
@@ -709,6 +744,23 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
 
         UISearchCtx::set_filters(filters);
         log!("[sync_to_app_state] Filters set in context");
+
+        // Sync sort options from URL
+        let sort_options = if !self.sort.is_empty() {
+            if let Some((sort_field, _)) = self.sort.first() {
+                UISortOptions::from_string(sort_field)
+            } else {
+                UISortOptions::default_sort()
+            }
+        } else {
+            UISortOptions::default_sort()
+        };
+
+        UISearchCtx::set_sort_options(sort_options);
+        log!(
+            "[sync_to_app_state] Sort options set in context: {:?}",
+            self.sort
+        );
 
         // Sync pagination state from URL
         use crate::view_state_layer::ui_search_state::UIPaginationState;

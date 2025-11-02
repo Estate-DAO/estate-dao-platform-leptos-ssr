@@ -40,7 +40,7 @@ pub struct DomainPaginationParams {
 pub struct DomainPaginationMeta {
     pub page: u32,
     pub page_size: u32,
-    pub total_results: Option<u32>, // If available from API
+    pub total_results: Option<i32>, // If available from API
     pub has_next_page: bool,
     pub has_previous_page: bool,
 }
@@ -162,6 +162,8 @@ pub struct DomainHotelAfterSearch {
     // <!-- Additional fields can be added later -->
     // pub hotel_description: Option<String>,
     pub hotel_address: Option<String>,
+    // Distance from center in kilometers (calculated if coordinates available)
+    pub distance_from_center_km: Option<f64>,
     // pub amenities: Option<Vec<String>>,
 }
 
