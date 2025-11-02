@@ -27,6 +27,7 @@ use crate::api::ApiError;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::domain::*;
 use crate::ports::hotel_provider_port::{ProviderError, ProviderErrorDetails, ProviderSteps};
+use crate::ports::traits::PlaceProviderPort;
 use crate::ports::ProviderNames;
 use crate::utils::date::date_tuple_to_dd_mm_yyyy;
 use async_trait::async_trait;
@@ -213,6 +214,7 @@ impl LiteApiAdapter {
         returned_count: usize,
         original_count_from_api: usize,
         requested_limit: usize,
+        total: i32,
     ) -> crate::domain::DomainPaginationMeta {
         // Better logic: has_next_page based on original API response count
         // If LiteAPI returned exactly what we requested, there might be more
@@ -221,7 +223,7 @@ impl LiteApiAdapter {
         crate::domain::DomainPaginationMeta {
             page,
             page_size,
-            total_results: None, // LiteAPI doesn't provide total count
+            total_results: Some(total), // LiteAPI doesn't provide total count
             has_next_page,
             has_previous_page: page > 1,
         }
@@ -325,6 +327,7 @@ impl LiteApiAdapter {
 
     fn map_liteapi_search_to_domain(
         liteapi_response: LiteApiHotelSearchResponse,
+        center_coords: Option<(f64, f64)>,
     ) -> DomainHotelListAfterSearch {
         let original_hotels = liteapi_response.data;
         let original_count = original_hotels.len();
@@ -353,13 +356,16 @@ impl LiteApiAdapter {
         DomainHotelListAfterSearch {
             hotel_results: valid_hotels
                 .into_iter()
-                .map(Self::map_liteapi_hotel_to_domain)
+                .map(|hotel| Self::map_liteapi_hotel_to_domain(hotel, center_coords))
                 .collect(),
             pagination: None, // Will be set by calling function if needed
         }
     }
 
-    fn map_liteapi_hotel_to_domain(liteapi_hotel: LiteApiHotelResult) -> DomainHotelAfterSearch {
+    fn map_liteapi_hotel_to_domain(
+        liteapi_hotel: LiteApiHotelResult,
+        center_coords: Option<(f64, f64)>,
+    ) -> DomainHotelAfterSearch {
         let hotel_id = liteapi_hotel.id.clone();
         let property_type = liteapi_hotel
             .hotel_type_id
@@ -371,6 +377,20 @@ impl LiteApiAdapter {
             .iter()
             .map(|&id| Self::map_facility_id_to_name(id))
             .collect();
+
+        // Calculate distance from center if both coordinates are available
+        let distance_from_center_km =
+            if let (Some((center_lat, center_lon)), hotel_lat, hotel_lon) = (
+                center_coords,
+                liteapi_hotel.latitude,
+                liteapi_hotel.longitude,
+            ) {
+                Some(Self::calculate_distance_km(
+                    center_lat, center_lon, hotel_lat, hotel_lon,
+                ))
+            } else {
+                None
+            };
 
         DomainHotelAfterSearch {
             hotel_code: hotel_id.clone(),
@@ -386,7 +406,24 @@ impl LiteApiAdapter {
             amenities,
             property_type,
             result_token: hotel_id,
+            distance_from_center_km,
         }
+    }
+
+    // Calculate distance between two coordinates using Haversine formula
+    fn calculate_distance_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+        const EARTH_RADIUS_KM: f64 = 6371.0;
+
+        let dlat = (lat2 - lat1).to_radians();
+        let dlon = (lon2 - lon1).to_radians();
+        let lat1_rad = lat1.to_radians();
+        let lat2_rad = lat2.to_radians();
+
+        let a = (dlat / 2.0).sin().powi(2)
+            + lat1_rad.cos() * lat2_rad.cos() * (dlon / 2.0).sin().powi(2);
+        let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
+
+        EARTH_RADIUS_KM * c
     }
 
     // Map search results with pricing from rates API
@@ -398,8 +435,35 @@ impl LiteApiAdapter {
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         // Track original count before any filtering
         let original_count_from_liteapi = liteapi_response.data.len();
+        let total_properties = liteapi_response.total;
 
-        let mut domain_results = Self::map_liteapi_search_to_domain(liteapi_response.clone());
+        // Get center coordinates from place details
+        let center_coords = if !search_criteria.place_id.is_empty() {
+            // Get place details to extract center coordinates
+            match self
+                .get_single_place_details(DomainPlaceDetailsPayload {
+                    place_id: search_criteria.place_id.clone(),
+                })
+                .await
+            {
+                Ok(place_details) => Some((
+                    place_details.data.location.latitude,
+                    place_details.data.location.longitude,
+                )),
+                Err(e) => {
+                    crate::log!(
+                        "Failed to get place details for distance calculation: {:?}",
+                        e
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        let mut domain_results =
+            Self::map_liteapi_search_to_domain(liteapi_response.clone(), center_coords);
 
         // (todo): review hotel_search - Extract hotel IDs
         let hotel_ids: Vec<String> = liteapi_response
@@ -480,6 +544,7 @@ impl LiteApiAdapter {
                 returned_count,
                 original_count_from_liteapi,
                 requested_limit,
+                total_properties,
             );
 
             // Debug logging for pagination metadata

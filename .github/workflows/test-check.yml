@@ -1,0 +1,99 @@
+name: Test and Check
+
+on:
+  workflow_call:
+    inputs:
+      is-prod:
+        description: "Whether to use production environment settings"
+        required: false
+        type: boolean
+        default: false
+      lib-features:
+        description: "Features to enable for lib tests (defaults based on is-prod)"
+        required: false
+        type: string
+        default: ""
+      bin-features:
+        description: "Features to enable for bin tests (defaults based on is-prod)"
+        required: false
+        type: string
+        default: ""
+      app-url:
+        description: "Base URL of the app (defaults based on is-prod)"
+        required: false
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      is-prod:
+        description: "Whether to use production environment settings"
+        required: false
+        type: boolean
+        default: false
+      lib-features:
+        description: "Features to enable for lib tests (defaults based on is-prod)"
+        required: false
+        type: string
+        default: ""
+      bin-features:
+        description: "Features to enable for bin tests (defaults based on is-prod)"
+        required: false
+        type: string
+        default: ""
+      app-url:
+        description: "Base URL of the app (defaults based on is-prod)"
+        required: false
+        type: string
+        default: ""
+
+env:
+  ACTIONS_STEP_DEBUG: true
+
+jobs:
+  test_check:
+    runs-on: ubuntu-latest
+    env:
+      # Set environment-specific values based on is-prod input
+      LIB_FEATURES: ${{ inputs.lib-features || (inputs.is-prod && 'release-lib-prod' || 'release-lib') }}
+      BIN_FEATURES: ${{ inputs.bin-features || (inputs.is-prod && 'release-bin-prod' || 'release-bin') }}
+      APP_URL: ${{ inputs.app-url || (inputs.is-prod && 'https://nofeebooking.com/' || 'https://estatefe.fly.dev/') }}
+      PROVAB_HEADERS: ${{ inputs.is-prod && secrets.PROVAB_PRODUCTION_ENVIRONMENT_REQUEST_HEADER_CONTENTS || secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+    steps:
+      - name: Checkout repo and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Rust Setup
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "nightly-2025-04-15"
+          targets: "wasm32-unknown-unknown"
+          components: "clippy,rustfmt"
+          
+      - name: Override Rust toolchain
+        run: rustup override set nightly-2025-04-15
+          
+      - name: Verify Rust version
+        run: rustc --version && cargo --version
+
+      - name: Install cargo-leptos
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/leptos-rs/cargo-leptos/releases/download/v0.2.31/cargo-leptos-installer.sh | sh
+
+      - name: Cache rust dependencies and build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang
+
+      - name: test check
+        run: |
+          cargo test --release --lib --features "${{ env.LIB_FEATURES }}" && cargo test --release --bin estate-fe --features "${{ env.BIN_FEATURES }}"
+        env:
+          LEPTOS_HASH_FILES: true
+          PROVAB_HEADERS: ${{ env.PROVAB_HEADERS }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}}
+          APP_URL: ${{ env.APP_URL }}

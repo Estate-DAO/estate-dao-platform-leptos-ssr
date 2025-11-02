@@ -8,7 +8,7 @@ use crate::{
         client_side_api::{Place, PlaceData},
         consts::PAGINATION_LIMIT,
     },
-    application_services::filter_types::UISearchFilters,
+    application_services::filter_types::{UISearchFilters, UISortOptions},
     canister::backend,
     component::{Destination, GuestSelection, SelectedDateRange},
     domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams},
@@ -32,6 +32,7 @@ pub struct UISearchCtx {
     pub date_range: RwSignal<SelectedDateRange>,
     pub guests: GuestSelection,
     pub filters: RwSignal<UISearchFilters>,
+    pub sort_options: RwSignal<UISortOptions>,
 }
 
 impl Default for UISearchCtx {
@@ -43,6 +44,7 @@ impl Default for UISearchCtx {
             date_range: RwSignal::new(SelectedDateRange::default()),
             guests: GuestSelection::default(),
             filters: RwSignal::new(UISearchFilters::default()),
+            sort_options: RwSignal::new(UISortOptions::default_sort()),
         }
     }
 }
@@ -93,6 +95,16 @@ impl UISearchCtx {
     pub fn update_filters(f: impl FnOnce(&mut UISearchFilters)) {
         let this: Self = expect_context();
         this.filters.update(|filters| f(filters));
+    }
+
+    pub fn set_sort_options(sort_options: UISortOptions) {
+        let this: Self = expect_context();
+        this.sort_options.set(sort_options);
+    }
+
+    pub fn update_sort_options(f: impl FnOnce(&mut UISortOptions)) {
+        let this: Self = expect_context();
+        this.sort_options.update(|sort_options| f(sort_options));
     }
 
     pub fn log_state() {

@@ -1,12 +1,16 @@
-use crate::component::Divider;
-// use leptos::logging::log;
+use crate::{
+    application_services::filter_types::UISortOptions, log,
+    view_state_layer::ui_search_state::UISearchCtx,
+};
 use leptos::*;
 use leptos_icons::*;
-use web_sys::*;
 
 #[component]
 pub fn SortBy() -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
+    let search_ctx: UISearchCtx = expect_context();
+    let current_sort = search_ctx.sort_options;
+
     let icon = create_memo(move |_| {
         if is_open() {
             icondata::BiChevronUpRegular
@@ -15,74 +19,106 @@ pub fn SortBy() -> impl IntoView {
         }
     });
 
-    view! {
-        <div class="">
-            <button
-                class="bg-white text-black px-4 py-2 rounded-lg flex items-center border border-gray-300"
-                // on:blur=move |_| set_is_open.set(false)
-                on:click=move |_| set_is_open.update(|open| *open = !*open)
-            >
-                "Sort by"
-                <Icon icon=icon class="w-6 h-6 ml-2" />
-            </button>
+    let current_sort_display = Signal::derive(move || {
+        let text = current_sort.get().get_display_name();
+        if text.is_empty() {
+            "Select".to_string()
+        } else {
+            text
+        }
+    });
 
-            <Show when=move || is_open()>
-                <div class="absolute mt-2 w-52 bg-white borderSortOptions border-gray-300 rounded-xl shadow-lg">
-                    <SortOptions set_is_open=set_is_open.into() />
-                </div>
-            </Show>
+    view! {
+        <div class="relative inline-flex items-center gap-2">
+            <span class="text-gray-700 font-medium text-sm">"Sort By:"</span>
+            <div class="relative">
+                <button
+                    class="flex items-center justify-between w-44 bg-white border border-gray-300 text-gray-700 rounded-md px-3 py-2 text-sm font-medium hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    on:click=move |_| set_is_open.update(|open| *open = !*open)
+                >
+                    <span>{current_sort_display}</span>
+                    <Icon icon=icon class="w-4 h-4 text-gray-500" />
+                </button>
+
+                <Show when=move || is_open()>
+                    <div
+                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-50 overflow-hidden"
+                    >
+                        <SortOptions
+                            set_is_open=set_is_open.into()
+                            current_sort=current_sort
+                        />
+                    </div>
+                </Show>
+            </div>
         </div>
     }
 }
 
 #[component]
-fn SortOptions(set_is_open: WriteSignal<bool>) -> impl IntoView {
-    let selected = create_rw_signal("Name");
+fn SortOptions(
+    set_is_open: WriteSignal<bool>,
+    current_sort: RwSignal<UISortOptions>,
+) -> impl IntoView {
+    let sort_options = vec![
+        ("our_top_picks", "Top Picks"),
+        ("price_low_to_high", "Price ( Low to High )"),
+        ("price_high_to_low", "Price ( High to Low )"),
+        ("distance_from_center", "Distance from center"),
+        ("rating_high_to_low", "Rating ( High to Low )"),
+        ("rating_low_to_high", "Rating ( Low to High )"),
+    ];
 
-    let apply_selection = move |_| {
-        log::info!("Sort By: {}", selected());
-        web_sys::console::log_1(&format!("Sort By: {}", selected()).into());
+    let selected_sort_key = Signal::derive(move || current_sort.get().to_string());
+
+    let apply_sort = move |sort_key: String| {
+        log!("Applying sort: {}", sort_key);
+        let new_sort = UISortOptions::from_string(&sort_key);
+        UISearchCtx::set_sort_options(new_sort);
         set_is_open.set(false);
     };
 
     view! {
-        <form class="p-4">
-            <div class="space-y-4">
-                <SortOption name="sort" value="Prices high to low" selected=selected />
-                <Divider />
-
-                <SortOption name="sort" value="Prices low to high" selected=selected />
-                <Divider />
-
-                <SortOption name="sort" value="Rating high to low" selected=selected />
-            </div>
-            <button
-                type="button"
-                class="w-full mt-4 bg-white border border-black-2 text-black px-4 py-2 rounded-full"
-                on:click=apply_selection
-            >
-                "Apply"
-            </button>
-        </form>
+        <div class="py-1">
+            {sort_options.into_iter().map(|(key, label)| {
+                let sort_key = key.to_string();
+                let sort_key_clone = sort_key.clone();
+                view! {
+                    <SortOption
+                        key=sort_key
+                        label=label
+                        selected=selected_sort_key
+                        on_select=move |_| apply_sort(sort_key_clone.clone())
+                    />
+                }
+            }).collect_view()}
+        </div>
     }
 }
 
 #[component]
 fn SortOption(
-    name: &'static str,
-    value: &'static str,
-    selected: RwSignal<&'static str>,
+    key: String,
+    label: &'static str,
+    selected: Signal<String>,
+    on_select: impl Fn(()) + 'static + Clone,
 ) -> impl IntoView {
+    let is_selected = Signal::derive(move || selected.get() == key);
+
     view! {
-        <label class="flex items-center space-x-2 cursor-pointer">
-            <input
-                type="radio"
-                name=name
-                value=value
-                checked=move || selected.get() == value
-                on:change=move |_| selected.set(value)
-            />
-            <span>{value}</span>
-        </label>
+        <button
+            type="button"
+            class={move || format!(
+                "block w-full text-left px-4 py-2 text-sm transition-all {}",
+                if is_selected() {
+                    "bg-blue-50 text-blue-700 font-semibold"
+                } else {
+                    "text-gray-700 hover:bg-gray-100"
+                }
+            )}
+            on:click=move |_| on_select(())
+        >
+            {label}
+        </button>
     }
 }
