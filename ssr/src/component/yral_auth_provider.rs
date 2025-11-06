@@ -161,7 +161,7 @@ fn LoginButton() -> impl IntoView {
             }
         >
             <img class="w-5 h-5 md:w-5 md:h-5" src="/img/google.svg" alt="Google logo" />
-            <span>"Login with Google"</span>
+            // <span>"Login with Google"</span>
         </button>
     }
 }

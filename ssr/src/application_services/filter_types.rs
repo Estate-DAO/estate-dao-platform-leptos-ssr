@@ -98,7 +98,7 @@ impl UISearchFilters {
             }
             let wanted_lc: Vec<String> = wanted.iter().map(|s| s.to_lowercase()).collect();
             let hotel_lc: Vec<String> = hotel.amenities.iter().map(|s| s.to_lowercase()).collect();
-            wanted_lc.iter().all(|w| hotel_lc.iter().any(|h| h == w))
+            wanted_lc.iter().any(|w| hotel_lc.iter().any(|h| h == w))
         });
 
         let meets_popular_filters = self.popular_filters.as_ref().map_or(true, |wanted| {
