@@ -1,7 +1,8 @@
 use leptos::*;
 
 #[component]
-pub fn AmenitiesFilter(
+pub fn CheckboxFilter(
+    #[prop(into)] title: String,
     #[prop(into)] options: Signal<Vec<String>>,
     #[prop(into)] selected: Signal<Vec<String>>,
     on_toggle: Callback<String>,
@@ -10,9 +11,9 @@ pub fn AmenitiesFilter(
     let has_selection = Signal::derive(move || !selected().is_empty());
 
     view! {
-        <div>
+        <div class="py-2">
             <div class="flex items-center justify-between">
-                <h3 class="text-base font-medium text-gray-900">"Amenities"</h3>
+                <h3 class="text-base font-medium text-gray-900">{title}</h3>
                 <button
                     type="button"
                     class="text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:hover:text-gray-400"

@@ -8,9 +8,9 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
-    format_price_range_value, AmenitiesFilter, Destination, Footer, GuestSelection, Navbar,
-    PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards,
-    SortBy, StarRatingFilter, MAX_PRICE, MIN_PRICE,
+    format_price_range_value, CheckboxFilter, Destination, Footer, GuestSelection, Navbar,
+    PaginationControls, PaginationInfo, PriceRangeFilter, SkeletonCards, SortBy, StarRatingFilter,
+    MAX_PRICE, MIN_PRICE,
 };
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
@@ -373,6 +373,16 @@ pub fn HotelListPage() -> impl IntoView {
         })
     };
 
+    let popular_filters_options_signal: Signal<Vec<String>> = Signal::derive(move || {
+        vec![
+            "Breakfast Included".to_string(),
+            "Hotel".to_string(),
+            "Parking".to_string(),
+            "Swimming Pool".to_string(),
+            "Pet Friendly".to_string(),
+        ]
+    });
+
     let amenities_selected_signal: Signal<Vec<String>> = {
         let filters_signal = filters_signal;
         Signal::derive(move || filters_signal.get().amenities.clone().unwrap_or_default())
@@ -384,6 +394,17 @@ pub fn HotelListPage() -> impl IntoView {
             filters_signal
                 .get()
                 .property_types
+                .clone()
+                .unwrap_or_default()
+        })
+    };
+
+    let popular_filters_selected_signal: Signal<Vec<String>> = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || {
+            filters_signal
+                .get()
+                .popular_filters
                 .clone()
                 .unwrap_or_default()
         })
@@ -437,6 +458,32 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.property_types = None);
+            update_url_with_current_state.call(());
+        })
+    };
+
+    let popular_filters_on_toggle = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |label: String| {
+            filters_signal.update(|f| {
+                let list = f.popular_filters.get_or_insert_with(Vec::new);
+                if let Some(pos) = list.iter().position(|v| v.eq_ignore_ascii_case(&label)) {
+                    list.remove(pos);
+                    if list.is_empty() {
+                        f.popular_filters = None;
+                    }
+                } else {
+                    list.push(label.clone());
+                }
+            });
+            update_url_with_current_state.call(());
+        })
+    };
+
+    let popular_filters_on_clear = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |_| {
+            filters_signal.update(|f| f.popular_filters = None);
             update_url_with_current_state.call(());
         })
     };
@@ -644,20 +691,30 @@ pub fn HotelListPage() -> impl IntoView {
                                         on_select=star_filter_on_select.clone()
                                     />
                                     <div class="border-t border-slate-100"></div>
-                                    <AmenitiesFilter
+                                    <CheckboxFilter
+                                        title="Popular Filters".to_string()
+                                        options=popular_filters_options_signal
+                                        selected=popular_filters_selected_signal
+                                        on_toggle=popular_filters_on_toggle
+                                        on_clear=popular_filters_on_clear
+                                    />
+                                    </div>
+                                    <div class="border-t border-slate-100"></div>
+                                    <CheckboxFilter
+                                        title="Amenities".to_string()
                                         options=amenities_options_signal
                                         selected=amenities_selected_signal
                                         on_toggle=amenities_on_toggle
                                         on_clear=amenities_on_clear
                                     />
                                     <div class="border-t border-slate-100"></div>
-                                    <PropertyTypeFilter
+                                    <CheckboxFilter
+                                        title="Property Type".to_string()
                                         options=property_type_options_signal
                                         selected=property_types_selected_signal
                                         on_toggle=property_type_on_toggle
                                         on_clear=property_type_on_clear
                                     />
-                                </div>
                             </Show>
                         </div>
                     </div>
@@ -991,14 +1048,24 @@ pub fn HotelListPage() -> impl IntoView {
                                     on_select=star_filter_on_select.clone()
                                 />
                                 <div class="border-t border-slate-100"></div>
-                                <AmenitiesFilter
+                                <CheckboxFilter
+                                    title="Popular Filters".to_string()
+                                    options=popular_filters_options_signal
+                                    selected=popular_filters_selected_signal
+                                    on_toggle=popular_filters_on_toggle
+                                    on_clear=popular_filters_on_clear
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <CheckboxFilter
+                                    title="Amenities".to_string()
                                     options=amenities_options_signal
                                     selected=amenities_selected_signal
                                     on_toggle=amenities_on_toggle
                                     on_clear=amenities_on_clear
                                 />
                                 <div class="border-t border-slate-100"></div>
-                                <PropertyTypeFilter
+                                <CheckboxFilter
+                                    title="Property Type".to_string()
                                     options=property_type_options_signal
                                     selected=property_types_selected_signal
                                     on_toggle=property_type_on_toggle
@@ -1094,7 +1161,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             <p class="text-gray-600">No hotels match your filters</p>
                                             <button
                                                 class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                                on:click=move |e| clear_filters.call(e)
+                                                        leptos::Callable::call(&clear_filters, e)
                                             >
                                                 Clear Filters
                                             </button>
@@ -1212,10 +1279,12 @@ pub fn HotelCard(
             log!("Hotel code set: {}", hotel_code_cloned);
 
             // ✅ 3. Try to build query params
-            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
-            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                target_url = hotel_params.to_shareable_url();
-            }
+            let target_url = if let Some(hotel_params) = HotelDetailsParams::from_current_context()
+            {
+                hotel_params.to_shareable_url()
+            } else {
+                AppRoutes::HotelDetails.to_string().into()
+            };
             log!("Opening in new tab: {}", target_url);
 
             // ✅ 4. Open in new tab
@@ -1345,12 +1414,12 @@ pub fn HotelCardTile(
             log!("Hotel code set: {}", hotel_code_cloned);
 
             // ✅ 3. Try to build query params
-            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
-            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                target_url = hotel_params.to_shareable_url();
+            let target_url = if let Some(hotel_params) = HotelDetailsParams::from_current_context()
+            {
+                hotel_params.to_shareable_url()
             } else {
                 return;
-            }
+            };
             log!("Opening in new tab: {}", target_url);
 
             // ✅ 4. Open in new tab

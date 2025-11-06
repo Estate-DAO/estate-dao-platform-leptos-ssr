@@ -9,6 +9,7 @@ const FILTER_KEY_MAX_PRICE: &str = "max_price_per_night";
 const FILTER_KEY_MIN_PRICE: &str = "min_price_per_night";
 const FILTER_KEY_AMENITIES: &str = "amenities";
 const FILTER_KEY_PROPERTY_TYPES: &str = "property_types";
+const FILTER_KEY_POPULAR: &str = "popular_filters";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UISearchFilters {
@@ -17,6 +18,7 @@ pub struct UISearchFilters {
     pub min_price_per_night: Option<f64>,
     pub amenities: Option<Vec<String>>, // e.g., ["wifi", "pool", "spa"]
     pub property_types: Option<Vec<String>>, // e.g., ["hotel", "resort", "apartment"]
+    pub popular_filters: Option<Vec<String>>,
     pub hotel_name_search: Option<String>, // For searching by hotel name
 }
 
@@ -50,6 +52,7 @@ impl UISearchFilters {
             || self.min_price_per_night.is_some()
             || self.amenities.as_ref().is_some_and(|a| !a.is_empty())
             || self.property_types.as_ref().is_some_and(|p| !p.is_empty())
+            || self.popular_filters.as_ref().is_some_and(|p| !p.is_empty())
             || self
                 .hotel_name_search
                 .as_ref()
@@ -64,6 +67,10 @@ impl UISearchFilters {
     // <!-- Helper method to get property types as Vec<String> -->
     pub fn get_property_types(&self) -> Vec<String> {
         self.property_types.clone().unwrap_or_default()
+    }
+
+    pub fn get_popular_filters(&self) -> Vec<String> {
+        self.popular_filters.clone().unwrap_or_default()
     }
 
     pub fn matches_hotel(&self, hotel: &DomainHotelAfterSearch) -> bool {
@@ -91,7 +98,25 @@ impl UISearchFilters {
             }
             let wanted_lc: Vec<String> = wanted.iter().map(|s| s.to_lowercase()).collect();
             let hotel_lc: Vec<String> = hotel.amenities.iter().map(|s| s.to_lowercase()).collect();
-            wanted_lc.iter().any(|w| hotel_lc.iter().any(|h| h == w))
+            wanted_lc.iter().all(|w| hotel_lc.iter().any(|h| h == w))
+        });
+
+        let meets_popular_filters = self.popular_filters.as_ref().map_or(true, |wanted| {
+            if wanted.is_empty() {
+                return true;
+            }
+            let wanted_lc: Vec<String> = wanted.iter().map(|s| s.to_lowercase()).collect();
+            let hotel_amenities_lc: Vec<String> =
+                hotel.amenities.iter().map(|s| s.to_lowercase()).collect();
+            let hotel_property_type_lc = hotel
+                .property_type
+                .as_ref()
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+
+            wanted_lc
+                .iter()
+                .all(|w| hotel_amenities_lc.contains(w) || hotel_property_type_lc.contains(w))
         });
 
         let meets_property_type = self.property_types.as_ref().map_or(true, |wanted_types| {
@@ -107,7 +132,12 @@ impl UISearchFilters {
             }
         });
 
-        meets_rating && meets_min_price && meets_max_price && meets_amenities && meets_property_type
+        meets_rating
+            && meets_min_price
+            && meets_max_price
+            && meets_amenities
+            && meets_property_type
+            && meets_popular_filters
     }
 
     pub fn apply_filters(&self, hotels: &[DomainHotelAfterSearch]) -> Vec<DomainHotelAfterSearch> {
@@ -191,6 +221,15 @@ impl UISearchFilters {
             }
         }
 
+        if let Some(popular_filters) = &self.popular_filters {
+            if !popular_filters.is_empty() {
+                map.insert(
+                    FILTER_KEY_POPULAR.to_string(),
+                    ComparisonOp::In(popular_filters.clone()),
+                );
+            }
+        }
+
         // TODO: Map hotel_name_search when supported
 
         map
@@ -246,6 +285,14 @@ impl UISearchFilters {
                 _ => None,
             };
             filters.property_types = values;
+        }
+
+        if let Some(op) = map.get(FILTER_KEY_POPULAR) {
+            let values = match op {
+                ComparisonOp::In(v) | ComparisonOp::All(v) => Some(v.clone()),
+                _ => None,
+            };
+            filters.popular_filters = values;
         }
 
         filters

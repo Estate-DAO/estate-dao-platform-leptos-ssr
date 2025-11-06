@@ -502,6 +502,22 @@ impl HotelListParams {
             }
         }
 
+        // Popular filters
+        if let Some(popular_str) = params.get("popularFilters") {
+            log!(
+                "[from_query_params] Found popularFilters param: {}",
+                popular_str
+            );
+            let popular = parse_comma_separated(&popular_str);
+            log!("[from_query_params] Parsed popular filters: {:?}", popular);
+            if !popular.is_empty() {
+                filters.insert(
+                    "popular_filters".to_string(),
+                    crate::utils::query_params::ComparisonOp::In(popular),
+                );
+            }
+        }
+
         // Pagination - support both pageSize and perPage (perPage for backward compat)
         // Only set if present in URL - otherwise leave as None to use backend default
         let page = params.get("page").and_then(|s| s.parse().ok());
@@ -602,6 +618,9 @@ impl HotelListParams {
                 }
                 ("property_types", crate::utils::query_params::ComparisonOp::In(vals)) => {
                     params.insert("propertyTypes".to_string(), join_comma_separated(vals));
+                }
+                ("popular_filters", crate::utils::query_params::ComparisonOp::In(vals)) => {
+                    params.insert("popularFilters".to_string(), join_comma_separated(vals));
                 }
                 _ => {} // Skip unknown filters
             }

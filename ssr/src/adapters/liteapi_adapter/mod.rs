@@ -6,6 +6,7 @@ cfg_if::cfg_if! {
 }
 
 use std::sync::Arc;
+mod map_facility_id;
 
 use crate::api::api_client::ApiClient;
 use crate::api::consts::PAGINATION_LIMIT;
@@ -777,29 +778,30 @@ impl LiteApiAdapter {
 
     // Map facility ID to human-readable name
     fn map_facility_id_to_name(facility_id: i32) -> String {
-        match facility_id {
-            1 => "Swimming Pool".to_string(),
-            2 => "Fitness Center".to_string(),
-            3 => "Spa & Wellness".to_string(),
-            4 => "Restaurant".to_string(),
-            5 => "Bar".to_string(),
-            6 => "Free WiFi".to_string(),
-            7 => "Parking".to_string(),
-            8 => "Business Center".to_string(),
-            9 => "Concierge".to_string(),
-            10 => "Room Service".to_string(),
-            11 => "Laundry Service".to_string(),
-            12 => "Air Conditioning".to_string(),
-            13 => "Pet Friendly".to_string(),
-            14 => "Elevator".to_string(),
-            15 => "Non-Smoking Rooms".to_string(),
-            16 => "Airport Shuttle".to_string(),
-            17 => "Meeting Rooms".to_string(),
-            18 => "Childcare".to_string(),
-            19 => "Breakfast".to_string(),
-            20 => "24-Hour Front Desk".to_string(),
-            _ => format!("Facility {}", facility_id),
-        }
+        crate::adapters::liteapi_adapter::map_facility_id::map_facility_id_to_name(facility_id)
+        // match facility_id {
+        //     1 => "Swimming Pool".to_string(),
+        //     2 => "Fitness Center".to_string(),
+        //     3 => "Spa & Wellness".to_string(),
+        //     4 => "Restaurant".to_string(),
+        //     5 => "Bar".to_string(),
+        //     6 => "Free WiFi".to_string(),
+        //     7 => "Parking".to_string(),
+        //     8 => "Business Center".to_string(),
+        //     9 => "Concierge".to_string(),
+        //     10 => "Room Service".to_string(),
+        //     11 => "Laundry Service".to_string(),
+        //     12 => "Air Conditioning".to_string(),
+        //     13 => "Pet Friendly".to_string(),
+        //     14 => "Elevator".to_string(),
+        //     15 => "Non-Smoking Rooms".to_string(),
+        //     16 => "Airport Shuttle".to_string(),
+        //     17 => "Meeting Rooms".to_string(),
+        //     18 => "Childcare".to_string(),
+        //     19 => "Breakfast".to_string(),
+        //     20 => "24-Hour Front Desk".to_string(),
+        //     _ => format!("Facility {}", facility_id),
+        // }
     }
 
     // Map hotel type ID to a human-readable label.
