@@ -313,7 +313,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
 
     view! {
         <div
-            class="relative flex w-full md:w-[274px] h-full"
+            class="relative flex w-full h-full"
             node_ref=container_ref
         >
             <div class="absolute inset-y-0 left-2 py-6 px-4 text-xl pointer-events-none flex items-center">
@@ -325,7 +325,7 @@ pub fn DestinationPickerV6() -> impl IntoView {
                     type="text"
                     node_ref=input_ref
                     id="destination-live-select"
-                    class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-full transition-colors focus:outline-none py-6"
+                    class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-full transition-colors focus:outline-none py-6 md:text-ellipsis"
                     placeholder="Where to?"
                     autocomplete="off"
                     aria-autocomplete="list"

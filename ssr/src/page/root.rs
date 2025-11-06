@@ -201,7 +201,7 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
                     // <!-- Changed mobile styling to use solid white background instead of transparent/backdrop-blur -->
                     // <!-- Added more rounded corners for mobile and better spacing -->
                     // <!-- Improved shadow for better card-like appearance on mobile -->
-                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white rounded-xl md:rounded-full border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
+                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-gray-200 max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white rounded-md border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
                     bg_class(),
                 )
             }
@@ -260,23 +260,14 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             <button
                 on:click=move |ev| {
                     ev.prevent_default();
-                    log!("[root.rs InputGroup] Search button clicked, about to dispatch search action");
-
                     // Reset pagination to first page when search is clicked
                     UIPaginationState::reset_to_first_page();
-                    log!("[root.rs InputGroup] Pagination reset to first page");
-
                     // Log current UISearchCtx state before dispatch
                     let current_search_ctx: UISearchCtx = expect_context();
-                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - destination: {:?}", current_search_ctx.destination.get());
-                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - date_range: {:?}", current_search_ctx.date_range.get());
-                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - adults: {}", current_search_ctx.guests.adults.get());
-
                     search_action.dispatch(());
-                    log!("[root.rs InputGroup] Search action dispatched");
                 }
                 class=move || {
-                    format!(" {} rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
+                    format!(" {} md:rounded-md sm:rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
                 }
             >
                 <div class="flex justify-center text-2xl ">
