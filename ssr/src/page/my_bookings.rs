@@ -73,7 +73,7 @@ pub fn MyBookings() -> impl IntoView {
             </div>
 
             {/* Content */}
-            <div class="flex-1 bg-gray-50">
+            <div class="flex-1">
                 <BookingsLoader />
             </div>
         </div>
@@ -127,11 +127,11 @@ pub fn BookingsLoader() -> impl IntoView {
             </div>
         }>
             {move || match bookings_resource.get() {
-                Some(Ok(bookings)) => view! { <BookingsContent bookings=bookings /> }.into_view(),
+                Some(Ok(bookings)) if !bookings.is_empty() => view! { <BookingsContent bookings=bookings /> }.into_view(),
                 Some(Err(e)) => view! {
                     <div class="text-center py-12 text-red-600">Error loading bookings: {e.to_string()}</div>
                 }.into_view(),
-                None => view! { <></> }.into_view(),
+                _ => view! { <></> }.into_view(),
             }}
         </Suspense>
     }
@@ -295,7 +295,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                     {/* Top bar: Wishlist (left) + Test badge (right) */}
                     <div class="absolute top-2 left-0 right-0 px-2 flex items-center justify-between">
                         <div class="flex items-center">
-                            <Wishlist hotel_code />
+                            <Wishlist hotel_code class="[&_button]:static [&_button]:top-auto [&_button]:left-auto" />
                         </div>
 
                         <Show when=move || booking.is_test>

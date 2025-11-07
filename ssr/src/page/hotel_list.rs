@@ -1547,7 +1547,10 @@ pub fn HotelCardTile(
 }
 
 #[component]
-pub fn Wishlist(hotel_code: String) -> impl IntoView {
+pub fn Wishlist(
+    hotel_code: String,
+    #[prop(optional, into)] class: Option<String>,
+) -> impl IntoView {
     let wishlist_hotel_code = hotel_code.clone();
     let add_to_wishlist_action = Action::new(move |_: &()| {
         let check_present =
@@ -1578,7 +1581,7 @@ pub fn Wishlist(hotel_code: String) -> impl IntoView {
                     ev.stop_propagation();
                     add_to_wishlist_action.dispatch(());
                 }
-                class="absolute top-3 left-3 bg-white rounded-full shadow-sm"
+                class=class.clone().unwrap_or("absolute top-3 left-3 bg-white rounded-full shadow-sm".to_string())
                 aria-label="Add to wishlist"
             >
                 {

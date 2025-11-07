@@ -190,7 +190,7 @@ fn UserAvatar(user: AuthState) -> impl IntoView {
                     <p class="text-xs text-gray-500 truncate">{user.email.unwrap_or_default()}</p>
                 </div>
                 <div class="px-4 py-2 border-b border-gray-100">
-                    <a href=AppRoutes::MyBookings.to_string() class="text-sm font-medium text-gray-900 truncate">My Bookings</a>
+                    <a href=AccountTabs::Booking.as_route() class="text-sm font-medium text-gray-900 truncate">My Bookings</a>
                 </div>
                 <div class="px-4 py-2 border-b border-gray-100">
                     <a href=AccountTabs::Wishlist.as_route() class="text-sm font-medium text-gray-900 truncate">My Wishlist</a>
