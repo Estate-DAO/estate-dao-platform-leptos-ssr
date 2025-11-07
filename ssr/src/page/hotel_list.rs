@@ -1547,7 +1547,7 @@ pub fn HotelCardTile(
 }
 
 #[component]
-fn Wishlist(hotel_code: String) -> impl IntoView {
+pub fn Wishlist(hotel_code: String) -> impl IntoView {
     let wishlist_hotel_code = hotel_code.clone();
     let add_to_wishlist_action = Action::new(move |_: &()| {
         let check_present =
