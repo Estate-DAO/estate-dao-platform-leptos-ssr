@@ -82,14 +82,10 @@ pub fn MyBookings() -> impl IntoView {
 
 #[component]
 pub fn AuthGatedBookings() -> impl IntoView {
-    move || {
-        let is_logged_in = AuthStateSignal::auth_state().get().email.is_some();
-
-        if is_logged_in {
-            view! { <BookingsTabs /> }.into_view()
-        } else {
-            view! { <BookingsLoginPrompt /> }.into_view()
-        }
+    view! {
+        <Show when=move||AuthStateSignal::auth_state().get().email.is_none()>
+            <BookingsLoginPrompt />
+        </Show>
     }
 }
 
@@ -292,14 +288,16 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                         alt=booking.hotel_name.clone()
                     />
 
-                    // --- ✅ Reintroduce Test badge here ---
-                    <Show when=move || booking.is_test>
-                        <div class="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-md shadow">
-                            "Test"
-                        </div>
-                    </Show>
+                    {/* Top-right container for Wishlist + Test badge */}
+                    <div class="absolute top-2 right-2 flex items-center space-x-2">
+                        <Wishlist hotel_code />
 
-                    <Wishlist hotel_code />
+                        <Show when=move || booking.is_test>
+                            <div class="bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-md shadow">
+                                "Test"
+                            </div>
+                        </Show>
+                    </div>
                 </div>
 
                 {/* Booking details */}
