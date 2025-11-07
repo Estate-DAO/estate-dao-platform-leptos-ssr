@@ -424,7 +424,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -432,7 +432,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.amenities = None);
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -450,7 +450,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -458,7 +458,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.property_types = None);
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -476,7 +476,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -484,7 +484,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.popular_filters = None);
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -496,7 +496,7 @@ pub fn HotelListPage() -> impl IntoView {
                     filters.min_star_rating = next;
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -524,7 +524,7 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -532,7 +532,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = filters_signal;
         Callback::new(move |_| {
             filters_signal.set(UISearchFilters::default());
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -551,7 +551,7 @@ pub fn HotelListPage() -> impl IntoView {
             .get()
             .is_some()
         {
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         }
     });
 
@@ -567,7 +567,7 @@ pub fn HotelListPage() -> impl IntoView {
             .get()
             .is_some()
         {
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         }
     });
 
@@ -891,7 +891,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                     filters_signal.update(|filters| {
                                                                         filters.min_star_rating = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    leptos::Callable::call(&update_url_with_current_state, ());
                                                                 }
                                                             >
                                                                 "Clear star filter"
@@ -909,7 +909,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         filters.min_price_per_night = None;
                                                                         filters.max_price_per_night = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    leptos::Callable::call(&update_url_with_current_state, ());
                                                                 }
                                                             >
                                                                 "Clear price filter"
@@ -1162,7 +1162,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             <p class="text-gray-600">No hotels match your filters</p>
                                             <button
                                                 class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                                        leptos::Callable::call(&clear_filters, e)
+                                                on:click=move |e| leptos::Callable::call(&clear_filters, e)
                                             >
                                                 Clear Filters
                                             </button>

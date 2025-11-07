@@ -19,7 +19,7 @@ pub fn HotelListNavbar() -> impl IntoView {
                 </a>
 
                 {/* --- Center: Dynamic Search Input --- */}
-                <div class="hidden md:flex flex-1 justify-center">
+                <div class="hidden md:flex flex-1 justify-center h-12">
                     // <div class="w-full">
                         <InputGroupContainer
                             default_expanded=false
@@ -37,12 +37,14 @@ pub fn HotelListNavbar() -> impl IntoView {
                     // </button>
 
                     {/* YralAuthProvider shows either LoginButton or UserAvatar */}
-                    <YralAuthProvider />
+                    <div class="h-9">
+                        <YralAuthProvider />
+                    </div>
                 </div>
             </div>
 
             {/* --- Mobile Collapsible Search --- */}
-            <div class="block md:hidden border-t border-gray-100 px-4 pb-3">
+            <div class="block md:hidden px-4 pb-3">
                 <InputGroupContainer
                     default_expanded=false
                     given_disabled=false

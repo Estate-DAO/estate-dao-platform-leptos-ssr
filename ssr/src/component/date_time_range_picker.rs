@@ -218,7 +218,17 @@ impl SelectedDateRange {
 }
 
 #[component]
-pub fn DateTimeRangePickerCustom() -> impl IntoView {
+pub fn DateTimeRangePickerCustom(
+    #[prop(optional, into)] h_class: MaybeSignal<String>,
+) -> impl IntoView {
+    let h_class = create_memo(move |_| {
+        let class = h_class.get();
+        if class.is_empty() {
+            "h-full".to_string()
+        } else {
+            class
+        }
+    });
     let is_open = create_memo(move |_| InputGroupState::is_date_open());
     let search_ctx: UISearchCtx = expect_context();
     let selected_range = search_ctx.date_range;
@@ -335,16 +345,25 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
     // );
 
     view! {
-        <div class="relative">
+        <div class="relative w-full">
             <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::AiCalendarOutlined class="text-blue-500 font-extralight" />
+                <Icon icon=icondata::AiCalendarOutlined class="text-blue-500 font-extralight"/>
             </div>
 
             <button
-                class="w-full py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left"
+                class=move || {
+                    format!(
+                        "w-full {} py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left",
+                        h_class(),
+                    )
+                }
                 on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
             >
-                {{ move || view! { <span class="text-black font-medium">{date_range_display()}</span> } }}
+                {{
+                    move || {
+                        view! { <span class="text-black font-medium truncate">{date_range_display()}</span> }
+                    }
+                }}
             </button>
 
             <Show when=move || is_open()>
@@ -365,7 +384,10 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                 }
                                 class="p-2 rounded-full hover:bg-gray-50 transition-colors"
                             >
-                                <Icon icon=icondata::BiChevronLeftRegular class="text-gray-600 text-2xl" />
+                                <Icon
+                                    icon=icondata::BiChevronLeftRegular
+                                    class="text-gray-600 text-2xl"
+                                />
                             </button>
 
                             <button
@@ -375,7 +397,10 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                 }
                                 class="p-2 rounded-full hover:bg-gray-50 transition-colors"
                             >
-                                <Icon icon=icondata::BiChevronRightRegular class="text-gray-600 text-2xl" />
+                                <Icon
+                                    icon=icondata::BiChevronRightRegular
+                                    class="text-gray-600 text-2xl"
+                                />
                             </button>
                         </div>
 
@@ -399,18 +424,12 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                     touch_throttled(delta);
                                 }
                             }
-                            // on:touchmove=move |ev: web_sys::TouchEvent| {
-                            //     ev.prevent_default();
-                            //     ev.stop_propagation();
-                            // }
-                            // For Leptos 0.6, the correct way to handle wheel events is:
-                            // on:wheel=move |ev: web_sys::WheelEvent| {
-                            //     ev.prevent_default();
-                            //     ev.stop_propagation();
-                            // }
                         >
                             <div class="flex-1">
-                                <DateCells year_month=initial_date.into() selected_range=selected_range />
+                                <DateCells
+                                    year_month=initial_date.into()
+                                    selected_range=selected_range
+                                />
                             </div>
                             <div class="flex-1">
                                 <DateCells
@@ -426,7 +445,8 @@ pub fn DateTimeRangePickerCustom() -> impl IntoView {
                                     type="button"
                                     class=move || {
                                         let range = selected_range.get();
-                                        let has_both_dates = range.start != (0, 0, 0) && range.end != (0, 0, 0);
+                                        let has_both_dates = range.start != (0, 0, 0)
+                                            && range.end != (0, 0, 0);
                                         if has_both_dates {
                                             "w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 text-white py-3 md:py-2 rounded-full hover:bg-blue-600 transition-colors"
                                         } else {
