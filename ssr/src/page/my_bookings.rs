@@ -108,10 +108,14 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
 #[component]
 pub fn BookingsLoader() -> impl IntoView {
     let bookings_resource = create_resource(
-        || (),
-        |_| async move {
-            log!("[MyBookings] Fetching bookings...");
-            load_my_bookings().await
+        || AuthStateSignal::auth_state().get(),
+        |auth| async move {
+            if auth.is_authenticated() {
+                log!("[MyBookings] Fetching bookings...");
+                load_my_bookings().await
+            } else {
+                Ok(Vec::new())
+            }
         },
     );
 
