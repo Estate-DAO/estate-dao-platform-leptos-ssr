@@ -41,6 +41,7 @@ impl From<backend::Booking> for MyBookingItem {
         // Extract hotel details
         let hotel_details = &value.user_selected_hotel_room_details.hotel_details;
         let hotel_name = hotel_details.hotel_name.clone();
+        let hotel_code = hotel_details.hotel_code.clone();
         let hotel_location = hotel_details.hotel_location.clone();
         let hotel_image_url = hotel_details.hotel_image.clone();
 
@@ -138,6 +139,7 @@ impl From<backend::Booking> for MyBookingItem {
         Self {
             booking_id,
             hotel_name,
+            hotel_code,
             hotel_location,
             hotel_image_url,
             check_in_date,
@@ -157,6 +159,7 @@ pub struct MyBookingItem {
     pub booking_id: String,
     pub hotel_name: String,
     pub hotel_location: String,
+    pub hotel_code: String,
     pub hotel_image_url: String,
     pub check_in_date: DateTime<Utc>,
     pub check_out_date: DateTime<Utc>,

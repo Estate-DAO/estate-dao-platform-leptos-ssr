@@ -271,7 +271,15 @@ impl ChildrenAgesSignalExt for ChildrenAges {
 
 /// Guest quantity component (button)
 #[component]
-pub fn GuestQuantity() -> impl IntoView {
+pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> impl IntoView {
+    let h_class = create_memo(move |_| {
+        let class = h_class.get();
+        if class.is_empty() {
+            "h-full".to_string()
+        } else {
+            class
+        }
+    });
     let is_open = create_memo(move |_| InputGroupState::is_guest_open());
 
     let icon = create_memo(move |_| {
@@ -325,25 +333,33 @@ pub fn GuestQuantity() -> impl IntoView {
     });
 
     view! {
-        <div class="relative flex items-center w-full">
-            <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight" />
-            </div>
-
-            <button
-                class="w-full py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left flex items-center justify-around"
-                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
-            >
-                <div class="text-black font-medium">{guest_count_display}</div>
-                <div>
-                // <div class="absolute inset-y-0 right-3 flex items-center">
-                    <Icon icon=icon() class="text-gray-600 text-sm" />
+        <div class="relative flex items-center w-full h-[56px] py-2">
+                <div class="absolute inset-y-0 left-2 flex items-center text-xl">
+                    <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight"/>
                 </div>
+
+                <button
+                    class=move || {
+                        format!(
+                            "w-full {} h-full pl-14 pr-3 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent border-none rounded-md focus:outline-none text-left flex items-center justify-between",
+                            h_class(),
+                        )
+                    }
+                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
+                >
+                <div class="text-black font-medium truncate">{guest_count_display}</div>
+                <div class="flex items-center justify-center text-gray-600">
+                    <Icon icon=icon() class="text-gray-600 text-base" />
+                </div>
+
             </button>
 
             <Show when=move || is_open()>
                 // !<-- Mobile Overlay -->
-                <div class="md:hidden fixed inset-0 z-[9999] bg-black/50" on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)></div>
+                <div
+                    class="md:hidden fixed inset-0 z-[9999] bg-black/50"
+                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
+                ></div>
 
                 // !<-- Desktop: Positioned dropdown aligned to right edge, extending beyond section -->
                 <div
@@ -366,7 +382,7 @@ pub fn GuestQuantity() -> impl IntoView {
                                 min=1u32
                             />
 
-                            <Divider />
+                            <Divider/>
 
                             // !<-- Children Counter -->
                             <NumberCounterV2
@@ -380,50 +396,69 @@ pub fn GuestQuantity() -> impl IntoView {
                             // !<-- Children Ages Grid -->
                             <Show when=move || { children_signal.get() > 0 }>
                                 <div class="pl-4 space-y-3">
-                                    <p class="text-sm text-gray-600 font-medium">"Ages of children"</p>
+                                    <p class="text-sm text-gray-600 font-medium">
+                                        "Ages of children"
+                                    </p>
                                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                                         {move || {
                                             let children_count = children_signal.get();
-                                            (0..children_count).map(|i| {
-                                                // Create a reactive age value that updates with the signal
-                                                let age_value = move || {
-                                                    children_ages_signal.get().get(i as usize).cloned().unwrap_or(10)
-                                                };
-
-                                                view! {
-                                                    <div class="flex flex-col items-center space-y-2">
-                                                        <label class="text-xs text-gray-500 font-medium">
-                                                            {format!("Child {}", i + 1)}
-                                                        </label>
-                                                        <select
-                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
-                                                            on:change=move |ev| {
-                                                                let value = event_target_value(&ev).parse().unwrap_or(10);
-                                                                // Update the children_ages state directly
-                                                                children_ages_signal.update(|ages| {
-                                                                    if let Some(age) = ages.get_mut(i as usize) {
-                                                                        *age = value;
-                                                                    }
-                                                                });
-                                                            }
-                                                            prop:value=move || age_value().to_string()
-                                                        >
-                                                            {(0..=17).map(|age| {
-                                                                view! {
-                                                                    <option value=age.to_string()>{age.to_string()}</option>
+                                            (0..children_count)
+                                                .map(| i | {
+                                                    // Create a reactive age value that updates with the signal
+                                                    let age_value = move || {
+                                                        children_ages_signal
+                                                            .get()
+                                                            .get(i as usize)
+                                                            .cloned()
+                                                            .unwrap_or(10)
+                                                    };
+                                                    view! {
+                                                        <div class="flex flex-col items-center space-y-2">
+                                                            <label class="text-xs text-gray-500 font-medium">
+                                                                {format!("Child {}", i + 1)}
+                                                            </label>
+                                                            <select
+                                                                class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                                                on:change=move | ev | {
+                                                                    let value = event_target_value(&ev)
+                                                                        .parse()
+                                                                        .unwrap_or(10);
+                                                                    // Update the children_ages state directly
+                                                                    children_ages_signal
+                                                                        .update(| ages | {
+                                                                            if let Some(age) = ages
+                                                                                .get_mut(i as usize)
+                                                                            {
+                                                                                *age = value;
+                                                                            }
+                                                                        });
                                                                 }
-                                                            }).collect::<Vec<_>>()}
-                                                        </select>
-                                                    </div>
-                                                }
-                                            }).collect::<Vec<_>>()
+                                                                prop:value=move || {
+                                                                    age_value().to_string()
+                                                                }
+                                                            >
+                                                                {(0..=17)
+                                                                    .map(| age | {
+                                                                        view! {
+                                                                            <option value=age
+                                                                                .to_string()>
+                                                                                {age.to_string()}
+                                                                            </option>
+                                                                        }
+                                                                    })
+                                                                    .collect::<Vec<_>>()}
+                                                            </select>
+                                                        </div>
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()
                                         }}
                                     </div>
                                     <p class="text-xs text-gray-500">"Ages 0-17"</p>
                                 </div>
                             </Show>
 
-                            <Divider />
+                            <Divider/>
 
                             // !<-- Rooms Counter -->
                             <NumberCounterV2
@@ -471,7 +506,7 @@ pub fn GuestQuantity() -> impl IntoView {
                                 min=1u32
                             />
 
-                            <Divider />
+                            <Divider/>
 
                             // !<-- Children Counter -->
                             <NumberCounterV2
@@ -485,50 +520,69 @@ pub fn GuestQuantity() -> impl IntoView {
                             // !<-- Children Ages Grid -->
                             <Show when=move || { children_signal.get() > 0 }>
                                 <div class="pl-4 space-y-3">
-                                    <p class="text-sm text-gray-600 font-medium">"Ages of children"</p>
+                                    <p class="text-sm text-gray-600 font-medium">
+                                        "Ages of children"
+                                    </p>
                                     <div class="grid grid-cols-2 gap-3">
                                         {move || {
                                             let children_count = children_signal.get();
-                                            (0..children_count).map(|i| {
-                                                // Create a reactive age value that updates with the signal
-                                                let age_value = move || {
-                                                    children_ages_signal.get().get(i as usize).cloned().unwrap_or(10)
-                                                };
-
-                                                view! {
-                                                    <div class="flex flex-col items-center space-y-2">
-                                                        <label class="text-xs text-gray-500 font-medium">
-                                                            {format!("Child {}", i + 1)}
-                                                        </label>
-                                                        <select
-                                                            class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
-                                                            on:change=move |ev| {
-                                                                let value = event_target_value(&ev).parse().unwrap_or(10);
-                                                                // Update the children_ages state directly
-                                                                children_ages_signal.update(|ages| {
-                                                                    if let Some(age) = ages.get_mut(i as usize) {
-                                                                        *age = value;
-                                                                    }
-                                                                });
-                                                            }
-                                                            prop:value=move || age_value().to_string()
-                                                        >
-                                                            {(0..=17).map(|age| {
-                                                                view! {
-                                                                    <option value=age.to_string()>{age.to_string()}</option>
+                                            (0..children_count)
+                                                .map(| i | {
+                                                    // Create a reactive age value that updates with the signal
+                                                    let age_value = move || {
+                                                        children_ages_signal
+                                                            .get()
+                                                            .get(i as usize)
+                                                            .cloned()
+                                                            .unwrap_or(10)
+                                                    };
+                                                    view! {
+                                                        <div class="flex flex-col items-center space-y-2">
+                                                            <label class="text-xs text-gray-500 font-medium">
+                                                                {format!("Child {}", i + 1)}
+                                                            </label>
+                                                            <select
+                                                                class="w-16 h-10 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                                                on:change=move | ev | {
+                                                                    let value = event_target_value(&ev)
+                                                                        .parse()
+                                                                        .unwrap_or(10);
+                                                                    // Update the children_ages state directly
+                                                                    children_ages_signal
+                                                                        .update(| ages | {
+                                                                            if let Some(age) = ages
+                                                                                .get_mut(i as usize)
+                                                                            {
+                                                                                *age = value;
+                                                                            }
+                                                                        });
                                                                 }
-                                                            }).collect::<Vec<_>>()}
-                                                        </select>
-                                                    </div>
-                                                }
-                                            }).collect::<Vec<_>>()
+                                                                prop:value=move || {
+                                                                    age_value().to_string()
+                                                                }
+                                                            >
+                                                                {(0..=17)
+                                                                    .map(| age | {
+                                                                        view! {
+                                                                            <option value=age
+                                                                                .to_string()>
+                                                                                {age.to_string()}
+                                                                            </option>
+                                                                        }
+                                                                    })
+                                                                    .collect::<Vec<_>>()}
+                                                            </select>
+                                                        </div>
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()
                                         }}
                                     </div>
                                     <p class="text-xs text-gray-500">"Ages 0-17"</p>
                                 </div>
                             </Show>
 
-                            <Divider />
+                            <Divider/>
 
                             // !<-- Rooms Counter -->
                             <NumberCounterV2
