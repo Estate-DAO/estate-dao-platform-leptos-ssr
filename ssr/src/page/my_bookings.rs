@@ -292,9 +292,11 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                         alt=booking.hotel_name.clone()
                     />
 
-                    {/* Top-right container for Wishlist + Test badge */}
-                    <div class="absolute top-2 right-2 flex items-center space-x-2">
-                        <Wishlist hotel_code />
+                    {/* Top bar: Wishlist (left) + Test badge (right) */}
+                    <div class="absolute top-2 left-0 right-0 px-2 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <Wishlist hotel_code />
+                        </div>
 
                         <Show when=move || booking.is_test>
                             <div class="bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-md shadow">
@@ -303,6 +305,7 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                         </Show>
                     </div>
                 </div>
+
 
                 {/* Booking details */}
                 <div class="flex-1 p-5 flex flex-col justify-between">
@@ -340,11 +343,11 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <span class=format!("text-sm font-medium {}", status_color)>
-                            {booking.status.to_string()}
-                        </span>
-                    </div>
+                    // <div class="mt-3">
+                    //     <span class=format!("text-sm font-medium {}", status_color)>
+                    //         {booking.status.to_string()}
+                    //     </span>
+                    // </div>
                 </div>
             </div>
         </div>
