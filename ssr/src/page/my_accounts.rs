@@ -5,6 +5,7 @@ use crate::{
     api::auth::auth_state::AuthStateSignal,
     app::AppRoutes,
     component::{my_account_tabs::*, FaqView, Navbar, SocialLinks},
+    page::MyBookings,
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -12,6 +13,7 @@ pub enum AccountTabs {
     PersonalInfo,
     Wallet,
     Wishlist,
+    Booking,
     Support,
     Terms,
     Privacy,
@@ -21,7 +23,8 @@ pub enum AccountTabs {
 impl AccountTabs {
     const TABS: [AccountTabs; 7] = [
         AccountTabs::PersonalInfo,
-        AccountTabs::Wallet,
+        // AccountTabs::Wallet,
+        AccountTabs::Booking,
         AccountTabs::Support,
         AccountTabs::Wishlist,
         AccountTabs::Terms,
@@ -32,6 +35,7 @@ impl AccountTabs {
     pub fn from_str(s: &String) -> Self {
         match s.as_str() {
             "wallet" => AccountTabs::Wallet,
+            "bookings" => AccountTabs::Booking,
             "wishlist" => AccountTabs::Wishlist,
             "support" => AccountTabs::Support,
             "tnc" => AccountTabs::Terms,
@@ -45,6 +49,7 @@ impl AccountTabs {
         match self {
             AccountTabs::PersonalInfo => "personal",
             AccountTabs::Wallet => "wallet",
+            AccountTabs::Booking => "bookings",
             AccountTabs::Wishlist => "wishlist",
             AccountTabs::Support => "support",
             AccountTabs::Terms => "tnc",
@@ -72,6 +77,7 @@ impl AccountTabs {
         match self {
             AccountTabs::PersonalInfo => "Personal Information",
             AccountTabs::Wallet => "Wallet",
+            AccountTabs::Booking => "Bookings",
             AccountTabs::Wishlist => "My Favorites",
             AccountTabs::Support => "Support",
             AccountTabs::Terms => "Terms & Conditions",
@@ -85,6 +91,7 @@ impl AccountTabs {
             AccountTabs::PersonalInfo => "/icons/profile.svg",
             AccountTabs::Wishlist => "/icons/heart.svg",
             AccountTabs::Wallet => "/icons/wallet1.svg",
+            AccountTabs::Booking => "/icons/wallet1.svg",
             AccountTabs::Support => "/icons/support.svg",
             AccountTabs::Terms => "/icons/tnc.svg",
             AccountTabs::Privacy => "/icons/privacy.svg",
@@ -222,6 +229,7 @@ pub fn MyAccountPage() -> impl IntoView {
                     {move || match active_tab() {
                         AccountTabs::PersonalInfo => view! { <PersonalInfoView/> }.into_view(),
                         AccountTabs::Wallet => view! { <WalletView/> }.into_view(),
+                        AccountTabs::Booking => view! { <MyBookings/> }.into_view(),
                         AccountTabs::Wishlist => view! { <WishlistView/> }.into_view(),
                         AccountTabs::Support => view! { <SupportView/> }.into_view(),
                         AccountTabs::Terms => view! { <TermsView/> }.into_view(),

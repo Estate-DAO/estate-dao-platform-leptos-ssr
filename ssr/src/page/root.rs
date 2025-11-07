@@ -79,7 +79,7 @@ pub fn HeroSection() -> impl IntoView {
                         Plan your next escape and pay in BTC, ETH, or your favorite token.
                     </h6>
 
-                    <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click />
+                    <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click size="large" />
                     <br />
                     // todo: uncomment in v2 when implementing filtering and sorting
                     // <FilterAndSortBy />
@@ -117,46 +117,32 @@ pub fn HeroSection() -> impl IntoView {
 }
 
 #[component]
-pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> impl IntoView {
-    // TODO (search-button): we want to disable the button for 5 seconds before user can click on it again.
-    // button with counter component
-
+pub fn InputGroup(
+    #[prop(optional, into)] given_disabled: MaybeSignal<bool>,
+    #[prop(optional, into)] h_class: MaybeSignal<String>,
+    #[prop(optional, into)] size: MaybeSignal<String>,
+) -> impl IntoView {
     let local_disabled = create_rw_signal(false);
-    let disabled = create_memo(move |_|
-        // let disabled = Signal::derive(move ||
-        {
-        let val = given_disabled.get() || local_disabled.get();
-        log!("search_bar_disabled - {}", val);
-        val
-        });
-    // -------------------------------------
-    // BACKGROUND CLASSES FOR DISABLED STATE
-    // -------------------------------------
+    let disabled = create_memo(move |_| given_disabled.get() || local_disabled.get());
 
     let bg_class = move || {
         if disabled.get() {
-            // <!-- Updated disabled state to be more subtle on mobile -->
-            "bg-gray-100 md:bg-gray-300"
+            "bg-gray-100"
         } else {
-            // <!-- Removed opacity for mobile to match screenshot -->
             "bg-white"
         }
     };
-
     let bg_search_class = move || {
         if disabled.get() {
-            "bg-gray-300"
+            "bg-gray-300 cursor-not-allowed"
         } else {
-            // <!-- Updated search button to be blue on mobile to match screenshot -->
-            "bg-blue-500 text-white hover:bg-blue-600 md:hover:bg-blue-200"
+            "bg-blue-500 hover:bg-blue-600 text-white"
         }
     };
-
     let bg_search_icon_class = move || {
         if disabled.get() {
             "text-gray-400"
         } else {
-            // <!-- Updated icon color to white for mobile to match screenshot -->
             "text-white"
         }
     };
@@ -168,156 +154,92 @@ pub fn InputGroup(#[prop(optional, into)] given_disabled: MaybeSignal<bool>) -> 
             .place
             .get()
             .map(|d| {
-                let search_text = if d.formatted_address.trim().is_empty() {
+                if d.formatted_address.trim().is_empty() {
                     d.display_name.clone()
                 } else {
                     format!("{}, {}", d.display_name, d.formatted_address)
-                };
-
-                search_text
+                }
             })
-            .unwrap_or_else(|| "".to_string())
+            .unwrap_or_default()
     });
 
-    // Use shared search action with UI state management
     let search_action = create_search_action_with_ui_state(local_disabled);
-
-    log!("[root.rs InputGroup] Search action created with UI state management");
-
-    // let close_closure = move |_: ()| {
-    //     log!("[root.rs] close panel");
-    //     InputGroupState::toggle_dialog(OpenDialogComponent::None);
-    // };
-
     let parent_div_ref: NodeRef<html::Div> = create_node_ref();
 
-    // let _ = on_click_outside(parent_div_ref, move |_| close_closure(()));
+    let height_class = move || {
+        match size.get().as_str() {
+            "small" => "h-12 lg:w-12 md:w-full", // navbar version
+            "large" | _ => "h-[56px] lg:w-[56px] md:w-full", // hero section default
+        }
+    };
 
     view! {
         <div
             node_ref=parent_div_ref
-            class=move || {
-                format!(
-                    // <!-- Changed mobile styling to use solid white background instead of transparent/backdrop-blur -->
-                    // <!-- Added more rounded corners for mobile and better spacing -->
-                    // <!-- Improved shadow for better card-like appearance on mobile -->
-                    " {} flex flex-col md:flex-row items-stretch md:items-center md:p-1.5 md:divide-x md:divide-white max-w-4xl w-full z-[70] space-y-4 md:space-y-0 bg-white rounded-xl md:rounded-full border border-gray-200 shadow-md md:shadow-sm md:backdrop-blur",
-                    bg_class(),
-                )
-            }
+            class=move || format!(
+                "relative flex flex-col md:flex-row items-stretch md:items-center max-w-4xl w-full z-[70]
+                 {bg} rounded-md border border-gray-200 shadow-md
+                 overflow-hidden md:overflow-visible
+                 md:space-y-0 space-y-3",
+                bg = bg_class()
+            )
         >
-            // <!-- Destination input -->
-            // <!-- Improved mobile styling with better rounded corners and spacing -->
-            // <div class="relative flex-1 md:backdrop-blur-none border-0 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-            <div class="relative flex-1 min-w-0 border-0 md:border-0 rounded-lg md:rounded-none">
-                <div class="flex items-center h-[56px] px-6">
-                    <Show when=move || !disabled.get()>
-                        <div class="absolute inset-0">
-                            <DestinationPickerV6 />
-                        </div>
-                    </Show>
 
-                    <Show when=move || disabled.get()>
-                        <div class="text-xl flex items-center flex-shrink-0">
-                            <Icon icon=icondata::BsMap class="text-blue-500" />
-                        </div>
-
-                        <button
-                            // NOTE: min-w-0 here + truncate span inside
-                            class="flex-1 ml-3 bg-transparent border-none focus:outline-none text-base text-left flex items-center font-normal min-w-0"
-                            disabled=disabled.get()
-                        >
-                            // span carries the truncation rules
-                            <span class="truncate font-medium block w-full">
-                                {move || place_display.get()}
-                            </span>
-                        </button>
-                    </Show>
-                </div>
+            // Destination
+            <div class="flex-1 flex items-center px-2 h-[56px]">
+                <Show when=move || !disabled.get()>
+                    <DestinationPickerV6 />
+                </Show>
+                <Show when=move || disabled.get()>
+                    <Icon icon=icondata::BsMap class="text-blue-500 text-lg" />
+                    <button
+                        class="flex-1 ml-3 text-base text-left font-medium truncate"
+                        disabled=disabled.get()
+                    >
+                        {move || place_display.get()}
+                    </button>
+                </Show>
             </div>
 
-            // <!-- Date range picker -->
-            // <!-- Improved mobile styling with better rounded corners and spacing -->
-            // <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-            <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none">
-                <div class="flex items-center h-[56px] px-6">
-                    <DateTimeRangePickerCustom />
-                </div>
+            <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
+
+            // Date range
+            <div class="flex-1 flex items-center px-2 h-[56px] border-t md:border-t-0 relative z-[80]">
+                <DateTimeRangePickerCustom />
             </div>
 
-            // <!-- Guests dropdown -->
-            // <!-- Improved mobile styling with better rounded corners and spacing -->
-            // <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none overflow-hidden">
-            <div class="relative flex-1 md:backdrop-blur-none border-t border-gray-200 md:border-0 rounded-lg md:rounded-none">
-                <div class="relative flex h-[56px] px-6">
-                    <GuestQuantity />
-                </div>
+            <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
+
+            // Guests
+            <div class="flex-1 flex items-center px-2 h-[56px] border-t md:border-t-0 relative z-[80]">
+                <GuestQuantity />
             </div>
 
-            // <!-- Search button -->
-            // <!-- Completely redesigned for mobile to match screenshot with full-width button at bottom -->
-            <div class="px-6 md:px-0">
+            // Search button
             <button
                 on:click=move |ev| {
                     ev.prevent_default();
-                    log!("[root.rs InputGroup] Search button clicked, about to dispatch search action");
-
-                    // Reset pagination to first page when search is clicked
                     UIPaginationState::reset_to_first_page();
-                    log!("[root.rs InputGroup] Pagination reset to first page");
-
-                    // Log current UISearchCtx state before dispatch
-                    let current_search_ctx: UISearchCtx = expect_context();
-                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - destination: {:?}", current_search_ctx.destination.get());
-                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - date_range: {:?}", current_search_ctx.date_range.get());
-                    log!("[root.rs InputGroup] Current UISearchCtx before dispatch - adults: {}", current_search_ctx.guests.adults.get());
-
                     search_action.dispatch(());
-                    log!("[root.rs InputGroup] Search action dispatched");
                 }
-                class=move || {
-                    format!(" {} rounded-full w-full focus:outline-none flex items-center justify-center h-[56px] px-4 mx-auto mb-2 md:mb-0 md:w-auto md:mx-0", bg_search_class())
-                }
-            >
-                <div class="flex justify-center text-2xl ">
-                    // done with tricks shared by generous Prakash!
-                    <div class="hidden md:block">
-                    <Show
-                        when=move || disabled.get()
-                        fallback=move || {
-                            view! {
-                                <Icon
-                                    icon=icondata::AiSearchOutlined
-                                    class=format!("{} text-2xl", bg_search_icon_class())
-                                />
-                            }
-                        }
-                    >
-                        <Icon
-                            icon=icondata::AiSearchOutlined
-                            class=format!("{} p-1 text-2xl", bg_search_icon_class())
-                        />
-
-                    </Show>
-                    </div>
-                    <div class="block md:hidden text-lg">
-
-                    <Show
-                    when=move || disabled.get()
-                    fallback=move || {
-                        view! {
-                            <div class="disabled">Search</div>
-                        }
-                    }
-                >
-                        Search
-                </Show>
-                </div>
-
-                </div>
+                class=move || format!(
+                    "flex items-center justify-center gap-2 transition-all duration-200 font-medium
+                    {}
+                    rounded-b-md md:rounded-b-none md:rounded-r-md border-l border-white
+                    leading-none {}",
+                    height_class(),
+                    bg_search_class()
+                )>
+                <Icon
+                    icon=icondata::AiSearchOutlined
+                    class=format!(
+                        "{} text-[20px] md:text-[20px] flex-shrink-0 leading-none",
+                        bg_search_icon_class()
+                    )
+                />
+                <span class="block md:hidden text-sm font-medium leading-none">"Search"</span>
             </button>
-            </div>
-            <div class="h-1 block md:hidden"></div>
+
 
         </div>
     }

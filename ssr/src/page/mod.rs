@@ -58,3 +58,6 @@ pub use wishlist::*;
 
 mod about_us;
 pub use about_us::*;
+
+pub mod hotel_list_navbar;
+pub use hotel_list_navbar::*;

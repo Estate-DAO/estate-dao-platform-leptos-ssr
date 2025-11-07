@@ -1,26 +1,17 @@
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
-use crate::component::yral_auth_provider::YralAuthProvider;
-use crate::component::Navbar;
+use crate::component::{yral_auth_provider::YralAuthProvider, Navbar};
 use crate::log;
-use crate::utils::parent_resource::MockPartialEq;
-use crate::view_state_layer::my_bookings_state::{
-    BookingStatus, BookingTab, MyBookingItem, MyBookingsState,
-};
+use crate::page::Wishlist;
+use crate::view_state_layer::my_bookings_state::{BookingStatus, BookingTab, MyBookingItem};
 use chrono::{DateTime, Utc};
-use codee::string::JsonSerdeCodec;
-use leptos::SignalGet;
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::*;
-use leptos_use::{use_cookie_with_options, UseCookieOptions};
 use std::rc::Rc;
-
 async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     log!("[MyBookings] Loading bookings from API");
 
     let auth_state = AuthStateSignal::auth_state().get();
-    // Call actual canister API to get bookings
     let backend_bookings =
         user_get_my_bookings(auth_state.email.ok_or(ServerFnError::new("Unauthorized"))?).await?;
     log!(
@@ -30,30 +21,15 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
 
     let total_bookings_count = backend_bookings.len();
 
-    // Filter out incomplete bookings and convert to MyBookingItem
     let complete_bookings: Vec<_> = backend_bookings
         .into_iter()
         .filter(|booking| {
-            // Check if booking is complete by verifying both payment and booking status
-            let has_payment = match &booking.payment_details.payment_status {
-                crate::canister::backend::BackendPaymentStatus::Paid(_) => true,
-                crate::canister::backend::BackendPaymentStatus::Unpaid(_) => false,
-            };
-
+            let has_payment = matches!(
+                booking.payment_details.payment_status,
+                crate::canister::backend::BackendPaymentStatus::Paid(_)
+            );
             let has_booking_confirmation = booking.book_room_status.is_some();
-
-            let is_complete = has_payment && has_booking_confirmation;
-
-            if !is_complete {
-                log!(
-                    "[MyBookings] Filtering out incomplete booking - app_reference: {}, has_payment: {}, has_booking: {}",
-                    booking.booking_id.app_reference,
-                    has_payment,
-                    has_booking_confirmation
-                );
-            }
-
-            is_complete
+            has_payment && has_booking_confirmation
         })
         .collect();
 
@@ -71,45 +47,57 @@ async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
 }
 
 #[component]
+pub fn MyBookingsPage() -> impl IntoView {
+    log!("[MyBookings] MyBookingsPage started");
+
+    view! {
+        <div class="min-h-screen flex flex-col">
+            <Navbar />
+            <MyBookings />
+        </div>
+    }
+}
+
+#[component]
+pub fn MyBookings() -> impl IntoView {
+    view! {
+        <div class="flex flex-col">
+        {/* Sticky header */}
+            <div class="sticky top-0 z-30 bg-white border-b border-gray-200">
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <h1 class="text-2xl font-semibold text-gray-900">My Bookings</h1>
+                </div>
+                <div class="border-t border-gray-200">
+                    <AuthGatedBookings />
+                </div>
+            </div>
+
+            {/* Content */}
+            <div class="flex-1">
+                <BookingsLoader />
+            </div>
+        </div>
+    }
+}
+
+#[component]
 pub fn AuthGatedBookings() -> impl IntoView {
-    use crate::api::consts::USER_IDENTITY;
-
-    // Return the reactive view - use move closure for reactivity
-    move || {
-        // Check auth state from both sources (cookie takes priority)
-        let is_logged_in = AuthStateSignal::auth_state().get().email.is_some();
-
-        crate::log!(
-            "AUTH_FLOW: my_bookings - AuthGatedBookings render check - is_logged_in: {}",
-            is_logged_in
-        );
-
-        if is_logged_in {
-            // User is logged in, show bookings content
-            view! { <BookingsLoader /> }.into_view()
-        } else {
-            // User is not logged in, show login prompt
-            view! { <BookingsLoginPrompt /> }.into_view()
-        }
+    view! {
+        <Show when=move||AuthStateSignal::auth_state().get().email.is_none()>
+            <BookingsLoginPrompt />
+        </Show>
     }
 }
 
 #[component]
 pub fn BookingsLoginPrompt() -> impl IntoView {
-    // Provide login context for YralAuthProvider
     view! {
-        <div class="max-w-md mx-auto mt-16">
-            <div class="bg-white rounded-2xl shadow-lg p-8 text-center">
-                <div class="mb-6">
-                    <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-6xl mx-auto mb-4" />
-                    <h2 class="text-2xl font-semibold text-gray-900 mb-2">
-                        "Login Required"
-                    </h2>
-                    <p class="text-gray-600 mb-6">
-                        "Please login to view your booking history"
-                    </p>
-                </div>
-                <div class="w-full flex justify-center">
+        <div class="max-w-md mx-auto mt-12">
+            <div class="bg-white rounded-2xl shadow-md p-8 text-center">
+                <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-5xl mx-auto mb-3" />
+                <h2 class="text-xl font-semibold text-gray-900 mb-1">Login Required</h2>
+                <p class="text-gray-600 mb-5">Please login to view your booking history</p>
+                <div class="flex justify-center">
                     <YralAuthProvider />
                 </div>
             </div>
@@ -119,334 +107,247 @@ pub fn BookingsLoginPrompt() -> impl IntoView {
 
 #[component]
 pub fn BookingsLoader() -> impl IntoView {
-    // Create resource for loading bookings data - following pattern from base_route.rs user_email_sync_resource
     let bookings_resource = create_resource(
-        || (),
-        move |_| async move {
-            log!("[MyBookings] Resource loading bookings");
-            load_my_bookings().await
+        || AuthStateSignal::auth_state().get(),
+        |auth| async move {
+            if auth.is_authenticated() {
+                log!("[MyBookings] Fetching bookings...");
+                load_my_bookings().await
+            } else {
+                Ok(Vec::new())
+            }
         },
     );
 
     view! {
-        <div class="p-6">
-            <Suspense fallback=move || view! {
-                <div class="flex justify-center items-center py-12">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    <span class="ml-3 text-gray-600">Loading bookings...</span>
-                </div>
-            }>
-                {move || {
-                    match bookings_resource.get() {
-                        Some(Ok(bookings)) => {
-                            log!("[MyBookings] Resource loaded {} bookings", bookings.len());
-                            view! { <BookingsContent bookings=bookings /> }.into_view()
-                        }
-                        Some(Err(error)) => {
-                            log!("[MyBookings] Resource error: {}", error);
-                            view! {
-                                <div class="text-center py-8">
-                                    <p class="text-red-600 mb-2">Failed to load bookings</p>
-                                    <p class="text-gray-500 text-sm">{error.to_string()}</p>
-                                </div>
-                            }.into_view()
-                        }
-                        None => view! { <>"Loading..."</> }.into_view()
-                    }
-                }}
-            </Suspense>
-        </div>
-    }
-}
-
-#[component]
-pub fn MyBookingsPage() -> impl IntoView {
-    log!("[MyBookings] MyBookingsPage component started");
-
-    view! {
-        <div class="min-h-screen bg-gray-50">
-            // <!-- Navbar -->
-            <Navbar />
-
-            // <!-- Header section with hero background -->
-            <div class="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-                <div class="absolute inset-0 bg-black opacity-20"></div>
-                <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                    <h1 class="text-4xl font-bold mb-2">My Bookings</h1>
-                </div>
-            </div>
-
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                // <!-- Auth-gated content -->
-                <div class="bg-white rounded-lg shadow-lg mb-6">
-                    // <!-- Use AuthGatedBookings component for reactive authentication -->
-                    <AuthGatedBookings />
-                </div>
-            </div>
-        </div>
-    }
-    .into_view()
-}
-
-#[component]
-fn TabButtonLocal(
-    tab: BookingTab,
-    label: &'static str,
-    count: usize,
-    current_tab: RwSignal<BookingTab>,
-) -> impl IntoView {
-    let on_click = move |_| {
-        current_tab.set(tab);
-    };
-
-    view! {
-        <button
-            class=move || format!(
-                "flex-1 px-6 py-4 text-sm font-medium border-b-2 transition-colors {}",
-                if current_tab.get() == tab {
-                    "border-blue-600 text-blue-600 bg-blue-50"
-                } else {
-                    "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }
-            )
-            on:click=on_click
-        >
-            <span class="flex items-center justify-center gap-2">
-                {label}
-                <span class=move || format!(
-                    "px-2 py-1 text-xs rounded-full {}",
-                    if current_tab.get() == tab {
-                        "bg-blue-600 text-white"
-                    } else {
-                        "bg-gray-200 text-gray-600"
-                    }
-                )>
-                    {count}
-                </span>
-            </span>
-        </button>
-    }
-}
-
-#[component]
-fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
-    log!(
-        "[MyBookings] BookingsContent component started with {} bookings",
-        bookings.len()
-    );
-
-    // Create state for managing current tab
-    let current_tab = RwSignal::new(BookingTab::Upcoming);
-
-    // Wrap bookings in Rc to allow sharing between closures
-    let bookings_rc = Rc::new(bookings);
-    let bookings_for_filter = bookings_rc.clone();
-    let bookings_for_count = bookings_rc.clone();
-
-    // Filter and sort bookings by current tab
-    let filtered_bookings = Signal::derive(move || {
-        let active_tab = current_tab.get();
-        let mut filtered = bookings_for_filter
-            .iter()
-            .filter(|booking| match active_tab {
-                BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
-                BookingTab::Completed => booking.status == BookingStatus::Completed,
-                BookingTab::Cancelled => booking.status == BookingStatus::Cancelled,
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-
-        if active_tab == BookingTab::Upcoming {
-            filtered.sort_by_key(|b| b.check_in_date);
-        }
-
-        filtered
-    });
-
-    // Get tab counts
-    let get_tab_count = move |tab: BookingTab| {
-        bookings_for_count
-            .iter()
-            .filter(|booking| match tab {
-                BookingTab::Upcoming => booking.status == BookingStatus::Upcoming,
-                BookingTab::Completed => booking.status == BookingStatus::Completed,
-                BookingTab::Cancelled => booking.status == BookingStatus::Cancelled,
-            })
-            .count()
-    };
-
-    view! {
-        // <!-- Tab navigation -->
-        <div class="flex border-b border-gray-200 mb-6">
-            <TabButtonLocal
-                tab=BookingTab::Upcoming
-                label="Upcoming"
-                count=get_tab_count(BookingTab::Upcoming)
-                current_tab=current_tab
-            />
-            <TabButtonLocal
-                tab=BookingTab::Completed
-                label="Completed"
-                count=get_tab_count(BookingTab::Completed)
-                current_tab=current_tab
-            />
-            <TabButtonLocal
-                tab=BookingTab::Cancelled
-                label="Cancelled"
-                count=get_tab_count(BookingTab::Cancelled)
-                current_tab=current_tab
-            />
-        </div>
-
-        // <!-- Bookings content -->
         <Suspense fallback=move || view! {
             <div class="flex justify-center items-center py-12">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <span class="ml-3 text-gray-600">Loading bookings...</span>
             </div>
         }>
-            {move || {
-            let filtered = filtered_bookings.get();
-            if filtered.is_empty() {
-                view! { <EmptyBookingsState /> }.into_view()
-            } else {
-                view! {
-                    <div class="space-y-4">
-                        <For
-                            each=move || filtered_bookings.get()
-                            key=|booking| booking.booking_id.clone()
-                            children=|booking| view! { <BookingCard booking=booking /> }
-                        />
-                    </div>
-                }.into_view()
+            {move || match bookings_resource.get() {
+                Some(Ok(bookings)) if !bookings.is_empty() => view! { <BookingsContent bookings=bookings /> }.into_view(),
+                Some(Err(e)) => view! {
+                    <div class="text-center py-12 text-red-600">Error loading bookings: {e.to_string()}</div>
+                }.into_view(),
+                _ => view! { <></> }.into_view(),
+            }}
+        </Suspense>
+    }
+}
+
+#[component]
+fn BookingsTabs() -> impl IntoView {
+    let current_tab = RwSignal::new(BookingTab::Completed);
+    view! {
+        <div class="flex justify-start sm:justify-start border-b border-gray-200 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <TabButtonLocal tab=BookingTab::Upcoming label="Upcoming" current_tab=current_tab />
+            <TabButtonLocal tab=BookingTab::Completed label="Completed" current_tab=current_tab />
+            <TabButtonLocal tab=BookingTab::Cancelled label="Cancelled" current_tab=current_tab />
+        </div>
+    }
+}
+
+#[component]
+fn TabButtonLocal(
+    tab: BookingTab,
+    label: &'static str,
+    current_tab: RwSignal<BookingTab>,
+) -> impl IntoView {
+    let on_click = move |_| current_tab.set(tab);
+    view! {
+        <button
+            on:click=on_click
+            class=move || format!(
+                "relative py-3 px-4 text-sm font-medium transition-colors {}",
+                if current_tab.get() == tab {
+                    "text-blue-600 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-blue-600"
+                } else {
+                    "text-gray-500 hover:text-gray-800"
+                }
+            )
+        >
+            {label}
+        </button>
+    }
+}
+
+#[component]
+fn BookingsContent(bookings: Vec<MyBookingItem>) -> impl IntoView {
+    // Track current active tab
+    let current_tab = RwSignal::new(BookingTab::Upcoming);
+
+    // Derive filtered list reactively
+    let filtered_bookings = Signal::derive({
+        let bookings = bookings.clone();
+        move || {
+            let active_tab = current_tab.get();
+            let mut filtered = bookings
+                .iter()
+                .filter(|b| match active_tab {
+                    BookingTab::Upcoming => b.status == BookingStatus::Upcoming,
+                    BookingTab::Completed => b.status == BookingStatus::Completed,
+                    BookingTab::Cancelled => b.status == BookingStatus::Cancelled,
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+
+            // Sort upcoming bookings by check-in date (soonest first)
+            if active_tab == BookingTab::Upcoming {
+                filtered.sort_by_key(|b| b.check_in_date);
             }
-        }}
-    </Suspense>
+
+            filtered
+        }
+    });
+
+    // Helper: count bookings per tab
+    let get_tab_count = {
+        let bookings = bookings.clone();
+        move |tab: BookingTab| {
+            bookings
+                .iter()
+                .filter(|b| match tab {
+                    BookingTab::Upcoming => b.status == BookingStatus::Upcoming,
+                    BookingTab::Completed => b.status == BookingStatus::Completed,
+                    BookingTab::Cancelled => b.status == BookingStatus::Cancelled,
+                })
+                .count()
+        }
+    };
+
+    view! {
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            // Tabs
+            <div class="flex border-b border-gray-200 mb-6">
+                <TabButtonLocal
+                    tab=BookingTab::Upcoming
+                    label="Upcoming"
+                    current_tab=current_tab
+                />
+                <span class="ml-1 text-xs text-gray-500 self-center">
+                    {get_tab_count(BookingTab::Upcoming)}
+                </span>
+
+                <TabButtonLocal
+                    tab=BookingTab::Completed
+                    label="Completed"
+                    current_tab=current_tab
+                />
+                <span class="ml-1 text-xs text-gray-500 self-center">
+                    {get_tab_count(BookingTab::Completed)}
+                </span>
+
+                <TabButtonLocal
+                    tab=BookingTab::Cancelled
+                    label="Cancelled"
+                    current_tab=current_tab
+                />
+                <span class="ml-1 text-xs text-gray-500 self-center">
+                    {get_tab_count(BookingTab::Cancelled)}
+                </span>
+            </div>
+
+            // Booking list
+            {move || {
+                let data = filtered_bookings.get();
+                if data.is_empty() {
+                    view! { <EmptyBookingsState /> }.into_view()
+                } else {
+                    view! {
+                        <div class="space-y-6">
+                            <For
+                                each=move || data.clone()
+                                key=|b| b.booking_id.clone()
+                                children=|b| view! { <BookingCard booking=b /> }
+                            />
+                        </div>
+                    }.into_view()
+                }
+            }}
+        </div>
     }
 }
 
 #[component]
 fn BookingCard(booking: MyBookingItem) -> impl IntoView {
-    let format_date = |date: DateTime<Utc>| date.format("%d %b %Y").to_string();
-
+    let format_date = |date: DateTime<Utc>| date.format("%d %B %Y").to_string();
     let status_color = match booking.status {
-        BookingStatus::Upcoming => "text-green-600 bg-green-50",
-        BookingStatus::Completed => "text-blue-600 bg-blue-50",
-        BookingStatus::Cancelled => "text-red-600 bg-red-50",
+        BookingStatus::Upcoming => "text-blue-600",
+        BookingStatus::Completed => "text-green-600",
+        BookingStatus::Cancelled => "text-red-600",
     };
 
-    // Signal to track if image failed to load
-    let image_failed = RwSignal::new(false);
-
-    // Clone values for use in closures
-    let hotel_name_for_image = booking.hotel_name.clone();
-    let image_url = booking.hotel_image_url.clone();
+    let hotel_code = booking.hotel_code.clone();
 
     view! {
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
             <div class="flex flex-col md:flex-row">
-                // <!-- Hotel Image -->
-                <div class="md:w-48 h-48 md:h-auto flex-shrink-0 bg-gray-100 relative">
-                    {move || {
-                        if image_url.is_empty() || image_failed.get() {
-                            view! {
-                                <div class="w-full h-full flex items-center justify-center text-gray-500 text-sm text-center p-4">
-                                    {format!("{} image", &hotel_name_for_image)}
-                                </div>
-                            }.into_view()
-                        } else {
-                            view! {
-                                <img
-                                    src=&image_url
-                                    alt=format!("{} image", &hotel_name_for_image)
-                                    class="w-full h-full object-cover"
-                                    loading="lazy"
-                                    on:error=move |_| {
-                                        image_failed.set(true);
-                                    }
-                                />
-                            }.into_view()
-                        }
-                    }}
+                {/* Hotel image + Wishlist */}
+                <div class="relative w-full h-40 md:h-auto md:basis-[28%] md:flex-shrink-0">
+                    <img
+                        class="w-full h-full object-cover md:rounded-l-xl rounded-t-xl md:rounded-t-none"
+                        src=booking.hotel_image_url.clone()
+                        alt=booking.hotel_name.clone()
+                    />
+
+                    {/* Top bar: Wishlist (left) + Test badge (right) */}
+                    <div class="absolute top-2 left-0 right-0 px-2 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <Wishlist hotel_code class="[&_button]:static [&_button]:top-auto [&_button]:left-auto" />
+                        </div>
+
+                        <Show when=move || booking.is_test>
+                            <div class="bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-md shadow">
+                                "Test"
+                            </div>
+                        </Show>
+                    </div>
                 </div>
 
-                // <!-- Booking Details -->
-                <div class="flex-1 p-4 sm:p-6">
-                    <div class="flex flex-col">
-                        // <!-- Header with hotel name and status -->
-                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3">
-                            <div class="flex-1">
-                                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1">
-                                    {&booking.hotel_name}
-                                </h3>
-                                <p class="text-gray-600 mb-3">{&booking.hotel_location}</p>
-                            </div>
-                            <div class="flex flex-col sm:flex-row gap-2 justify-start sm:justify-end mb-3 sm:mb-0">
-                                <span class=format!("px-3 py-1 rounded-full text-sm font-medium {}", status_color)>
-                                    {booking.status.to_string()}
-                                </span>
-                                {move || {
-                                    if booking.is_test {
-                                        view! {
-                                            <span class="px-2 py-1 rounded-full text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200">
-                                                TEST
-                                            </span>
-                                        }.into_view()
-                                    } else {
-                                        view! { <></> }.into_view()
-                                    }
-                                }}
-                            </div>
+
+                {/* Booking details */}
+                <div class="flex-1 p-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">{booking.hotel_name.clone()}</h3>
+                        <p class="text-sm text-gray-600 mb-3">{booking.hotel_location.clone()}</p>
+
+                        <p class="text-sm text-gray-500 mb-2">
+                            Booking ID: <span class="font-medium text-gray-700">{booking.booking_id.clone()}</span>
+                        </p>
+
+                        <div class="flex items-center text-sm text-gray-600 mb-2">
+                            <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {format!("{} - {}", format_date(booking.check_in_date), format_date(booking.check_out_date))}
                         </div>
 
-                        // <!-- Booking details - stack on mobile, horizontal on larger screens -->
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-gray-600 mb-4">
-                            <div class="flex items-center gap-1">
-                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
-                                <span class="break-words">{format_date(booking.check_in_date)} - {format_date(booking.check_out_date)}</span>
+                                <span>{format!("{} adult", booking.adults)}</span>
                             </div>
-                            <div class="flex items-center gap-4 sm:gap-2">
-                                <div class="flex items-center gap-1">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span>{booking.adults} adult</span>
-                                </div>
-                                <div class="flex items-center gap-1">
-                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                    </svg>
-                                    <span>{booking.rooms} room</span>
-                                </div>
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                                <span>{format!("{} room", booking.rooms)}</span>
                             </div>
-                        </div>
-
-                        // <!-- Booking ID -->
-                        <div class="mb-4">
-                            <p class="text-sm text-gray-500">
-                                Booking ID: <span class="font-mono text-xs sm:text-sm break-all">{&booking.booking_id}</span>
-                            </p>
                         </div>
                     </div>
 
-                        // <!-- Action buttons - commented out for now -->
-                        // <div class="flex items-center gap-4">
-                            //     <button class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
-                            //         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            //             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            //             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            //         </svg>
-                            //         View Booking
-                            //     </button>
-                            //     <button class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
-                            //         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            //             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                            //         </svg>
-                            //         Share
-                            //     </button>
-                            // </div>
+                    // <div class="mt-3">
+                    //     <span class=format!("text-sm font-medium {}", status_color)>
+                    //         {booking.status.to_string()}
+                    //     </span>
+                    // </div>
                 </div>
             </div>
         </div>
@@ -456,20 +357,11 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
 #[component]
 fn EmptyBookingsState() -> impl IntoView {
     view! {
-        <div class="text-center py-12">
-            <div class="mb-6">
-                <img
-                    src="/img/no-booking-found.svg"
-                    alt="No bookings found"
-                    class="mx-auto h-48 w-48"
-                />
-            </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No bookings yet</h3>
+        <div class="text-center py-16">
+            <img src="/img/no-booking-found.svg" alt="No bookings" class="mx-auto w-40 mb-4" />
+            <h3 class="text-lg font-semibold text-gray-900">No bookings yet</h3>
             <p class="text-gray-500 mb-6">When you book a hotel, it will appear here.</p>
-            <a
-                href="/"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-            >
+            <a href="/" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
                 Start Booking
             </a>
         </div>

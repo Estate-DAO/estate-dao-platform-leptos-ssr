@@ -8,12 +8,12 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
-    format_price_range_value, AmenitiesFilter, Destination, Footer, GuestSelection, Navbar,
-    PaginationControls, PaginationInfo, PriceRangeFilter, PropertyTypeFilter, SkeletonCards,
-    SortBy, StarRatingFilter, MAX_PRICE, MIN_PRICE,
+    format_price_range_value, CheckboxFilter, Destination, Footer, GuestSelection, Navbar,
+    PaginationControls, PaginationInfo, PriceRangeFilter, SkeletonCards, SortBy, StarRatingFilter,
+    MAX_PRICE, MIN_PRICE,
 };
 use crate::log;
-use crate::page::{HotelDetailsParams, HotelListParams, InputGroupContainer};
+use crate::page::{HotelDetailsParams, HotelListNavbar, HotelListParams, InputGroupContainer};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -373,6 +373,16 @@ pub fn HotelListPage() -> impl IntoView {
         })
     };
 
+    let popular_filters_options_signal: Signal<Vec<String>> = Signal::derive(move || {
+        vec![
+            "Breakfast Included".to_string(),
+            "Hotel".to_string(),
+            "Parking".to_string(),
+            "Swimming Pool".to_string(),
+            "Pet Friendly".to_string(),
+        ]
+    });
+
     let amenities_selected_signal: Signal<Vec<String>> = {
         let filters_signal = filters_signal;
         Signal::derive(move || filters_signal.get().amenities.clone().unwrap_or_default())
@@ -384,6 +394,17 @@ pub fn HotelListPage() -> impl IntoView {
             filters_signal
                 .get()
                 .property_types
+                .clone()
+                .unwrap_or_default()
+        })
+    };
+
+    let popular_filters_selected_signal: Signal<Vec<String>> = {
+        let filters_signal = filters_signal;
+        Signal::derive(move || {
+            filters_signal
+                .get()
+                .popular_filters
                 .clone()
                 .unwrap_or_default()
         })
@@ -403,7 +424,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -411,7 +432,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.amenities = None);
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -429,7 +450,7 @@ pub fn HotelListPage() -> impl IntoView {
                     list.push(label.clone());
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -437,7 +458,33 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = search_ctx.filters;
         Callback::new(move |_| {
             filters_signal.update(|f| f.property_types = None);
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
+        })
+    };
+
+    let popular_filters_on_toggle = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |label: String| {
+            filters_signal.update(|f| {
+                let list = f.popular_filters.get_or_insert_with(Vec::new);
+                if let Some(pos) = list.iter().position(|v| v.eq_ignore_ascii_case(&label)) {
+                    list.remove(pos);
+                    if list.is_empty() {
+                        f.popular_filters = None;
+                    }
+                } else {
+                    list.push(label.clone());
+                }
+            });
+            leptos::Callable::call(&update_url_with_current_state, ());
+        })
+    };
+
+    let popular_filters_on_clear = {
+        let filters_signal = search_ctx.filters;
+        Callback::new(move |_| {
+            filters_signal.update(|f| f.popular_filters = None);
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -449,7 +496,7 @@ pub fn HotelListPage() -> impl IntoView {
                     filters.min_star_rating = next;
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -477,7 +524,7 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
             });
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -485,7 +532,7 @@ pub fn HotelListPage() -> impl IntoView {
         let filters_signal = filters_signal;
         Callback::new(move |_| {
             filters_signal.set(UISearchFilters::default());
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         })
     };
 
@@ -504,7 +551,7 @@ pub fn HotelListPage() -> impl IntoView {
             .get()
             .is_some()
         {
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         }
     });
 
@@ -520,51 +567,52 @@ pub fn HotelListPage() -> impl IntoView {
             .get()
             .is_some()
         {
-            update_url_with_current_state.call(());
+            leptos::Callable::call(&update_url_with_current_state, ());
         }
     });
 
     view! {
         // Fixed header section at top
-        <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
-            <div class={
-                let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-                move || format!(
-                    "bg-blue-600 relative transition-all duration-300 {}",
-                    if is_input_expanded() {
-                        // Expanded height on mobile/tablet when input group is open, normal on desktop
-                        "h-96 sm:h-96 md:h-80 lg:h-32"
-                    } else {
-                        // Normal collapsed height for all screen sizes
-                        "h-40 sm:h-40 md:h-36 lg:h-32"
-                    }
-                )
-            }>
-                <Navbar blue_header=true />
+        // <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+            // <div class={
+            //     let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+            //     move || format!(
+            //         "bg-blue-600 relative transition-all duration-300 {}",
+            //         if is_input_expanded() {
+            //             // Expanded height on mobile/tablet when input group is open, normal on desktop
+            //             "h-96 sm:h-96 md:h-80 lg:h-32"
+            //         } else {
+            //             // Normal collapsed height for all screen sizes
+            //             "h-40 sm:h-40 md:h-36 lg:h-32"
+            //         }
+            //     )
+            // }>
+            //     <Navbar blue_header=true />
 
-                // Mobile/tablet: position input group normally in the flow when expanded
-                // Desktop: use absolute positioning (original behavior)
-                <div class={
-                    let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-                    move || format!(
-                        "w-full flex flex-col items-center px-4 {}",
-                        if is_input_expanded() {
-                            // Mobile/tablet expanded: normal flow positioning
-                            "justify-end h-full pb-4 lg:absolute lg:left-1/2 lg:bottom-0 lg:transform lg:-translate-x-1/2 lg:translate-y-1/2 lg:max-w-5xl lg:z-40 lg:h-auto lg:pb-0"
-                        } else {
-                            // All screens collapsed: absolute positioning for desktop, hidden for mobile
-                            "absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 max-w-5xl z-40"
-                        }
-                    )
-                }>
-                    <InputGroupContainer
-                        default_expanded=false
-                        given_disabled=disabled_input_group
-                        allow_outside_click_collapse=true
-                    />
-                </div>
-            </div>
-        </div>
+            //     // Mobile/tablet: position input group normally in the flow when expanded
+            //     // Desktop: use absolute positioning (original behavior)
+            //     <div class={
+            //         let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+            //         move || format!(
+            //             "w-full flex flex-col items-center px-4 {}",
+            //             if is_input_expanded() {
+            //                 // Mobile/tablet expanded: normal flow positioning
+            //                 "justify-end h-full pb-4 lg:absolute lg:left-1/2 lg:bottom-0 lg:transform lg:-translate-x-1/2 lg:translate-y-1/2 lg:max-w-5xl lg:z-40 lg:h-auto lg:pb-0"
+            //             } else {
+            //                 // All screens collapsed: absolute positioning for desktop, hidden for mobile
+            //                 "absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2 max-w-5xl z-40"
+            //             }
+            //         )
+            //     }>
+            //         <InputGroupContainer
+            //             default_expanded=false
+            //             given_disabled=disabled_input_group
+            //             allow_outside_click_collapse=true
+            //         />
+            //     </div>
+            // </div>
+            <HotelListNavbar />
+        // </div>
 
         // Dynamic spacer that only adjusts on mobile/tablet, stays normal on desktop
         <div class={
@@ -576,16 +624,16 @@ pub fn HotelListPage() -> impl IntoView {
                     "h-96 sm:h-96 md:h-80 lg:h-48"
                 } else {
                     // Normal spacer when collapsed on all screens
-                    "h-56 sm:h-56 md:h-60 lg:h-48"
+                    "h-24"
                 }
             )
         }></div>
 
         // Main scrollable section
-        <section class="min-h-screen bg-slate-50 px-4">
+        <section class="bg-slate-50 px-4 pb-2">
             // Desktop layout (lg screens and up) - centered with 85% width
             <div class="hidden lg:flex justify-center">
-                <div class="w-[85%] max-w-7xl flex h-[calc(100vh-12rem)]">
+                <div class="w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]">
                     // Fixed aside on left (desktop only)
                     <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
                     <div class="h-full overflow-y-auto p-4">
@@ -644,20 +692,30 @@ pub fn HotelListPage() -> impl IntoView {
                                         on_select=star_filter_on_select.clone()
                                     />
                                     <div class="border-t border-slate-100"></div>
-                                    <AmenitiesFilter
+                                    <CheckboxFilter
+                                        title="Popular Filters".to_string()
+                                        options=popular_filters_options_signal
+                                        selected=popular_filters_selected_signal
+                                        on_toggle=popular_filters_on_toggle
+                                        on_clear=popular_filters_on_clear
+                                    />
+                                    </div>
+                                    <div class="border-t border-slate-100"></div>
+                                    <CheckboxFilter
+                                        title="Amenities".to_string()
                                         options=amenities_options_signal
                                         selected=amenities_selected_signal
                                         on_toggle=amenities_on_toggle
                                         on_clear=amenities_on_clear
                                     />
                                     <div class="border-t border-slate-100"></div>
-                                    <PropertyTypeFilter
+                                    <CheckboxFilter
+                                        title="Property Type".to_string()
                                         options=property_type_options_signal
                                         selected=property_types_selected_signal
                                         on_toggle=property_type_on_toggle
                                         on_clear=property_type_on_clear
                                     />
-                                </div>
                             </Show>
                         </div>
                     </div>
@@ -833,7 +891,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                     filters_signal.update(|filters| {
                                                                         filters.min_star_rating = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    leptos::Callable::call(&update_url_with_current_state, ());
                                                                 }
                                                             >
                                                                 "Clear star filter"
@@ -851,7 +909,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         filters.min_price_per_night = None;
                                                                         filters.max_price_per_night = None;
                                                                     });
-                                                                    update_url_with_current_state.call(());
+                                                                    leptos::Callable::call(&update_url_with_current_state, ());
                                                                 }
                                                             >
                                                                 "Clear price filter"
@@ -942,7 +1000,7 @@ pub fn HotelListPage() -> impl IntoView {
             </div>
 
             // Mobile layout (lg screens and below)
-            <div class="lg:hidden min-h-screen pb-20">
+            <div class="lg:hidden min-h-screen mt-16">
                 <div class="px-4 py-6">
                     // Filter toggle button for mobile
                     <div class="mb-4">
@@ -991,14 +1049,24 @@ pub fn HotelListPage() -> impl IntoView {
                                     on_select=star_filter_on_select.clone()
                                 />
                                 <div class="border-t border-slate-100"></div>
-                                <AmenitiesFilter
+                                <CheckboxFilter
+                                    title="Popular Filters".to_string()
+                                    options=popular_filters_options_signal
+                                    selected=popular_filters_selected_signal
+                                    on_toggle=popular_filters_on_toggle
+                                    on_clear=popular_filters_on_clear
+                                />
+                                <div class="border-t border-slate-100"></div>
+                                <CheckboxFilter
+                                    title="Amenities".to_string()
                                     options=amenities_options_signal
                                     selected=amenities_selected_signal
                                     on_toggle=amenities_on_toggle
                                     on_clear=amenities_on_clear
                                 />
                                 <div class="border-t border-slate-100"></div>
-                                <PropertyTypeFilter
+                                <CheckboxFilter
+                                    title="Property Type".to_string()
                                     options=property_type_options_signal
                                     selected=property_types_selected_signal
                                     on_toggle=property_type_on_toggle
@@ -1094,7 +1162,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             <p class="text-gray-600">No hotels match your filters</p>
                                             <button
                                                 class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                                on:click=move |e| clear_filters.call(e)
+                                                on:click=move |e| leptos::Callable::call(&clear_filters, e)
                                             >
                                                 Clear Filters
                                             </button>
@@ -1212,10 +1280,12 @@ pub fn HotelCard(
             log!("Hotel code set: {}", hotel_code_cloned);
 
             // ✅ 3. Try to build query params
-            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
-            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                target_url = hotel_params.to_shareable_url();
-            }
+            let target_url = if let Some(hotel_params) = HotelDetailsParams::from_current_context()
+            {
+                hotel_params.to_shareable_url()
+            } else {
+                AppRoutes::HotelDetails.to_string().into()
+            };
             log!("Opening in new tab: {}", target_url);
 
             // ✅ 4. Open in new tab
@@ -1345,12 +1415,12 @@ pub fn HotelCardTile(
             log!("Hotel code set: {}", hotel_code_cloned);
 
             // ✅ 3. Try to build query params
-            let mut target_url = AppRoutes::HotelDetails.to_string().to_string();
-            if let Some(hotel_params) = HotelDetailsParams::from_current_context() {
-                target_url = hotel_params.to_shareable_url();
+            let target_url = if let Some(hotel_params) = HotelDetailsParams::from_current_context()
+            {
+                hotel_params.to_shareable_url()
             } else {
                 return;
-            }
+            };
             log!("Opening in new tab: {}", target_url);
 
             // ✅ 4. Open in new tab
@@ -1477,7 +1547,10 @@ pub fn HotelCardTile(
 }
 
 #[component]
-fn Wishlist(hotel_code: String) -> impl IntoView {
+pub fn Wishlist(
+    hotel_code: String,
+    #[prop(optional, into)] class: Option<String>,
+) -> impl IntoView {
     let wishlist_hotel_code = hotel_code.clone();
     let add_to_wishlist_action = Action::new(move |_: &()| {
         let check_present =
@@ -1508,7 +1581,7 @@ fn Wishlist(hotel_code: String) -> impl IntoView {
                     ev.stop_propagation();
                     add_to_wishlist_action.dispatch(());
                 }
-                class="absolute top-3 left-3 bg-white rounded-full shadow-sm"
+                class=class.clone().unwrap_or("absolute top-3 left-3 bg-white rounded-full shadow-sm".to_string())
                 aria-label="Add to wishlist"
             >
                 {

@@ -21,7 +21,15 @@ fn city_search_result_to_destination(city: CitySearchResult) -> Destination {
 }
 
 #[component]
-pub fn DestinationPickerV6() -> impl IntoView {
+pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>) -> impl IntoView {
+    let h_class = create_memo(move |_| {
+        let class = h_class.get();
+        if class.is_empty() {
+            "h-full".to_string()
+        } else {
+            class
+        }
+    });
     let search_ctx: UISearchCtx = expect_context();
 
     // Simple state management
@@ -312,12 +320,9 @@ pub fn DestinationPickerV6() -> impl IntoView {
     };
 
     view! {
-        <div
-            class="relative flex w-full md:w-[274px] h-full"
-            node_ref=container_ref
-        >
-            <div class="absolute inset-y-0 left-2 py-6 px-4 text-xl pointer-events-none flex items-center">
-                <Icon icon=icondata::BsMap class="text-blue-500 font-bold" />
+        <div class=move || format!("relative flex items-center w-full h-[56px] py-2 {}", h_class()) node_ref=container_ref>
+            <div class="absolute inset-y-0 left-2 flex items-center text-xl pointer-events-none">
+                <Icon icon=icondata::BsMap class="text-blue-500 font-bold"/>
             </div>
 
             <div class="relative w-full">
@@ -325,7 +330,13 @@ pub fn DestinationPickerV6() -> impl IntoView {
                     type="text"
                     node_ref=input_ref
                     id="destination-live-select"
-                    class="w-full h-full pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-full transition-colors focus:outline-none py-6"
+                    class=move || {
+                        format!(
+                            "w-full h-full {} pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-md transition-colors focus:outline-none md:text-ellipsis",
+                            h_class(),
+                        )
+                    }
+
                     placeholder="Where to?"
                     autocomplete="off"
                     aria-autocomplete="list"
@@ -355,61 +366,87 @@ pub fn DestinationPickerV6() -> impl IntoView {
                                     let is_loading_val = is_loading.get();
                                     let search_text_val = search_text.get();
 
-                                    log!("Search results count: {}, is_loading: {}", results.len(), is_loading_val);
+                                    log!(
+                                        "Search results count: {}, is_loading: {}",
+                                        results.len(),
+                                        is_loading_val
+                                    );
 
                                     if is_loading_val {
                                         view! {
-                                            <div class="px-3 py-2 text-gray-500">
-                                                "Searching..."
-                                            </div>
-                                        }.into_view()
+                                            <div class="px-3 py-2 text-gray-500">"Searching..."</div>
+                                        }
+                                            .into_view()
                                     } else if search_text_val.trim().is_empty() {
                                         view! {
                                             <div class="px-3 py-2 text-gray-500">
                                                 "Start typing to search cities..."
                                             </div>
-                                        }.into_view()
+                                        }
+                                            .into_view()
                                     } else if results.is_empty() {
                                         view! {
                                             <div class="px-3 py-2 text-gray-500">
                                                 "No results found"
                                             </div>
-                                        }.into_view()
+                                        }
+                                            .into_view()
                                     } else {
-                                        results.into_iter().enumerate().map(|(i, dest)| {
-                                            let dest_clone = dest.clone();
-                                            let dest_for_click = dest.clone();
-                                            view! {
-                                                <div
-                                                    class=move || {
-                                                        let base = "px-3 py-2 cursor-pointer hover:bg-gray-100";
-                                                        if active_index.get() == i {
-                                                            format!("{} bg-blue-50 text-blue-600", base)
-                                                        } else {
-                                                            base.to_string()
+                                        results
+                                            .into_iter()
+                                            .enumerate()
+                                            .map(| (i, dest) | {
+                                                let dest_clone = dest.clone();
+                                                let dest_for_click = dest.clone();
+                                                view! {
+                                                    <div
+                                                        class=move || {
+                                                            let base = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+                                                            if active_index.get() == i {
+                                                                format!(
+                                                                    "{} bg-blue-50 text-blue-600",
+                                                                    base,
+                                                                )
+                                                            } else {
+                                                                base.to_string()
+                                                            }
                                                         }
-                                                    }
-                                                    role="option"
-                                                    aria-selected=move || (active_index.get() == i).to_string()
-                                                    on:click=move |ev| {
-                                                        log!("Option clicked");
-                                                        ev.stop_propagation();
-                                                        select_option(dest_for_click.clone());
-                                                    }
-                                                    on:mouseenter=move |_| {
-                                                        set_active_index.set(i);
-                                                    }
-                                                >
-                                                {highlight_match(&{
-                                                    if dest_clone.formatted_address.trim().is_empty() {
-                                                        dest_clone.display_name.clone()
-                                                    } else {
-                                                        format!("{}, {}", dest_clone.display_name, dest_clone.formatted_address)
-                                                    }
-                                                }, &search_text.get())}
-                                                </div>
-                                            }
-                                        }).collect::<Vec<_>>().into_view()
+                                                        role="option"
+                                                        aria-selected=move || {
+                                                            (active_index.get() == i).to_string()
+                                                        }
+                                                        on:click=move | ev | {
+                                                            log!("Option clicked");
+                                                            ev.stop_propagation();
+                                                            select_option(dest_for_click.clone());
+                                                        }
+                                                        on:mouseenter=move | _ | {
+                                                            set_active_index.set(i);
+                                                        }
+                                                    >
+                                                        {highlight_match(
+                                                            &{
+                                                                if dest_clone
+                                                                    .formatted_address
+                                                                    .trim()
+                                                                    .is_empty()
+                                                                {
+                                                                    dest_clone.display_name.clone()
+                                                                } else {
+                                                                    format!(
+                                                                        "{}, {}",
+                                                                        dest_clone.display_name,
+                                                                        dest_clone.formatted_address,
+                                                                    )
+                                                                }
+                                                            },
+                                                            &search_text.get(),
+                                                        )}
+                                                    </div>
+                                                }
+                                            })
+                                            .collect::<Vec<_>>()
+                                            .into_view()
                                     }
                                 }}
                             </div>
