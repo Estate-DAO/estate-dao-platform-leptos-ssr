@@ -320,8 +320,8 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
     };
 
     view! {
-        <div class=move || format!("relative flex w-full {}", h_class()) node_ref=container_ref>
-            <div class="absolute inset-y-0 left-2 py-6 px-4 text-xl pointer-events-none flex items-center">
+        <div class=move || format!("relative flex items-center w-full h-[56px] py-2 {}", h_class()) node_ref=container_ref>
+            <div class="absolute inset-y-0 left-2 flex items-center text-xl pointer-events-none">
                 <Icon icon=icondata::BsMap class="text-blue-500 font-bold"/>
             </div>
 
@@ -332,10 +332,11 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
                     id="destination-live-select"
                     class=move || {
                         format!(
-                            "w-full {} pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-full transition-colors focus:outline-none py-6 md:text-ellipsis",
+                            "w-full h-full {} pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-md transition-colors focus:outline-none md:text-ellipsis",
                             h_class(),
                         )
                     }
+
                     placeholder="Where to?"
                     autocomplete="off"
                     aria-autocomplete="list"

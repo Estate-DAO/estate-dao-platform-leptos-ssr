@@ -11,6 +11,7 @@ pub fn InputGroupContainer(
     #[prop(optional, into)] default_expanded: MaybeSignal<bool>,
     #[prop(optional, into)] allow_outside_click_collapse: MaybeSignal<bool>, // New prop
     #[prop(optional, into)] h_class: MaybeSignal<String>,
+    #[prop(optional, into)] size: MaybeSignal<String>,
 ) -> impl IntoView {
     // Signal to track if the detailed input group is open on mobile
     let is_desktop = use_is_desktop();
@@ -30,7 +31,7 @@ pub fn InputGroupContainer(
             // Mobile: show full InputGroup when expanded
             // <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/20 backdrop-blur-sm">
             //     <div class="w-full max-w-xl mx-auto">
-            <InputGroup given_disabled=given_disabled h_class=h_class.clone()/>
+            <InputGroup given_disabled=given_disabled h_class=h_class.clone() size=size.clone() />
             // </div>
             <Show when=move || allow_outside_click_collapse.get()>
                 <div

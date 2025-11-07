@@ -79,7 +79,7 @@ pub fn HeroSection() -> impl IntoView {
                         Plan your next escape and pay in BTC, ETH, or your favorite token.
                     </h6>
 
-                    <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click />
+                    <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click size="large" />
                     <br />
                     // todo: uncomment in v2 when implementing filtering and sorting
                     // <FilterAndSortBy />
@@ -120,17 +120,11 @@ pub fn HeroSection() -> impl IntoView {
 pub fn InputGroup(
     #[prop(optional, into)] given_disabled: MaybeSignal<bool>,
     #[prop(optional, into)] h_class: MaybeSignal<String>,
+    #[prop(optional, into)] size: MaybeSignal<String>,
 ) -> impl IntoView {
-    // Local disabled logic
     let local_disabled = create_rw_signal(false);
+    let disabled = create_memo(move |_| given_disabled.get() || local_disabled.get());
 
-    let disabled = create_memo(move |_| {
-        let val = given_disabled.get() || local_disabled.get();
-        log!("search_bar_disabled - {}", val);
-        val
-    });
-
-    // Background states
     let bg_class = move || {
         if disabled.get() {
             "bg-gray-100"
@@ -138,7 +132,6 @@ pub fn InputGroup(
             "bg-white"
         }
     };
-
     let bg_search_class = move || {
         if disabled.get() {
             "bg-gray-300 cursor-not-allowed"
@@ -146,7 +139,6 @@ pub fn InputGroup(
             "bg-blue-500 hover:bg-blue-600 text-white"
         }
     };
-
     let bg_search_icon_class = move || {
         if disabled.get() {
             "text-gray-400"
@@ -155,7 +147,6 @@ pub fn InputGroup(
         }
     };
 
-    // Reactive search context
     let search_ctx: UISearchCtx = expect_context();
 
     let place_display = create_memo(move |_| {
@@ -163,38 +154,42 @@ pub fn InputGroup(
             .place
             .get()
             .map(|d| {
-                let search_text = if d.formatted_address.trim().is_empty() {
+                if d.formatted_address.trim().is_empty() {
                     d.display_name.clone()
                 } else {
                     format!("{}, {}", d.display_name, d.formatted_address)
-                };
-                search_text
+                }
             })
-            .unwrap_or_else(|| "".to_string())
+            .unwrap_or_default()
     });
 
-    // Hook search action
     let search_action = create_search_action_with_ui_state(local_disabled);
-
-    // Main container
     let parent_div_ref: NodeRef<html::Div> = create_node_ref();
+
+    let height_class = move || {
+        match size.get().as_str() {
+            "small" => "h-12 lg:w-12 md:w-full", // navbar version
+            "large" | _ => "h-[56px] lg:w-[56px] md:w-full", // hero section default
+        }
+    };
 
     view! {
         <div
             node_ref=parent_div_ref
             class=move || format!(
-                "flex flex-col md:flex-row items-stretch md:items-center max-w-4xl w-full z-[70]
-                 bg-white rounded-md border border-gray-200 shadow-md overflow-hidden
-                 md:space-y-0 space-y-3"
+                "relative flex flex-col md:flex-row items-stretch md:items-center max-w-4xl w-full z-[70]
+                 {bg} rounded-md border border-gray-200 shadow-md
+                 overflow-hidden md:overflow-visible
+                 md:space-y-0 space-y-3",
+                bg = bg_class()
             )
         >
 
             // Destination
-            <div class="flex-1 flex items-center px-5 h-[56px]">
+            <div class="flex-1 flex items-center px-2 h-[56px]">
                 <Show when=move || !disabled.get()>
                     <DestinationPickerV6 />
                 </Show>
-
                 <Show when=move || disabled.get()>
                     <Icon icon=icondata::BsMap class="text-blue-500 text-lg" />
                     <button
@@ -209,40 +204,42 @@ pub fn InputGroup(
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Date range
-            <div class="flex-1 flex items-center px-5 h-[56px] border-t md:border-t-0">
+            <div class="flex-1 flex items-center px-2 h-[56px] border-t md:border-t-0 relative z-[80]">
                 <DateTimeRangePickerCustom />
             </div>
 
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Guests
-            <div class="flex-1 flex items-center px-5 h-[56px] border-t md:border-t-0">
+            <div class="flex-1 flex items-center px-2 h-[56px] border-t md:border-t-0 relative z-[80]">
                 <GuestQuantity />
             </div>
 
-            // Search button (inside border)
-            <div class="flex items-stretch">
-                <button
-                    on:click=move |ev| {
-                        ev.prevent_default();
-                        UIPaginationState::reset_to_first_page();
-                        search_action.dispatch(());
-                    }
-                    class=move || format!(
-                        "flex sm:w-full items-center justify-center font-medium transition-all duration-200
-                         md:px-6 px-5 gap-2 {} h-[56px] md:rounded-r-md rounded-b-md md:rounded-b-none border-l border-white",
-                        bg_search_class()
+            // Search button
+            <button
+                on:click=move |ev| {
+                    ev.prevent_default();
+                    UIPaginationState::reset_to_first_page();
+                    search_action.dispatch(());
+                }
+                class=move || format!(
+                    "flex items-center justify-center gap-2 transition-all duration-200 font-medium
+                    {}
+                    rounded-b-md md:rounded-b-none md:rounded-r-md border-l border-white
+                    leading-none {}",
+                    height_class(),
+                    bg_search_class()
+                )>
+                <Icon
+                    icon=icondata::AiSearchOutlined
+                    class=format!(
+                        "{} text-[20px] md:text-[20px] flex-shrink-0 leading-none",
+                        bg_search_icon_class()
                     )
-                    style="aspect-ratio: 1/1;"
-                >
-                    <Icon
-                        icon=icondata::AiSearchOutlined
-                        class=format!("{} text-xl", bg_search_icon_class())
-                    />
-                    // Show text on mobile and md+
-                    <span class="block md:hidden text-sm font-medium">"Search"</span>
-                </button>
-            </div>
+                />
+                <span class="block md:hidden text-sm font-medium leading-none">"Search"</span>
+            </button>
+
 
         </div>
     }

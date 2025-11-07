@@ -345,15 +345,15 @@ pub fn DateTimeRangePickerCustom(
     // );
 
     view! {
-        <div class="relative w-full">
-            <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
+        <div class="relative w-full py-2">
+            <div class="absolute inset-y-0 left-2 flex items-center text-xl">
                 <Icon icon=icondata::AiCalendarOutlined class="text-blue-500 font-extralight"/>
             </div>
 
             <button
                 class=move || {
                     format!(
-                        "w-full {} py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left",
+                        "w-full {} h-full pl-14 pr-3 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent border-none rounded-md focus:outline-none text-left",
                         h_class(),
                     )
                 }
@@ -367,110 +367,76 @@ pub fn DateTimeRangePickerCustom(
             </button>
 
             <Show when=move || is_open()>
+                // --- MOBILE: full-screen fixed bottom sheet ---
                 <div
-                    class="fixed inset-0 z-[9999] bg-black/50 md:bg-transparent"
+                    class="fixed inset-0 z-[9999] bg-black/50 md:hidden"
                     style="touch-action: none; overscroll-behavior: contain;"
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
                 >
                     <div
-                        class=" fixed bottom-0 left-0 right-0 top-auto md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:bottom-auto md:max-w-[600px] md:w-[600px] z-[9999]"
+                        class="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl z-[10000]"
                         on:click=|e| e.stop_propagation()
                     >
-                        <div class="bg-white rounded-t-lg flex justify-between px-2">
-                            <button
-                                on:click=move |_| {
-                                    let (current_year, current_month) = initial_date.get_untracked();
-                                    set_initial_date(prev_date(current_year, current_month))
-                                }
-                                class="p-2 rounded-full hover:bg-gray-50 transition-colors"
-                            >
-                                <Icon
-                                    icon=icondata::BiChevronLeftRegular
-                                    class="text-gray-600 text-2xl"
-                                />
-                            </button>
+                        {date_picker_inner_content(initial_date, next_month_date, selected_range, calendar_ref)}
+                    </div>
+                </div>
 
-                            <button
-                                on:click=move |_| {
-                                    let (current_year, current_month) = initial_date.get_untracked();
-                                    set_initial_date(next_date(current_year, current_month))
-                                }
-                                class="p-2 rounded-full hover:bg-gray-50 transition-colors"
-                            >
-                                <Icon
-                                    icon=icondata::BiChevronRightRegular
-                                    class="text-gray-600 text-2xl"
-                                />
-                            </button>
-                        </div>
-
-                        <div
-                            _ref=calendar_ref
-                            class="rounded-b-lg flex flex-col md:flex-row bg-white md:gap-8 space-y-6 md:space-y-0 px-2 z-[9999] overflow-y-auto"
-                            style="max-height: 70vh; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;"
-                            on:touchstart=move |ev: TouchEvent| {
-                                // ev.prevent_default();
-                                // ev.stop_propagation();
-                                if let Some(t) = ev.touches().item(0) {
-                                    touch_start_y.set(t.client_y() as f64);
-                                }
-                            }
-                            on:touchend=move |ev: TouchEvent| {
-                                // ev.prevent_default();
-                                // ev.stop_propagation();
-                                if let Some(t) = ev.changed_touches().item(0) {
-                                    let delta = (t.client_y() as f64) - touch_start_y.get();
-                                    log!("[Touch] delta_y = {}", delta);
-                                    touch_throttled(delta);
-                                }
-                            }
-                        >
-                            <div class="flex-1">
-                                <DateCells
-                                    year_month=initial_date.into()
-                                    selected_range=selected_range
-                                />
-                            </div>
-                            <div class="flex-1">
-                                <DateCells
-                                    year_month=next_month_date.into()
-                                    selected_range=selected_range
-                                />
-                            </div>
-                        </div>
-
-                        <div class="bg-white px-2 py-2">
-                            <div class="flex justify-center">
-                                <button
-                                    type="button"
-                                    class=move || {
-                                        let range = selected_range.get();
-                                        let has_both_dates = range.start != (0, 0, 0)
-                                            && range.end != (0, 0, 0);
-                                        if has_both_dates {
-                                            "w-full text-sm md:w-48 mt-6 mb-2 bg-blue-500 text-white py-3 md:py-2 rounded-full hover:bg-blue-600 transition-colors"
-                                        } else {
-                                            "w-full text-sm md:w-48 mt-6 mb-2 bg-gray-300 text-gray-500 py-3 md:py-2 rounded-full cursor-not-allowed transition-colors"
-                                        }
-                                    }
-                                    disabled=move || {
-                                        let range = selected_range.get();
-                                        !(range.start != (0, 0, 0) && range.end != (0, 0, 0))
-                                    }
-                                    on:click=move |ev: _| {
-                                        let range = selected_range.get();
-                                        if range.start != (0, 0, 0) && range.end != (0, 0, 0) {
-                                            InputGroupState::toggle_dialog(OpenDialogComponent::None)
-                                        }
-                                    }
-                                >
-                                    "Apply"
-                                </button>
-                            </div>
-                        </div>
+                // --- DESKTOP: dropdown positioned relative to button ---
+                <div
+                    class="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[10000] hidden md:block"
+                    on:click=|e| e.stop_propagation()
+                >
+                    <div class="bg-white rounded-lg shadow-lg border border-gray-200 w-[600px]">
+                        {date_picker_inner_content(initial_date, next_month_date, selected_range, calendar_ref)}
                     </div>
                 </div>
             </Show>
+
+        </div>
+    }
+}
+
+fn date_picker_inner_content(
+    initial_date: ReadSignal<(u32, u32)>,
+    next_month_date: Signal<(u32, u32)>,
+    selected_range: RwSignal<SelectedDateRange>,
+    calendar_ref: NodeRef<html::Div>,
+) -> impl IntoView {
+    view! {
+        <div
+            _ref=calendar_ref
+            class="flex flex-col md:flex-row gap-8 p-4 overflow-y-auto"
+            style="max-height: 70vh; -webkit-overflow-scrolling: touch;"
+        >
+            <div class="flex-1">
+                <DateCells year_month=initial_date.into() selected_range=selected_range />
+            </div>
+            <div class="flex-1">
+                <DateCells year_month=next_month_date.into() selected_range=selected_range />
+            </div>
+        </div>
+
+        <div class="bg-white px-4 py-3 flex justify-center border-t">
+            <button
+                type="button"
+                class=move || {
+                    let range = selected_range.get();
+                    let has_both_dates = range.start != (0, 0, 0)
+                        && range.end != (0, 0, 0);
+                    if has_both_dates {
+                        "w-full md:w-48 bg-blue-500 text-white py-2 rounded-full hover:bg-blue-600 transition-colors"
+                    } else {
+                        "w-full md:w-48 bg-gray-300 text-gray-500 py-2 rounded-full cursor-not-allowed"
+                    }
+                }
+                disabled=move || {
+                    let range = selected_range.get();
+                    !(range.start != (0, 0, 0) && range.end != (0, 0, 0))
+                }
+                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+            >
+                "Apply"
+            </button>
         </div>
     }
 }

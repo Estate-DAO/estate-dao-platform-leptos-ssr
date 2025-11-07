@@ -22,9 +22,10 @@ pub fn HotelListNavbar() -> impl IntoView {
                 <div class="hidden md:flex flex-1 justify-center h-12">
                     // <div class="w-full">
                         <InputGroupContainer
-                            default_expanded=false
+                            default_expanded=true
                             given_disabled=false
                             allow_outside_click_collapse=false
+                            size="small"
                         />
                     // </div>
                 </div>

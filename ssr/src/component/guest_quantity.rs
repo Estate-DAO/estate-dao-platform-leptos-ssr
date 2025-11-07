@@ -333,24 +333,25 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
     });
 
     view! {
-        <div class="relative flex items-center w-full">
-            <div class="absolute inset-y-0 left-1 flex items-center text-2xl">
-                <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight"/>
-            </div>
-
-            <button
-                class=move || {
-                    format!(
-                        "w-full {} py-2 pl-10 text-black bg-transparent border-none focus:outline-none text-sm text-left flex items-center justify-around",
-                        h_class(),
-                    )
-                }
-                on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
-            >
-                <div class="text-black font-medium truncate">{guest_count_display}</div>
-                <div>
-                    <Icon icon=icon() class="text-gray-600 text-sm"/>
+        <div class="relative flex items-center w-full h-[56px] py-2">
+                <div class="absolute inset-y-0 left-2 flex items-center text-xl">
+                    <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight"/>
                 </div>
+
+                <button
+                    class=move || {
+                        format!(
+                            "w-full {} h-full pl-14 pr-3 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent border-none rounded-md focus:outline-none text-left flex items-center justify-between",
+                            h_class(),
+                        )
+                    }
+                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
+                >
+                <div class="text-black font-medium truncate">{guest_count_display}</div>
+                <div class="flex items-center justify-center text-gray-600">
+                    <Icon icon=icon() class="text-gray-600 text-base" />
+                </div>
+
             </button>
 
             <Show when=move || is_open()>
