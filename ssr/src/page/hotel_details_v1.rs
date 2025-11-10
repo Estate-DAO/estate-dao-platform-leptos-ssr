@@ -298,58 +298,56 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 ui_search_ctx.guests.children_ages.get_signal().get(),
             )
         },
-        move |(hotel_code, date_range, adults, children, rooms, children_ages)| {
-            async move {
-                if hotel_code.is_empty() || date_range.start == (0, 0, 0) {
-                    return None;
+        move |(hotel_code, date_range, adults, children, rooms, children_ages)| async move {
+            if hotel_code.is_empty() || date_range.start == (0, 0, 0) {
+                return None;
+            }
+
+            HotelDetailsUIState::set_rates_loading(true);
+            let client = ClientSideApiClient::new();
+
+            let room_guests = vec![DomainRoomGuest {
+                no_of_adults: adults,
+                no_of_children: children,
+                children_ages: if children > 0 {
+                    Some(
+                        children_ages
+                            .into_iter()
+                            .map(|age| age.to_string())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+            }];
+
+            let search_criteria = DomainHotelSearchCriteria {
+                place_id: "".to_string(),
+                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                no_of_nights: date_range.no_of_nights(),
+                no_of_rooms: rooms,
+                room_guests,
+                guest_nationality: "US".to_string(),
+                ..Default::default()
+            };
+
+            let criteria = DomainHotelInfoCriteria {
+                token: hotel_code.clone(),
+                hotel_ids: vec![hotel_code],
+                search_criteria,
+            };
+
+            match client.get_hotel_rates(criteria).await {
+                Ok(rates) => {
+                    HotelDetailsUIState::set_rates(Some(rates.clone()));
+                    HotelDetailsUIState::set_rates_loading(false);
+                    Some(rates)
                 }
-
-                HotelDetailsUIState::set_rates_loading(true);
-                let client = ClientSideApiClient::new();
-
-                let room_guests = vec![DomainRoomGuest {
-                    no_of_adults: adults,
-                    no_of_children: children,
-                    children_ages: if children > 0 {
-                        Some(
-                            children_ages
-                                .into_iter()
-                                .map(|age| age.to_string())
-                                .collect(),
-                        )
-                    } else {
-                        None
-                    },
-                }];
-
-                let search_criteria = DomainHotelSearchCriteria {
-                    place_id: "".to_string(),
-                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                    no_of_nights: date_range.no_of_nights(),
-                    no_of_rooms: rooms,
-                    room_guests,
-                    guest_nationality: "US".to_string(),
-                    ..Default::default()
-                };
-
-                let criteria = DomainHotelInfoCriteria {
-                    token: hotel_code.clone(),
-                    hotel_ids: vec![hotel_code],
-                    search_criteria,
-                };
-
-                match client.get_hotel_rates(criteria).await {
-                    Ok(rates) => {
-                        HotelDetailsUIState::set_rates(Some(rates.clone()));
-                        HotelDetailsUIState::set_rates_loading(false);
-                        Some(rates)
-                    }
-                    Err(e) => {
-                        // HotelDetailsUIState::set_error(Some(e));
-                        HotelDetailsUIState::set_rates_loading(false);
-                        None
-                    }
+                Err(e) => {
+                    HotelDetailsUIState::set_error(Some(e));
+                    HotelDetailsUIState::set_rates_loading(false);
+                    None
                 }
             }
         },
@@ -458,120 +456,124 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 when=move || !is_loading()
                 fallback=FullScreenSpinnerGray
             >
-                <Show
-                    when=move || error_message().is_none()
-                    fallback=move || view! {
-                        <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                            <div class="bg-white rounded-xl shadow-md p-6">
-                                {
-                                    let error = error_message().unwrap_or_else(|| "Unknown error occurred".to_string());
-                                    // Check if this is the specific "no rooms available" error
-                                    if error.contains("No room types or rates available") || error.contains("fully booked") {
-                                        view! {
-                                            <div class="text-center">
-                                                <div class="text-6xl mb-4">"🏨"</div>
-                                                <div class="text-xl font-semibold text-orange-600 mb-2">No Rooms Available</div>
-                                                <div class="text-gray-700 mb-4">
-                                                    "This hotel may be fully booked for your selected dates."
-                                                </div>
-                                                <div class="text-sm text-gray-600">
-                                                    "Please try different dates or check other hotels in the area."
-                                                </div>
-                                            </div>
-                                        }
-                                    } else {
-                                        view! {
-                                            <div>
-                                                <div class="text-xl font-semibold text-red-600 mb-2">Error</div>
-                                                <div class="text-gray-700">
-                                                    {error}
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                }
+                <Show when=loaded fallback=|| view! {
+                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <div class="text-xl font-semibold text-gray-600 text-center">
+                                No hotel data available
                             </div>
                         </div>
-                    }
-                >
-                    <Show when=loaded fallback=|| view! {
-                        <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                            <div class="bg-white rounded-xl shadow-md p-6">
-                                <div class="text-xl font-semibold text-gray-600 text-center">
-                                    No hotel data available
-                                </div>
-                            </div>
+                    </div>
+                }>
+                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                        <div class="flex flex-col">
+                            <StarRating rating=move || star_rating_signal() as u8 />
+                            <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
                         </div>
-                    }>
-                        <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                            <div class="flex flex-col">
-                                <StarRating rating=move || star_rating_signal() as u8 />
-                                <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
-                            </div>
 
-                            <div class="mt-4 md:mt-6">
-                                <HotelImages open_image_viewer/>
-                            </div>
+                        <div class="mt-4 md:mt-6">
+                            <HotelImages open_image_viewer/>
+                        </div>
 
-                            <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
-                                <div class="w-full md:w-3/5 flex flex-col space-y-6">
-                                    <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                        <div class="text-xl mb-2 font-semibold">About</div>
-                                        <div class="mb-2 text-gray-700" inner_html=move || description_signal()></div>
-                                    </div>
-
-                                    <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                        <div class="text-xl mb-2 font-semibold">Address</div>
-                                        <div class="text-gray-700">{address_signal}</div>
-                                    </div>
-
-                                    <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                        <div class="text-xl mb-4 font-semibold">Amenities</div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                            <For
-                                                each=amenities_signal
-                                                key=|amenity| amenity.text.clone()
-                                                let:amenity
-                                            >
-                                                <AmenitiesIconText icon=amenity.icon text=amenity.text />
-                                            </For>
-                                        </div>
-                                    </div>
+                        <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
+                            <div class="w-full md:w-3/5 flex flex-col space-y-6">
+                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
+                                    <div class="text-xl mb-2 font-semibold">About</div>
+                                    <div class="mb-2 text-gray-700" inner_html=move || description_signal()></div>
                                 </div>
 
-                                <div class="w-full md:w-2/5 mt-8 md:mt-0 flex flex-col space-y-4">
-                                    <div class="bg-white rounded-xl shadow-md p-6">
-                                        <div class="text-xl mb-4 font-semibold">Hotel Information</div>
-                                        <div class="space-y-2">
-                                            <div class="text-sm text-gray-600">Check-in: {move || {
-                                                let range = ui_search_ctx.date_range.get();
-                                                if range.start == (0,0,0) {
-                                                    "N/A".to_string()
-                                                } else {
-                                                    format!("{:04}-{:02}-{:02}", range.start.0, range.start.1, range.start.2)
-                                                }
-                                            }}</div>
-                                            <div class="text-sm text-gray-600">Check-out: {move || {
-                                                let range = ui_search_ctx.date_range.get();
-                                                if range.end == (0,0,0) {
-                                                    "N/A".to_string()
-                                                } else {
-                                                    format!("{:04}-{:02}-{:02}", range.end.0, range.end.1, range.end.2)
-                                                }
-                                            }}</div>
-                                        </div>
-                                    </div>
+                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
+                                    <div class="text-xl mb-2 font-semibold">Address</div>
+                                    <div class="text-gray-700">{address_signal}</div>
+                                </div>
 
-                                    // <!-- Pricing and Booking Section -->
-                                    <div class="bg-white rounded-xl shadow-md">
-                                        <PricingBookNowV1 />
+                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
+                                    <div class="text-xl mb-4 font-semibold">Amenities</div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        <For
+                                            each=amenities_signal
+                                            key=|amenity| amenity.text.clone()
+                                            let:amenity
+                                        >
+                                            <AmenitiesIconText icon=amenity.icon text=amenity.text />
+                                        </For>
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="w-full md:w-2/5 mt-8 md:mt-0 flex flex-col space-y-4">
+                                <div class="bg-white rounded-xl shadow-md p-6">
+                                    <div class="text-xl mb-4 font-semibold">Hotel Information</div>
+                                    <div class="space-y-2">
+                                        <div class="text-sm text-gray-600">Check-in: {move || {
+                                            let range = ui_search_ctx.date_range.get();
+                                            if range.start == (0,0,0) {
+                                                "N/A".to_string()
+                                            } else {
+                                                format!("{:04}-{:02}-{:02}", range.start.0, range.start.1, range.start.2)
+                                            }
+                                        }}</div>
+                                        <div class="text-sm text-gray-600">Check-out: {move || {
+                                            let range = ui_search_ctx.date_range.get();
+                                            if range.end == (0,0,0) {
+                                                "N/A".to_string()
+                                            } else {
+                                                format!("{:04}-{:02}-{:02}", range.end.0, range.end.1, range.end.2)
+                                            }
+                                        }}</div>
+                                    </div>
+                                </div>
+
+                                // <!-- Pricing and Booking Section -->
+                                <div class="bg-white rounded-xl shadow-md">
+                                    <PricingBookNowV1 />
+                                </div>
+                            </div>
                         </div>
-                    </Show>
+                    </div>
                 </Show>
             </Show>
+            <Show when=move || error_message().is_some()>
+                <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                    // <div class="bg-white rounded-xl shadow-md p-6">
+                        {
+                            let error = error_message().unwrap_or_else(|| "Unknown error occurred".to_string());
+                            if error.contains("No room types or rates available") || error.contains("fully booked") {
+                                view! {
+                                    <div class="flex items-start gap-4 border border-red-300 rounded-xl bg-red-50 p-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 flex-shrink-0 text-red-500" viewBox="0 0 18 19" fill="none">
+                                            <path d="M5.625 2.75V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M12.375 2.75V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M15.75 11.9839V6.125C15.75 5.52826 15.5129 4.95597 15.091 4.53401C14.669 4.11205 14.0967 3.875 13.5 3.875H4.5C3.90326 3.875 3.33097 4.11205 2.90901 4.53401C2.48705 4.95597 2.25 5.52826 2.25 6.125V6.7352" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M2.25 9.64551V13.9989C2.25 14.5956 2.48705 15.1679 2.90901 15.5899C3.33097 16.0118 3.90326 16.2489 4.5 16.2489H13.5C14.0967 16.2489 14.669 16.0118 15.091 15.5899C15.329 15.3518 15.5082 15.066 15.6192 14.7549" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M0.759766 6.27441L17.2404 12.7237" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        </svg>
+
+                                        <div>
+                                            <div class="text-red-600 font-semibold text-base mb-1">
+                                                This hotel is fully booked for your selected dates
+                                            </div>
+                                            <div class="text-gray-700 text-sm">
+                                                Please try different dates or check other hotels in the area.
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            } else {
+                                view! {
+                                    <div>
+                                        <div class="text-xl font-semibold text-red-600 mb-2">Error</div>
+                                        <div class="text-gray-700">
+                                            {error}
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                    // </div>
+                </div>
+            </Show>
+
         </section>
     }
 }

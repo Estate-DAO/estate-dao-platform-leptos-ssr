@@ -98,11 +98,7 @@ impl HotelProviderPort for LiteApiAdapter {
             .send(rates_request)
             .await
             .map_err(|e: ApiError| {
-                ProviderError::from_api_error(
-                    e,
-                    ProviderNames::LiteApi,
-                    ProviderSteps::HotelDetails,
-                )
+                ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelRate)
             })?;
 
         let hotel_rate_info = rates_response
@@ -110,9 +106,11 @@ impl HotelProviderPort for LiteApiAdapter {
             .and_then(|d| d.into_iter().next())
             .ok_or_else(|| {
                 ProviderError::from_api_error(
-                    ApiError::Other("Empty response from LiteAPI rates endpoint. Hotel may not be available for the selected dates.".to_string()),
+                    ApiError::Other(
+                        "Hotel may not be available for the selected dates.".to_string(),
+                    ),
                     ProviderNames::LiteApi,
-                    ProviderSteps::HotelDetails,
+                    ProviderSteps::HotelRate,
                 )
             })?;
 

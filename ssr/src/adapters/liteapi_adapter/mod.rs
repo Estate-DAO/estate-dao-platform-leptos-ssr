@@ -762,7 +762,7 @@ impl LiteApiAdapter {
                     "No hotel ID available. Either hotel_ids or token must be provided."
                         .to_string(),
                 ),
-                error_step: ProviderSteps::HotelDetails,
+                error_step: ProviderSteps::HotelRate,
             })));
         };
 
@@ -919,9 +919,9 @@ impl LiteApiAdapter {
             return Err(ProviderError(Arc::new(ProviderErrorDetails {
                 provider_name: ProviderNames::LiteApi,
                 api_error: ApiError::Other(
-                    "Empty response from LiteAPI rates endpoint. Hotel may not be available for the selected dates.".to_string()
+                    "Hotel may not be available for the selected dates.".to_string(),
                 ),
-                error_step: ProviderSteps::HotelDetails,
+                error_step: ProviderSteps::HotelRate,
             })));
         }
 
