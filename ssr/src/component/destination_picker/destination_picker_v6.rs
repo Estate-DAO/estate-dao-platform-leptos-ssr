@@ -287,13 +287,9 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
         }
     };
 
-    // Add this function inside your component, before the view! macro
     let highlight_match = move |text: &str, search: &str| -> View {
         if search.is_empty() {
-            return view! {
-                {text.to_string()}
-            }
-            .into_view();
+            return text.to_string().into_view();
         }
 
         let search_lower = search.to_lowercase();
@@ -312,10 +308,7 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
             }
             .into_view()
         } else {
-            view! {
-                {text.to_string()}
-            }
-            .into_view()
+            text.to_string().into_view()
         }
     };
 

@@ -186,6 +186,11 @@ pub struct DomainHotelInfoCriteria {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainHotelCodeId {
+    pub hotel_id: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainFirstRoomDetails {
     pub price: DomainDetailedPrice,
     pub room_data: DomainRoomData,
@@ -244,10 +249,12 @@ pub struct DomainHotelDetails {
     pub images: Vec<String>,
     pub all_rooms: Vec<DomainRoomOption>,
     pub amenities: Vec<String>,
+    pub search_info: Option<DomainHotelSearchInfo>,
+    pub search_criteria: Option<DomainHotelSearchCriteria>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DomainHotelDetailsWithoutRates {
+pub struct DomainHotelStaticDetails {
     pub hotel_name: String,
     pub hotel_code: String,
     pub star_rating: i32,
@@ -256,10 +263,53 @@ pub struct DomainHotelDetailsWithoutRates {
     pub address: String,
     pub images: Vec<String>,
     pub amenities: Vec<String>,
-    pub city: String,
-    pub country: String,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
+}
+
+impl DomainHotelStaticDetails {
+    pub fn get_domain_hotel_details(
+        &self,
+        checkin: String,
+        checkout: String,
+        all_rooms: Vec<DomainRoomOption>,
+        search_info: Option<DomainHotelSearchInfo>,
+        search_criteria: Option<DomainHotelSearchCriteria>,
+    ) -> DomainHotelDetails {
+        DomainHotelDetails {
+            checkin: checkin,
+            checkout: checkout,
+            hotel_name: self.hotel_name.clone(),
+            hotel_code: self.hotel_code.clone(),
+            star_rating: self.star_rating,
+            description: self.description.clone(),
+            hotel_facilities: self.hotel_facilities.clone(),
+            address: self.address.clone(),
+            images: self.images.clone(),
+            all_rooms,
+            amenities: self.amenities.clone(),
+            search_info,
+            search_criteria,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainHotelSearchInfo {
+    pub hotel_code: String,
+    pub hotel_name: String,
+    pub star_rating: i32,
+    pub price: Option<DomainPrice>,
+    pub hotel_picture: String,
+    // Derived from provider result where available
+    pub amenities: Vec<String>,
+    pub property_type: Option<String>,
+    // todo (liteapi) how does liteapi propagate tokens?
+    pub result_token: String,
+    // <!-- Additional fields can be added later -->
+    // pub hotel_description: Option<String>,
+    pub hotel_address: Option<String>,
+    // Distance from center in kilometers (calculated if coordinates available)
+    pub distance_from_center_km: Option<f64>,
+    // pub amenities: Option<Vec<String>>,
 }
 
 // <!-- Default implementations -->
