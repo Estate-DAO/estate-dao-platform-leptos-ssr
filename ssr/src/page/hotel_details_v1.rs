@@ -525,9 +525,11 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                                 </div>
 
                                 // <!-- Pricing and Booking Section -->
-                                <div class="bg-white rounded-xl shadow-md">
-                                    <PricingBookNowV1 />
-                                </div>
+                                <Show when=move || hotel_details_state.rates.get().is_some()>
+                                    <div class="bg-white rounded-xl shadow-md">
+                                        <PricingBookNowV1 />
+                                    </div>
+                                </Show>
                             </div>
                         </div>
                     </div>
