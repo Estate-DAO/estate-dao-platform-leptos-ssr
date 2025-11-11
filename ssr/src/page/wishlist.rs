@@ -5,7 +5,7 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
 use crate::component::{Footer, Navbar, SkeletonCards};
-use crate::domain::DomainHotelDetailsWithoutRates;
+use crate::domain::DomainHotelDetails;
 use crate::log;
 use crate::page::HotelCardTile;
 
@@ -182,13 +182,7 @@ pub fn WishlistComponent() -> impl IntoView {
                                                 class="w-full mb-4 bg-white".to_string()
                                                 hotel_address={
                                                     if hotel.address.trim().is_empty() {
-                                                        if !hotel.city.trim().is_empty() && !hotel.country.trim().is_empty() {
-                                                            Some(format!("{}, {}", hotel.city, hotel.country))
-                                                        } else if !hotel.city.trim().is_empty() {
-                                                            Some(hotel.city.clone())
-                                                        } else {
-                                                            None
-                                                        }
+                                                        None
                                                     } else {
                                                         Some(hotel.address.clone())
                                                     }

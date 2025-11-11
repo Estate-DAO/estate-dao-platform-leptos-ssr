@@ -27,7 +27,7 @@ pub async fn get_hotel_rates_api_server_fn_route(
     let result = hotel_service.get_hotel_rates(request).await.map_err(|e| {
         tracing::error!("Hotel rates retrieval failed: {:?}", e);
         let error_response = json!({
-            "error": format!("Failed to get hotel rates: {}", e)
+            "error": format!("{}", e)
         });
         (
             StatusCode::INTERNAL_SERVER_ERROR,

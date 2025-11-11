@@ -6,10 +6,13 @@ use crate::api::client_side_api::{ClientSideApiClient, Place};
 use crate::app::AppRoutes;
 use crate::component::ImageLightbox;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
-use crate::domain::{DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest};
+use crate::domain::{
+    DomainHotelCodeId, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest,
+};
 use crate::log;
-use crate::page::{HotelDetailsParams, InputGroupContainer};
+use crate::page::{HotelDetailsParams, HotelListNavbar, InputGroupContainer};
 use crate::utils::query_params::QueryParamsSync;
+use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
@@ -259,129 +262,105 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // Create resource to fetch hotel details when page loads
     // Following the pattern from block_room_v1.rs prebook_resource
     // Enhanced to work with query params for shareable URLs
-    let hotel_details_resource = create_resource(
-        move || {
-            // Wait for essential data to be ready before calling API
-            // Data can come from either UI state or URL query params
-            let hotel_code = hotel_info_ctx.hotel_code.get();
-            let date_range = ui_search_ctx.date_range.get();
-            let has_hotel_code = !hotel_code.is_empty();
-            let has_valid_dates = date_range.start != (0, 0, 0) && date_range.end != (0, 0, 0);
-
-            // Return true when ready to call API - removed dependency on place_details
-            let is_ready = has_hotel_code && has_valid_dates;
-
-            log!(
-                "Hotel details resource readiness check: hotel_code={}, dates={}, ready={}",
-                has_hotel_code,
-                has_valid_dates,
-                is_ready
-            );
-
-            // Pass a tuple of reactive values to ensure the resource reruns on change
-            (is_ready, hotel_code, date_range)
-        },
-        move |(is_ready, _, _)| {
-            let guests_for_details = ui_search_ctx.guests.clone();
-            async move {
-                if !is_ready {
-                    log!("Hotel details resource: Not ready yet, waiting for data...");
-                    return None;
+    let static_details_resource = create_resource(
+        move || hotel_info_ctx.hotel_code.get(),
+        |hotel_code| async move {
+            if hotel_code.is_empty() {
+                return None;
+            }
+            let client = ClientSideApiClient::new();
+            match client
+                .get_hotel_static_details(DomainHotelCodeId {
+                    hotel_id: hotel_code,
+                })
+                .await
+            {
+                Ok(details) => {
+                    HotelDetailsUIState::set_static_details(Some(details.clone()));
+                    Some(details)
                 }
-
-                log!("Hotel details resource: Page data ready, fetching hotel details...");
-                HotelDetailsUIState::set_loading(true);
-                HotelDetailsUIState::set_error(None);
-
-                let client = ClientSideApiClient::new();
-                let guests_clone = guests_for_details.clone();
-
-                // Get hotel code from context
-                let hotel_code = HotelInfoCtx::get_hotel_code_untracked();
-                if hotel_code.is_empty() {
-                    HotelDetailsUIState::set_error(Some("No hotel selected".to_string()));
-                    HotelDetailsUIState::set_loading(false);
-                    return None;
-                }
-
-                // Create search criteria from UI context
-                // This will work whether data came from direct navigation or URL query params
-                let date_range = ui_search_ctx.date_range.get_untracked();
-                let guests = &guests_clone;
-
-                // Create room guests
-                let room_guests = vec![DomainRoomGuest {
-                    no_of_adults: guests.adults.get_untracked(),
-                    no_of_children: guests.children.get_untracked(),
-                    children_ages: if guests.children.get_untracked() > 0 {
-                        Some(
-                            guests
-                                .children_ages
-                                .get_untracked()
-                                .into_iter()
-                                .map(|age| age.to_string())
-                                .collect(),
-                        )
-                    } else {
-                        None
-                    },
-                }];
-
-                // Create search criteria
-                let search_criteria = DomainHotelSearchCriteria {
-                    place_id: "".to_string(), // No longer dependent on place
-                    check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
-                    check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
-                    no_of_nights: date_range.no_of_nights(),
-                    no_of_rooms: guests.rooms.get_untracked(),
-                    room_guests,
-                    guest_nationality: "US".to_string(), // Default for now
-                    pagination: None,                    // No pagination for hotel details
-                    ..Default::default()
-                };
-
-                log!(
-                    "Using search criteria for hotel details API: dates={:?}-{:?}, guests={}+{}+{}",
-                    // search_criteria.destination_city_name,
-                    search_criteria.check_in_date,
-                    search_criteria.check_out_date,
-                    search_criteria.room_guests[0].no_of_adults,
-                    search_criteria.room_guests[0].no_of_children,
-                    search_criteria.no_of_rooms
-                );
-
-                // Create hotel info criteria
-                let criteria = DomainHotelInfoCriteria {
-                    token: hotel_code.clone(),
-                    hotel_ids: vec![hotel_code],
-                    search_criteria,
-                };
-
-                // Call API
-                match client.get_hotel_info(criteria).await {
-                    Ok(details) => {
-                        log!("Hotel details resource: Success - {}", details.hotel_name);
-                        HotelDetailsUIState::set_hotel_details(Some(details.clone()));
-                        HotelDetailsUIState::set_loading(false);
-                        Some(details)
-                    }
-                    Err(error_msg) => {
-                        log!("Hotel details resource: Error - {}", error_msg);
-                        HotelDetailsUIState::set_error(Some(error_msg));
-                        HotelDetailsUIState::set_loading(false);
-                        None
-                    }
+                Err(e) => {
+                    HotelDetailsUIState::set_error(Some(e));
+                    None
                 }
             }
         },
     );
 
-    let loaded = move || hotel_details_state.hotel_details.get().is_some();
-    let is_loading = move || hotel_details_state.loading.get();
+    let rates_resource = create_resource(
+        move || {
+            (
+                hotel_info_ctx.hotel_code.get(),
+                ui_search_ctx.date_range.get(),
+                ui_search_ctx.guests.adults.get(),
+                ui_search_ctx.guests.children.get(),
+                ui_search_ctx.guests.rooms.get(),
+                ui_search_ctx.guests.children_ages.get_signal().get(),
+            )
+        },
+        move |(hotel_code, date_range, adults, children, rooms, children_ages)| async move {
+            if hotel_code.is_empty() || date_range.start == (0, 0, 0) {
+                return None;
+            }
+
+            HotelDetailsUIState::set_rates_loading(true);
+            let client = ClientSideApiClient::new();
+
+            let room_guests = vec![DomainRoomGuest {
+                no_of_adults: adults,
+                no_of_children: children,
+                children_ages: if children > 0 {
+                    Some(
+                        children_ages
+                            .into_iter()
+                            .map(|age| age.to_string())
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
+            }];
+
+            let search_criteria = DomainHotelSearchCriteria {
+                place_id: "".to_string(),
+                check_in_date: (date_range.start.0, date_range.start.1, date_range.start.2),
+                check_out_date: (date_range.end.0, date_range.end.1, date_range.end.2),
+                no_of_nights: date_range.no_of_nights(),
+                no_of_rooms: rooms,
+                room_guests,
+                guest_nationality: "US".to_string(),
+                ..Default::default()
+            };
+
+            let criteria = DomainHotelInfoCriteria {
+                token: hotel_code.clone(),
+                hotel_ids: vec![hotel_code],
+                search_criteria,
+            };
+
+            match client.get_hotel_rates(criteria).await {
+                Ok(rates) => {
+                    HotelDetailsUIState::set_rates(Some(rates.clone()));
+                    HotelDetailsUIState::set_rates_loading(false);
+                    Some(rates)
+                }
+                Err(e) => {
+                    HotelDetailsUIState::set_error(Some(e));
+                    HotelDetailsUIState::set_rates_loading(false);
+                    None
+                }
+            }
+        },
+    );
+
+    let is_loading =
+        move || hotel_details_state.loading.get() || hotel_details_state.rates_loading.get();
     let error_message = move || hotel_details_state.error.get();
 
+    let loaded = move || static_details_resource.get().and_then(|d| d).is_some();
+
     let hotel_name_signal = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             hotel_details.hotel_name
         } else {
             "".to_string()
@@ -389,7 +368,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     let star_rating_signal = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             hotel_details.star_rating
         } else {
             0
@@ -397,7 +376,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     let description_signal = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             hotel_details.description
         } else {
             "".to_string()
@@ -405,7 +384,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     let address_signal = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             hotel_details.address
         } else {
             "".to_string()
@@ -413,7 +392,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     let amenities_signal = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             // <!-- Use hotel_facilities instead of amenities for LiteAPI compatibility -->
             // <!-- LiteAPI maps facility_ids to hotel_facilities, while amenities remains empty -->
             convert_to_amenities(hotel_details.hotel_facilities)
@@ -423,7 +402,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     };
 
     let images_signal = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             let mut images = hotel_details.images;
             if images.len() < 6 {
                 let repeat_count = 6 - images.len();
@@ -440,19 +419,35 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
     view! {
         <section class="relative min-h-screen bg-gray-50">
-            <Navbar />
-            <Show when=move || !open_image_viewer.get()>
-                <div class="flex flex-col items-center mt-6 p-4">
-                    <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
-                </div>
-            </Show>
+            <HotelListNavbar />
+            <div class={
+            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
+            move || format!(
+                "transition-all duration-300 {}",
+                if is_input_expanded() {
+                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
+                    "h-96 sm:h-96 md:h-80 lg:h-48"
+                } else {
+                    // Normal spacer when collapsed on all screens
+                    "h-24"
+                }
+            )
+            }></div>
+
+            // <Navbar />
+            // <Show when=move || !open_image_viewer.get()>
+            //     <div class="flex flex-col items-center mt-6 p-4">
+            //         <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
+            //     </div>
+            // </Show>
 
             // <!-- Use resource pattern like prebook_resource in block_room_v1.rs -->
             // <!-- The resource automatically triggers data loading when dependencies change -->
             <Suspense fallback=move || view! { <></> }>
                 {move || {
                 // Trigger the resource loading but don't render anything
-                let _ = hotel_details_resource.get();
+                let _ = static_details_resource.get();
+                let _ = rates_resource.get();
                 view! { <></> }
             }}
             </Suspense>
@@ -461,118 +456,126 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 when=move || !is_loading()
                 fallback=FullScreenSpinnerGray
             >
-                <Show
-                    when=move || error_message().is_none()
-                    fallback=move || view! {
-                        <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                            <div class="bg-white rounded-xl shadow-md p-6">
-                                {
-                                    let error = error_message().unwrap_or_else(|| "Unknown error occurred".to_string());
-                                    // Check if this is the specific "no rooms available" error
-                                    if error.contains("No room types or rates available") || error.contains("fully booked") {
-                                        view! {
-                                            <div class="text-center">
-                                                <div class="text-6xl mb-4">"🏨"</div>
-                                                <div class="text-xl font-semibold text-orange-600 mb-2">No Rooms Available</div>
-                                                <div class="text-gray-700 mb-4">
-                                                    "This hotel may be fully booked for your selected dates."
-                                                </div>
-                                                <div class="text-sm text-gray-600">
-                                                    "Please try different dates or check other hotels in the area."
-                                                </div>
-                                            </div>
-                                        }
-                                    } else {
-                                        view! {
-                                            <div>
-                                                <div class="text-xl font-semibold text-red-600 mb-2">Error</div>
-                                                <div class="text-gray-700">
-                                                    {error}
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                }
+                <Show when=loaded fallback=|| view! {
+                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <div class="text-xl font-semibold text-gray-600 text-center">
+                                No hotel data available
                             </div>
                         </div>
-                    }
-                >
-                    <Show when=loaded fallback=|| view! {
-                        <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                            <div class="bg-white rounded-xl shadow-md p-6">
-                                <div class="text-xl font-semibold text-gray-600 text-center">
-                                    No hotel data available
+                    </div>
+                }>
+                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                        <div class="flex flex-col">
+                            <StarRating rating=move || star_rating_signal() as u8 />
+                            <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
+                        </div>
+
+                        <div class="mt-4 md:mt-6">
+                            <HotelImages open_image_viewer/>
+                        </div>
+
+                        <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
+                            <div class="w-full md:w-3/5 flex flex-col space-y-6">
+                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
+                                    <div class="text-xl mb-2 font-semibold">About</div>
+                                    <div class="mb-2 text-gray-700" inner_html=move || description_signal()></div>
+                                </div>
+
+                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
+                                    <div class="text-xl mb-2 font-semibold">Address</div>
+                                    <div class="text-gray-700">{address_signal}</div>
+                                </div>
+
+                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
+                                    <div class="text-xl mb-4 font-semibold">Amenities</div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        <For
+                                            each=amenities_signal
+                                            key=|amenity| amenity.text.clone()
+                                            let:amenity
+                                        >
+                                            <AmenitiesIconText icon=amenity.icon text=amenity.text />
+                                        </For>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    }>
-                        <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                            <div class="flex flex-col">
-                                <StarRating rating=move || star_rating_signal() as u8 />
-                                <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
-                            </div>
 
-                            <div class="mt-4 md:mt-6">
-                                <HotelImages open_image_viewer/>
-                            </div>
-
-                            <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
-                                <div class="w-full md:w-3/5 flex flex-col space-y-6">
-                                    <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                        <div class="text-xl mb-2 font-semibold">About</div>
-                                        <div class="mb-2 text-gray-700" inner_html=move || description_signal()></div>
-                                    </div>
-
-                                    <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                        <div class="text-xl mb-2 font-semibold">Address</div>
-                                        <div class="text-gray-700">{address_signal}</div>
-                                    </div>
-
-                                    <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                        <div class="text-xl mb-4 font-semibold">Amenities</div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                            <For
-                                                each=amenities_signal
-                                                key=|amenity| amenity.text.clone()
-                                                let:amenity
-                                            >
-                                                <AmenitiesIconText icon=amenity.icon text=amenity.text />
-                                            </For>
-                                        </div>
+                            <div class="w-full md:w-2/5 mt-8 md:mt-0 flex flex-col space-y-4">
+                                <div class="bg-white rounded-xl shadow-md p-6">
+                                    <div class="text-xl mb-4 font-semibold">Hotel Information</div>
+                                    <div class="space-y-2">
+                                        <div class="text-sm text-gray-600">Check-in: {move || {
+                                            let range = ui_search_ctx.date_range.get();
+                                            if range.start == (0,0,0) {
+                                                "N/A".to_string()
+                                            } else {
+                                                format!("{:04}-{:02}-{:02}", range.start.0, range.start.1, range.start.2)
+                                            }
+                                        }}</div>
+                                        <div class="text-sm text-gray-600">Check-out: {move || {
+                                            let range = ui_search_ctx.date_range.get();
+                                            if range.end == (0,0,0) {
+                                                "N/A".to_string()
+                                            } else {
+                                                format!("{:04}-{:02}-{:02}", range.end.0, range.end.1, range.end.2)
+                                            }
+                                        }}</div>
                                     </div>
                                 </div>
 
-                                <div class="w-full md:w-2/5 mt-8 md:mt-0 flex flex-col space-y-4">
-                                    <div class="bg-white rounded-xl shadow-md p-6">
-                                        <div class="text-xl mb-4 font-semibold">Hotel Information</div>
-                                        <div class="space-y-2">
-                                            <div class="text-sm text-gray-600">Check-in: {move || {
-                                                if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
-                                                    hotel_details.checkin
-                                                } else {
-                                                    "N/A".to_string()
-                                                }
-                                            }}</div>
-                                            <div class="text-sm text-gray-600">Check-out: {move || {
-                                                if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
-                                                    hotel_details.checkout
-                                                } else {
-                                                    "N/A".to_string()
-                                                }
-                                            }}</div>
-                                        </div>
-                                    </div>
-
-                                    // <!-- Pricing and Booking Section -->
+                                // <!-- Pricing and Booking Section -->
+                                <Show when=move || hotel_details_state.rates.get().is_some()>
                                     <div class="bg-white rounded-xl shadow-md">
                                         <PricingBookNowV1 />
                                     </div>
-                                </div>
+                                </Show>
                             </div>
                         </div>
-                    </Show>
+                    </div>
                 </Show>
             </Show>
+            <Show when=move || error_message().is_some()>
+                <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                    // <div class="bg-white rounded-xl shadow-md p-6">
+                        {
+                            let error = error_message().unwrap_or_else(|| "Unknown error occurred".to_string());
+                            if error.contains("No room types or rates available") || error.contains("fully booked") {
+                                view! {
+                                    <div class="flex items-start gap-4 border border-red-300 rounded-xl bg-red-50 p-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 flex-shrink-0 text-red-500" viewBox="0 0 18 19" fill="none">
+                                            <path d="M5.625 2.75V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M12.375 2.75V5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M15.75 11.9839V6.125C15.75 5.52826 15.5129 4.95597 15.091 4.53401C14.669 4.11205 14.0967 3.875 13.5 3.875H4.5C3.90326 3.875 3.33097 4.11205 2.90901 4.53401C2.48705 4.95597 2.25 5.52826 2.25 6.125V6.7352" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M2.25 9.64551V13.9989C2.25 14.5956 2.48705 15.1679 2.90901 15.5899C3.33097 16.0118 3.90326 16.2489 4.5 16.2489H13.5C14.0967 16.2489 14.669 16.0118 15.091 15.5899C15.329 15.3518 15.5082 15.066 15.6192 14.7549" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            <path d="M0.759766 6.27441L17.2404 12.7237" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        </svg>
+
+                                        <div>
+                                            <div class="text-red-600 font-semibold text-base mb-1">
+                                                This hotel is fully booked for your selected dates
+                                            </div>
+                                            <div class="text-gray-700 text-sm">
+                                                Please try different dates or check other hotels in the area.
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            } else {
+                                view! {
+                                    <div>
+                                        <div class="text-xl font-semibold text-red-600 mb-2">Error</div>
+                                        <div class="text-gray-700">
+                                            {error}
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                    // </div>
+                </div>
+            </Show>
+
         </section>
     }
 }
@@ -585,7 +588,7 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let (selected_index, set_selected_index) = create_signal(0);
 
     let images_signal = create_memo(move |_| {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
             let mut images = hotel_details.images.clone();
             if images.len() < 6 {
                 let repeat_count = 6 - images.len();
@@ -1001,10 +1004,9 @@ pub fn PricingBookNowV1() -> impl IntoView {
     // **Price Source**: Extracts room_price from hotel_details.all_rooms
     // **Data Structure**: (room_name, price_per_night, room_unique_id)
     let available_rooms = move || {
-        if let Some(hotel_details) = hotel_details_state.hotel_details.get() {
+        if let Some(rates) = hotel_details_state.rates.get() {
             // Use real room data from all_rooms with individual pricing
-            hotel_details
-                .all_rooms
+            rates
                 .into_iter()
                 .take(5) // <!-- Limit to maximum 5 rooms for display -->
                 .map(|room_option| {

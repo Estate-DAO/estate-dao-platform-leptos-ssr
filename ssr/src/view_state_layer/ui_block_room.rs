@@ -1,4 +1,4 @@
-use crate::domain::{DomainHotelDetails, DomainRoomData};
+use crate::domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData};
 use crate::view_state_layer::GlobalStateForLeptos;
 use leptos::*;
 use std::collections::HashMap;
@@ -581,3 +581,23 @@ impl BlockRoomUIState {
 }
 
 impl GlobalStateForLeptos for BlockRoomUIState {}
+
+impl From<DomainHotelStaticDetails> for DomainHotelDetails {
+    fn from(static_details: DomainHotelStaticDetails) -> Self {
+        DomainHotelDetails {
+            hotel_name: static_details.hotel_name,
+            hotel_code: static_details.hotel_code,
+            star_rating: static_details.star_rating,
+            description: static_details.description,
+            hotel_facilities: static_details.hotel_facilities,
+            address: static_details.address,
+            images: static_details.images,
+            amenities: static_details.amenities,
+            all_rooms: vec![], // No room rates in static details
+            checkin: "".to_string(),
+            checkout: "".to_string(),
+            search_info: None,
+            search_criteria: None,
+        }
+    }
+}

@@ -24,6 +24,7 @@ pub enum ProviderSteps {
     PlaceDetails,
     HotelSearch,
     HotelDetails,
+    HotelRate,
     HotelBlockRoom,
     HotelBookRoom,
     GetBookingDetails,
@@ -35,11 +36,33 @@ pub struct ProviderError(pub Arc<ProviderErrorDetails>);
 // Added Display implementation
 impl fmt::Display for ProviderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Provider '{:?}' failed during '{:?}' step. Details: {}",
-            self.0.provider_name, self.0.error_step, self.0.api_error
-        )
+        let error_message = match self.0.error_step {
+            ProviderSteps::PlaceSearch => {
+                "There was a problem searching for the place. Please try again."
+            }
+            ProviderSteps::PlaceDetails => {
+                "Could not retrieve details for the selected place. Please try again."
+            }
+            ProviderSteps::HotelSearch => {
+                "There was a problem searching for hotels. Please try again."
+            }
+            ProviderSteps::HotelDetails => {
+                "Could not retrieve details for the selected hotel. Please try again."
+            }
+            ProviderSteps::HotelRate => {
+                "This hotel is fully booked for your selected dates. Please choose different dates or another hotel."
+            }
+            ProviderSteps::HotelBlockRoom => {
+                "We were unable to reserve the room. Please try again."
+            }
+            ProviderSteps::HotelBookRoom => {
+                "There was a problem confirming your booking. Please try again."
+            }
+            ProviderSteps::GetBookingDetails => {
+                "Could not retrieve booking details. Please try again."
+            }
+        };
+        write!(f, "{}", error_message)
     }
 }
 

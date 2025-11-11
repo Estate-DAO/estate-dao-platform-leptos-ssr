@@ -162,9 +162,20 @@ impl SearchListResults {
     }
 
     pub fn set_search_results(hotel_search_response: Option<DomainHotelListAfterSearch>) {
-        Self::from_leptos_context()
-            .search_result
-            .set(hotel_search_response);
+        let search_result_signal = Self::from_leptos_context().search_result;
+
+        if let Some(new_response) = hotel_search_response {
+            search_result_signal.update(|current_result| {
+                if let Some(current) = current_result {
+                    current.hotel_results.extend(new_response.hotel_results);
+                    current.pagination = new_response.pagination;
+                } else {
+                    *current_result = Some(new_response);
+                }
+            });
+        } else {
+            search_result_signal.set(None);
+        }
     }
 
     pub fn get_hotel_code_results_token_map() -> HashMap<String, String> {

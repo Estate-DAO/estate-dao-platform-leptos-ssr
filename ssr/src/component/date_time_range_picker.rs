@@ -32,6 +32,15 @@ impl SelectedDateRange {
         let end_str = format!("{:04}-{:02}-{:02}", self.end.0, self.end.1, self.end.2);
         format!("{} - {}", start_str, end_str)
     }
+    pub fn end_to_string(&self) -> String {
+        format!("{:04}-{:02}-{:02}", self.end.0, self.end.1, self.end.2)
+    }
+    pub fn start_to_string(&self) -> String {
+        format!(
+            "{:04}-{:02}-{:02}",
+            self.start.0, self.start.1, self.start.2
+        )
+    }
 
     pub fn display_string(&self) -> String {
         if self.start == (0, 0, 0) && self.end == (0, 0, 0) {

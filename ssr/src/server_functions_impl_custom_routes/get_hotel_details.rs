@@ -2,6 +2,7 @@ use axum::{
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{adapters::LiteApiAdapter, application_services::HotelService};
@@ -17,10 +18,10 @@ pub struct GetHotelDetailsQuery {
 #[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
 pub async fn get_hotel_details_api_server_fn_route(
     State(state): State<AppState>,
-    Query(query): Query<GetHotelDetailsQuery>,
+    Json(request): Json<GetHotelDetailsQuery>,
 ) -> Result<Response, Response> {
     // Validate hotel_id is provided
-    if query.hotel_id.trim().is_empty() {
+    if request.hotel_id.trim().is_empty() {
         let error_response = json!({
             "error": "Hotel ID cannot be empty"
         });
@@ -33,7 +34,7 @@ pub async fn get_hotel_details_api_server_fn_route(
 
     // Get hotel details without rates
     let result = hotel_service
-        .get_hotel_details_without_rates(query.hotel_id)
+        .get_hotel_static_details(&request.hotel_id)
         .await
         .map_err(|e| {
             tracing::error!("Hotel details retrieval failed: {:?}", e);

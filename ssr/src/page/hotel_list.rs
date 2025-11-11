@@ -611,23 +611,32 @@ pub fn HotelListPage() -> impl IntoView {
             //         />
             //     </div>
             // </div>
-            <HotelListNavbar />
+        <HotelListNavbar />
         // </div>
 
         // Dynamic spacer that only adjusts on mobile/tablet, stays normal on desktop
-        <div class={
-            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-            move || format!(
-                "transition-all duration-300 {}",
-                if is_input_expanded() {
-                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
-                    "h-96 sm:h-96 md:h-80 lg:h-48"
-                } else {
-                    // Normal spacer when collapsed on all screens
-                    "h-24"
-                }
-            )
-        }></div>
+        <div
+        class=move || {
+            let is_expanded = InputGroupState::is_open_show_full_input();
+            // Dynamically compute height class
+            let base = if is_expanded {
+                "h-56" // Default (mobile)
+            } else {
+                "h-24" // Collapsed
+            };
+
+            // Apply smoother responsive overrides
+            let responsive = if is_expanded {
+                // As screen gets wider, reduce spacer height
+                "sm:h-48 md:h-24 lg:h-16"
+            } else {
+                // Keep small consistent spacer across screens
+                "sm:h-16 md:h-16 lg:h-16"
+            };
+
+            format!("transition-all duration-300 ease-in-out {} {}", base, responsive)
+        }
+        ></div>
 
         // Main scrollable section
         <section class="bg-slate-50 px-4 pb-2">
@@ -773,15 +782,6 @@ pub fn HotelListPage() -> impl IntoView {
                                 <SortBy />
                             </div>
                         </div>
-
-                        // Use resource pattern with Suspense for automatic loading states
-                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
-                            {move || {
-                                // Trigger the resource loading but don't render anything
-                                let _ = hotel_search_resource.get();
-                                view! { <></> }
-                            }}
-                        </Suspense>
 
                             <Show
                                 when=move || search_list_page.search_result.get().is_some()
@@ -982,18 +982,26 @@ pub fn HotelListPage() -> impl IntoView {
                             </Show>
 
                             // Pagination controls - only show when we have results
-                            <Show
-                                when=move || {
-                                    search_list_page.search_result.get()
-                                        .map_or(false, |result| !result.hotel_list().is_empty())
-                                }
-                                fallback=move || view! { <></> }
-                            >
-                                <div class="col-span-full">
-                                    // <PaginationInfo />
-                                    <PaginationControls />
-                                </div>
-                            </Show>
+
+                             // Use resource pattern with Suspense for automatic loading states
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
+                            {move || {
+                                // Trigger the resource loading but don't render anything
+                                let _ = hotel_search_resource.get();
+                                view! { <Show
+                                        when=move || {
+                                            search_list_page.search_result.get()
+                                                .map_or(false, |result| !result.hotel_list().is_empty())
+                                        }
+                                        fallback=move || view! { <></> }
+                                    >
+                                        <div class="col-span-full">
+                                            // <PaginationInfo />
+                                            <PaginationControls />
+                                        </div>
+                                    </Show> }
+                            }}
+                        </Suspense>
                         </div>
                     </div>
                 </div>
@@ -1128,13 +1136,13 @@ pub fn HotelListPage() -> impl IntoView {
 
                     // Mobile hotel listings
                     <div class="space-y-4">
-                        <Suspense fallback=move || view! { <div class="space-y-4">{(0..5).map(|_| fallback()).collect_view()}</div> }>
-                            {move || {
-                                // Trigger the resource loading
-                                let _ = hotel_search_resource.get();
-                                view! { <></> }
-                            }}
-                        </Suspense>
+                        // <Suspense fallback=move || view! { <div class="space-y-4">{(0..5).map(|_| fallback()).collect_view()}</div> }>
+                        //     {move || {
+                        //         // Trigger the resource loading
+                        //         let _ = hotel_search_resource.get();
+                        //         view! { <></> }
+                        //     }}
+                        // </Suspense>
 
                         <Show
                             when=move || search_list_page.search_result.get().is_some()
@@ -1217,19 +1225,27 @@ pub fn HotelListPage() -> impl IntoView {
                                 }
                             }}
                         </Show>
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
+                            {move || {
+                                // Trigger the resource loading but don't render anything
+                                let _ = hotel_search_resource.get();
+                                view! { // Mobile pagination controls
+                                        <Show
+                                            when=move || {
+                                                search_list_page.search_result.get()
+                                                    .map_or(false, |result| !result.hotel_list().is_empty())
+                                            }
+                                            fallback=move || view! { <></> }
+                                        >
+                                            <div class="mt-6">
+                                                <PaginationControls />
+                                            </div>
+                                        </Show>
+                                    }
+                            }}
+                        </Suspense>
 
-                        // Mobile pagination controls
-                        <Show
-                            when=move || {
-                                search_list_page.search_result.get()
-                                    .map_or(false, |result| !result.hotel_list().is_empty())
-                            }
-                            fallback=move || view! { <></> }
-                        >
-                            <div class="mt-6">
-                                <PaginationControls />
-                            </div>
-                        </Show>
+
                     </div>
                 </div>
             </div>

@@ -247,6 +247,8 @@ impl BookingBackendConversions {
             images: vec![],
             all_rooms: vec![],
             amenities: vec![],
+            search_criteria: None,
+            search_info: None,
         };
         let guests = DomainUserDetails {
             adults: vec![DomainAdultDetail {

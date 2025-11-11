@@ -355,6 +355,8 @@ async fn build_hotel_details(
         images: actual_images,
         all_rooms,
         amenities: actual_amenities,
+        search_criteria: None,
+        search_info: None,
     }
 }
 

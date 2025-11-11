@@ -5,7 +5,7 @@ pub const BOOKING_ID: &str = "estatedao_booking_id";
 pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 pub const USER_IDENTITY: &str = "estatedao_user_identity";
 pub const USER_EMAIL_MAPPING_SYNCED: &str = "estatedao_user_email_mapping_synced";
-pub const PAGINATION_LIMIT: i32 = 500;
+pub const PAGINATION_LIMIT: i32 = 100;
 // PROVAB_BASE_URL options
 pub const PROVAB_PROD_OLD_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";

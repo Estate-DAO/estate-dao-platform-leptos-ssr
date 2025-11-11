@@ -226,8 +226,10 @@ pub fn api_routes() -> Router<AppState> {
             post(get_hotel_info_api_server_fn_route).options(handle_options),
         )
         .route(
-            "/get_hotel_details_api",
-            get(get_hotel_details_api_server_fn_route).options(handle_options),
+            "/get_hotel_static_details_api",
+            get(get_hotel_details_api_server_fn_route)
+                .post(get_hotel_details_api_server_fn_route)
+                .options(handle_options),
         )
         .route(
             "/get_hotel_rates_api",
