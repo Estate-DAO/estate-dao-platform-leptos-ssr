@@ -783,15 +783,6 @@ pub fn HotelListPage() -> impl IntoView {
                             </div>
                         </div>
 
-                        // Use resource pattern with Suspense for automatic loading states
-                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
-                            {move || {
-                                // Trigger the resource loading but don't render anything
-                                let _ = hotel_search_resource.get();
-                                view! { <></> }
-                            }}
-                        </Suspense>
-
                             <Show
                                 when=move || search_list_page.search_result.get().is_some()
                                 fallback=move || view! { <></> }
@@ -991,18 +982,26 @@ pub fn HotelListPage() -> impl IntoView {
                             </Show>
 
                             // Pagination controls - only show when we have results
-                            <Show
-                                when=move || {
-                                    search_list_page.search_result.get()
-                                        .map_or(false, |result| !result.hotel_list().is_empty())
-                                }
-                                fallback=move || view! { <></> }
-                            >
-                                <div class="col-span-full">
-                                    // <PaginationInfo />
-                                    <PaginationControls />
-                                </div>
-                            </Show>
+
+                             // Use resource pattern with Suspense for automatic loading states
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
+                            {move || {
+                                // Trigger the resource loading but don't render anything
+                                let _ = hotel_search_resource.get();
+                                view! { <Show
+                                        when=move || {
+                                            search_list_page.search_result.get()
+                                                .map_or(false, |result| !result.hotel_list().is_empty())
+                                        }
+                                        fallback=move || view! { <></> }
+                                    >
+                                        <div class="col-span-full">
+                                            // <PaginationInfo />
+                                            <PaginationControls />
+                                        </div>
+                                    </Show> }
+                            }}
+                        </Suspense>
                         </div>
                     </div>
                 </div>
@@ -1137,13 +1136,13 @@ pub fn HotelListPage() -> impl IntoView {
 
                     // Mobile hotel listings
                     <div class="space-y-4">
-                        <Suspense fallback=move || view! { <div class="space-y-4">{(0..5).map(|_| fallback()).collect_view()}</div> }>
-                            {move || {
-                                // Trigger the resource loading
-                                let _ = hotel_search_resource.get();
-                                view! { <></> }
-                            }}
-                        </Suspense>
+                        // <Suspense fallback=move || view! { <div class="space-y-4">{(0..5).map(|_| fallback()).collect_view()}</div> }>
+                        //     {move || {
+                        //         // Trigger the resource loading
+                        //         let _ = hotel_search_resource.get();
+                        //         view! { <></> }
+                        //     }}
+                        // </Suspense>
 
                         <Show
                             when=move || search_list_page.search_result.get().is_some()
@@ -1226,19 +1225,27 @@ pub fn HotelListPage() -> impl IntoView {
                                 }
                             }}
                         </Show>
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
+                            {move || {
+                                // Trigger the resource loading but don't render anything
+                                let _ = hotel_search_resource.get();
+                                view! { // Mobile pagination controls
+                                        <Show
+                                            when=move || {
+                                                search_list_page.search_result.get()
+                                                    .map_or(false, |result| !result.hotel_list().is_empty())
+                                            }
+                                            fallback=move || view! { <></> }
+                                        >
+                                            <div class="mt-6">
+                                                <PaginationControls />
+                                            </div>
+                                        </Show>
+                                    }
+                            }}
+                        </Suspense>
 
-                        // Mobile pagination controls
-                        <Show
-                            when=move || {
-                                search_list_page.search_result.get()
-                                    .map_or(false, |result| !result.hotel_list().is_empty())
-                            }
-                            fallback=move || view! { <></> }
-                        >
-                            <div class="mt-6">
-                                <PaginationControls />
-                            </div>
-                        </Show>
+
                     </div>
                 </div>
             </div>
