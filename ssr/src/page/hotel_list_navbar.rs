@@ -6,7 +6,7 @@ use crate::{component::yral_auth_provider::YralAuthProvider, page::InputGroupCon
 #[component]
 pub fn HotelListNavbar() -> impl IntoView {
     view! {
-        <nav class="w-full bg-white shadow-sm fixed top-0 left-0 z-50">
+        <nav class="w-full bg-white fixed top-0 left-0 z-50">
             <div class="flex items-center gap-8 justify-between px-4 sm:px-6  py-3">
 
                 {/* --- Left: Logo --- */}
