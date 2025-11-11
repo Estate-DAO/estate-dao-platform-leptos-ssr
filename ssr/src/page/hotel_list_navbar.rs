@@ -38,9 +38,9 @@ pub fn HotelListNavbar() -> impl IntoView {
                     // </button>
 
                     {/* YralAuthProvider shows either LoginButton or UserAvatar */}
-                    <div class="h-9">
+                    // <div class="h-9">
                         <YralAuthProvider />
-                    </div>
+                    // </div>
                 </div>
             </div>
 
