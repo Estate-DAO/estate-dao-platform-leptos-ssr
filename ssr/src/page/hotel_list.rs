@@ -611,23 +611,32 @@ pub fn HotelListPage() -> impl IntoView {
             //         />
             //     </div>
             // </div>
-            <HotelListNavbar />
+        <HotelListNavbar />
         // </div>
 
         // Dynamic spacer that only adjusts on mobile/tablet, stays normal on desktop
-        <div class={
-            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-            move || format!(
-                "transition-all duration-300 {}",
-                if is_input_expanded() {
-                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
-                    "h-96 sm:h-96 md:h-80 lg:h-48"
-                } else {
-                    // Normal spacer when collapsed on all screens
-                    "h-24"
-                }
-            )
-        }></div>
+        <div
+        class=move || {
+            let is_expanded = InputGroupState::is_open_show_full_input();
+            // Dynamically compute height class
+            let base = if is_expanded {
+                "h-56" // Default (mobile)
+            } else {
+                "h-24" // Collapsed
+            };
+
+            // Apply smoother responsive overrides
+            let responsive = if is_expanded {
+                // As screen gets wider, reduce spacer height
+                "sm:h-48 md:h-24 lg:h-16"
+            } else {
+                // Keep small consistent spacer across screens
+                "sm:h-16 md:h-16 lg:h-16"
+            };
+
+            format!("transition-all duration-300 ease-in-out {} {}", base, responsive)
+        }
+        ></div>
 
         // Main scrollable section
         <section class="bg-slate-50 px-4 pb-2">

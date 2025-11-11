@@ -1,5 +1,5 @@
 use crate::{
-    domain::{DomainHotelDetails, DomainRoomData, DomainRoomOption},
+    domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData, DomainRoomOption},
     error, log, warn,
 };
 use leptos::*;
@@ -10,7 +10,10 @@ use super::GlobalStateForLeptos;
 #[derive(Debug, Clone, Default)]
 pub struct HotelDetailsUIState {
     pub hotel_details: RwSignal<Option<DomainHotelDetails>>,
+    pub static_details: RwSignal<Option<DomainHotelStaticDetails>>,
+    pub rates: RwSignal<Option<Vec<DomainRoomOption>>>,
     pub loading: RwSignal<bool>,
+    pub rates_loading: RwSignal<bool>,
     pub error: RwSignal<Option<String>>,
     pub selected_rooms: RwSignal<HashMap<String, u32>>, // room_unique_id -> quantity
     // this is the aggregate price of all the rooms selected
@@ -27,9 +30,24 @@ impl HotelDetailsUIState {
         this.hotel_details.set(details);
     }
 
+    pub fn set_static_details(details: Option<DomainHotelStaticDetails>) {
+        let this: Self = expect_context();
+        this.static_details.set(details);
+    }
+
+    pub fn set_rates(rates: Option<Vec<DomainRoomOption>>) {
+        let this: Self = expect_context();
+        this.rates.set(rates);
+    }
+
     pub fn set_loading(loading: bool) {
         let this: Self = expect_context();
         this.loading.set(loading);
+    }
+
+    pub fn set_rates_loading(loading: bool) {
+        let this: Self = expect_context();
+        this.rates_loading.set(loading);
     }
 
     pub fn set_error(error: Option<String>) {
@@ -40,7 +58,10 @@ impl HotelDetailsUIState {
     pub fn reset() {
         let this: Self = expect_context();
         this.hotel_details.set(None);
+        this.static_details.set(None);
+        this.rates.set(None);
         this.loading.set(false);
+        this.rates_loading.set(false);
         this.error.set(None);
         this.selected_rooms.set(HashMap::new());
         this.total_price.set(0.0);
@@ -64,8 +85,8 @@ impl HotelDetailsUIState {
     // <!-- Room selection methods using consolidated DomainHotelDetails.all_rooms -->
     pub fn get_available_room_options() -> Vec<DomainRoomOption> {
         let this: Self = expect_context();
-        if let Some(hotel_details) = this.hotel_details.get() {
-            hotel_details.all_rooms
+        if let Some(rates) = this.rates.get() {
+            rates
         } else {
             vec![]
         }

@@ -5,9 +5,10 @@ use crate::{
     domain::{
         DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest,
         DomainBookRoomResponse, DomainGetBookingRequest, DomainGetBookingResponse,
-        DomainHotelDetails, DomainHotelDetailsWithoutRates, DomainHotelInfoCriteria,
-        DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainPlaceDetails,
+        DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
+        DomainHotelSearchCriteria, DomainHotelStaticDetails, DomainPlaceDetails,
         DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload,
+        DomainRoomOption,
     },
     ports::hotel_provider_port::ProviderError,
 };
@@ -32,21 +33,15 @@ pub trait HotelProviderPort {
     // ) -> impl Future<Output = Result<DomainHotelListAfterSearch, ProviderError>> + Send;
     // // ) -> LocalBoxFuture<'_, Result<DomainHotelListAfterSearch, ProviderError>>;
 
-    async fn get_single_hotel_details(
+    async fn get_hotel_static_details(
+        &self,
+        hotel_id: &str,
+    ) -> Result<DomainHotelStaticDetails, ProviderError>;
+
+    async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<DomainHotelDetails, ProviderError>;
-
-    // <!-- Get hotel details without rates - returns basic hotel information without pricing -->
-    async fn get_hotel_details_without_rates(
-        &self,
-        hotel_id: String,
-    ) -> Result<DomainHotelDetailsWithoutRates, ProviderError>;
-
-    // fn get_hotel_details(
-    //     &self,
-    //     criteria: DomainHotelInfoCriteria,
-    // ) -> impl Future<Output = Result<DomainHotelDetails, ProviderError>> + Send;
+    ) -> Result<Vec<DomainRoomOption>, ProviderError>;
 
     // <!-- Block room operation - reserves room before payment -->
     async fn block_room(
@@ -59,12 +54,6 @@ pub trait HotelProviderPort {
         &self,
         book_request: DomainBookRoomRequest,
     ) -> Result<DomainBookRoomResponse, ProviderError>;
-
-    // <!-- Get hotel rates - for providers that need separate rates call -->
-    async fn get_hotel_rates(
-        &self,
-        criteria: DomainHotelInfoCriteria,
-    ) -> Result<DomainHotelDetails, ProviderError>;
 
     // <!-- Get booking details - retrieve booking information -->
     async fn get_booking_details(

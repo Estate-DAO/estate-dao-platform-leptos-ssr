@@ -4,9 +4,8 @@ use crate::api::payments::ports::GetPaymentStatusResponse;
 use crate::canister::backend::{Booking, PaymentDetails};
 
 use crate::domain::{
-    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelDetails,
-    DomainHotelDetailsWithoutRates, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
-    DomainHotelSearchCriteria,
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainHotelCodeId, DomainHotelDetails,
+    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria,
 };
 use crate::log;
 use crate::utils::route::join_base_and_path_url;
@@ -485,11 +484,23 @@ impl ClientSideApiClient {
         .await
     }
 
+    pub async fn get_hotel_static_details(
+        &self,
+        request: DomainHotelCodeId,
+    ) -> Result<crate::domain::DomainHotelStaticDetails, String> {
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/get_hotel_static_details_api",
+            "get hotel static details",
+        )
+        .await
+    }
+
     pub async fn get_hotel_rates(
         &self,
         request: DomainHotelInfoCriteria,
-    ) -> Option<DomainHotelDetails> {
-        Self::api_call(
+    ) -> Result<Vec<crate::domain::DomainRoomOption>, String> {
+        Self::api_call_with_error(
             request,
             "server_fn_api/get_hotel_rates_api",
             "get hotel rates",
@@ -628,7 +639,7 @@ impl ClientSideApiClient {
     pub async fn get_hotel_details_without_rates(
         &self,
         hotel_id: &str,
-    ) -> Result<DomainHotelDetailsWithoutRates, String> {
+    ) -> Result<crate::domain::DomainHotelDetails, String> {
         let url = format!("server_fn_api/get_hotel_details_api?hotel_id={}", hotel_id);
 
         #[cfg(not(feature = "ssr"))]

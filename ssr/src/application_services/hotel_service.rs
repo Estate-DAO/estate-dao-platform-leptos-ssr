@@ -4,12 +4,12 @@ use crate::application_services::filter_types::{
 };
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
-    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelDetails,
-    DomainHotelDetailsWithoutRates, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
-    DomainHotelSearchCriteria,
+    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelDetails, DomainHotelInfoCriteria,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainHotelStaticDetails,
 };
 use crate::ports::hotel_provider_port::ProviderError;
 use crate::ports::traits::HotelProviderPort;
+use crate::utils::date::date_tuple_to_yyyy_mm_dd;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
@@ -118,29 +118,46 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainHotelDetails, ProviderError> {
-        // <!-- Core business logic for getting hotel details can be added here -->
-        // <!-- For now, we just delegate to th                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     e provider -->
-        self.provider.get_single_hotel_details(criteria).await
+        let static_details_future = self
+            .provider
+            .get_hotel_static_details(&criteria.hotel_ids[0]);
+        let rates_future = self.provider.get_hotel_rates(criteria.clone());
+
+        let (static_details_result, rates_result) =
+            futures::join!(static_details_future, rates_future);
+
+        let static_details = static_details_result?;
+        let rates = rates_result?;
+
+        Ok(DomainHotelDetails {
+            hotel_name: static_details.hotel_name,
+            hotel_code: static_details.hotel_code,
+            star_rating: static_details.star_rating,
+            description: static_details.description,
+            hotel_facilities: static_details.hotel_facilities,
+            address: static_details.address,
+            images: static_details.images,
+            amenities: static_details.amenities,
+            all_rooms: rates,
+            checkin: date_tuple_to_yyyy_mm_dd(criteria.search_criteria.check_in_date),
+            checkout: date_tuple_to_yyyy_mm_dd(criteria.search_criteria.check_out_date),
+            search_info: None,
+            search_criteria: Some(criteria.search_criteria),
+        })
+    }
+
+    pub async fn get_hotel_static_details(
+        &self,
+        hotel_id: &str,
+    ) -> Result<DomainHotelStaticDetails, ProviderError> {
+        self.provider.get_hotel_static_details(hotel_id).await
     }
 
     pub async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<DomainHotelDetails, ProviderError> {
-        // <!-- Core business logic for getting hotel rates can be added here -->
-        // <!-- For now, we just delegate to the provider -->
+    ) -> Result<Vec<crate::domain::DomainRoomOption>, ProviderError> {
         self.provider.get_hotel_rates(criteria).await
-    }
-
-    pub async fn get_hotel_details_without_rates(
-        &self,
-        hotel_id: String,
-    ) -> Result<DomainHotelDetailsWithoutRates, ProviderError> {
-        // <!-- Core business logic for getting hotel details without rates can be added here -->
-        // <!-- For now, we just delegate to the provider -->
-        self.provider
-            .get_hotel_details_without_rates(hotel_id)
-            .await
     }
 
     // <!-- Room operations and booking methods -->
