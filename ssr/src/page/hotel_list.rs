@@ -12,6 +12,7 @@ use crate::component::{
     PaginationControls, PaginationInfo, PriceRangeFilter, SkeletonCards, SortBy, StarRatingFilter,
     MAX_PRICE, MIN_PRICE,
 };
+use crate::domain::{DomainHotelListAfterSearch, DomainPaginationParams};
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListNavbar, HotelListParams, InputGroupContainer};
 use crate::utils::query_params::QueryParamsSync;
@@ -78,6 +79,8 @@ impl PreviousSearchContext {
 
 #[component]
 pub fn HotelListPage() -> impl IntoView {
+    const INITIAL_PAGE: u32 = 1;
+
     let search_ctx: UISearchCtx = expect_context();
     let navigate = use_navigate();
     let query_map = leptos_router::use_query_map();
@@ -90,6 +93,7 @@ pub fn HotelListPage() -> impl IntoView {
 
     // Initialize pagination state
     let pagination_state: UIPaginationState = expect_context();
+    let search_list_results: SearchListResults = expect_context();
 
     // Sync query params with state on page load (URL → State)
     // Parse URL params and sync to app state (URL → State)
@@ -223,6 +227,7 @@ pub fn HotelListPage() -> impl IntoView {
         move |(is_ready_place, _date_range, _adults, _rooms, current_page, page_size)| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
+            let search_results_clone = search_list_results.clone();
             async move {
                 let is_ready = is_ready_place.is_some();
                 log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
@@ -232,33 +237,115 @@ pub fn HotelListPage() -> impl IntoView {
                     return None;
                 }
 
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, performing hotel search...");
+                log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, evaluating pagination requirements...");
 
-                // Use the same API client as root.rs
-                let api_client = ClientSideApiClient::new();
-                let result = api_client.search_hotel(search_ctx_clone.into()).await;
+                let target_page = current_page.max(INITIAL_PAGE);
+                let effective_page_size = if page_size == 0 { 1 } else { page_size };
 
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Hotel search API completed");
+                let existing_results = search_results_clone.search_result.get_untracked();
+                let had_existing_results = existing_results.is_some();
+                let existing_results_count = existing_results
+                    .as_ref()
+                    .map(|res| res.hotel_results.len().min(u32::MAX as usize) as u32)
+                    .unwrap_or(0);
 
-                // Set results in the same way as root.rs
-                SearchListResults::set_search_results(result.clone());
-                PreviousSearchContext::update(search_ctx_clone2.clone());
-
-                // Update pagination metadata from search results
-                if let Some(ref response) = result {
-                    log!(
-                        "🔄 Setting Pagination Metadata: pagination={:?}",
-                        response.pagination
-                    );
-                    UIPaginationState::set_pagination_meta(response.pagination.clone());
+                let loaded_pages = if effective_page_size == 0 {
+                    0
                 } else {
-                    log!("⚠️ No search result to extract pagination metadata from");
+                    let numerator = existing_results_count
+                        .saturating_add(effective_page_size.saturating_sub(1));
+                    numerator / effective_page_size
+                };
+
+                let mut pages_to_fetch: Vec<u32> = Vec::new();
+                let mut fetch_start_page: Option<u32> = None;
+
+                if loaded_pages < target_page {
+                    let start_page = if loaded_pages == 0 {
+                        INITIAL_PAGE
+                    } else {
+                        loaded_pages + 1
+                    };
+                    for page in start_page..=target_page {
+                        pages_to_fetch.push(page);
+                    }
+                    fetch_start_page = Some(start_page);
                 }
 
-                // Reset first_time_filled flag after successful search
+                if pages_to_fetch.is_empty() {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] No additional pages to fetch (loaded_pages={}, target_page={})",
+                        loaded_pages,
+                        target_page
+                    );
+                    PreviousSearchContext::update(search_ctx_clone2.clone());
+                    PreviousSearchContext::reset_first_time_filled();
+                    return Some(existing_results);
+                }
+
+                log!(
+                    "[PAGINATION-DEBUG] [hotel_search_resource] Fetching pages {:?} to satisfy target_page={}",
+                    pages_to_fetch,
+                    target_page
+                );
+
+                let api_client = ClientSideApiClient::new();
+                let mut latest_result: Option<DomainHotelListAfterSearch> = None;
+
+                for page in pages_to_fetch {
+                    let mut request: crate::domain::DomainHotelSearchCriteria =
+                        search_ctx_clone.clone().into();
+                    if let Some(pagination) = request.pagination.as_mut() {
+                        pagination.page = Some(page);
+                        pagination.page_size = Some(effective_page_size);
+                    } else {
+                        request.pagination = Some(DomainPaginationParams {
+                            page: Some(page),
+                            page_size: Some(effective_page_size),
+                        });
+                    }
+
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Performing hotel search for page {}",
+                        page
+                    );
+                    let page_response = api_client.search_hotel(request).await;
+
+                    match page_response {
+                        Some(response) => {
+                            log!(
+                                "[PAGINATION-DEBUG] [hotel_search_resource] Page {} completed with {} hotels",
+                                page,
+                                response.hotel_results.len()
+                            );
+
+                            if page == target_page {
+                                UIPaginationState::set_pagination_meta(response.pagination.clone());
+                            }
+
+                            SearchListResults::set_search_results(Some(response.clone()));
+                            latest_result = Some(response);
+                        }
+                        None => {
+                            log!(
+                                "[PAGINATION-DEBUG] [hotel_search_resource] Page {} returned no data",
+                                page
+                            );
+
+                            if !had_existing_results && Some(page) == fetch_start_page {
+                                SearchListResults::set_search_results(None);
+                                UIPaginationState::set_pagination_meta(None);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+
+                PreviousSearchContext::update(search_ctx_clone2.clone());
                 PreviousSearchContext::reset_first_time_filled();
 
-                Some(result)
+                Some(latest_result)
             }
         },
     );
