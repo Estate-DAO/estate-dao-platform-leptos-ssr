@@ -10,7 +10,9 @@ use crate::domain::{
     DomainHotelCodeId, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest,
 };
 use crate::log;
-use crate::page::{HotelDetailsParams, HotelListNavbar, InputGroupContainer};
+use crate::page::{
+    add_to_wishlist_action, HotelDetailsParams, HotelListNavbar, InputGroupContainer,
+};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
@@ -367,9 +369,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         }
     };
 
+    let hotel_code_signal = move || {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
+            hotel_details.hotel_code
+        } else {
+            "".to_string()
+        }
+    };
+
     let star_rating_signal = move || {
         if let Some(hotel_details) = hotel_details_state.static_details.get() {
-            hotel_details.star_rating
+            hotel_details.star_rating as u8
         } else {
             0
         }
@@ -418,21 +428,20 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     let open_image_viewer = RwSignal::new(false);
 
     view! {
-        <section class="relative min-h-screen bg-gray-50">
+        <section class="relative min-h-screen bg-gray-50 pt-16 md:pt-16">
             <HotelListNavbar />
-            <div class={
-            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-            move || format!(
-                "transition-all duration-300 {}",
-                if is_input_expanded() {
-                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
-                    "h-96 sm:h-96 md:h-80 lg:h-48"
-                } else {
-                    // Normal spacer when collapsed on all screens
-                    "h-24"
-                }
-            )
-            }></div>
+            // <div class=move || {
+            //     let is_expanded = InputGroupState::is_open_show_full_input();
+            //     if is_expanded {
+            //         // tall when expanded
+            //         "transition-all duration-300 h-96 sm:h-96 md:h-80 lg:h-24"
+            //     } else {
+            //         // keep space for fixed navbar (don't use lg:h-0)
+            //         "transition-all duration-300 h-24 sm:h-16 md:h-12 lg:h-16"
+            //     }
+            // }/>
+
+
 
             // <Navbar />
             // <Show when=move || !open_image_viewer.get()>
@@ -465,15 +474,18 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                         </div>
                     </div>
                 }>
-                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                        <div class="flex flex-col">
-                            <StarRating rating=move || star_rating_signal() as u8 />
-                            <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
-                        </div>
+                    <HotelDetailsHeader hotel_name_signal=hotel_name_signal() star_rating_signal=star_rating_signal() address_signal=address_signal() hotel_code=hotel_code_signal() />
+                    <HotelImages open_image_viewer/>
 
-                        <div class="mt-4 md:mt-6">
-                            <HotelImages open_image_viewer/>
-                        </div>
+                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                        // <div class="flex flex-col">
+                        //     <StarRating rating=move || star_rating_signal() as u8 />
+                        //     <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
+                        // </div>
+
+                        // <div class="mt-4 md:mt-6">
+                        //     <HotelImages open_image_viewer/>
+                        // </div>
 
                         <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
                             <div class="w-full md:w-3/5 flex flex-col space-y-6">
@@ -581,19 +593,76 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 }
 
 #[component]
+pub fn HotelDetailsHeader(
+    #[prop(into)] hotel_name_signal: String,
+    #[prop(into)] address_signal: String,
+    #[prop(into)] star_rating_signal: u8,
+    #[prop(into)] hotel_code: String,
+) -> impl IntoView {
+    let toggle_wishlist_action = add_to_wishlist_action(hotel_code);
+    view! {
+        <div class="my-4 w-full max-w-7xl mx-auto px-4 pt-4 pb-2 lg:pt-2 lg:pb-0">
+            {/* on small: actions drop under title; on md+: they sit on the right */}
+            <div class="py-2 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div class="min-w-0">
+                    // {/* tiny blue stars + rating */}
+                    // <div class="flex items-center gap-2 text-blue-600">
+                    //     <StarRating rating=move || star_rating_signal />
+                    //     // <span class="text-sm"> {format!("{}.0", star_rating_signal)} </span>
+                    // </div>
+                    <h1 class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 break-words">
+                        {hotel_name_signal}
+                    </h1>
+
+                    {/* address row */}
+                    <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                        </svg>
+                        <span class="truncate">{address_signal}</span>
+                        <span class="text-gray-300">{"|"}</span>
+                        <a href="#map" class="text-blue-600 hover:underline">"Show in Map"</a>
+                    </div>
+                </div>
+
+                {/* actions */}
+                <div class="flex items-center gap-3 md:self-start">
+                    <button
+                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm bg-white hover:bg-gray-50"
+                        on:click=move |_| toggle_wishlist_action.dispatch(())
+                    >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20.8 4.6a5.3 5.3 0 0 0-7.5 0L12 5.9l-1.3-1.3a5.3 5.3 0 0 0-7.5 7.5l1.3 1.3L12 22l7.5-8.6 1.3-1.3a5.3 5.3 0 0 0 0-7.5z"/>
+                        </svg>
+                        "Add to Wishlist"
+                    </button>
+                    <button class="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+                        "Select A Room"
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+/* ===================== Image Gallery ===================== */
+
+#[component]
 pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    // let (show_viewer, set_show_viewer) = create_signal(false);
+    // index used for the big image on the page
+    let (main_index, set_main_index) = create_signal(0);
+    // index to start from when opening the lightbox
     let (selected_index, set_selected_index) = create_signal(0);
 
     let images_signal = create_memo(move |_| {
-        if let Some(hotel_details) = hotel_details_state.static_details.get() {
-            let mut images = hotel_details.images.clone();
+        if let Some(h) = hotel_details_state.static_details.get() {
+            let mut images = h.images.clone();
             if images.len() < 6 {
-                let repeat_count = 6 - images.len();
-                let repeated_images = images.clone();
-                images.extend(repeated_images.into_iter().take(repeat_count));
+                let repeat = 6 - images.len();
+                let dup = images.clone();
+                images.extend(dup.into_iter().take(repeat));
             }
             images
         } else {
@@ -601,88 +670,104 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
         }
     });
 
+    // open viewer from current/explicit index
+    let open_from = move |i: usize| {
+        set_selected_index(i);
+        open_image_viewer.set(true);
+    };
+
+    // go next/prev on the PAGE (updates the big image)
+    let next = move |_| {
+        let n = images_signal().len();
+        if n > 0 {
+            set_main_index((main_index.get() + 1) % n);
+        }
+    };
+    let prev = move |_| {
+        let n = images_signal().len();
+        if n > 0 {
+            set_main_index((main_index.get() + n - 1) % n);
+        }
+    };
+
     move || {
         if images_signal().is_empty() {
-            view! { <div class="text-gray-500 text-center py-8">No images available</div> }
+            view! { <div class="text-gray-500 text-center py-8">"No images available"</div> }
         } else {
             view! {
-                <div>
-                    <div class="block sm:hidden">
-                        <img
-                            src=move || images_signal()[0].clone()
-                            alt="Hotel"
-                            class="w-full h-64 rounded-xl object-cover cursor-pointer"
-                            on:click=move |_| {
-                                set_selected_index(0);
-                                open_image_viewer.set(true);
-                            }
-                        />
-                    </div>
-                    <div class="hidden sm:flex flex-col space-y-3">
-                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                <div class="py-2  w-full max-w-7xl mx-auto px-4">
+                    {/* Mobile: one big image */}
+                    <div class="md:hidden">
+                        <div class="relative rounded-2xl overflow-hidden">
                             <img
-                                src=move || images_signal()[0].clone()
+                                src=move || images_signal()[main_index.get()].clone()
                                 alt="Hotel"
-                                class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover cursor-pointer"
-                                on:click=move |_| {
-                                    set_selected_index(0);
-                                    open_image_viewer.set(true);
-                                }
+                                class="w-full aspect-[16/9] object-cover"
+                                on:click=move |_| open_from(main_index.get())
                             />
-                            <div class="flex flex-row sm:flex-col space-x-3 sm:space-x-0 sm:space-y-3 w-full sm:w-2/5">
-                                <img
-                                    src=move || images_signal().get(1).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                    alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
-                                    on:click=move |_| {
-                                        set_selected_index(1);
-                                        open_image_viewer.set(true);
-                                    }
-                                />
-                                <img
-                                    src=move || images_signal().get(2).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                    alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
-                                    on:click=move |_| {
-                                        set_selected_index(2);
-                                        open_image_viewer.set(true);
-                                    }
-                                />
-                            </div>
                         </div>
-                        <div class="flex justify-between space-x-3">
+                    </div>
+
+                    {/* Desktop / tablet */}
+                    <div class="hidden md:grid grid-cols-12 gap-6">
+                        {/* Left: main image (driven by main_index) */}
+                        <div class="col-span-9 relative rounded-2xl overflow-hidden bg-gray-100">
                             <img
-                                src=move || images_signal().get(3).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
-                                on:click=move |_| {
-                                    set_selected_index(3);
-                                    open_image_viewer.set(true);
-                                }
+                                src=move || images_signal()[main_index.get()].clone()
+                                alt="Hotel main"
+                                class="w-full aspect-[16/9] object-cover"
+                                on:click=move |_| open_from(main_index.get())
+                            />
+                            {/* arrows */}
+                            <button
+                                class="absolute left-4 top-1/2 -translate-y-1/2 grid place-items-center w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow"
+                                on:click=prev aria-label="Previous"
+                            >
+                                <span class="text-lg">"‹"</span>
+                            </button>
+                            <button
+                                class="absolute right-4 top-1/2 -translate-y-1/2 grid place-items-center w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow"
+                                on:click=next aria-label="Next"
+                            >
+                                <span class="text-lg">"›"</span>
+                            </button>
+                        </div>
+
+                        {/* Right: vertical stack of 3 thumbs (static) */}
+                        <div class="col-span-3 flex flex-col gap-6">
+                            <img
+                                src=move || images_signal().get(1).cloned().unwrap_or_else(|| images_signal()[0].clone())
+                                alt="Thumb 1"
+                                class="w-full aspect-[16/9] rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| set_main_index(1)  // change main image
                             />
                             <img
-                                src=move || images_signal().get(4).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
-                                on:click=move |_| {
-                                    set_selected_index(4);
-                                    open_image_viewer.set(true);
-                                }
+                                src=move || images_signal().get(2).cloned().unwrap_or_else(|| images_signal()[0].clone())
+                                alt="Thumb 2"
+                                class="w-full aspect-[16/9] rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| set_main_index(2)
                             />
-                            <div class="relative w-72 h-48 rounded-xl">
+                            <div class="relative">
                                 <img
-                                    src=move || images_signal().get(5).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                    alt="Hotel"
-                                    class="object-cover h-full w-full rounded-xl cursor-pointer"
-                                    on:click=move |_| {
-                                        set_selected_index(5);
-                                        open_image_viewer.set(true);
-                                    }
+                                    src=move || images_signal().get(3).cloned().unwrap_or_else(|| images_signal()[0].clone())
+                                    alt="Thumb 3"
+                                    class="w-full aspect-[16/9] rounded-xl object-cover cursor-pointer"
+                                    on:click=move |_| set_main_index(3)
                                 />
+                                {/* "Show All Pictures" overlay opens viewer at current main_index */}
+                                <button
+                                    class="absolute left-4 right-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/95 px-4 py-3 text-sm leading-tight shadow hover:bg-white"
+                                    on:click=move |_| open_from(main_index.get())
+                                >
+                                    <div class="flex flex-col items-center">
+                                        <span>"Show All Pictures"</span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
 
+                    {/* Lightbox uses selected_index */}
                     {move || open_image_viewer.get().then(|| {
                         view! {
                             <ImageLightbox

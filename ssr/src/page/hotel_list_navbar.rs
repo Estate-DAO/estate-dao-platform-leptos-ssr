@@ -6,52 +6,41 @@ use crate::{component::yral_auth_provider::YralAuthProvider, page::InputGroupCon
 #[component]
 pub fn HotelListNavbar() -> impl IntoView {
     view! {
-        <nav class="w-full bg-white fixed top-0 left-0 z-50">
-            <div class="flex items-center gap-8 justify-between px-4 sm:px-6  py-3">
-
-                {/* --- Left: Logo --- */}
+        // Fixed top bar only
+        <nav class="p-2 fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+            <div class="h-14 md:h-16 flex items-center gap-8 justify-between px-4 sm:px-6">
+                {/* Left: Logo */}
                 <a href="/" class="flex items-center space-x-2">
-                    <img
-                        src="/img/nofeebooking.webp"
-                        alt="NoFeeBooking Logo"
-                        class="h-8 sm:h-9 w-auto"
-                    />
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking Logo" class="h-8 sm:h-9 w-auto" />
                 </a>
 
-                {/* --- Center: Dynamic Search Input --- */}
-                <div class="hidden md:flex flex-1 justify-center h-12">
-                    // <div class="w-full">
+                {/* Center: Search (desktop only) */}
+                <div class="hidden md:flex flex-1 justify-center">
+                    <div class="w-full max-w-3xl">
                         <InputGroupContainer
-                            default_expanded=true
-                            given_disabled=false
-                            allow_outside_click_collapse=false
-                            size="small"
+                        default_expanded=true
+                        given_disabled=false
+                        allow_outside_click_collapse=false
+                        size="small"
                         />
-                    // </div>
+                    </div>
                 </div>
 
-                {/* --- Right: Auth / Avatar --- */}
+                {/* Right: Auth */}
                 <div class="flex items-center space-x-3">
-                    {/* Mobile Search Icon */}
-                    // <button class="md:hidden p-2 rounded-full hover:bg-gray-100 transition">
-                    //     <Icon icon=icondata::BsSearch class="text-gray-700 text-xl" />
-                    // </button>
-
-                    {/* YralAuthProvider shows either LoginButton or UserAvatar */}
-                    // <div class="h-9">
-                        <YralAuthProvider />
-                    // </div>
+                    <YralAuthProvider />
                 </div>
-            </div>
-
-            {/* --- Mobile Collapsible Search --- */}
-            <div class="block md:hidden px-4 pb-3">
-                <InputGroupContainer
-                    default_expanded=false
-                    given_disabled=false
-                    allow_outside_click_collapse=false
-                />
             </div>
         </nav>
+
+        // Mobile search as a normal flow element (NOT fixed)
+        <div class="md:hidden bg-white px-4 pt-16 pb-3">
+            // pt-16 matches the fixed bar height (h-14 ≈ 56px -> 14 * 4px = 56; we add a tad more to be safe)
+            <InputGroupContainer
+                default_expanded=false
+                given_disabled=false
+                allow_outside_click_collapse=false
+            />
+        </div>
     }
 }
