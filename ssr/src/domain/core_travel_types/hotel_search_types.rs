@@ -260,6 +260,9 @@ pub struct DomainHotelDetails {
     pub hotel_name: String,
     pub hotel_code: String,
     pub star_rating: i32,
+    pub rating: Option<f64>,
+    pub review_count: Option<u32>,
+    pub categories: Vec<DomainReviewCategory>,
     pub description: String,
     pub hotel_facilities: Vec<String>,
     pub address: String,
@@ -275,6 +278,9 @@ pub struct DomainHotelStaticDetails {
     pub hotel_name: String,
     pub hotel_code: String,
     pub star_rating: i32,
+    pub rating: Option<f64>,
+    pub review_count: Option<u32>,
+    pub categories: Vec<DomainReviewCategory>,
     pub description: String,
     pub hotel_facilities: Vec<String>,
     pub address: String,
@@ -282,6 +288,8 @@ pub struct DomainHotelStaticDetails {
     pub amenities: Vec<String>,
     pub rooms: Vec<DomainStaticRoom>,
     pub location: Option<DomainLocation>,
+    pub checkin_checkout_times: Option<DomainCheckinCheckoutTimes>,
+    pub policies: Vec<DomainPolicy>,
 }
 
 impl DomainHotelStaticDetails {
@@ -299,6 +307,9 @@ impl DomainHotelStaticDetails {
             hotel_name: self.hotel_name.clone(),
             hotel_code: self.hotel_code.clone(),
             star_rating: self.star_rating,
+            rating: self.rating,
+            review_count: self.review_count,
+            categories: self.categories.clone(),
             description: self.description.clone(),
             hotel_facilities: self.hotel_facilities.clone(),
             address: self.address.clone(),
@@ -309,6 +320,26 @@ impl DomainHotelStaticDetails {
             search_criteria,
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct DomainCheckinCheckoutTimes {
+    pub checkin: String,
+    pub checkout: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct DomainPolicy {
+    pub policy_type: Option<String>,
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct DomainReviewCategory {
+    pub name: String,
+    pub rating: f32,
+    pub description: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

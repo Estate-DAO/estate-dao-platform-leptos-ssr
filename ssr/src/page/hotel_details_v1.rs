@@ -1843,27 +1843,87 @@ pub fn SelectRoomSection() -> impl IntoView {
     }
 }
 
+fn rating_label_for_score(score: f64) -> &'static str {
+    if score >= 9.0 {
+        "Superb"
+    } else if score >= 8.5 {
+        "Excellent"
+    } else if score >= 8.0 {
+        "Very Good"
+    } else if score >= 7.0 {
+        "Good"
+    } else if score >= 6.0 {
+        "Pleasant"
+    } else {
+        "Okay"
+    }
+}
+
 #[component]
 pub fn GuestReviewsSection() -> impl IntoView {
-    let summary_score = 7.1;
-    let summary_label = "Good";
-    let total_reviews = 1136;
+    let hotel_details_state: HotelDetailsUIState = expect_context();
+    let summary_score = hotel_details_state
+        .static_details
+        .get()
+        .and_then(|d| d.rating)
+        .unwrap_or(7.1);
+    let summary_label = rating_label_for_score(summary_score);
+    let total_reviews = hotel_details_state
+        .static_details
+        .get()
+        .and_then(|d| d.review_count)
+        .unwrap_or(1136);
     let review_cards = SAMPLE_REVIEWS.to_vec();
-    let categories = REVIEW_CATEGORY_SCORES.to_vec();
-    let highlight_tag_vec = REVIEW_HIGHLIGHT_TAGS.to_vec();
+    let categories_from_api = hotel_details_state
+        .static_details
+        .get()
+        .map(|d| d.categories.clone())
+        .unwrap_or_default();
+    let mut categories = if categories_from_api.is_empty() {
+        REVIEW_CATEGORY_SCORES
+            .iter()
+            .map(|(name, score)| (name.to_string(), *score))
+            .collect::<Vec<_>>()
+    } else {
+        categories_from_api
+            .into_iter()
+            .map(|c| (c.name, c.rating))
+            .collect::<Vec<_>>()
+    };
+    categories.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let highlight_tag_vec = if !categories.is_empty() {
+        categories
+            .iter()
+            .take(3)
+            .map(|(name, _)| name.clone())
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
 
     view! {
         <section class="w-full max-w-7xl mx-auto px-4 mt-12">
             <SectionTitle id="reviews" title="Guest Reviews" />
-            <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+            <div class="mt-6 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    <div class="flex items-start gap-4 md:gap-6">
+                        <div class="flex items-center justify-center bg-yellow-400 text-white font-semibold text-xl w-12 h-12 rounded-lg">
+                            {format!("{summary_score:.1}")}
+                        </div>
                         <div>
-                            <p class="text-5xl font-semibold text-blue-600">{format!("{summary_score:.1}")}</p>
-                            <p class="text-gray-700 font-medium">{summary_label}</p>
+                            <p class="text-lg font-semibold text-gray-900">{summary_label}</p>
                             <p class="text-sm text-gray-500">"Based on " {total_reviews} " reviews"</p>
                         </div>
-                        <div class="flex flex-col gap-2 w-full md:w-2/3">
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-gray-900">"Categories"</p>
+                            <button class="text-sm font-semibold text-blue-600 hover:underline" type="button">
+                                "Show All"
+                            </button>
+                        </div>
+                        <div class="grid gap-3 md:grid-cols-3">
                             {
                                 move || {
                                     categories
@@ -1873,7 +1933,7 @@ pub fn GuestReviewsSection() -> impl IntoView {
                                             let percent = (score / 10.0 * 100.0).clamp(0.0, 100.0);
                                             view! {
                                                 <div class="space-y-1">
-                                                    <div class="flex items-center justify-between text-sm text-gray-600">
+                                                    <div class="flex items-center justify-between text-sm text-gray-700">
                                                         <span>{label}</span>
                                                         <span>{format!("{score:.1}")}</span>
                                                     </div>
@@ -1905,40 +1965,40 @@ pub fn GuestReviewsSection() -> impl IntoView {
                         }}
                     </div>
                 </div>
-                <div class="space-y-4">
-                    {
-                        move || {
-                            review_cards
-                                .clone()
-                                .into_iter()
-                                .map(|review| {
-                                    view! {
-                                        <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
-                                            <div class="flex items-center justify-between">
-                                                <div>
-                                                    <p class="font-semibold text-gray-900">{review.name}</p>
-                                                    <p class="text-xs text-gray-500">{review.stay_info}</p>
-                                                </div>
-                                                <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold">{format!("{:.1}", review.rating)}</span>
-                                            </div>
-                                            <p class="text-sm font-semibold text-gray-800">{review.title}</p>
-                                            <p class="text-sm text-gray-600 leading-6">{review.body}</p>
-                                            <div class="flex flex-wrap gap-2">
-                                                {review.tags.iter().map(|tag| view! {
-                                                    <span class="text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1">{*tag}</span>
-                                                }).collect_view()}
-                                            </div>
-                                            <button class="text-sm text-blue-600 hover:underline">"Read More"</button>
-                                        </div>
-                                    }
-                                })
-                                .collect_view()
-                        }
-                    }
-                    <button class="w-full rounded-xl border border-gray-200 py-3 text-sm font-semibold text-blue-600 hover:border-blue-400">
-                        "View All Reviews"
-                    </button>
-                </div>
+                // <div class="space-y-4">
+                //     {
+                //         move || {
+                //             review_cards
+                //                 .clone()
+                //                 .into_iter()
+                //                 .map(|review| {
+                //                     view! {
+                //                         <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+                //                             <div class="flex items-center justify-between">
+                //                                 <div>
+                //                                     <p class="font-semibold text-gray-900">{review.name}</p>
+                //                                     <p class="text-xs text-gray-500">{review.stay_info}</p>
+                //                                 </div>
+                //                                 <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold">{format!("{:.1}", review.rating)}</span>
+                //                             </div>
+                //                             <p class="text-sm font-semibold text-gray-800">{review.title}</p>
+                //                             <p class="text-sm text-gray-600 leading-6">{review.body}</p>
+                //                             <div class="flex flex-wrap gap-2">
+                //                                 {review.tags.iter().map(|tag| view! {
+                //                                     <span class="text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1">{*tag}</span>
+                //                                 }).collect_view()}
+                //                             </div>
+                //                             <button class="text-sm text-blue-600 hover:underline">"Read More"</button>
+                //                         </div>
+                //                     }
+                //                 })
+                //                 .collect_view()
+                //         }
+                //     }
+                //     <button class="w-full rounded-xl border border-gray-200 py-3 text-sm font-semibold text-blue-600 hover:border-blue-400">
+                //         "View All Reviews"
+                //     </button>
+                // </div>
             </div>
         </section>
     }
@@ -1946,6 +2006,21 @@ pub fn GuestReviewsSection() -> impl IntoView {
 
 #[component]
 pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
+    let hotel_details_state: HotelDetailsUIState = expect_context();
+    let static_details = hotel_details_state.static_details.get();
+    let static_details_clone = static_details.clone();
+    let policies = Memo::new(move |_| {
+        static_details
+            .as_ref()
+            .map(|d| d.policies.clone())
+            .unwrap_or_default()
+    });
+
+    let is_policies_empty = move || policies.get().is_empty();
+    let check_times = static_details_clone
+        .as_ref()
+        .and_then(|d| d.checkin_checkout_times.clone());
+
     view! {
         <section class="w-full max-w-7xl mx-auto px-4 mt-12">
             <SectionTitle id="rules" title="Policy & Rules" />
@@ -1953,37 +2028,70 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
                 <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                     <p class="text-gray-700 leading-7">
                         "Please review the key policies for this property before confirming your stay. "
-                        "Kelapa Gading Homestay keeps things simple—share your arrival details and any special "
-                        "requests ahead of time so the team can prepare. Property address: " {address.clone()} "."
+                        "Property address: " {address.clone()} "."
                     </p>
-                    <ul class="space-y-3 text-sm text-gray-700">
-                        <li>
-                            <span class="font-semibold text-gray-900">"Children & extra beds: "</span>
-                            "Children are welcome. Extra beds depend on the room you choose; please check the individual room capacity."
-                        </li>
-                        <li>
-                            <span class="font-semibold text-gray-900">"Pets: "</span>
-                            "Pets are not allowed at this property."
-                        </li>
-                        <li>
-                            <span class="font-semibold text-gray-900">"Payment methods: "</span>
-                            "Major cards and digital payments accepted at the front desk."
-                        </li>
-                    </ul>
+                    <Show
+                        when=move || !is_policies_empty()
+                        fallback=|| view! {
+                            <ul class="space-y-3 text-sm text-gray-700">
+                                <li>
+                                    <span class="font-semibold text-gray-900">"Children & extra beds: "</span>
+                                    "Children are welcome. Extra beds depend on the room you choose; please check the individual room capacity."
+                                </li>
+                                <li>
+                                    <span class="font-semibold text-gray-900">"Pets: "</span>
+                                    "Pets are not allowed at this property."
+                                </li>
+                                <li>
+                                    <span class="font-semibold text-gray-900">"Payment methods: "</span>
+                                    "Major cards and digital payments accepted at the front desk."
+                                </li>
+                            </ul>
+                        }
+                    >
+                        <div class="space-y-3">
+                            <For
+                                each=move || policies.get()
+                                key=|p| p.name.clone()
+                                let:policy
+                            >
+                                <div>
+                                    <p class="font-semibold text-gray-900 text-sm">{policy.name.clone()}</p>
+                                    <p class="text-sm text-gray-700 whitespace-pre-line">
+                                        {if policy.description.trim().is_empty() {
+                                            "Details not provided.".to_string()
+                                        } else {
+                                            policy.description.clone()
+                                        }}
+                                    </p>
+                                </div>
+                            </For>
+                        </div>
+                    </Show>
                 </div>
                 <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
                     <div>
                         <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
                             "Check-in / Check-out"
                         </p>
-                        <p class="text-sm text-gray-700 mt-1">"Check-in from 03:00 PM · Check-out until 12:00 PM"</p>
+                        <p class="text-sm text-gray-700 mt-1">
+                            {move || {
+                                if let Some(times) = check_times.clone() {
+                                    let checkin = if times.checkin.is_empty() { "03:00 PM".to_string() } else { times.checkin };
+                                    let checkout = if times.checkout.is_empty() { "12:00 PM".to_string() } else { times.checkout };
+                                    format!("Check-in from {checkin} · Check-out until {checkout}")
+                                } else {
+                                    "Check-in from 03:00 PM · Check-out until 12:00 PM".to_string()
+                                }
+                            }}
+                        </p>
                     </div>
                     <div>
                         <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
                             "Important Info"
                         </p>
                         <p class="text-sm text-gray-700 mt-1">
-                            "All couples must present a marriage certificate at check-in. Government-issued ID required for all guests."
+                            "Policies vary by room type and rate plan. Please review specific rate details before booking."
                         </p>
                     </div>
                     <div>

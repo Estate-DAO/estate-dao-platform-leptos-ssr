@@ -869,6 +869,11 @@ impl LiteApiAdapter {
     fn map_liteapi_to_domain_static_details(
         details: LiteApiSingleHotelDetailData,
     ) -> DomainHotelStaticDetails {
+        let sentiment_categories = details
+            .sentiment_analysis
+            .as_ref()
+            .map(|s| s.categories.clone())
+            .unwrap_or_default();
         let mut images = Vec::new();
         if !details.main_photo.is_empty() {
             images.push(details.main_photo.clone());
@@ -896,6 +901,32 @@ impl LiteApiAdapter {
             hotel_code: details.id,
             hotel_name: details.name,
             star_rating: details.star_rating,
+            rating: if details.rating > 0.0 {
+                Some(details.rating)
+            } else {
+                None
+            },
+            review_count: if details.review_count > 0 {
+                Some(details.review_count as u32)
+            } else {
+                None
+            },
+            categories: if !sentiment_categories.is_empty() {
+                sentiment_categories
+            } else {
+                details.categories
+            }
+            .into_iter()
+            .map(|c| DomainReviewCategory {
+                name: c.name,
+                rating: c.rating as f32,
+                description: if c.description.trim().is_empty() {
+                    None
+                } else {
+                    Some(c.description)
+                },
+            })
+            .collect(),
             description: details.hotel_description,
             address: details.address,
             images,
@@ -906,6 +937,23 @@ impl LiteApiAdapter {
                 latitude: location.latitude,
                 longitude: location.longitude,
             }),
+            checkin_checkout_times: Some(DomainCheckinCheckoutTimes {
+                checkin: details.checkin_checkout_times.checkin,
+                checkout: details.checkin_checkout_times.checkout,
+            }),
+            policies: details
+                .policies
+                .into_iter()
+                .map(|p| DomainPolicy {
+                    policy_type: if p.policy_type.is_empty() {
+                        None
+                    } else {
+                        Some(p.policy_type)
+                    },
+                    name: p.name,
+                    description: p.description,
+                })
+                .collect(),
         }
     }
 
@@ -1289,6 +1337,9 @@ impl LiteApiAdapter {
             hotel_name: hotel_name.clone(),
             hotel_code: hotel_data.hotel_id.clone(),
             star_rating,
+            rating: None,
+            review_count: None,
+            categories: Vec::new(),
             description: description.clone(),
             hotel_facilities: hotel_facilities.clone(),
             address: address.clone(),

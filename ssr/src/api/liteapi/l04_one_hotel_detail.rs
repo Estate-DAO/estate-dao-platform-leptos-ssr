@@ -88,6 +88,41 @@ pub struct LiteApiRoomView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiPolicy {
+    pub id: i32,
+    #[serde(rename = "policy_type", default)]
+    pub policy_type: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub child_allowed: String,
+    #[serde(default)]
+    pub pets_allowed: String,
+    #[serde(default)]
+    pub parking: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiCategory {
+    pub name: String,
+    pub rating: f64,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiSentimentAnalysis {
+    #[serde(default)]
+    pub categories: Vec<LiteApiCategory>,
+    // other sentiment fields can be added when needed
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiBedType {
     pub quantity: i32,
     #[serde(rename = "bedType")]
@@ -172,6 +207,12 @@ pub struct LiteApiSingleHotelDetailData {
     pub rating: f64,
     #[serde(rename = "reviewCount", default)]
     pub review_count: i32,
+    #[serde(default)]
+    pub categories: Vec<LiteApiCategory>,
+    #[serde(default)]
+    pub sentiment_analysis: Option<LiteApiSentimentAnalysis>,
+    #[serde(default)]
+    pub policies: Vec<LiteApiPolicy>,
     #[serde(default)]
     pub parking: String,
     #[serde(rename = "groupRoomMin", default)]
