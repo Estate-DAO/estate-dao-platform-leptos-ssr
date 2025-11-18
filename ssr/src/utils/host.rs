@@ -5,7 +5,7 @@ pub fn get_host() -> String {
         window().location().host().unwrap().to_string()
     }
 
-    #[cfg(not(feature = "hydrate"))]
+    #[cfg(all(feature = "ssr", not(feature = "hydrate")))]
     {
         use axum::http::request::Parts;
         use leptos::{expect_context, use_context};
@@ -16,5 +16,10 @@ pub fn get_host() -> String {
         }
         let headers = parts.unwrap().headers;
         headers.get("Host").unwrap().to_str().unwrap().to_string()
+    }
+
+    #[cfg(all(not(feature = "ssr"), not(feature = "hydrate")))]
+    {
+        String::new()
     }
 }

@@ -45,7 +45,7 @@ pub fn get_host() -> String {
             .to_string()
     }
 
-    #[cfg(not(feature = "hydrate"))]
+    #[cfg(all(feature = "ssr", not(feature = "hydrate")))]
     {
         use leptos::prelude::*;
 
@@ -59,6 +59,11 @@ pub fn get_host() -> String {
             .get("Host")
             .map(|h| h.to_str().unwrap_or_default().to_string())
             .unwrap_or_default()
+    }
+
+    #[cfg(all(not(feature = "ssr"), not(feature = "hydrate")))]
+    {
+        String::new()
     }
 }
 

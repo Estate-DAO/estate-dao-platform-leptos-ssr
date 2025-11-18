@@ -74,21 +74,8 @@ pub struct LiteApiRoomAmenity {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRoomPhoto {
     pub url: String,
-    // #[serde(rename = "imageDescription")]
-    // pub image_description: String,
-    // #[serde(rename = "imageClass1")]
-    // pub image_class1: String,
-    // #[serde(rename = "imageClass2")]
-    // pub image_class2: String,
-    // #[serde(rename = "failoverPhoto")]
-    // pub failover_photo: String,
     #[serde(rename = "mainPhoto")]
     pub main_photo: bool,
-    // pub score: f64,
-    // #[serde(rename = "classId")]
-    // pub class_id: i32,
-    // #[serde(rename = "classOrder")]
-    // pub class_order: i32,
     #[serde(rename = "hd_url")]
     pub hd_url: String,
 }
@@ -101,15 +88,26 @@ pub struct LiteApiRoomView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiBedType {
+    pub quantity: i32,
+    #[serde(rename = "bedType")]
+    pub bed_type: String,
+    #[serde(rename = "bedSize")]
+    pub bed_size: String,
+    pub id: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRoom {
     pub id: i32,
     #[serde(rename = "roomName")]
     pub room_name: String,
     pub description: String,
-    // #[serde(rename = "roomSizeSquare")]
-    // pub room_size_square: i32,
-    // #[serde(rename = "roomSizeUnit")]
-    // pub room_size_unit: String,
+    #[serde(rename = "roomSizeSquare")]
+    pub room_size_square: Option<f64>,
+    #[serde(rename = "roomSizeUnit", default)]
+    pub room_size_unit: Option<String>,
     #[serde(rename = "hotelId")]
     pub hotel_id: String,
     #[serde(rename = "maxAdults")]
@@ -118,14 +116,12 @@ pub struct LiteApiRoom {
     pub max_children: i32,
     #[serde(rename = "maxOccupancy")]
     pub max_occupancy: i32,
-    // #[serde(rename = "bedTypes")]
-    // pub bed_types: Vec<String>,
+    #[serde(rename = "bedTypes", default)]
+    pub bed_types: Vec<LiteApiBedType>,
     #[serde(rename = "roomAmenities")]
     pub room_amenities: Vec<LiteApiRoomAmenity>,
     pub photos: Vec<LiteApiRoomPhoto>,
     pub views: Vec<LiteApiRoomView>,
-    // #[serde(rename = "bedRelation")]
-    // pub bed_relation: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

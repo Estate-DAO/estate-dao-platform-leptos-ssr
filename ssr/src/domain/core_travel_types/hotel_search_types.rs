@@ -214,6 +214,7 @@ pub struct DomainDetailedPrice {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 
 pub struct DomainRoomData {
+    pub mapped_room_id: u32,
     pub room_name: String,
     pub room_unique_id: String,
     pub rate_key: String,
@@ -222,6 +223,7 @@ pub struct DomainRoomData {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainRoomOption {
+    pub mapped_room_id: u32,
     pub price: DomainDetailedPrice,
     pub room_data: DomainRoomData,
     pub meal_plan: Option<String>, // Board type + board name (e.g., "Room Only")
@@ -233,6 +235,21 @@ pub struct DomainRoomOccupancy {
     pub max_occupancy: Option<u32>,
     pub adult_count: Option<u32>,
     pub child_count: Option<u32>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainStaticRoom {
+    pub room_id: String,
+    pub room_name: String,
+    pub description: String,
+    pub room_size_square: Option<f64>,
+    pub room_size_unit: Option<String>,
+    pub max_adults: Option<u32>,
+    pub max_children: Option<u32>,
+    pub max_occupancy: Option<u32>,
+    pub amenities: Vec<String>,
+    pub photos: Vec<String>,
+    pub bed_types: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -263,6 +280,8 @@ pub struct DomainHotelStaticDetails {
     pub address: String,
     pub images: Vec<String>,
     pub amenities: Vec<String>,
+    pub rooms: Vec<DomainStaticRoom>,
+    pub location: Option<DomainLocation>,
 }
 
 impl DomainHotelStaticDetails {

@@ -298,6 +298,7 @@ async fn build_hotel_details(
             room_data: room_data.clone(),
             meal_plan: None,
             occupancy_info: None,
+            mapped_room_id: room_data.mapped_room_id,
         })
         .collect();
 
