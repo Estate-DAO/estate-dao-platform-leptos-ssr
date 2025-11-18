@@ -1,6 +1,6 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::{use_navigate, use_query_map};
+use leptos_router::{use_navigate, use_query_map, NavigateOptions};
 
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
@@ -434,6 +434,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 Ok(rates) => {
                     HotelDetailsUIState::set_rates(Some(rates.clone()));
                     HotelDetailsUIState::set_rates_loading(false);
+                    HotelDetailsUIState::set_error(None);
                     Some(rates)
                 }
                 Err(e) => {
@@ -446,7 +447,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     );
 
     let is_loading =
-        move || hotel_details_state.loading.get() || hotel_details_state.rates_loading.get();
+        move || hotel_details_state.loading.get() /* || hotel_details_state.rates_loading.get() */;
     let error_message = move || hotel_details_state.error.get();
 
     let loaded = move || static_details_resource.get().and_then(|d| d).is_some();
@@ -1244,13 +1245,38 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     // Create memo for button disabled state
     let button_disabled = create_memo(move |_| !has_rooms_selected() || booking_loading.get());
 
-    let selected_rooms_with_data = move || HotelDetailsUIState::get_selected_rooms_with_data();
     let currency_code = create_memo(move |_| {
         HotelDetailsUIState::get_available_room_options()
             .first()
             .map(|opt| opt.price.currency_code.clone())
             .unwrap_or_else(|| "USD".to_string())
     });
+    let resolved_selection_rows = move || {
+        let selected = HotelDetailsUIState::get_selected_rooms();
+        let options = HotelDetailsUIState::get_available_room_options();
+        let default_code = currency_code.get();
+
+        selected
+            .into_iter()
+            .filter(|(_, qty)| *qty > 0)
+            .map(|(room_id, quantity)| {
+                let mut room_name = "Selected Room".to_string();
+                let mut price_per_night = 0.0;
+                let mut code = default_code.clone();
+
+                if let Some(opt) = options
+                    .iter()
+                    .find(|opt| opt.room_data.room_unique_id == room_id)
+                {
+                    room_name = opt.room_data.room_name.clone();
+                    price_per_night = opt.price.room_price;
+                    code = opt.price.currency_code.clone();
+                }
+
+                (room_id, quantity, room_name, price_per_night, code)
+            })
+            .collect::<Vec<_>>()
+    };
     let guests = ui_search_ctx.guests;
     let adults_count = move || guests.adults.get();
 
@@ -1364,19 +1390,17 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 <div class="space-y-4">
                     <div class="space-y-2 text-sm text-gray-700">
                         <For
-                            each=selected_rooms_with_data
-                            key=|(room_option, _)| room_option.room_data.room_unique_id.clone()
+                            each=resolved_selection_rows
+                            key=|(room_id, _, _, _, _)| room_id.clone()
                             let:selected
                         >
-                            {let (room_option, quantity) = selected;
-                            let room_name = room_option.room_data.room_name.clone();
-                            let line_total =
-                                room_option.price.room_price * quantity as f64 * nights() as f64;
+                            {let (room_id, quantity, room_name, price_per_night, code) = selected;
+                            let line_total = price_per_night * quantity as f64 * nights() as f64;
                             view! {
                                 <div class="flex items-center justify-between">
                                     <span class="font-medium">{format!("{quantity} × {room_name}")}</span>
                                     <span class="text-gray-900 font-semibold">
-                                        {format_currency_with_code(line_total, &currency_code.get())}
+                                        {format_currency_with_code(line_total, &code)}
                                     </span>
                                 </div>
                             }}
@@ -1384,15 +1408,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                     </div>
 
                     <div class="border-t border-gray-200 pt-3 flex items-center justify-between text-sm font-semibold text-gray-900">
-                        <span>
-                            {move || format!(
-                                "{} night{}, {} adult{}",
-                                nights(),
-                                if nights() == 1 { "" } else { "s" },
-                                adults_count(),
-                                if adults_count() == 1 { "" } else { "s" }
-                            )}
-                        </span>
+                        <span>{move || format!("{} night{}, {} adult{}", nights(), if nights() == 1 { "" } else { "s" }, adults_count(), if adults_count() == 1 { "" } else { "s" })}</span>
                         <span class="text-blue-700">
                             {move || format_currency_with_code(total_for_stay(), &currency_code.get())}
                         </span>
@@ -1443,6 +1459,7 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
         .unwrap_or_else(|| "Room Only".to_string());
     let occupancy = format_occupancy_text(rate.occupancy_info.as_ref());
     let room_key = room_id.clone();
+    let mapped_room_id = rate.mapped_room_id;
 
     let nights = move || {
         let nights = ui_search_ctx.date_range.get().no_of_nights();
@@ -1455,12 +1472,30 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
 
     let selection_key = room_key.clone();
     let selection_count = create_memo(move |_| {
-        hotel_details_state
-            .selected_rooms
-            .get()
-            .get(&selection_key)
-            .copied()
-            .unwrap_or(0)
+        let selected = hotel_details_state.selected_rooms.get();
+        if let Some(count) = selected.get(&selection_key) {
+            return *count;
+        }
+
+        // Fallback: aggregate selections by mapped_room_id in case room_unique_id changed
+        if mapped_room_id != 0 {
+            if let Some(rates) = hotel_details_state.rates.get() {
+                let mut total = 0;
+                for (sel_id, qty) in selected.iter() {
+                    if let Some(opt) = rates
+                        .iter()
+                        .find(|opt| opt.room_data.room_unique_id == *sel_id)
+                    {
+                        if opt.mapped_room_id == mapped_room_id {
+                            total += *qty;
+                        }
+                    }
+                }
+                return total;
+            }
+        }
+
+        0
     });
 
     let dec_key = room_key.clone();
@@ -1637,7 +1672,7 @@ fn RoomTypeCard(
     };
 
     view! {
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-gray-100 border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                 <h3 class="text-lg font-semibold text-gray-900">{room_display_name}</h3>
                 <Show when=move || is_recommended>
