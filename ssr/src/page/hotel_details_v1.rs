@@ -200,7 +200,7 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
                 .iter()
                 .find(|(key, _)| lower_text.contains(*key))
                 .map(|(_, icon)| *icon)
-                .unwrap_or(icondata::IoWifi);
+                .unwrap_or(icondata::IoCheckmark);
 
             // todo: truncate if needed later.
             // let display_text = if text.len() > 10 {
@@ -1657,7 +1657,7 @@ fn RoomTypeCard(
                                 class="w-full h-full object-cover"
                             />
                         </div>
-                        <div class="space-y-4">
+                        <div class="space-y-4 rounded-md bg-gray-100 px-3 py-2 ">
                             <div>
                                 <p class="text-sm font-semibold text-gray-800">"Room Details"</p>
                                 <div class="mt-2 grid grid-cols-2 gap-2">
@@ -1668,7 +1668,7 @@ fn RoomTypeCard(
                                     >
                                         {let (_, icon, label) = fact;
                                         view! {
-                                            <span class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-2 text-xs text-gray-700">
+                                            <span class="inline-flex items-center gap-2 text-xs text-gray-700">
                                                 <Icon class="text-blue-500 text-sm" icon=icon />
                                                 {label}
                                             </span>
