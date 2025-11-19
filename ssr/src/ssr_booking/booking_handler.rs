@@ -17,6 +17,7 @@ use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::app_reference::BookingId;
 use crate::utils::booking_id::PaymentIdentifiers;
+use crate::utils::backend_default_impl::decode_room_id_with_occupancy;
 
 // New imports for v1 implementation
 use crate::adapters::liteapi_adapter::LiteApiAdapter;
@@ -324,6 +325,29 @@ fn backend_booking_to_domain_book_room_request(
         )));
     }
 
+    // Decode any stored occupancy numbers (encoded in room_unique_id) so we can map guests accurately
+    let mut stored_occupancy_numbers: Vec<u32> = backend_booking
+        .user_selected_hotel_room_details
+        .room_details
+        .iter()
+        .filter_map(|room| {
+            let (_id, occ) = decode_room_id_with_occupancy(&room.room_unique_id);
+            occ
+        })
+        .collect();
+
+    if stored_occupancy_numbers.len() < number_of_rooms as usize {
+        let mut next = 1u32;
+        while stored_occupancy_numbers.len() < number_of_rooms as usize {
+            if !stored_occupancy_numbers.contains(&next) {
+                stored_occupancy_numbers.push(next);
+            }
+            next += 1;
+        }
+    } else {
+        stored_occupancy_numbers.truncate(number_of_rooms as usize);
+    }
+
     // Create one PRIMARY CONTACT per room (not per adult)
     // LiteAPI Rule: Need exactly one guest per room as the primary contact/room manager
     let guests: Vec<DomainBookingGuest> = backend_booking
@@ -333,7 +357,10 @@ fn backend_booking_to_domain_book_room_request(
         .take(number_of_rooms as usize)
         .enumerate()
         .map(|(index, adult)| DomainBookingGuest {
-            occupancy_number: (index + 1) as u32, // Room number (1, 2, 3...)
+            occupancy_number: stored_occupancy_numbers
+                .get(index)
+                .copied()
+                .unwrap_or((index + 1) as u32),
             first_name: adult.first_name.clone(),
             last_name: adult.last_name.clone().unwrap_or_default(),
             email: adult.email.clone().unwrap_or_default(),

@@ -18,6 +18,25 @@ use crate::{
 
 use crate::utils::app_reference::BookingId as AppReferenceBookingId;
 
+const ROOM_ID_OCC_SUFFIX: &str = "__occ__";
+
+/// Encode occupancy number alongside the room identifier so we can persist it without schema changes.
+pub fn encode_room_id_with_occupancy(room_id: &str, occupancy_number: Option<u32>) -> String {
+    occupancy_number
+        .map(|num| format!("{room_id}{ROOM_ID_OCC_SUFFIX}{num}"))
+        .unwrap_or_else(|| room_id.to_string())
+}
+
+/// Decode the stored room identifier into (original_id, occupancy_number).
+pub fn decode_room_id_with_occupancy(encoded_id: &str) -> (String, Option<u32>) {
+    if let Some(pos) = encoded_id.rfind(ROOM_ID_OCC_SUFFIX) {
+        if let Ok(num) = encoded_id[pos + ROOM_ID_OCC_SUFFIX.len()..].parse::<u32>() {
+            return (encoded_id[..pos].to_string(), Some(num));
+        }
+    }
+    (encoded_id.to_string(), None)
+}
+
 impl PartialEq for BookingSummary {
     fn eq(&self, other: &Self) -> bool {
         self.booking_id.app_reference == other.booking_id.app_reference
@@ -489,7 +508,7 @@ impl From<DomainRoomData> for backend::RoomDetails {
     fn from(domain: DomainRoomData) -> Self {
         Self {
             room_price: 0.0, // Price will need to be set separately
-            room_unique_id: domain.room_unique_id,
+            room_unique_id: encode_room_id_with_occupancy(&domain.room_unique_id, domain.occupancy_number),
             room_type_name: domain.room_name,
         }
     }
