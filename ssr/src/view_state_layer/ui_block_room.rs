@@ -215,8 +215,7 @@ impl BlockRoomUIState {
         let adult_list = this.adults.get_untracked();
         let child_list = this.children.get_untracked();
         let ui_search_ctx: UISearchCtx = expect_context();
-        let required_primary_contacts =
-            ui_search_ctx.guests.rooms.get_untracked().max(1) as usize;
+        let required_primary_contacts = ui_search_ctx.guests.rooms.get_untracked().max(1) as usize;
 
         // Validate primary adult
         let primary_adult_valid = adult_list.first().is_some_and(|adult| {

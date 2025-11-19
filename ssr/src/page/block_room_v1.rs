@@ -279,7 +279,13 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             .sum::<f64>()
     };
     let num_rooms = move || ui_search_ctx.guests.rooms.get();
-    let adult_count = move || ui_search_ctx.guests.adults.get().max(ui_search_ctx.guests.rooms.get());
+    let adult_count = move || {
+        ui_search_ctx
+            .guests
+            .adults
+            .get()
+            .max(ui_search_ctx.guests.rooms.get())
+    };
     let child_count = move || ui_search_ctx.guests.children.get();
 
     // Hotel info signals with enhanced data flow - prioritize BlockRoomUIState over HotelInfoCtx
