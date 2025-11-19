@@ -329,28 +329,41 @@ fn backend_booking_to_domain_book_room_request(
     // Decode any stored occupancy numbers (encoded in room_unique_id) so we can map guests accurately
     let mut stored_occupancy_numbers: Vec<u32> = Vec::new();
     let mut used_numbers: HashSet<u32> = HashSet::new();
-    for room in &backend_booking
+    let mut pending_indices: Vec<usize> = Vec::new();
+    for room in backend_booking
         .user_selected_hotel_room_details
         .room_details
+        .iter()
+        .take(number_of_rooms as usize)
     {
         let (_id, occ) = decode_room_id_with_occupancy(&room.room_unique_id);
         if let Some(num) = occ {
-            if used_numbers.insert(num) {
+            if num > 0 && used_numbers.insert(num) {
                 stored_occupancy_numbers.push(num);
+                continue;
             }
         }
+        stored_occupancy_numbers.push(0);
+        pending_indices.push(stored_occupancy_numbers.len() - 1);
     }
 
-    if stored_occupancy_numbers.len() < number_of_rooms as usize {
-        let mut next = 1u32;
-        while stored_occupancy_numbers.len() < number_of_rooms as usize {
-            if used_numbers.insert(next) {
-                stored_occupancy_numbers.push(next);
-            }
+    while stored_occupancy_numbers.len() < number_of_rooms as usize {
+        stored_occupancy_numbers.push(0);
+        pending_indices.push(stored_occupancy_numbers.len() - 1);
+    }
+
+    let mut next = 1u32;
+    for idx in pending_indices {
+        while used_numbers.contains(&next) {
             next += 1;
         }
-    } else {
-        stored_occupancy_numbers.truncate(number_of_rooms as usize);
+        stored_occupancy_numbers[idx] = next;
+        used_numbers.insert(next);
+        next += 1;
+    }
+
+    for (idx, value) in stored_occupancy_numbers.iter_mut().enumerate() {
+        *value = (idx + 1) as u32;
     }
 
     // Create one PRIMARY CONTACT per room (not per adult)
