@@ -65,8 +65,8 @@ pub struct LiteApiRetailRate {
 pub struct LiteApiRate {
     #[serde(rename = "rateId")]
     pub rate_id: String,
-    // #[serde(rename = "occupancyNumber")]
-    // pub occupancy_number: i32,
+    #[serde(rename = "occupancyNumber")]
+    pub occupancy_number: Option<u32>,
     pub name: String,
     #[serde(rename = "maxOccupancy")]
     pub max_occupancy: u32,

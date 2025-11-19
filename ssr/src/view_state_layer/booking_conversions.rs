@@ -199,9 +199,21 @@ impl BookingConversions {
         // Convert adults to guests (one PRIMARY CONTACT per room)
         // LiteAPI Rule: Need exactly one guest per room as the primary contact/room manager
         let guests_ctx = &ui_search_ctx.guests;
-        let number_of_rooms = guests_ctx.rooms.get_untracked() as usize;
-        let effective_adult_count =
-            std::cmp::max(adults.len() as u32, guests_ctx.rooms.get_untracked());
+        let room_selection_summary = block_room_state.room_selection_summary.get_untracked();
+        let selected_rooms_count: u32 = room_selection_summary
+            .iter()
+            .map(|summary| summary.quantity)
+            .sum();
+        let requested_rooms = guests_ctx.rooms.get_untracked();
+        let inferred_rooms = if selected_rooms_count > 0 {
+            selected_rooms_count
+        } else if requested_rooms > 0 {
+            requested_rooms
+        } else {
+            1
+        };
+        let number_of_rooms = inferred_rooms as usize;
+        let effective_adult_count = std::cmp::max(adults.len() as u32, inferred_rooms);
 
         // Validation: Must have at least one adult per room
         if adults.len() < number_of_rooms {
@@ -211,19 +223,44 @@ impl BookingConversions {
             )));
         }
 
+        // Build occupancy numbers from selected room data when available
+        let mut occupancy_numbers: Vec<u32> = Vec::new();
+        for summary in &room_selection_summary {
+            if summary.quantity == 0 {
+                continue;
+            }
+            for _ in 0..summary.quantity {
+                let fallback = (occupancy_numbers.len() + 1) as u32;
+                occupancy_numbers.push(summary.room_data.occupancy_number.unwrap_or(fallback));
+            }
+        }
+        if occupancy_numbers.len() < number_of_rooms {
+            let start = occupancy_numbers.len();
+            for idx in start..number_of_rooms {
+                occupancy_numbers.push((idx + 1) as u32);
+            }
+        } else if occupancy_numbers.len() > number_of_rooms {
+            occupancy_numbers.truncate(number_of_rooms);
+        }
+
         // Take only the first N adults as primary contacts (ignore extras)
         // This follows LiteAPI rule: one primary contact per room, not per person
         let guests: Vec<DomainBookingGuest> = adults
             .into_iter()
-            .take(number_of_rooms)  // 🔑 KEY FIX: Limit to room count, not adult count
+            .take(number_of_rooms)
             .enumerate()
             .map(|(index, adult)| -> Result<DomainBookingGuest, BookingError> {
+                let occupancy_number = occupancy_numbers
+                    .get(index)
+                    .copied()
+                    .unwrap_or((index + 1) as u32);
                 Ok(DomainBookingGuest {
-                    occupancy_number: (index + 1) as u32,  // Room number (1, 2, 3...)
+                    occupancy_number,
                     first_name: adult.first_name,
                     last_name: adult.last_name.ok_or_else(|| {
                         BookingError::ValidationError(format!(
-                            "[UI VALIDATION ERROR] Primary contact for room {} must have a last name", index + 1
+                            "[UI VALIDATION ERROR] Primary contact for room {} must have a last name",
+                            index + 1
                         ))
                     })?,
                     email: adult.email.unwrap_or_default(),  // Will be handled by fallback
@@ -247,7 +284,7 @@ impl BookingConversions {
         }];
 
         let booking_context = DomainBookingContext {
-            number_of_rooms: guests_ctx.rooms.get_untracked(),
+            number_of_rooms: inferred_rooms,
             room_occupancies,
             total_guests: effective_adult_count + guests_ctx.children.get_untracked(),
             original_search_criteria: None, // Can be filled if needed

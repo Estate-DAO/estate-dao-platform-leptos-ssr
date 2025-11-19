@@ -1108,6 +1108,7 @@ impl LiteApiAdapter {
                             },
                             room_data: crate::domain::DomainRoomData {
                                 mapped_room_id: rate.mapped_room_id,
+                                occupancy_number: rate.occupancy_number,
                                 room_name: rate.name.clone(),
                                 room_unique_id: room_type.room_type_id.clone(),
                                 rate_key: rate.rate_id.clone(),
@@ -2206,6 +2207,7 @@ impl LiteApiAdapter {
             },
             room_data: crate::domain::DomainRoomData {
                 mapped_room_id: rate.mapped_room_id,
+                occupancy_number: rate.occupancy_number,
                 room_name: rate.name,
                 room_unique_id: room_type_id,
                 rate_key: rate.rate_id,

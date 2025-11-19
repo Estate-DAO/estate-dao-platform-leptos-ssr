@@ -324,13 +324,13 @@ fn backend_booking_to_domain_book_room_request(
         )));
     }
 
-    // FIXED: Create one PRIMARY CONTACT per room (not per adult)
+    // Create one PRIMARY CONTACT per room (not per adult)
     // LiteAPI Rule: Need exactly one guest per room as the primary contact/room manager
     let guests: Vec<DomainBookingGuest> = backend_booking
         .guests
         .adults
         .iter()
-        .take(number_of_rooms as usize) // 🔑 KEY FIX: Limit to room count, not adult count
+        .take(number_of_rooms as usize)
         .enumerate()
         .map(|(index, adult)| DomainBookingGuest {
             occupancy_number: (index + 1) as u32, // Room number (1, 2, 3...)

@@ -230,6 +230,7 @@ impl BookingBackendConversions {
             end: (2024, 1, 2),
         };
         let room_details = vec![DomainRoomData {
+            occupancy_number: Some(1),
             room_name: "Standard Room".to_string(),
             room_unique_id: "standard_room_1".to_string(),
             rate_key: "standard_rate".to_string(),

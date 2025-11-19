@@ -215,6 +215,7 @@ pub struct DomainDetailedPrice {
 
 pub struct DomainRoomData {
     pub mapped_room_id: u32,
+    pub occupancy_number: Option<u32>,
     pub room_name: String,
     pub room_unique_id: String,
     pub rate_key: String,
