@@ -16,8 +16,8 @@ use crate::canister::backend::{self, BeBookRoomResponse, Booking};
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::app_reference::BookingId;
-use crate::utils::booking_id::PaymentIdentifiers;
 use crate::utils::backend_default_impl::decode_room_id_with_occupancy;
+use crate::utils::booking_id::PaymentIdentifiers;
 
 // New imports for v1 implementation
 use crate::adapters::liteapi_adapter::LiteApiAdapter;

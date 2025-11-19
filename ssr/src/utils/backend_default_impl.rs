@@ -508,7 +508,10 @@ impl From<DomainRoomData> for backend::RoomDetails {
     fn from(domain: DomainRoomData) -> Self {
         Self {
             room_price: 0.0, // Price will need to be set separately
-            room_unique_id: encode_room_id_with_occupancy(&domain.room_unique_id, domain.occupancy_number),
+            room_unique_id: encode_room_id_with_occupancy(
+                &domain.room_unique_id,
+                domain.occupancy_number,
+            ),
             room_type_name: domain.room_name,
         }
     }
