@@ -11,6 +11,7 @@ use crate::view_state_layer::ui_block_room::{AdultDetail, ChildDetail, RoomSelec
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
 use leptos::*;
+use std::collections::HashSet;
 
 /// Trait for converting UI state to Domain types
 pub trait UIToDomain<T> {
@@ -225,19 +226,35 @@ impl BookingConversions {
 
         // Build occupancy numbers from selected room data when available
         let mut occupancy_numbers: Vec<u32> = Vec::new();
+        let mut used_numbers: HashSet<u32> = HashSet::new();
         for summary in &room_selection_summary {
             if summary.quantity == 0 {
                 continue;
             }
             for _ in 0..summary.quantity {
-                let fallback = (occupancy_numbers.len() + 1) as u32;
-                occupancy_numbers.push(summary.room_data.occupancy_number.unwrap_or(fallback));
+                if let Some(preferred) = summary.room_data.occupancy_number {
+                    if used_numbers.insert(preferred) {
+                        occupancy_numbers.push(preferred);
+                        continue;
+                    }
+                }
+                let mut fallback = 1;
+                while used_numbers.contains(&fallback) {
+                    fallback += 1;
+                }
+                used_numbers.insert(fallback);
+                occupancy_numbers.push(fallback);
             }
         }
         if occupancy_numbers.len() < number_of_rooms {
             let start = occupancy_numbers.len();
             for idx in start..number_of_rooms {
-                occupancy_numbers.push((idx + 1) as u32);
+                let mut next = (idx + 1) as u32;
+                while used_numbers.contains(&next) {
+                    next += 1;
+                }
+                used_numbers.insert(next);
+                occupancy_numbers.push(next);
             }
         } else if occupancy_numbers.len() > number_of_rooms {
             occupancy_numbers.truncate(number_of_rooms);
