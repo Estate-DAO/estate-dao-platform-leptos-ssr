@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use tokio::time;
 use tracing::{debug, error, info, instrument, warn};
@@ -326,20 +327,24 @@ fn backend_booking_to_domain_book_room_request(
     }
 
     // Decode any stored occupancy numbers (encoded in room_unique_id) so we can map guests accurately
-    let mut stored_occupancy_numbers: Vec<u32> = backend_booking
+    let mut stored_occupancy_numbers: Vec<u32> = Vec::new();
+    let mut used_numbers: HashSet<u32> = HashSet::new();
+    for room in &backend_booking
         .user_selected_hotel_room_details
         .room_details
-        .iter()
-        .filter_map(|room| {
-            let (_id, occ) = decode_room_id_with_occupancy(&room.room_unique_id);
-            occ
-        })
-        .collect();
+    {
+        let (_id, occ) = decode_room_id_with_occupancy(&room.room_unique_id);
+        if let Some(num) = occ {
+            if used_numbers.insert(num) {
+                stored_occupancy_numbers.push(num);
+            }
+        }
+    }
 
     if stored_occupancy_numbers.len() < number_of_rooms as usize {
         let mut next = 1u32;
         while stored_occupancy_numbers.len() < number_of_rooms as usize {
-            if !stored_occupancy_numbers.contains(&next) {
+            if used_numbers.insert(next) {
                 stored_occupancy_numbers.push(next);
             }
             next += 1;
