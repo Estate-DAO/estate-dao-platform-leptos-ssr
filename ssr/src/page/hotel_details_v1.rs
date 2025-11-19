@@ -1263,6 +1263,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 let mut room_name = "Selected Room".to_string();
                 let mut price_per_night = 0.0;
                 let mut code = default_code.clone();
+                let mut meal_plan = None;
 
                 if let Some(opt) = options
                     .iter()
@@ -1271,9 +1272,17 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                     room_name = opt.room_data.room_name.clone();
                     price_per_night = opt.price.room_price;
                     code = opt.price.currency_code.clone();
+                    meal_plan = opt.meal_plan.clone();
                 }
 
-                (room_id, quantity, room_name, price_per_night, code)
+                (
+                    room_id,
+                    quantity,
+                    room_name,
+                    meal_plan.unwrap_or_default(),
+                    price_per_night,
+                    code,
+                )
             })
             .collect::<Vec<_>>()
     };
@@ -1389,22 +1398,32 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             >
                 <div class="space-y-4">
                     <div class="space-y-2 text-sm text-gray-700">
-                        <For
-                            each=resolved_selection_rows
-                            key=|(room_id, _, _, _, _)| room_id.clone()
-                            let:selected
-                        >
-                            {let (room_id, quantity, room_name, price_per_night, code) = selected;
-                            let line_total = price_per_night * quantity as f64 * nights() as f64;
-                            view! {
-                                <div class="flex items-center justify-between">
-                                    <span class="font-medium">{format!("{quantity} × {room_name}")}</span>
-                                    <span class="text-gray-900 font-semibold">
-                                        {format_currency_with_code(line_total, &code)}
-                                    </span>
-                                </div>
-                            }}
-                        </For>
+                        {move || {
+                            resolved_selection_rows()
+                                .into_iter()
+                                .map(|selected| {
+                                    let (_, quantity, room_name, meal_plan, price_per_night, code) =
+                                        selected;
+                                    let line_total =
+                                        price_per_night * quantity as f64 * nights() as f64;
+                                    let display_name = if meal_plan.is_empty() {
+                                        room_name
+                                    } else {
+                                        format!("{room_name} - {meal_plan}")
+                                    };
+                                    view! {
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-medium">
+                                                {format!("{quantity} × {display_name}")}
+                                            </span>
+                                            <span class="text-gray-900 font-semibold">
+                                                {format_currency_with_code(line_total, &code)}
+                                            </span>
+                                        </div>
+                                    }
+                                })
+                                .collect_view()
+                        }}
                     </div>
 
                     <div class="border-t border-gray-200 pt-3 flex items-center justify-between text-sm font-semibold text-gray-900">
@@ -1459,7 +1478,6 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
         .unwrap_or_else(|| "Room Only".to_string());
     let occupancy = format_occupancy_text(rate.occupancy_info.as_ref());
     let room_key = room_id.clone();
-    let mapped_room_id = rate.mapped_room_id;
 
     let nights = move || {
         let nights = ui_search_ctx.date_range.get().no_of_nights();
@@ -1472,30 +1490,12 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
 
     let selection_key = room_key.clone();
     let selection_count = create_memo(move |_| {
-        let selected = hotel_details_state.selected_rooms.get();
-        if let Some(count) = selected.get(&selection_key) {
-            return *count;
-        }
-
-        // Fallback: aggregate selections by mapped_room_id in case room_unique_id changed
-        if mapped_room_id != 0 {
-            if let Some(rates) = hotel_details_state.rates.get() {
-                let mut total = 0;
-                for (sel_id, qty) in selected.iter() {
-                    if let Some(opt) = rates
-                        .iter()
-                        .find(|opt| opt.room_data.room_unique_id == *sel_id)
-                    {
-                        if opt.mapped_room_id == mapped_room_id {
-                            total += *qty;
-                        }
-                    }
-                }
-                return total;
-            }
-        }
-
-        0
+        hotel_details_state
+            .selected_rooms
+            .get()
+            .get(&selection_key)
+            .copied()
+            .unwrap_or(0)
     });
 
     let dec_key = room_key.clone();
@@ -1648,7 +1648,7 @@ fn RoomTypeCard(
 
     let rates_for_render = rates.clone();
 
-    let room_display_name = format!("1 x {}", room_name.clone());
+    let room_display_name = format!("{}", room_name.clone());
     let room_size_text = room_details.as_ref().and_then(|details| {
         details.room_size_square.map(|size| {
             let unit = details
