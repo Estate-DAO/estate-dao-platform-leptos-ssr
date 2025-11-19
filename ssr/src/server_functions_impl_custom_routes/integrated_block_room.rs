@@ -123,6 +123,7 @@ async fn create_backend_booking(
     let date_range = extract_date_range_from_request(request);
     let mut room_details = extract_room_details_from_request(request);
     enrich_room_details_with_provider_data(&mut room_details, block_result);
+    align_room_details_with_blocked_rooms(&mut room_details, block_result);
     let hotel_details =
         build_hotel_details(state, request, block_result, &date_range, &room_details).await;
 
@@ -306,6 +307,46 @@ fn enrich_room_details_with_provider_data(
     if fallback_needed {
         for (idx, room) in room_details.iter_mut().enumerate() {
             room.occupancy_number.get_or_insert((idx + 1) as u32);
+        }
+    }
+}
+
+/// Ensure we only keep room details for rooms that were actually blocked by the provider.
+fn align_room_details_with_blocked_rooms(
+    room_details: &mut Vec<DomainRoomData>,
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+) {
+    if room_details.is_empty() || block_result.blocked_rooms.is_empty() {
+        return;
+    }
+
+    use std::collections::HashSet;
+    let blocked_codes: HashSet<_> = block_result
+        .blocked_rooms
+        .iter()
+        .map(|room| room.room_code.clone())
+        .collect();
+
+    let original_rooms = room_details.clone();
+    room_details.retain(|room| blocked_codes.contains(&room.room_unique_id));
+
+    if room_details.is_empty() {
+        for blocked in &block_result.blocked_rooms {
+            if let Some(original) = original_rooms
+                .iter()
+                .find(|room| room.room_unique_id == blocked.room_code)
+            {
+                room_details.push(original.clone());
+            } else {
+                room_details.push(DomainRoomData {
+                    room_name: blocked.room_name.clone(),
+                    room_unique_id: blocked.room_code.clone(),
+                    mapped_room_id: 0,
+                    occupancy_number: Some(1),
+                    rate_key: String::new(),
+                    offer_id: String::new(),
+                });
+            }
         }
     }
 }
