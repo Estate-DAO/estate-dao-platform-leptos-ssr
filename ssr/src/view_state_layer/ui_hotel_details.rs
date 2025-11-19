@@ -3,7 +3,7 @@ use crate::{
     error, log, warn,
 };
 use leptos::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::GlobalStateForLeptos;
 
@@ -37,7 +37,13 @@ impl HotelDetailsUIState {
 
     pub fn set_rates(rates: Option<Vec<DomainRoomOption>>) {
         let this: Self = expect_context();
+        let previous = this.rates.get_untracked();
+        let cloned = rates.clone();
         this.rates.set(rates);
+        Self::sync_selected_rooms_with_rates(
+            cloned.as_ref().map(|r| r.as_slice()),
+            previous.as_ref().map(|r| r.as_slice()),
+        );
     }
 
     pub fn set_loading(loading: bool) {
@@ -226,6 +232,74 @@ impl HotelDetailsUIState {
             });
 
         this.total_price.set(total);
+    }
+
+    fn sync_selected_rooms_with_rates(
+        rates: Option<&[DomainRoomOption]>,
+        previous_rates: Option<&[DomainRoomOption]>,
+    ) {
+        let this: Self = expect_context();
+        match rates {
+            Some(rate_list) if !rate_list.is_empty() => {
+                let valid_ids: HashSet<_> = rate_list
+                    .iter()
+                    .map(|option| option.room_data.room_unique_id.clone())
+                    .collect();
+                let mut changed = false;
+                this.selected_rooms.update(|rooms| {
+                    let mut to_remove = Vec::new();
+                    let mut to_rekey = Vec::new();
+
+                    for room_id in rooms.keys().cloned().collect::<Vec<_>>() {
+                        if valid_ids.contains(&room_id) {
+                            continue;
+                        }
+
+                        if let Some(prev_rates) = previous_rates {
+                            if let Some(prev_option) = prev_rates
+                                .iter()
+                                .find(|opt| opt.room_data.room_unique_id == room_id)
+                            {
+                                let mapped_id = prev_option.room_data.mapped_room_id;
+                                if mapped_id != 0 {
+                                    if let Some(new_option) =
+                                        rate_list.iter().find(|opt| opt.mapped_room_id == mapped_id)
+                                    {
+                                        let new_id = new_option.room_data.room_unique_id.clone();
+                                        to_rekey.push((room_id.clone(), new_id));
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
+                        to_remove.push(room_id);
+                    }
+
+                    for room_id in to_remove {
+                        rooms.remove(&room_id);
+                        changed = true;
+                    }
+
+                    for (old_id, new_id) in to_rekey {
+                        if let Some(qty) = rooms.remove(&old_id) {
+                            let entry = rooms.entry(new_id).or_insert(0);
+                            *entry += qty;
+                            changed = true;
+                        }
+                    }
+                });
+                if changed {
+                    Self::update_total_price();
+                }
+            }
+            _ => {
+                if !this.selected_rooms.get_untracked().is_empty() {
+                    this.selected_rooms.set(HashMap::new());
+                    this.total_price.set(0.0);
+                }
+            }
+        }
     }
 }
 
