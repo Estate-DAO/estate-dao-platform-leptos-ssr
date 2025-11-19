@@ -24,9 +24,25 @@ pub struct ChildDetail {
 pub struct RoomSelectionSummary {
     pub room_id: String,
     pub room_name: String,
+    pub meal_plan: Option<String>,
     pub quantity: u32,
     pub price_per_night: f64,
     pub room_data: DomainRoomData,
+}
+
+impl RoomSelectionSummary {
+    pub fn display_name(&self) -> String {
+        if let Some(plan) = self
+            .meal_plan
+            .as_ref()
+            .map(|plan| plan.trim())
+            .filter(|plan| !plan.is_empty())
+        {
+            format!("{} - {}", self.room_name, plan)
+        } else {
+            self.room_name.clone()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

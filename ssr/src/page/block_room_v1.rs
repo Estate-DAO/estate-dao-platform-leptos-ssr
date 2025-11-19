@@ -123,7 +123,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             log!(
                 "    Room {}: {} x{} @ ${:.2}/night",
                 i + 1,
-                room.room_name,
+                room.display_name(),
                 room.quantity,
                 room.price_per_night
             );
@@ -522,16 +522,19 @@ pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
             <div class="price-breakdown space-y-3 mt-4">
                 <Show when=move || !room_summary().is_empty()>
                     {move || room_summary().into_iter().map(|room| {
+                        let display_name = room.display_name();
+                        let price_per_night = room.price_per_night;
+                        let quantity = room.quantity;
                         view! {
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-gray-700 flex-1 min-w-0">
-                                    <span class="truncate break-words whitespace-normal">{room.room_name.clone()}</span>
+                                    <span class="truncate break-words whitespace-normal">{display_name}</span>
                                     <span class="text-xs text-gray-500 ml-1">
-                                        "× " {room.quantity} " × " {num_nights()} " nights"
+                                        "× " {quantity} " × " {num_nights()} " nights"
                                     </span>
                                 </span>
                                 <span class="font-semibold ml-2">
-                                    ${format!("{:.2}", room.price_per_night * room.quantity as f64 * num_nights() as f64)}
+                                    ${format!("{:.2}", price_per_night * quantity as f64 * num_nights() as f64)}
                                 </span>
                             </div>
                         }
@@ -613,30 +616,33 @@ pub fn SelectedRoomsSummary() -> impl IntoView {
 // <!-- Individual room summary card component -->
 #[component]
 pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
+    let display_name = room.display_name();
+    let quantity = room.quantity;
+    let price_per_night = room.price_per_night;
     view! {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
             // <!-- Room details -->
             <div class="flex-1 min-w-0 mb-2 sm:mb-0">
                 <div class="font-semibold text-base min-w-0 break-words whitespace-normal truncate">
-                    {room.room_name.clone()}
+                    {display_name.clone()}
                 </div>
                 <div class="text-sm text-gray-600 flex items-center gap-2 mt-1">
                     <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {format!("{} room{}", room.quantity, if room.quantity == 1 { "" } else { "s" })}
+                        {format!("{} room{}", quantity, if quantity == 1 { "" } else { "s" })}
                     </span>
                     <span class="text-gray-500">"•"</span>
-                    <span>${format!("{:.2}", room.price_per_night)} /night</span>
+                    <span>${format!("{:.2}", price_per_night)} /night</span>
                 </div>
             </div>
 
             // <!-- Price display -->
             <div class="flex flex-col items-start sm:items-end sm:text-right">
                 <div class="text-lg font-bold">
-                    ${format!("{:.2}", room.price_per_night * room.quantity as f64)}
+                    ${format!("{:.2}", price_per_night * quantity as f64)}
                     <span class="text-sm font-normal text-gray-600 ml-1">/night</span>
                 </div>
                 <div class="text-xs text-gray-500">
-                    {format!("${:.2} × {}", room.price_per_night, room.quantity)}
+                    {format!("${:.2} × {}", price_per_night, quantity)}
                 </div>
             </div>
         </div>

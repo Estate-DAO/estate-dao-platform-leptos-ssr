@@ -1299,31 +1299,61 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             // Get selected rooms with quantities
             let selected_rooms = HotelDetailsUIState::get_selected_rooms();
             let available_rooms = HotelDetailsUIState::get_available_rooms();
+            let room_options = HotelDetailsUIState::get_available_room_options();
             let hotel_details = HotelDetailsUIState::get_hotel_details();
 
             // Create room selection summary for block room page
             let mut room_selection_summary = Vec::new();
             let mut selected_rooms_with_data = std::collections::HashMap::new();
+            let fallback_price_per_room = {
+                let total_rooms = HotelDetailsUIState::total_selected_rooms();
+                if total_rooms > 0 {
+                    HotelDetailsUIState::total_room_price() / total_rooms as f64
+                } else {
+                    0.0
+                }
+            };
 
             for (room_id, quantity) in selected_rooms.iter() {
                 if *quantity > 0 {
-                    // Find the corresponding room data
-                    if let Some(room_data) = available_rooms
+                    let mut handled = false;
+                    if let Some(room_option) = room_options
                         .iter()
-                        .find(|r| &r.room_unique_id == room_id)
+                        .find(|opt| &opt.room_data.room_unique_id == room_id)
                     {
-                        // Create summary entry
                         let summary = RoomSelectionSummary {
                             room_id: room_id.clone(),
-                            room_name: room_data.room_name.clone(),
+                            room_name: room_option.room_data.room_name.clone(),
+                            meal_plan: room_option.meal_plan.clone(),
                             quantity: *quantity,
-                            price_per_night: HotelDetailsUIState::total_room_price()
-                                / HotelDetailsUIState::total_selected_rooms() as f64,
-                            room_data: room_data.clone(),
+                            price_per_night: room_option.price.room_price,
+                            room_data: room_option.room_data.clone(),
                         };
                         room_selection_summary.push(summary);
                         selected_rooms_with_data
-                            .insert(room_id.clone(), (*quantity, room_data.clone()));
+                            .insert(room_id.clone(), (*quantity, room_option.room_data.clone()));
+                        handled = true;
+                    }
+
+                    // Find the corresponding room data
+                    if !handled {
+                        if let Some(room_data) = available_rooms
+                            .iter()
+                            .find(|r| &r.room_unique_id == room_id)
+                        {
+                            // Create summary entry
+                            let summary = RoomSelectionSummary {
+                                room_id: room_id.clone(),
+                                room_name: room_data.room_name.clone(),
+                                meal_plan: None,
+                                quantity: *quantity,
+                                price_per_night: fallback_price_per_room,
+                                room_data: room_data.clone(),
+                            };
+                            room_selection_summary.push(summary);
+                            selected_rooms_with_data
+                                .insert(room_id.clone(), (*quantity, room_data.clone()));
+                        }
                     }
                 }
             }
