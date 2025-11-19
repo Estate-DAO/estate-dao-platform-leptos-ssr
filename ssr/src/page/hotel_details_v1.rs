@@ -447,7 +447,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     );
 
     let is_loading =
-        move || hotel_details_state.loading.get() /* || hotel_details_state.rates_loading.get() */;
+        move || /* hotel_details_state.loading.get() ||*/  hotel_details_state.rates_loading.get();
     let error_message = move || hotel_details_state.error.get();
 
     let loaded = move || static_details_resource.get().and_then(|d| d).is_some();
@@ -1598,11 +1598,17 @@ fn RoomTypeCard(
     room_details: Option<DomainStaticRoom>,
     #[prop(optional)] is_recommended: bool,
 ) -> impl IntoView {
+    let open_image_viewer = RwSignal::new(false);
     let RoomTypeGroup {
         room_name,
         mapped_room_id: _,
         rates,
     } = room_group;
+
+    let room_images = room_details
+        .as_ref()
+        .map(|details| details.photos.clone())
+        .unwrap_or_default();
 
     let hero_image = room_details
         .as_ref()
@@ -1672,6 +1678,17 @@ fn RoomTypeCard(
     };
 
     view! {
+        {move || open_image_viewer.get().then(|| {
+            let room_images = room_images.clone();
+            view! {
+                <ImageLightbox
+                    images=room_images
+                    initial_index=0
+                    loop_images=true
+                    on_close=Callback::new(move |_| open_image_viewer.set(false))
+                />
+            }
+        })}
         <div class="bg-gray-100 border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                 <h3 class="text-lg font-semibold text-gray-900">{room_display_name}</h3>
@@ -1685,13 +1702,18 @@ fn RoomTypeCard(
             <div class="p-5">
                 <div class="grid lg:grid-cols-12 gap-5">
                     <div class="lg:col-span-4 space-y-4">
-                        <div class="w-full h-40 sm:h-48 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
-                            <img
-                                src=hero_image.clone()
-                                alt={format!("{} photo", room_name)}
-                                class="w-full h-full object-cover"
-                            />
-                        </div>
+                        <button
+                            type="button"
+                            class="w-full text-left"
+                            on:click=move |_| open_image_viewer.set(true)>
+                            <div class="w-full h-40 sm:h-48 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
+                                <img
+                                    src=hero_image.clone()
+                                    alt={format!("{} photo", room_name)}
+                                    class="w-full h-full object-cover"
+                                />
+                            </div>
+                        </button>
                         <div class="space-y-4 rounded-md bg-gray-100 px-3 py-2 ">
                             <div>
                                 <p class="text-sm font-semibold text-gray-800">"Room Details"</p>
@@ -1819,14 +1841,25 @@ pub fn SelectRoomSection() -> impl IntoView {
                                                             ))
                                                             .cloned()
                                                     });
+                                                let room_images = room_details
+                                                    .as_ref()
+                                                    .map(|details| {
+                                                        details
+                                                            .photos
+                                                            .clone()
+                                                            .into_iter()
+                                                            .filter(|url| !url.is_empty())
+                                                            .collect::<Vec<_>>()
+                                                    })
+                                                    .unwrap_or_default();
                                                 view! {
-                                                    <RoomTypeCard
-                                                        room_group=group
-                                                        fallback_image=fallback_clone.clone()
-                                                        amenity_preview=amenities_clone.clone()
-                                                        room_details=room_details
-                                                        is_recommended=idx == 0
-                                                    />
+                                                <RoomTypeCard
+                                                    room_group=group
+                                                    fallback_image=fallback_clone.clone()
+                                                    amenity_preview=amenities_clone.clone()
+                                                    room_details=room_details
+                                                    is_recommended=idx == 0
+                                                />
                                                 }
                                             })
                                             .collect_view()
