@@ -38,7 +38,8 @@ impl BookingConversions {
         // let block_room_id = block_room_state.block_room_id.get_untracked();
 
         // Get form data
-        let adults = block_room_state.adults.get_untracked();
+        let adults: Vec<AdultDetail> = block_room_state.adults.get_untracked();
+        let total_adults = adults.len();
         let children = block_room_state.children.get_untracked();
 
         // Convert UI adults to domain adults
@@ -79,11 +80,14 @@ impl BookingConversions {
         //     .ok_or_else(|| BookingError::ValidationError("Place is required".to_string()))?;
         let date_range = ui_search_ctx.date_range.get_untracked();
         let guests = &ui_search_ctx.guests;
+        let rooms_count = guests.rooms.get_untracked();
+        let effective_adult_count = std::cmp::max(total_adults as u32, rooms_count);
+        let children_count = guests.children.get_untracked();
 
         let room_guests = vec![DomainRoomGuest {
-            no_of_adults: guests.adults.get_untracked(),
-            no_of_children: guests.children.get_untracked(),
-            children_ages: if guests.children.get_untracked() > 0 {
+            no_of_adults: effective_adult_count,
+            no_of_children: children_count,
+            children_ages: if children_count > 0 {
                 Some(
                     guests
                         .children_ages
@@ -145,14 +149,12 @@ impl BookingConversions {
             ));
         };
 
-        let total_guests = guests.adults.get_untracked() + guests.children.get_untracked();
-
         Ok(DomainBlockRoomRequest {
             hotel_info_criteria,
             user_details,
             selected_rooms,
             selected_room,
-            total_guests,
+            total_guests: effective_adult_count + children_count,
             special_requests: None,
         })
     }
@@ -198,6 +200,8 @@ impl BookingConversions {
         // LiteAPI Rule: Need exactly one guest per room as the primary contact/room manager
         let guests_ctx = &ui_search_ctx.guests;
         let number_of_rooms = guests_ctx.rooms.get_untracked() as usize;
+        let effective_adult_count =
+            std::cmp::max(adults.len() as u32, guests_ctx.rooms.get_untracked());
 
         // Validation: Must have at least one adult per room
         if adults.len() < number_of_rooms {
@@ -232,7 +236,7 @@ impl BookingConversions {
         // Build booking context
         let room_occupancies = vec![DomainRoomOccupancyForBooking {
             room_number: 1,
-            adults: guests_ctx.adults.get_untracked(),
+            adults: effective_adult_count,
             children: guests_ctx.children.get_untracked(),
             children_ages: guests_ctx
                 .children_ages
@@ -245,7 +249,7 @@ impl BookingConversions {
         let booking_context = DomainBookingContext {
             number_of_rooms: guests_ctx.rooms.get_untracked(),
             room_occupancies,
-            total_guests: guests_ctx.adults.get_untracked() + guests_ctx.children.get_untracked(),
+            total_guests: effective_adult_count + guests_ctx.children.get_untracked(),
             original_search_criteria: None, // Can be filled if needed
         };
 

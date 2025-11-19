@@ -59,17 +59,20 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
     create_effect(move |_| {
         let adults_count = ui_search_ctx.guests.adults.get() as usize;
+        let rooms_count = ui_search_ctx.guests.rooms.get() as usize;
+        let required_primary_contacts = adults_count.max(rooms_count);
         let children_count = ui_search_ctx.guests.children.get() as usize;
         let children_ages = ui_search_ctx.guests.children_ages.clone();
 
         // Initialize adults and children only once
         if !initialized.get_untracked() {
             log!(
-                "Initializing form data for the first time - adults: {}, children: {}",
+                "Initializing form data for the first time - adults: {}, rooms: {}, children: {}",
                 adults_count,
+                rooms_count,
                 children_count
             );
-            BlockRoomUIState::create_adults(adults_count);
+            BlockRoomUIState::create_adults(required_primary_contacts);
             BlockRoomUIState::create_children(children_count);
             set_initialized.set(true);
         } else {
@@ -276,7 +279,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             .sum::<f64>()
     };
     let num_rooms = move || ui_search_ctx.guests.rooms.get();
-    let adult_count = move || ui_search_ctx.guests.adults.get();
+    let adult_count = move || ui_search_ctx.guests.adults.get().max(ui_search_ctx.guests.rooms.get());
     let child_count = move || ui_search_ctx.guests.children.get();
 
     // Hotel info signals with enhanced data flow - prioritize BlockRoomUIState over HotelInfoCtx
@@ -711,12 +714,30 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    let adult_count = move || ui_search_ctx.guests.adults.get();
+    let adult_count = move || {
+        let adults = ui_search_ctx.guests.adults.get();
+        let rooms = ui_search_ctx.guests.rooms.get();
+        adults.max(rooms)
+    };
     let child_count = move || ui_search_ctx.guests.children.get();
     let children_ages = ui_search_ctx.guests.children_ages.clone();
 
     view! {
         <div class="guest-form mt-4 space-y-6">
+            {move || {
+                let rooms = ui_search_ctx.guests.rooms.get();
+                let adults = BlockRoomUIState::get_adults().len() as u32;
+
+                (rooms > adults).then_some(view! {
+                    <div class="rounded-md bg-amber-50 text-amber-800 text-sm px-3 py-2">
+                        {format!(
+                            "{} room(s) selected. Please add a primary adult for each room ({} required).",
+                            rooms, rooms
+                        )}
+                    </div>
+                })
+            }}
+
             // Adults
             {(0..adult_count())
                 .map(|i| {
