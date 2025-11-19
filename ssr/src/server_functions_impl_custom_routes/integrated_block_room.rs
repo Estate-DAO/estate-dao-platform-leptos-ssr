@@ -5,7 +5,7 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    api::canister::add_booking::call_add_booking_backend,
+    api::{canister::add_booking::call_add_booking_backend, liteapi::LiteApiPrebookResponse},
     domain::{
         BookingError, DomainDestination, DomainHotelDetails, DomainRoomData, DomainRoomOption,
         DomainSelectedDateRange,
@@ -121,7 +121,8 @@ async fn create_backend_booking(
     let booking_id_struct = parse_booking_id(&request.booking_id)?;
     let destination = extract_destination_from_request(request);
     let date_range = extract_date_range_from_request(request);
-    let room_details = extract_room_details_from_request(request);
+    let mut room_details = extract_room_details_from_request(request);
+    enrich_room_details_with_provider_data(&mut room_details, block_result);
     let hotel_details =
         build_hotel_details(state, request, block_result, &date_range, &room_details).await;
 
@@ -255,6 +256,58 @@ fn extract_room_details_from_request(request: &IntegratedBlockRoomRequest) -> Ve
         .iter()
         .map(|room| room.room_data.clone())
         .collect()
+}
+
+/// Use provider data from LiteAPI to attach occupancy numbers to selected rooms
+fn enrich_room_details_with_provider_data(
+    room_details: &mut [DomainRoomData],
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+) {
+    if room_details.is_empty() {
+        return;
+    }
+
+    let provider_data = match &block_result.provider_data {
+        Some(data) => data,
+        None => return,
+    };
+
+    let prebook_response: LiteApiPrebookResponse = match serde_json::from_str(provider_data) {
+        Ok(resp) => resp,
+        Err(e) => {
+            tracing::warn!("Failed to parse LiteAPI prebook provider data: {}", e);
+            return;
+        }
+    };
+
+    let data = match prebook_response.data {
+        Some(data) => data,
+        None => return,
+    };
+
+    use std::collections::HashMap;
+    let mut occupancy_by_rate: HashMap<String, u32> = HashMap::new();
+    for room_type in data.room_types {
+        for rate in room_type.rates {
+            let occupancy = rate.occupancy_number.max(0) as u32;
+            occupancy_by_rate.insert(rate.rate_id, occupancy);
+        }
+    }
+
+    let mut fallback_needed = false;
+    for room in room_details.iter_mut() {
+        if let Some(rate_key) = occupancy_by_rate.get(&room.rate_key) {
+            room.occupancy_number = Some(*rate_key);
+        } else if room.occupancy_number.is_none() {
+            fallback_needed = true;
+        }
+    }
+
+    if fallback_needed {
+        for (idx, room) in room_details.iter_mut().enumerate() {
+            room.occupancy_number.get_or_insert((idx + 1) as u32);
+        }
+    }
 }
 
 /// Fetch actual hotel details from hotel service
