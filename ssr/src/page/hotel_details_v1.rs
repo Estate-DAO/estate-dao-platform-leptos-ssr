@@ -3,6 +3,7 @@ use leptos_icons::Icon;
 use leptos_router::{use_navigate, use_query_map, NavigateOptions};
 
 use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::consts::ENFORCE_SINGLE_ROOM_TYPE_BOOKING;
 use crate::app::AppRoutes;
 use crate::component::ImageLightbox;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray};
@@ -1530,17 +1531,42 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
 
     let dec_key = room_key.clone();
     let inc_key = room_key.clone();
+    let rooms_requested_signal = ui_search_ctx.guests.rooms;
 
     let select_room = Action::new(move |_: &()| {
-        HotelDetailsUIState::increment_room_counter(room_key.clone());
+        if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
+            let requested_rooms = rooms_requested_signal.get_untracked();
+            HotelDetailsUIState::set_single_room_selection(room_key.clone(), requested_rooms);
+        } else {
+            HotelDetailsUIState::increment_room_counter(room_key.clone());
+        }
         async {}
     });
     let decrement = Action::new(move |_: &()| {
-        HotelDetailsUIState::decrement_room_counter(dec_key.clone());
+        if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
+            let current = HotelDetailsUIState::get_selected_rooms()
+                .get(&dec_key)
+                .copied()
+                .unwrap_or(0);
+            let new_qty = 0;
+            HotelDetailsUIState::set_single_room_selection(dec_key.clone(), new_qty);
+        } else {
+            HotelDetailsUIState::decrement_room_counter(dec_key.clone());
+        }
         async {}
     });
     let increment = Action::new(move |_: &()| {
-        HotelDetailsUIState::increment_room_counter(inc_key.clone());
+        if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
+            if HotelDetailsUIState::can_increment_room_selection() {
+                let current = HotelDetailsUIState::get_selected_rooms()
+                    .get(&inc_key)
+                    .copied()
+                    .unwrap_or(0);
+                HotelDetailsUIState::set_single_room_selection(inc_key.clone(), current + 1);
+            }
+        } else {
+            HotelDetailsUIState::increment_room_counter(inc_key.clone());
+        }
         async {}
     });
 

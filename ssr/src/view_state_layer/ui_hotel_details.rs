@@ -150,6 +150,18 @@ impl HotelDetailsUIState {
             .collect()
     }
 
+    /// Replace the current selection with a single room type and quantity.
+    /// Used when single-room-type booking is enforced to keep selections consistent.
+    pub fn set_single_room_selection(room_type: String, quantity: u32) {
+        let this: Self = expect_context();
+        let mut rooms = HashMap::new();
+        if quantity > 0 {
+            rooms.insert(room_type, quantity);
+        }
+        this.selected_rooms.set(rooms);
+        Self::update_total_price();
+    }
+
     pub fn get_selected_rooms() -> HashMap<String, u32> {
         let this: Self = expect_context();
         this.selected_rooms.get()
