@@ -59,17 +59,20 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
     create_effect(move |_| {
         let adults_count = ui_search_ctx.guests.adults.get() as usize;
+        let rooms_count = ui_search_ctx.guests.rooms.get() as usize;
+        let required_primary_contacts = adults_count.max(rooms_count);
         let children_count = ui_search_ctx.guests.children.get() as usize;
         let children_ages = ui_search_ctx.guests.children_ages.clone();
 
         // Initialize adults and children only once
         if !initialized.get_untracked() {
             log!(
-                "Initializing form data for the first time - adults: {}, children: {}",
+                "Initializing form data for the first time - adults: {}, rooms: {}, children: {}",
                 adults_count,
+                rooms_count,
                 children_count
             );
-            BlockRoomUIState::create_adults(adults_count);
+            BlockRoomUIState::create_adults(required_primary_contacts);
             BlockRoomUIState::create_children(children_count);
             set_initialized.set(true);
         } else {
@@ -120,7 +123,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             log!(
                 "    Room {}: {} x{} @ ${:.2}/night",
                 i + 1,
-                room.room_name,
+                room.display_name(),
                 room.quantity,
                 room.price_per_night
             );
@@ -276,7 +279,13 @@ pub fn BlockRoomV1Page() -> impl IntoView {
             .sum::<f64>()
     };
     let num_rooms = move || ui_search_ctx.guests.rooms.get();
-    let adult_count = move || ui_search_ctx.guests.adults.get();
+    let adult_count = move || {
+        ui_search_ctx
+            .guests
+            .adults
+            .get()
+            .max(ui_search_ctx.guests.rooms.get())
+    };
     let child_count = move || ui_search_ctx.guests.children.get();
 
     // Hotel info signals with enhanced data flow - prioritize BlockRoomUIState over HotelInfoCtx
@@ -513,16 +522,19 @@ pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
             <div class="price-breakdown space-y-3 mt-4">
                 <Show when=move || !room_summary().is_empty()>
                     {move || room_summary().into_iter().map(|room| {
+                        let display_name = room.display_name();
+                        let price_per_night = room.price_per_night;
+                        let quantity = room.quantity;
                         view! {
                             <div class="flex justify-between items-center text-sm">
                                 <span class="text-gray-700 flex-1 min-w-0">
-                                    <span class="truncate break-words whitespace-normal">{room.room_name.clone()}</span>
+                                    <span class="truncate break-words whitespace-normal">{display_name}</span>
                                     <span class="text-xs text-gray-500 ml-1">
-                                        "× " {room.quantity} " × " {num_nights()} " nights"
+                                        "× " {quantity} " × " {num_nights()} " nights"
                                     </span>
                                 </span>
                                 <span class="font-semibold ml-2">
-                                    ${format!("{:.2}", room.price_per_night * room.quantity as f64 * num_nights() as f64)}
+                                    ${format!("{:.2}", price_per_night * quantity as f64 * num_nights() as f64)}
                                 </span>
                             </div>
                         }
@@ -604,30 +616,33 @@ pub fn SelectedRoomsSummary() -> impl IntoView {
 // <!-- Individual room summary card component -->
 #[component]
 pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
+    let display_name = room.display_name();
+    let quantity = room.quantity;
+    let price_per_night = room.price_per_night;
     view! {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
             // <!-- Room details -->
             <div class="flex-1 min-w-0 mb-2 sm:mb-0">
                 <div class="font-semibold text-base min-w-0 break-words whitespace-normal truncate">
-                    {room.room_name.clone()}
+                    {display_name.clone()}
                 </div>
                 <div class="text-sm text-gray-600 flex items-center gap-2 mt-1">
                     <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {format!("{} room{}", room.quantity, if room.quantity == 1 { "" } else { "s" })}
+                        {format!("{} room{}", quantity, if quantity == 1 { "" } else { "s" })}
                     </span>
                     <span class="text-gray-500">"•"</span>
-                    <span>${format!("{:.2}", room.price_per_night)} /night</span>
+                    <span>${format!("{:.2}", price_per_night)} /night</span>
                 </div>
             </div>
 
             // <!-- Price display -->
             <div class="flex flex-col items-start sm:items-end sm:text-right">
                 <div class="text-lg font-bold">
-                    ${format!("{:.2}", room.price_per_night * room.quantity as f64)}
+                    ${format!("{:.2}", price_per_night * quantity as f64)}
                     <span class="text-sm font-normal text-gray-600 ml-1">/night</span>
                 </div>
                 <div class="text-xs text-gray-500">
-                    {format!("${:.2} × {}", room.price_per_night, room.quantity)}
+                    {format!("${:.2} × {}", price_per_night, quantity)}
                 </div>
             </div>
         </div>
@@ -711,12 +726,30 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    let adult_count = move || ui_search_ctx.guests.adults.get();
+    let adult_count = move || {
+        let adults = ui_search_ctx.guests.adults.get();
+        let rooms = ui_search_ctx.guests.rooms.get();
+        adults.max(rooms)
+    };
     let child_count = move || ui_search_ctx.guests.children.get();
     let children_ages = ui_search_ctx.guests.children_ages.clone();
 
     view! {
         <div class="guest-form mt-4 space-y-6">
+            {move || {
+                let rooms = ui_search_ctx.guests.rooms.get();
+                let adults = BlockRoomUIState::get_adults().len() as u32;
+
+                (rooms > adults).then_some(view! {
+                    <div class="rounded-md bg-amber-50 text-amber-800 text-sm px-3 py-2">
+                        {format!(
+                            "{} room(s) selected. Please add a primary adult for each room ({} required).",
+                            rooms, rooms
+                        )}
+                    </div>
+                })
+            }}
+
             // Adults
             {(0..adult_count())
                 .map(|i| {

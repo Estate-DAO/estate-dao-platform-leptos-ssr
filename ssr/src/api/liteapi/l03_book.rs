@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 
 // <!-- LiteAPI Book Room Request/Response Types -->
 // Based on LiteAPI /book endpoint specification
@@ -163,8 +163,28 @@ pub struct LiteApiBookedRoom {
     pub first_name: String,
     #[serde(rename = "lastName")]
     pub last_name: String,
-    #[serde(rename = "mappedRoomId")]
+    #[serde(
+        rename = "mappedRoomId",
+        default,
+        deserialize_with = "deserialize_mapped_room_id"
+    )]
     pub mapped_room_id: Option<String>,
+}
+
+fn deserialize_mapped_room_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let opt = Option::<serde_json::Value>::deserialize(deserializer)?;
+    match opt {
+        None => Ok(None),
+        Some(serde_json::Value::String(value)) => Ok(Some(value)),
+        Some(serde_json::Value::Number(num)) => Ok(Some(num.to_string())),
+        Some(other) => Err(de::Error::custom(format!(
+            "expected string or number for mappedRoomId, got {}",
+            other
+        ))),
+    }
 }
 
 #[cfg(test)]
@@ -233,6 +253,25 @@ mod tests {
         assert_eq!(room.first_name, "John");
         assert_eq!(room.last_name, "Doe");
         assert_eq!(room.mapped_room_id, Some("R123".to_string()));
+    }
+
+    #[test]
+    fn test_deserialize_booked_room_with_integer_mapped_room_id() {
+        let data = json!({
+            "roomType": { "name": "Deluxe Room" },
+            "boardType": "HB",
+            "boardName": "Half Board",
+            "adults": 2,
+            "children": 1,
+            "amount": 200.50,
+            "currency": "USD",
+            "firstName": "John",
+            "lastName": "Doe",
+            "mappedRoomId": 1321678386
+        });
+
+        let room: LiteApiBookedRoom = serde_json::from_value(data).unwrap();
+        assert_eq!(room.mapped_room_id, Some("1321678386".to_string()));
     }
 }
 
