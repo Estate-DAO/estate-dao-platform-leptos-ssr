@@ -58,9 +58,8 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     });
 
     create_effect(move |_| {
-        let adults_count = ui_search_ctx.guests.adults.get() as usize;
         let rooms_count = ui_search_ctx.guests.rooms.get() as usize;
-        let required_primary_contacts = adults_count.max(rooms_count);
+        let required_primary_contacts = rooms_count.max(1);
         let children_count = ui_search_ctx.guests.children.get() as usize;
         let children_ages = ui_search_ctx.guests.children_ages.clone();
 
@@ -68,7 +67,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
         if !initialized.get_untracked() {
             log!(
                 "Initializing form data for the first time - adults: {}, rooms: {}, children: {}",
-                adults_count,
+                required_primary_contacts,
                 rooms_count,
                 children_count
             );
@@ -131,7 +130,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
         log!(
             "BlockRoomV1Page initialized - adults: {}, children: {}, room_price: {}, nights: {}",
-            adults_count,
+            required_primary_contacts,
             children_count,
             room_price,
             num_nights
@@ -727,10 +726,7 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let ui_search_ctx: UISearchCtx = expect_context();
 
     let adult_count = move || {
-        // let adults = ui_search_ctx.guests.adults.get();
-        let rooms = ui_search_ctx.guests.rooms.get();
-        // adults.max(rooms)
-        rooms
+        ui_search_ctx.guests.rooms.get()
     };
     let child_count = move || ui_search_ctx.guests.children.get();
     let children_ages = ui_search_ctx.guests.children_ages.clone();
