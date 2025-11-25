@@ -330,7 +330,7 @@ fn enrich_room_details_with_provider_data(
                 new_room.occupancy_number = Some(occ);
                 // encode occupancy in room_unique_id to keep entries distinct
                 new_room.room_unique_id =
-                    crate::utils::backend_default_impl::encode_room_id_with_occupancy(
+                    estate_fe::utils::backend_default_impl::encode_room_id_with_occupancy(
                         &template.room_unique_id,
                         Some(occ),
                     );
