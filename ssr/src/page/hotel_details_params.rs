@@ -224,47 +224,50 @@ impl HotelDetailsParams {
 
 impl QueryParamsSync<HotelDetailsParams> for HotelDetailsParams {
     fn sync_to_app_state(&self) {
-        let search_ctx: UISearchCtx = expect_context();
         let hotel_info_ctx: HotelInfoCtx = expect_context();
 
-        // Set hotel code
-        if let Some(code) = &self.hotel_code {
-            hotel_info_ctx.hotel_code.set(code.clone());
-        }
-
-        // Set date range
-        if let (Some(checkin), Some(checkout)) = (&self.checkin, &self.checkout) {
-            if let (Ok(start_date), Ok(end_date)) = (
-                chrono::NaiveDate::parse_from_str(checkin, "%Y-%m-%d"),
-                chrono::NaiveDate::parse_from_str(checkout, "%Y-%m-%d"),
-            ) {
-                let date_range = SelectedDateRange {
-                    start: (
-                        start_date.year() as u32,
-                        start_date.month(),
-                        start_date.day(),
-                    ),
-                    end: (end_date.year() as u32, end_date.month(), end_date.day()),
-                };
-                UISearchCtx::set_date_range(date_range);
+        // Batch the sync so downstream reactive effects (like rates fetch)
+        // only run once with the final, consolidated state.
+        batch(|| {
+            // Set hotel code
+            if let Some(code) = &self.hotel_code {
+                hotel_info_ctx.hotel_code.set(code.clone());
             }
-        }
 
-        // Set guest information
-        let guest_selection = GuestSelection::default();
-        if let Some(adults) = self.adults {
-            guest_selection.adults.set(adults);
-        }
-        if let Some(children) = self.children {
-            guest_selection.children.set(children);
-        }
-        if let Some(rooms) = self.rooms {
-            guest_selection.rooms.set(rooms);
-        }
-        guest_selection
-            .children_ages
-            .set_ages(self.children_ages.clone());
+            // Set date range
+            if let (Some(checkin), Some(checkout)) = (&self.checkin, &self.checkout) {
+                if let (Ok(start_date), Ok(end_date)) = (
+                    chrono::NaiveDate::parse_from_str(checkin, "%Y-%m-%d"),
+                    chrono::NaiveDate::parse_from_str(checkout, "%Y-%m-%d"),
+                ) {
+                    let date_range = SelectedDateRange {
+                        start: (
+                            start_date.year() as u32,
+                            start_date.month(),
+                            start_date.day(),
+                        ),
+                        end: (end_date.year() as u32, end_date.month(), end_date.day()),
+                    };
+                    UISearchCtx::set_date_range(date_range);
+                }
+            }
 
-        UISearchCtx::set_guests(guest_selection);
+            // Set guest information
+            let guest_selection = GuestSelection::default();
+            if let Some(adults) = self.adults {
+                guest_selection.adults.set(adults);
+            }
+            if let Some(children) = self.children {
+                guest_selection.children.set(children);
+            }
+            if let Some(rooms) = self.rooms {
+                guest_selection.rooms.set(rooms);
+            }
+            guest_selection
+                .children_ages
+                .set_ages(self.children_ages.clone());
+
+            UISearchCtx::set_guests(guest_selection);
+        });
     }
 }

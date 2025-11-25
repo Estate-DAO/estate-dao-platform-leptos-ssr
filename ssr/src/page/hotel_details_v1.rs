@@ -968,13 +968,39 @@ fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<RoomTypeGroup
     let mut grouped_by_id: HashMap<u32, RoomTypeGroup> = HashMap::new();
     let mut grouped_by_name: BTreeMap<String, RoomTypeGroup> = BTreeMap::new();
 
+    // Use a stable key to dedupe identical offers that only differ by occupancy_number
+    let dedupe_key = |rate: &DomainRoomOption| {
+        if !rate.room_data.offer_id.is_empty() {
+            format!("offer:{}", rate.room_data.offer_id)
+        } else if !rate.room_data.rate_key.is_empty() {
+            format!("rate:{}", rate.room_data.rate_key)
+        } else {
+            // Fallback: room name + meal plan + rounded price
+            format!(
+                "fallback:{}:{}:{:.2}",
+                normalized_room_key(&rate.room_data.room_name),
+                rate.meal_plan.clone().unwrap_or_default(),
+                rate.price.room_price
+            )
+        }
+    };
+
     for rate in rates {
         let mapped_room_id = (rate.mapped_room_id != 0).then_some(rate.mapped_room_id);
+        let key_for_rate = dedupe_key(&rate);
         if let Some(id) = mapped_room_id {
             grouped_by_id
                 .entry(id)
-                .and_modify(|entry| entry.rates.push(rate.clone()))
-                .or_insert(RoomTypeGroup {
+                .and_modify(|entry| {
+                    if !entry
+                        .rates
+                        .iter()
+                        .any(|existing| dedupe_key(existing) == key_for_rate)
+                    {
+                        entry.rates.push(rate.clone());
+                    }
+                })
+                .or_insert_with(|| RoomTypeGroup {
                     room_name: rate.room_data.room_name.clone(),
                     mapped_room_id: Some(id),
                     rates: vec![rate.clone()],
@@ -983,8 +1009,16 @@ fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<RoomTypeGroup
             let key = normalized_room_key(&rate.room_data.room_name);
             grouped_by_name
                 .entry(key)
-                .and_modify(|entry| entry.rates.push(rate.clone()))
-                .or_insert(RoomTypeGroup {
+                .and_modify(|entry| {
+                    if !entry
+                        .rates
+                        .iter()
+                        .any(|existing| dedupe_key(existing) == key_for_rate)
+                    {
+                        entry.rates.push(rate.clone());
+                    }
+                })
+                .or_insert_with(|| RoomTypeGroup {
                     room_name: rate.room_data.room_name.clone(),
                     mapped_room_id: None,
                     rates: vec![rate.clone()],

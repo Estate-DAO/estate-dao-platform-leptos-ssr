@@ -724,27 +724,99 @@ impl LiteApiAdapter {
     ) -> Result<LiteApiHotelRatesRequest, ProviderError> {
         let search_criteria = &domain_criteria.search_criteria;
 
-        // Convert room guests to occupancies
-        let occupancies: Vec<LiteApiOccupancy> = search_criteria
-            .room_guests
-            .iter()
-            .map(|room_guest| {
-                let children = if room_guest.no_of_children > 0 {
-                    room_guest.children_ages.as_ref().map(|ages| {
-                        ages.iter()
-                            .filter_map(|age_str| age_str.parse::<u32>().ok())
-                            .collect()
-                    })
-                } else {
-                    None
-                };
+        // Normalize occupancies so LiteAPI gets one entry per room
+        let room_count = if search_criteria.no_of_rooms == 0 {
+            let derived = search_criteria.room_guests.len() as u32;
+            if derived == 0 {
+                1
+            } else {
+                derived
+            }
+        } else {
+            search_criteria.no_of_rooms
+        };
 
-                LiteApiOccupancy {
-                    adults: room_guest.no_of_adults,
-                    children,
+        let map_guest_to_occupancy = |room_guest: &DomainRoomGuest| -> LiteApiOccupancy {
+            let children = if room_guest.no_of_children > 0 {
+                room_guest.children_ages.as_ref().map(|ages| {
+                    ages.iter()
+                        .filter_map(|age_str| age_str.parse::<u32>().ok())
+                        .collect()
+                })
+            } else {
+                None
+            };
+
+            LiteApiOccupancy {
+                adults: room_guest.no_of_adults,
+                children,
+            }
+        };
+
+        let occupancies: Vec<LiteApiOccupancy> =
+            if search_criteria.room_guests.len() as u32 == room_count {
+                // Already have one guest group per room
+                search_criteria
+                    .room_guests
+                    .iter()
+                    .map(map_guest_to_occupancy)
+                    .collect()
+            } else {
+                // Spread total guests evenly across rooms
+                let total_adults: u32 = search_criteria
+                    .room_guests
+                    .iter()
+                    .map(|rg| rg.no_of_adults)
+                    .sum();
+                let total_children: u32 = search_criteria
+                    .room_guests
+                    .iter()
+                    .map(|rg| rg.no_of_children)
+                    .sum();
+                let children_ages: Vec<u32> = search_criteria
+                    .room_guests
+                    .iter()
+                    .filter_map(|rg| rg.children_ages.as_ref())
+                    .flat_map(|ages| ages.iter())
+                    .filter_map(|age_str| age_str.parse::<u32>().ok())
+                    .collect();
+
+                let base_adults = total_adults / room_count;
+                let mut extra_adults = total_adults % room_count;
+                let base_children = total_children / room_count;
+                let mut extra_children = total_children % room_count;
+                let mut age_iter = children_ages.into_iter();
+
+                let mut distributed = Vec::with_capacity(room_count as usize);
+                for _ in 0..room_count {
+                    let adults = base_adults
+                        + if extra_adults > 0 {
+                            extra_adults -= 1;
+                            1
+                        } else {
+                            0
+                        };
+                    let children_for_room = base_children
+                        + if extra_children > 0 {
+                            extra_children -= 1;
+                            1
+                        } else {
+                            0
+                        };
+
+                    let children = if children_for_room > 0 {
+                        let kids: Vec<u32> =
+                            age_iter.by_ref().take(children_for_room as usize).collect();
+                        Some(kids)
+                    } else {
+                        None
+                    };
+
+                    distributed.push(LiteApiOccupancy { adults, children });
                 }
-            })
-            .collect();
+
+                distributed
+            };
 
         // Format dates as YYYY-MM-DD
         let checkin = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_in_date);
