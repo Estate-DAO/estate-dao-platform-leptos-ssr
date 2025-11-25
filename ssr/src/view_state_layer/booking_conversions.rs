@@ -287,18 +287,52 @@ impl BookingConversions {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        // Build booking context
-        let room_occupancies = vec![DomainRoomOccupancyForBooking {
-            room_number: 1,
-            adults: effective_adult_count,
-            children: guests_ctx.children.get_untracked(),
-            children_ages: guests_ctx
-                .children_ages
-                .get_untracked()
-                .into_iter()
-                .map(|age| age as u8)
-                .collect(),
-        }];
+        // Build booking context with one entry per room (LiteAPI expects this)
+        let total_children = guests_ctx.children.get_untracked();
+        let children_ages: Vec<u8> = guests_ctx
+            .children_ages
+            .get_untracked()
+            .into_iter()
+            .map(|age| age as u8)
+            .collect();
+
+        let base_adults = effective_adult_count / inferred_rooms;
+        let mut extra_adults = effective_adult_count % inferred_rooms;
+        let base_children = total_children / inferred_rooms;
+        let mut extra_children = total_children % inferred_rooms;
+        let mut age_iter = children_ages.into_iter();
+
+        let mut room_occupancies = Vec::with_capacity(number_of_rooms);
+        for (idx, occ_number) in occupancy_numbers.iter().copied().enumerate() {
+            let adults_for_room = base_adults
+                + if extra_adults > 0 {
+                    extra_adults -= 1;
+                    1
+                } else {
+                    0
+                };
+            let children_for_room = base_children
+                + if extra_children > 0 {
+                    extra_children -= 1;
+                    1
+                } else {
+                    0
+                };
+            let ages_for_room: Vec<u8> =
+                age_iter.by_ref().take(children_for_room as usize).collect();
+
+            room_occupancies.push(DomainRoomOccupancyForBooking {
+                room_number: occ_number,
+                adults: adults_for_room,
+                children: children_for_room,
+                children_ages: ages_for_room,
+            });
+
+            // Safety: stop if we somehow generated more occupancy numbers than rooms
+            if idx + 1 >= number_of_rooms {
+                break;
+            }
+        }
 
         let booking_context = DomainBookingContext {
             number_of_rooms: inferred_rooms,
