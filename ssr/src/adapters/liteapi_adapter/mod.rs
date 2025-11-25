@@ -1480,57 +1480,101 @@ impl LiteApiAdapter {
             .data
             .expect("Data should exist after error handling");
 
-        // Extract price information from prebook response
-        let total_price = data.price;
-        let suggested_selling_price = data.suggested_selling_price;
-        let currency = data.currency.clone();
+        // Flatten all rates returned in prebook so we can reflect multiple rooms of the same offer
+        let mut flattened_rates: Vec<crate::api::liteapi::l02_prebook::LiteApiPrebookRate> =
+            Vec::new();
+        for room_type in &data.room_types {
+            flattened_rates.extend(room_type.rates.clone());
+        }
 
-        // Get room details from first room type and rate if available
-        let (room_name, cancellation_policy, meal_plan) =
-            if let Some(room_type) = data.room_types.first() {
-                if let Some(rate) = room_type.rates.first() {
-                    (
-                        rate.name.clone(),
-                        Some(rate.cancellation_policies.refundable_tag.clone()),
-                        Some(format!("{} - {}", rate.board_type, rate.board_name)),
-                    )
-                } else {
-                    (original_request.selected_room.room_name.clone(), None, None)
-                }
-            } else {
-                (original_request.selected_room.room_name.clone(), None, None)
+        // Build blocked rooms from rates, defaulting to selected_room info if missing
+        let currency = data.currency.clone();
+        let mut blocked_rooms = Vec::new();
+        for rate in &flattened_rates {
+            let room_price_amount = rate
+                .retail_rate
+                .as_ref()
+                .and_then(|rr| rr.total.first().map(|a| a.amount))
+                .unwrap_or(data.price);
+            let room_currency = rate
+                .retail_rate
+                .as_ref()
+                .and_then(|rr| rr.total.first().map(|a| a.currency.clone()))
+                .unwrap_or_else(|| currency.clone());
+
+            let detailed_price = DomainDetailedPrice {
+                published_price: room_price_amount,
+                published_price_rounded_off: room_price_amount.round(),
+                offered_price: room_price_amount,
+                offered_price_rounded_off: room_price_amount.round(),
+                room_price: room_price_amount,
+                tax: 0.0,
+                extra_guest_charge: 0.0,
+                child_charge: 0.0,
+                other_charges: 0.0,
+                currency_code: room_currency,
             };
 
-        // Create detailed price from prebook response
-        let detailed_price = DomainDetailedPrice {
-            published_price: suggested_selling_price,
-            published_price_rounded_off: suggested_selling_price.round(),
-            offered_price: total_price,
-            offered_price_rounded_off: total_price.round(),
-            room_price: total_price,
-            tax: 0.0, // Could extract from taxes_and_fees if needed
+            let room_name = if !rate.name.is_empty() {
+                rate.name.clone()
+            } else {
+                original_request.selected_room.room_name.clone()
+            };
+
+            blocked_rooms.push(DomainBlockedRoom {
+                room_code: original_request.selected_room.room_unique_id.clone(),
+                room_name,
+                room_type_code: Some(original_request.selected_room.room_unique_id.clone()),
+                price: detailed_price,
+                cancellation_policy: Some(rate.cancellation_policies.refundable_tag.clone()),
+                meal_plan: Some(format!("{} - {}", rate.board_type, rate.board_name)),
+            });
+        }
+
+        // If nothing came back, fall back to a single placeholder room
+        if blocked_rooms.is_empty() {
+            let fallback_price = DomainDetailedPrice {
+                published_price: data.suggested_selling_price,
+                published_price_rounded_off: data.suggested_selling_price.round(),
+                offered_price: data.price,
+                offered_price_rounded_off: data.price.round(),
+                room_price: data.price,
+                tax: 0.0,
+                extra_guest_charge: 0.0,
+                child_charge: 0.0,
+                other_charges: 0.0,
+                currency_code: currency.clone(),
+            };
+            blocked_rooms.push(DomainBlockedRoom {
+                room_code: original_request.selected_room.room_unique_id.clone(),
+                room_name: original_request.selected_room.room_name.clone(),
+                room_type_code: Some(original_request.selected_room.room_unique_id.clone()),
+                price: fallback_price,
+                cancellation_policy: None,
+                meal_plan: None,
+            });
+        }
+
+        // Total price from provider (already includes multiple rooms if applicable)
+        let total_price = DomainDetailedPrice {
+            published_price: data.suggested_selling_price,
+            published_price_rounded_off: data.suggested_selling_price.round(),
+            offered_price: data.price,
+            offered_price_rounded_off: data.price.round(),
+            room_price: data.price,
+            tax: 0.0,
             extra_guest_charge: 0.0,
             child_charge: 0.0,
             other_charges: 0.0,
             currency_code: currency.clone(),
         };
 
-        // Create a blocked room entry from the prebook response
-        let blocked_room = DomainBlockedRoom {
-            room_code: original_request.selected_room.room_unique_id.clone(),
-            room_name,
-            room_type_code: Some(original_request.selected_room.room_unique_id.clone()),
-            price: detailed_price.clone(),
-            cancellation_policy,
-            meal_plan,
-        };
-
         DomainBlockRoomResponse {
             block_id: data.prebook_id.clone(),
             is_price_changed: data.price_difference_percent != 0.0,
             is_cancellation_policy_changed: data.cancellation_changed,
-            blocked_rooms: vec![blocked_room],
-            total_price: detailed_price,
+            blocked_rooms,
+            total_price,
             provider_data: Some(provider_data_json),
         }
     }
