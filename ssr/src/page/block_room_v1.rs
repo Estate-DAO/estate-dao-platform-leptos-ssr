@@ -725,9 +725,7 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    let adult_count = move || {
-        ui_search_ctx.guests.rooms.get()
-    };
+    let adult_count = move || ui_search_ctx.guests.rooms.get();
     let child_count = move || ui_search_ctx.guests.children.get();
     let children_ages = ui_search_ctx.guests.children_ages.clone();
 
