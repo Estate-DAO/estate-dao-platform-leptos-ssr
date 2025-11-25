@@ -108,7 +108,20 @@ impl BlockRoomUIState {
 
     pub fn create_children(count: usize) {
         let this: Self = expect_context();
-        this.children.set(vec![ChildDetail::default(); count]);
+        let search_ctx: UISearchCtx = expect_context();
+        let ages_from_search = search_ctx.guests.children_ages.get_untracked();
+
+        let children: Vec<ChildDetail> = (0..count)
+            .map(|idx| {
+                let age = ages_from_search.get(idx).copied().map(|a| a as u8);
+                ChildDetail {
+                    age,
+                    ..Default::default()
+                }
+            })
+            .collect();
+
+        this.children.set(children);
     }
 
     pub fn update_adult(index: usize, field: &str, value: String) {
