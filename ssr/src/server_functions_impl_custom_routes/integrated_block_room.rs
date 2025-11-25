@@ -255,13 +255,17 @@ fn extract_room_details_from_request(request: &IntegratedBlockRoomRequest) -> Ve
         .block_room_request
         .selected_rooms
         .iter()
-        .map(|room| room.room_data.clone())
+        .flat_map(|room| {
+            // Repeat the room_data according to quantity so we track each room instance
+            let qty = room.quantity.max(1);
+            std::iter::repeat(room.room_data.clone()).take(qty as usize)
+        })
         .collect()
 }
 
 /// Use provider data from LiteAPI to attach occupancy numbers to selected rooms
 fn enrich_room_details_with_provider_data(
-    room_details: &mut [DomainRoomData],
+    room_details: &mut Vec<DomainRoomData>,
     block_result: &estate_fe::domain::DomainBlockRoomResponse,
 ) {
     if room_details.is_empty() {
@@ -286,7 +290,7 @@ fn enrich_room_details_with_provider_data(
         None => return,
     };
 
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     let mut occupancy_by_rate: HashMap<String, u32> = HashMap::new();
     for room_type in data.room_types {
         for rate in room_type.rates {
@@ -296,9 +300,11 @@ fn enrich_room_details_with_provider_data(
     }
 
     let mut fallback_needed = false;
+    let mut used_occupancies: HashSet<u32> = HashSet::new();
     for room in room_details.iter_mut() {
         if let Some(rate_key) = occupancy_by_rate.get(&room.rate_key) {
             room.occupancy_number = Some(*rate_key);
+            used_occupancies.insert(*rate_key);
         } else if room.occupancy_number.is_none() {
             fallback_needed = true;
         }
@@ -307,6 +313,29 @@ fn enrich_room_details_with_provider_data(
     if fallback_needed {
         for (idx, room) in room_details.iter_mut().enumerate() {
             room.occupancy_number.get_or_insert((idx + 1) as u32);
+        }
+    }
+
+    // If we have more occupancies from provider than room_details, add clones to match counts
+    let missing: Vec<u32> = occupancy_by_rate
+        .values()
+        .copied()
+        .filter(|occ| !used_occupancies.contains(occ))
+        .collect();
+
+    if !missing.is_empty() {
+        if let Some(template) = room_details.first().cloned() {
+            for occ in missing {
+                let mut new_room = template.clone();
+                new_room.occupancy_number = Some(occ);
+                // encode occupancy in room_unique_id to keep entries distinct
+                new_room.room_unique_id =
+                    crate::utils::backend_default_impl::encode_room_id_with_occupancy(
+                        &template.room_unique_id,
+                        Some(occ),
+                    );
+                room_details.push(new_room);
+            }
         }
     }
 }
