@@ -1614,67 +1614,65 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     rate_details.push("Non-Refundable".to_string());
 
     view! {
-        <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-5">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div class="space-y-2">
-                    <p class="text-base font-semibold text-gray-900">{meal_plan}</p>
-                    <ul class="list-disc list-inside text-xs text-gray-600 space-y-1">
-                        <For
-                            each=move || rate_details.clone()
-                            key=|item| item.clone()
-                            let:item
-                        >
-                            <li>{item}</li>
-                        </For>
-                    </ul>
-                    <p class="text-xs text-gray-600">{occupancy}</p>
-                </div>
-                <div class="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
-                    <div class="text-right">
-                        <p class="text-2xl font-semibold text-gray-900">{price_text}</p>
-                        <p class="text-[11px] text-gray-500">
-                            {move || {
-                                let nights = nights();
-                                format!(
-                                    "({} night{}, 1 Room incl. taxes)",
-                                    nights,
-                                    if nights == 1 { "" } else { "s" }
-                                )
-                            }}
-                        </p>
-                    </div>
-                    <Show
-                        when=move || selection_count.get() == 0
-                        fallback=move ||
-                            view! {
-                                <div class="inline-flex items-center overflow-hidden rounded-lg border border-blue-100 bg-blue-50 text-blue-700">
-                                    <button
-                                        class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled=move || selection_count.get() == 0
-                                        on:click=move|_|decrement.dispatch(())
-                                    >
-                                        "−"
-                                    </button>
-                                    <span class="px-3 text-sm font-semibold">{move || selection_count.get()}</span>
-                                    <button
-                                        class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled=move || HotelDetailsUIState::is_at_room_selection_limit()
-                                        on:click=move|_|increment.dispatch(())
-                                    >
-                                        "+"
-                                    </button>
-                                </div>
-                            }
-
+        <div class="flex flex-col md:grid md:grid-cols-[1.5fr_1fr_auto] md:items-stretch gap-4 md:gap-0">
+            <div class="space-y-2 md:pr-6">
+                <p class="text-base font-semibold text-gray-900">{meal_plan}</p>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <For
+                        each=move || rate_details.clone()
+                        key=|item| item.clone()
+                        let:item
                     >
-                        <button
-                            class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors duration-150"
-                            on:click=move|_| select_room.dispatch(())
-                        >
-                            "Select Room"
-                        </button>
-                    </Show>
-                </div>
+                        <li>{item}</li>
+                    </For>
+                </ul>
+                <p class="text-xs text-gray-500">{occupancy}</p>
+            </div>
+            <div class="md:border-l md:border-gray-200 md:px-6 text-left md:text-center space-y-1 flex flex-col justify-center md:h-full">
+                <p class="text-2xl font-semibold text-gray-900">{price_text}</p>
+                <p class="text-[11px] text-gray-500">
+                    {move || {
+                        let nights = nights();
+                        format!(
+                            "({} night{}, 1 Room incl. taxes)",
+                            nights,
+                            if nights == 1 { "" } else { "s" }
+                        )
+                    }}
+                </p>
+            </div>
+            <div class="md:border-l md:border-gray-200 md:pl-6 flex items-center justify-start md:justify-end w-full md:h-full">
+                <Show
+                    when=move || selection_count.get() == 0
+                    fallback=move ||
+                        view! {
+                            <div class="inline-flex items-center overflow-hidden rounded-lg border border-blue-100 bg-blue-50 text-blue-700">
+                                <button
+                                    class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled=move || selection_count.get() == 0
+                                    on:click=move|_|decrement.dispatch(())
+                                >
+                                    "−"
+                                </button>
+                                <span class="px-3 text-sm font-semibold">{move || selection_count.get()}</span>
+                                <button
+                                    class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled=move || HotelDetailsUIState::is_at_room_selection_limit()
+                                    on:click=move|_|increment.dispatch(())
+                                >
+                                    "+"
+                                </button>
+                            </div>
+                        }
+
+                >
+                    <button
+                        class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors duration-150 w-full md:w-auto"
+                        on:click=move|_| select_room.dispatch(())
+                    >
+                        "Select Room"
+                    </button>
+                </Show>
             </div>
         </div>
     }
@@ -1779,84 +1777,86 @@ fn RoomTypeCard(
                 />
             }
         })}
-        <div class="bg-gray-100 border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-                <h3 class="text-lg font-semibold text-gray-900">{room_display_name}</h3>
-                <Show when=move || is_recommended>
-                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1">
-                        <Icon class="text-sm" icon=icondata::FaThumbsUpSolid />
-                        "Recommended"
-                    </span>
-                </Show>
-            </div>
-            <div class="p-5">
-                <div class="grid lg:grid-cols-12 gap-5">
-                    <div class="lg:col-span-4 space-y-4">
-                        <button
-                            type="button"
-                            class="w-full text-left"
-                            on:click=move |_| open_image_viewer.set(true)>
-                            <div class="w-full h-40 sm:h-48 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
-                                <img
-                                    src=hero_image.clone()
-                                    alt={format!("{} photo", room_name)}
-                                    class="w-full h-full object-cover"
-                                />
+        <div class="bg-[#f9f9f9] border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 pt-5 pb-0">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-xl font-semibold text-gray-900">{room_display_name}</h3>
+                    <Show when=move || is_recommended>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1">
+                            <Icon class="text-sm" icon=icondata::FaThumbsUpSolid />
+                            "Recommended"
+                        </span>
+                    </Show>
+                </div>
+
+                <div class="mt-5 flex flex-col lg:grid lg:grid-cols-[320px_1fr] items-start gap-5">
+                    <button
+                        type="button"
+                        class="w-full text-left"
+                        on:click=move |_| open_image_viewer.set(true)>
+                        <div class="w-full h-48 md:h-56 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
+                            <img
+                                src=hero_image.clone()
+                                alt={format!("{} photo", room_name)}
+                                class="w-full h-full object-cover"
+                            />
+                        </div>
+                    </button>
+
+                    <div class="w-full flex flex-col gap-5">
+                        <div class="space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">"Room Details"</p>
+                            <div class="flex flex-wrap items-center gap-4">
+                                <For
+                                    each=move || quick_facts.clone()
+                                    key=|(idx, _, _)| *idx
+                                    let:fact
+                                >
+                                    {let (_, icon, label) = fact;
+                                    view! {
+                                        <span class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                            <Icon class="text-blue-500 text-base" icon=icon />
+                                            {label}
+                                        </span>
+                                    }}
+                                </For>
                             </div>
-                        </button>
-                        <div class="space-y-4 rounded-md bg-gray-100 px-3 py-2 ">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-800">"Room Details"</p>
-                                <div class="mt-2 grid grid-cols-2 gap-2">
-                                    <For
-                                        each=move || quick_facts.clone()
-                                        key=|(idx, _, _)| *idx
-                                        let:fact
-                                    >
-                                        {let (_, icon, label) = fact;
-                                        view! {
-                                            <span class="inline-flex items-center gap-2 text-xs text-gray-700">
-                                                <Icon class="text-blue-500 text-sm" icon=icon />
-                                                {label}
-                                            </span>
-                                        }}
-                                    </For>
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <p class="text-sm font-semibold text-gray-800">"Amenities"</p>
-                                <div class="space-y-1">
-                                    <For
-                                        each=move || amenities_for_render.clone()
-                                        key=|amenity| amenity.text.clone()
-                                        let:amenity
-                                    >
-                                        <div class="flex items-center gap-2 text-sm text-gray-700">
-                                            <Icon class="text-blue-500 text-sm" icon=amenity.icon />
-                                            <span>{amenity.text.clone()}</span>
-                                        </div>
-                                    </For>
-                                </div>
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-sm font-semibold text-gray-800">"Amenities"</p>
+                            <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                                <For
+                                    each=move || amenities_for_render.clone()
+                                    key=|amenity| amenity.text.clone()
+                                    let:amenity
+                                >
+                                    <span class="inline-flex items-center gap-2">
+                                        <Icon class="text-blue-500 text-sm" icon=amenity.icon />
+                                        {amenity.text.clone()}
+                                    </span>
+                                </For>
                                 <button type="button" class="text-sm font-semibold text-blue-600 hover:underline">
                                     "See All Details"
                                 </button>
                             </div>
                         </div>
                     </div>
-
-                    <div class="lg:col-span-8 space-y-3">
-                        <For
-                            each=move || rates_for_render.clone()
-                            key=|rate| rate.room_data.rate_key.clone()
-                            let:rate
-                        >
-                            <RoomRateRow
-                                room_id=rate.room_data.room_unique_id.clone()
-                                rate=rate
-                            />
-                        </For>
-                    </div>
                 </div>
+            </div>
+
+            <div class="mt-5 border-t border-gray-200">
+                <For
+                    each=move || rates_for_render.clone()
+                    key=|rate| rate.room_data.rate_key.clone()
+                    let:rate
+                >
+                    <div class="px-5 py-4 border-b border-gray-200 last:border-b-0 bg-white">
+                        <RoomRateRow
+                            room_id=rate.room_data.room_unique_id.clone()
+                            rate=rate
+                        />
+                    </div>
+                </For>
             </div>
         </div>
     }
