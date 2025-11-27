@@ -277,7 +277,8 @@ Team Nofeebooking"
                     format!("https://nofeebooking.com/hotel-details?hotelCode={hotel_code}");
                 let hero_image = {
                     let trimmed = hotel_image.trim();
-                    let is_web_url = trimmed.starts_with("http://") || trimmed.starts_with("https://");
+                    let is_web_url =
+                        trimmed.starts_with("http://") || trimmed.starts_with("https://");
                     if trimmed.is_empty() || !is_web_url {
                         "https://nofeebooking.com/img/home.png".to_string()
                     } else {
