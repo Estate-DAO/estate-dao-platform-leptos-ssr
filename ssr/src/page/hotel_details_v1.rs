@@ -965,35 +965,25 @@ pub fn OverviewSection(
 }
 
 fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<RoomTypeGroup> {
-    let mut grouped_by_id: HashMap<u32, RoomTypeGroup> = HashMap::new();
+    // Single grouping keyed by normalized room name; mapped_room_id is attached when present.
     let mut grouped_by_name: BTreeMap<String, RoomTypeGroup> = BTreeMap::new();
 
-    // Deduplicate by room identity + meal plan; keep the lowest-priced rate per key
+    // Deduplicate by room identity + meal plan; keep the lowest-priced rate per key.
+    // If prices tie, keep the higher-occupancy option so we don't show duplicate tiles.
     let dedupe_key = |rate: &DomainRoomOption| {
         let meal = rate.meal_plan.clone().unwrap_or_default();
-        // Prefer occupancy_info for a stable key; fall back to room_data occupancy_number
-        let occ = rate
-            .occupancy_info
+        format!(
+            "{}:{}",
+            normalized_room_key(&rate.room_data.room_name),
+            meal
+        )
+    };
+    let occupancy_value = |rate: &DomainRoomOption| -> u32 {
+        rate.occupancy_info
             .as_ref()
-            .map(|info| {
-                let adults = info.adult_count.unwrap_or(0);
-                let children = info.child_count.unwrap_or(0);
-                let max = info.max_occupancy.unwrap_or(adults + children);
-                format!("occ{}-a{}-c{}", max, adults, children)
-            })
-            .unwrap_or_else(|| {
-                format!("occ{}", rate.room_data.occupancy_number.unwrap_or_default())
-            });
-        if rate.mapped_room_id != 0 {
-            format!("id:{}:{}:{}", rate.mapped_room_id, meal, occ)
-        } else {
-            format!(
-                "name:{}:{}:{}",
-                normalized_room_key(&rate.room_data.room_name),
-                meal,
-                occ
-            )
-        }
+            .and_then(|info| info.max_occupancy)
+            .or(rate.room_data.occupancy_number)
+            .unwrap_or(0)
     };
 
     let mut seen_rate_keys = HashSet::new();
@@ -1002,59 +992,43 @@ fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<RoomTypeGroup
         if !seen_rate_keys.insert(rate.room_data.rate_key.clone()) {
             continue;
         }
-        let mapped_room_id = (rate.mapped_room_id != 0).then_some(rate.mapped_room_id);
         let key_for_rate = dedupe_key(&rate);
-        if let Some(id) = mapped_room_id {
-            grouped_by_id
-                .entry(id)
-                .and_modify(|entry| {
-                    // If a rate with same key exists, keep the cheaper one
-                    if let Some(existing) = entry
-                        .rates
-                        .iter()
-                        .position(|existing| dedupe_key(existing) == key_for_rate)
-                    {
-                        if rate.price.room_price < entry.rates[existing].price.room_price {
-                            entry.rates[existing] = rate.clone();
-                        }
-                    } else {
-                        entry.rates.push(rate.clone());
+        let key = normalized_room_key(&rate.room_data.room_name);
+        grouped_by_name
+            .entry(key)
+            .and_modify(|entry| {
+                if entry.mapped_room_id.is_none() && rate.mapped_room_id != 0 {
+                    entry.mapped_room_id = Some(rate.mapped_room_id);
+                }
+
+                if let Some(existing) = entry
+                    .rates
+                    .iter()
+                    .position(|existing| dedupe_key(existing) == key_for_rate)
+                {
+                    let existing_price = entry.rates[existing].price.room_price;
+                    let existing_occ = occupancy_value(&entry.rates[existing]);
+                    let new_price = rate.price.room_price;
+                    let new_occ = occupancy_value(&rate);
+
+                    let should_replace = new_price < existing_price
+                        || (new_price == existing_price && new_occ > existing_occ);
+
+                    if should_replace {
+                        entry.rates[existing] = rate.clone();
                     }
-                })
-                .or_insert_with(|| RoomTypeGroup {
-                    room_name: rate.room_data.room_name.clone(),
-                    mapped_room_id: Some(id),
-                    rates: vec![rate.clone()],
-                });
-        } else {
-            let key = normalized_room_key(&rate.room_data.room_name);
-            grouped_by_name
-                .entry(key)
-                .and_modify(|entry| {
-                    if let Some(existing) = entry
-                        .rates
-                        .iter()
-                        .position(|existing| dedupe_key(existing) == key_for_rate)
-                    {
-                        if rate.price.room_price < entry.rates[existing].price.room_price {
-                            entry.rates[existing] = rate.clone();
-                        }
-                    } else {
-                        entry.rates.push(rate.clone());
-                    }
-                })
-                .or_insert_with(|| RoomTypeGroup {
-                    room_name: rate.room_data.room_name.clone(),
-                    mapped_room_id: None,
-                    rates: vec![rate.clone()],
-                });
-        }
+                } else {
+                    entry.rates.push(rate.clone());
+                }
+            })
+            .or_insert_with(|| RoomTypeGroup {
+                room_name: rate.room_data.room_name.clone(),
+                mapped_room_id: (rate.mapped_room_id != 0).then_some(rate.mapped_room_id),
+                rates: vec![rate.clone()],
+            });
     }
 
-    let mut groups: Vec<RoomTypeGroup> = grouped_by_id
-        .into_values()
-        .chain(grouped_by_name.into_values())
-        .collect();
+    let mut groups: Vec<RoomTypeGroup> = grouped_by_name.into_values().collect();
 
     for group in &mut groups {
         group.rates.sort_by(|a, b| {
@@ -1648,11 +1622,16 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
 
     let mut rate_details = Vec::new();
     let lower_meal = meal_plan.to_lowercase();
-    if lower_meal.contains("breakfast") {
-        rate_details.push("Breakfast included".to_string());
+    let meal_desc = if lower_meal.contains("full board") || lower_meal.contains("(fb)") {
+        "Breakfast, lunch, and dinner included"
+    } else if lower_meal.contains("half board") || lower_meal.contains("(hb)") {
+        "Breakfast and dinner included"
+    } else if lower_meal.contains("breakfast") || lower_meal.contains("(bi)") {
+        "Breakfast included"
     } else {
-        rate_details.push("No meals included".to_string());
-    }
+        "No meals included"
+    };
+    rate_details.push(meal_desc.to_string());
     rate_details.push("Non-Refundable".to_string());
 
     view! {
@@ -1735,6 +1714,8 @@ fn RoomTypeCard(
         rates,
     } = room_group;
 
+    let rates_for_render = rates.clone();
+
     let room_images = room_details
         .as_ref()
         .map(|details| details.photos.clone())
@@ -1746,6 +1727,9 @@ fn RoomTypeCard(
         .or_else(|| fallback_image.clone())
         .unwrap_or_else(|| "/img/home.png".to_string());
 
+    let occupancy_from_rates = rates_for_render
+        .iter()
+        .find_map(|rate| rate.occupancy_info.as_ref());
     let occupancy_summary = room_details.as_ref().and_then(|details| {
         details.max_occupancy.map(|occ| {
             let adults = details.max_adults.unwrap_or(occ);
@@ -1757,11 +1741,13 @@ fn RoomTypeCard(
             }
         })
     });
-    let fallback_occupancy = rates
-        .first()
-        .map(|rate| format_occupancy_text(rate.occupancy_info.as_ref()))
-        .unwrap_or_else(|| "Sleeps up to 2 guests".to_string());
-    let occupancy_text = occupancy_summary.clone().unwrap_or(fallback_occupancy);
+    let occupancy_text = if let Some(info) = occupancy_from_rates {
+        format_occupancy_text(Some(info))
+    } else if let Some(summary) = occupancy_summary.clone() {
+        summary
+    } else {
+        "Sleeps up to 2 guests".to_string()
+    };
 
     let room_specific_amenities = room_details
         .as_ref()
@@ -1775,8 +1761,6 @@ fn RoomTypeCard(
             .take(5)
             .collect::<Vec<_>>()
     };
-
-    let rates_for_render = rates.clone();
 
     let room_display_name = format!("{}", room_name.clone());
     let room_size_text = room_details.as_ref().and_then(|details| {
