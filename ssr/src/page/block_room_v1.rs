@@ -287,60 +287,70 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     };
     let child_count = move || ui_search_ctx.guests.children.get();
 
-    // Hotel info signals with enhanced data flow - prioritize BlockRoomUIState over HotelInfoCtx
+    // Hotel info signals with enhanced data flow - prioritize BlockRoomUIState, then HotelDetailsUIState, then HotelInfoCtx
+    let resolved_hotel_details = move || {
+        BlockRoomUIState::get_hotel_context().or_else(|| HotelDetailsUIState::get_hotel_details())
+    };
+
     let hotel_name = move || {
-        // Try to get hotel name from BlockRoomUIState (from hotel details page)
-        if let Some(hotel_details) = BlockRoomUIState::get_hotel_context() {
-            let name = hotel_details.hotel_name.clone();
-            log!("Hotel name from BlockRoomUIState: '{}'", name);
-            name
-        } else {
-            // Fallback to HotelInfoCtx (from hotel list)
-            let name = hotel_info_ctx.selected_hotel_name.get();
-            if name.is_empty() {
-                log!("Warning: hotel_name is empty in both BlockRoomUIState and HotelInfoCtx");
-            } else {
-                log!("Hotel name from HotelInfoCtx: '{}'", name);
-            }
-            name
-        }
+        resolved_hotel_details()
+            .map(|h| h.hotel_name)
+            .filter(|name| !name.trim().is_empty())
+            .or_else(|| {
+                let name = hotel_info_ctx.selected_hotel_name.get();
+                if name.trim().is_empty() {
+                    None
+                } else {
+                    Some(name)
+                }
+            })
+            .unwrap_or_else(|| "Hotel Name".to_string())
     };
 
     let hotel_address = move || {
-        // Try to get hotel address from BlockRoomUIState (from hotel details page)
-        if let Some(hotel_details) = BlockRoomUIState::get_hotel_context() {
-            let address = hotel_details.address.clone();
-            log!("Hotel address from BlockRoomUIState: '{}'", address);
-            address
-        } else {
-            // Fallback to HotelInfoCtx (from hotel list)
-            let address = hotel_info_ctx.selected_hotel_location.get();
-            log!("Hotel address from HotelInfoCtx: '{}'", address);
-            address
-        }
+        resolved_hotel_details()
+            .map(|h| h.address)
+            .filter(|addr| !addr.trim().is_empty())
+            .or_else(|| {
+                let address = hotel_info_ctx.selected_hotel_location.get();
+                if address.trim().is_empty() {
+                    None
+                } else {
+                    Some(address)
+                }
+            })
+            .unwrap_or_else(|| "".to_string())
+    };
+
+    let hotel_rating_and_reviews = move || {
+        resolved_hotel_details()
+            .map(|h| (h.rating, h.review_count))
+            .unwrap_or((None, None))
     };
 
     let hotel_image = move || {
-        // Try to get hotel image from BlockRoomUIState (from hotel details page)
-        if let Some(hotel_details) = BlockRoomUIState::get_hotel_context() {
-            let img = hotel_details.images.first().cloned().unwrap_or_default();
-            log!("Hotel image from BlockRoomUIState: '{}'", img);
-            if img.is_empty() {
-                "/img/home.webp".to_string()
-            } else {
-                img
-            }
-        } else {
-            // Fallback to HotelInfoCtx (from hotel list)
-            let img = hotel_info_ctx.selected_hotel_image.get();
-            log!("Hotel image from HotelInfoCtx: '{}'", img);
-            if img.is_empty() {
-                "/img/home.webp".to_string()
-            } else {
-                img
+        resolved_hotel_details()
+            .and_then(|h| h.images.first().cloned())
+            .filter(|img| !img.is_empty())
+            .or_else(|| {
+                let img = hotel_info_ctx.selected_hotel_image.get();
+                if img.is_empty() {
+                    None
+                } else {
+                    Some(img)
+                }
+            })
+            .unwrap_or_else(|| "/img/home.webp".to_string())
+    };
+
+    // Ensure hotel context is populated on this page if it was missed during navigation
+    create_effect(move |_| {
+        if BlockRoomUIState::get_hotel_context().is_none() {
+            if let Some(details) = HotelDetailsUIState::get_hotel_details() {
+                BlockRoomUIState::set_hotel_context(Some(details.clone()));
             }
         }
-    };
+    });
 
     // Date formatting
     let checkin_date = move || ui_search_ctx.date_range.get().dd_month_yyyy_start();
@@ -388,60 +398,81 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     // Left side - Form content
                 <div class="w-full lg:w-3/5 flex flex-col gap-8 order-1">
                     // Hotel information card
-                    <div class="p-2 sm:p-6 bg-white rounded-2xl shadow w-full">
-                        <div class="flex items-center gap-3 mb-2">
+                    <div class="p-5 bg-white rounded-2xl shadow w-full border border-gray-100 space-y-6">
+                        <div class="flex items-start gap-4">
                             <img
                                 src=hotel_image
                                 alt=hotel_name
-                                class="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
+                                class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover flex-shrink-0"
                             />
-                            <div class="flex flex-col justify-center min-h-[2.5rem]">
-                                <div class="font-bold text-base sm:text-lg min-h-[1.25rem]">
+                            <div class="flex-1 min-w-0 space-y-1.5">
+                                <div class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight truncate">
                                     {hotel_name}
                                 </div>
-                                <div class="text-gray-500 text-sm min-h-[1rem]">
-                                    {hotel_address}
-                                </div>
+                                {move || {
+                                    let address = hotel_address();
+                                    (!address.trim().is_empty()).then(|| {
+                                        view! {
+                                            <div class="flex items-center gap-2 text-sm text-gray-600 leading-tight">
+                                                <Icon icon=icondata::AiEnvironmentOutlined class="text-blue-500 text-base" />
+                                                <span class="truncate">{address}</span>
+                                            </div>
+                                        }
+                                    })
+                                }}
+                                {move || {
+                                    let (rating, reviews) = hotel_rating_and_reviews();
+                                    (rating.is_some() || reviews.is_some()).then(|| {
+                                        let badge = rating
+                                            .map(|r| format!("{:.1}", r))
+                                            .unwrap_or_else(|| "--".to_string());
+                                        let review_text = match (rating, reviews) {
+                                            (Some(_), Some(c)) => format!("Good ({c})"),
+                                            (Some(_), None) => "Good".to_string(),
+                                            (None, Some(c)) => format!("Reviews ({c})"),
+                                            (None, None) => "".to_string(),
+                                        };
+                                        view! {
+                                            <div class="flex items-center gap-2 text-sm text-gray-700 leading-tight">
+                                                <span class="inline-flex items-center rounded-md bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-semibold">
+                                                    {badge}
+                                                </span>
+                                                <span class="text-gray-800">{review_text}</span>
+                                            </div>
+                                        }
+                                    })
+                                }}
                             </div>
                         </div>
 
-                        <hr class="my-3 border-gray-200" />
+                        <hr class="border-gray-200" />
 
-                        // Date and guest information
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex flex-col items-start">
-                                <span class="text-xs text-gray-400">Check-in</span>
-                                <span class="font-semibold text-base">{checkin_date}</span>
-                            </div>
-                            <div class="flex flex-col items-center">
-                                <span class="bg-gray-100 rounded-full px-3 py-1 text-xs font-semibold text-gray-700 mb-1">
-                                    {formatted_nights}
-                                </span>
-                            </div>
-                            <div class="flex flex-col items-end">
-                                <span class="text-xs text-gray-400">Check-out</span>
-                                <span class="font-semibold text-base">{checkout_date}</span>
-                            </div>
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-gray-500">"Check-in & Check-out"</p>
+                            <p class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
+                                {move || format!("{} - {} ({})", checkin_date(), checkout_date(), formatted_nights())}
+                            </p>
                         </div>
 
-                        <hr class="my-3 border-gray-200" />
+                        <hr class="border-gray-200" />
 
-                        <div class="flex items-center gap-2 mt-2">
-                            <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-lg" />
-                            <span class="text-xs text-gray-400 font-semibold">Guests & Rooms</span>
-                            <span class="font-bold text-sm ml-2 text-right min-w-0 break-words">
-                                {move || format!(
-                                    "{} Room{}{} {} Adult{}{} {} child{}",
-                                    num_rooms(),
-                                    if num_rooms() == 1 { "" } else { "s" },
-                                    if num_rooms() > 0 { "," } else { "" },
-                                    adult_count(),
-                                    if adult_count() == 1 { "" } else { "s" },
-                                    if child_count() > 0 { "," } else { "" },
-                                    child_count(),
-                                    if child_count() == 1 { "" } else { "ren" }
-                                )}
-                            </span>
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-gray-500">"Guests & Room"</p>
+                            <p class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
+                                {move || {
+                                    let rooms = num_rooms();
+                                    let adults = adult_count();
+                                    let children = child_count();
+                                    let mut parts = vec![
+                                        format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
+                                        format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
+                                    ];
+                                    if children > 0 {
+                                        parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
+                                    }
+                                    parts.join(" • ")
+                                }}
+                            </p>
                         </div>
                     </div>
 

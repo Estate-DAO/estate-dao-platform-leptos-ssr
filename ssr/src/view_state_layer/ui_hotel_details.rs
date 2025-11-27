@@ -15,7 +15,7 @@ pub struct HotelDetailsUIState {
     pub loading: RwSignal<bool>,
     pub rates_loading: RwSignal<bool>,
     pub error: RwSignal<Option<String>>,
-    pub selected_rooms: RwSignal<HashMap<String, u32>>, // room_unique_id -> quantity
+    pub selected_rooms: RwSignal<HashMap<String, u32>>, // rate_key -> quantity
     // this is the aggregate price of all the rooms selected
     pub total_price: RwSignal<f64>,
 }
@@ -73,9 +73,9 @@ impl HotelDetailsUIState {
         this.total_price.set(0.0);
     }
 
-    pub fn get_hotel_details() -> Option<DomainHotelDetails> {
+    pub fn get_hotel_details() -> Option<DomainHotelStaticDetails> {
         let this: Self = expect_context();
-        this.hotel_details.get()
+        this.static_details.get()
     }
 
     pub fn is_loading() -> bool {
@@ -193,7 +193,7 @@ impl HotelDetailsUIState {
             .filter_map(|(room_id, quantity)| {
                 available_room_options
                     .iter()
-                    .find(|option| option.room_data.room_unique_id == room_id)
+                    .find(|option| option.room_data.rate_key == room_id)
                     .map(|room_option| (room_option.clone(), quantity))
             })
             .collect()
@@ -255,7 +255,7 @@ impl HotelDetailsUIState {
             Some(rate_list) if !rate_list.is_empty() => {
                 let valid_ids: HashSet<_> = rate_list
                     .iter()
-                    .map(|option| option.room_data.room_unique_id.clone())
+                    .map(|option| option.room_data.rate_key.clone())
                     .collect();
                 let mut changed = false;
                 this.selected_rooms.update(|rooms| {
@@ -270,14 +270,14 @@ impl HotelDetailsUIState {
                         if let Some(prev_rates) = previous_rates {
                             if let Some(prev_option) = prev_rates
                                 .iter()
-                                .find(|opt| opt.room_data.room_unique_id == room_id)
+                                .find(|opt| opt.room_data.rate_key == room_id)
                             {
                                 let mapped_id = prev_option.room_data.mapped_room_id;
                                 if mapped_id != 0 {
                                     if let Some(new_option) =
                                         rate_list.iter().find(|opt| opt.mapped_room_id == mapped_id)
                                     {
-                                        let new_id = new_option.room_data.room_unique_id.clone();
+                                        let new_id = new_option.room_data.rate_key.clone();
                                         to_rekey.push((room_id.clone(), new_id));
                                         continue;
                                     }

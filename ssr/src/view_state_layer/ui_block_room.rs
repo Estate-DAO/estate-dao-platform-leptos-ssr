@@ -77,7 +77,7 @@ pub struct BlockRoomUIState {
 
     // <!-- Room selection data from hotel details -->
     pub selected_rooms: RwSignal<HashMap<String, (u32, DomainRoomData)>>, // room_id -> (quantity, room_data)
-    pub hotel_context: RwSignal<Option<DomainHotelDetails>>,
+    pub hotel_context: RwSignal<Option<DomainHotelStaticDetails>>,
     pub room_selection_summary: RwSignal<Vec<RoomSelectionSummary>>,
 }
 
@@ -430,7 +430,7 @@ impl BlockRoomUIState {
         this.error.get()
     }
 
-    pub fn get_hotel_context() -> Option<DomainHotelDetails> {
+    pub fn get_hotel_context() -> Option<DomainHotelStaticDetails> {
         let this: Self = expect_context();
         this.hotel_context.get()
     }
@@ -494,12 +494,12 @@ impl BlockRoomUIState {
         this.selected_rooms.get_untracked()
     }
 
-    pub fn set_hotel_context(hotel_details: Option<DomainHotelDetails>) {
+    pub fn set_hotel_context(hotel_details: Option<DomainHotelStaticDetails>) {
         let this: Self = expect_context();
         this.hotel_context.set(hotel_details);
     }
 
-    pub fn get_hotel_context_untracked() -> Option<DomainHotelDetails> {
+    pub fn get_hotel_context_untracked() -> Option<DomainHotelStaticDetails> {
         let this: Self = expect_context();
         this.hotel_context.get_untracked()
     }
