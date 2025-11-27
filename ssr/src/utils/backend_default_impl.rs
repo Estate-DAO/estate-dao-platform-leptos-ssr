@@ -222,6 +222,20 @@ impl Booking {
             .hotel_location
             .clone()
     }
+    /// Hotel code for deep links
+    pub fn get_hotel_code(&self) -> String {
+        self.user_selected_hotel_room_details
+            .hotel_details
+            .hotel_code
+            .clone()
+    }
+    /// Primary hotel image for emails (may be empty)
+    pub fn get_hotel_image(&self) -> String {
+        self.user_selected_hotel_room_details
+            .hotel_details
+            .hotel_image
+            .clone()
+    }
     /// Booking reference/app id
     pub fn get_booking_ref(&self) -> String {
         self.booking_id.app_reference.clone()

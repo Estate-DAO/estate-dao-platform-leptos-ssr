@@ -640,7 +640,10 @@ impl ClientSideApiClient {
         &self,
         hotel_id: &str,
     ) -> Result<crate::domain::DomainHotelDetails, String> {
-        let url = format!("server_fn_api/get_hotel_details_api?hotel_id={}", hotel_id);
+        let url = format!(
+            "server_fn_api/get_hotel_static_details_api?hotel_id={}",
+            hotel_id
+        );
 
         #[cfg(not(feature = "ssr"))]
         {
