@@ -275,10 +275,14 @@ Team Nofeebooking"
                 let view_booking_url = format!("https://nofeebooking.com/account?page=bookings");
                 let hotel_details_url =
                     format!("https://nofeebooking.com/hotel-details?hotelCode={hotel_code}");
-                let hero_image = if hotel_image.trim().is_empty() {
-                    "https://nofeebooking.com/img/home.png"
-                } else {
-                    &hotel_image
+                let hero_image = {
+                    let trimmed = hotel_image.trim();
+                    let is_web_url = trimmed.starts_with("http://") || trimmed.starts_with("https://");
+                    if trimmed.is_empty() || !is_web_url {
+                        "https://nofeebooking.com/img/home.png".to_string()
+                    } else {
+                        trimmed.to_string()
+                    }
                 };
                 let html_body = format!(
                     r#"<!doctype html>
