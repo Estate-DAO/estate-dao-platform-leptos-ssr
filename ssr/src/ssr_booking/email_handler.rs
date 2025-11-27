@@ -313,7 +313,7 @@ Team Nofeebooking"
                         <div><strong>Booking ID:</strong> {booking_id}</div>
                         <div><strong>Stay:</strong> {check_in_date} to {check_out_date}</div>
                         <div><strong>Guests:</strong> {number_of_adults} Adults, {number_of_children} Children</div>
-                        <div><strong>Amount Paid:</strong> {amount_paid}</div>
+                        <div><strong>Amount Paid:</strong>$ {amount_paid}</div>
                       </div>
                     </td>
                   </tr>
