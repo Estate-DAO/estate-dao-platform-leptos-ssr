@@ -358,161 +358,127 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let formatted_nights = move || ui_search_ctx.date_range.get().formatted_nights();
 
     view! {
-        <section class="relative min-h-screen bg-gray-50">
+        <section class="relative min-h-screen bg-[#f7f7f7]">
             <Navbar />
 
-            // Prebook API resource following payment_handler.rs pattern
-            // <Suspense>
-            //     {move || prebook_resource.get()}
-            // </Suspense>
-
-            <div class="max-w-5xl mx-auto px-2 sm:px-6">
-                <div class="flex items-center py-4 md:py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-8">
+                <div class="flex items-center py-3 md:py-5">
                     <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
                         <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
                     </span>
-                    <h1 class="ml-2 sm:ml-4 text-2xl sm:text-3xl font-bold">"You're just one step away!"</h1>
+                    <h1 class="ml-2 sm:ml-4 text-xl sm:text-2xl font-semibold text-gray-800">"You're just one step away!"</h1>
                 </div>
-            </div>
 
-            // Show form immediately on page load
-            // <Show
-            //     when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
-            //     fallback=move || view! {
-            //         <div class="flex justify-center items-center min-h-[calc(100vh-10rem)]">
-            //             <div class="flex flex-col items-center space-y-4">
-            //                 <SpinnerGray />
-            //                 <div class="text-center">
-            //                     <div class="font-semibold text-lg text-gray-700">
-            //                         "Checking Room Availability"
-            //                     </div>
-            //                     <div class="text-sm text-gray-600">
-            //                         "Please wait while we verify your room selection..."
-            //                     </div>
-            //                 </div>
-            //             </div>
-            //         </div>
-            //     }
-            // >
-                <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-center p-2 sm:p-6 max-w-5xl mx-auto gap-4 md:gap-6">
-                    // Left side - Form content
-                <div class="w-full lg:w-3/5 flex flex-col gap-8 order-1">
-                    // Hotel information card
-                    <div class="p-5 bg-white rounded-2xl shadow w-full border border-gray-100 space-y-6">
-                        <div class="flex items-start gap-4">
-                            <img
-                                src=hotel_image
-                                alt=hotel_name
-                                class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover flex-shrink-0"
-                            />
-                            <div class="flex-1 min-w-0 space-y-1.5">
-                                <div class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight truncate">
-                                    {hotel_name}
+                <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-between pb-14 gap-6 sm:gap-8">
+                    <div class="w-full lg:w-3/5 flex flex-col gap-5">
+                        // Hotel information card
+                        <div class="p-6 sm:p-7 bg-white rounded-xl border border-gray-200 w-full space-y-5">
+                            <div class="flex items-start gap-4 sm:gap-5">
+                                <img
+                                    src=hotel_image
+                                    alt=hotel_name
+                                    class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover flex-shrink-0 border border-gray-200"
+                                />
+                                <div class="flex-1 min-w-0 space-y-2">
+                                    <div class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight truncate">
+                                        {hotel_name}
+                                    </div>
+                                    {move || {
+                                        let address = hotel_address();
+                                        (!address.trim().is_empty()).then(|| {
+                                            view! {
+                                                <div class="flex items-center gap-2 text-sm text-gray-600 leading-tight">
+                                                    <Icon icon=icondata::AiEnvironmentOutlined class="text-blue-500 text-base" />
+                                                    <span class="truncate">{address}</span>
+                                                </div>
+                                            }
+                                        })
+                                    }}
+                                    {move || {
+                                        let (rating, reviews) = hotel_rating_and_reviews();
+                                        (rating.is_some() || reviews.is_some()).then(|| {
+                                            let badge = rating
+                                                .map(|r| format!("{:.1}", r))
+                                                .unwrap_or_else(|| "--".to_string());
+                                            let review_text = match (rating, reviews) {
+                                                (Some(_), Some(c)) => format!("Good ({c})"),
+                                                (Some(_), None) => "Good".to_string(),
+                                                (None, Some(c)) => format!("Reviews ({c})"),
+                                                (None, None) => "".to_string(),
+                                            };
+                                            view! {
+                                                <div class="flex items-center gap-3 text-sm text-gray-700 leading-tight">
+                                                    <span class="inline-flex items-center rounded-md bg-amber-200 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+                                                        {badge}
+                                                    </span>
+                                                    <span class="text-gray-700">{review_text}</span>
+                                                </div>
+                                            }
+                                        })
+                                    }}
                                 </div>
-                                {move || {
-                                    let address = hotel_address();
-                                    (!address.trim().is_empty()).then(|| {
-                                        view! {
-                                            <div class="flex items-center gap-2 text-sm text-gray-600 leading-tight">
-                                                <Icon icon=icondata::AiEnvironmentOutlined class="text-blue-500 text-base" />
-                                                <span class="truncate">{address}</span>
-                                            </div>
+                            </div>
+
+                            <Divider class="border-gray-200".into() />
+
+                            <div class="space-y-1.5">
+                                <p class="text-sm text-gray-500">"Check-in & Check-out"</p>
+                                <p class="text-lg font-semibold text-gray-900 leading-tight">
+                                    {move || format!("{} - {} ( {} )", checkin_date(), checkout_date(), formatted_nights())}
+                                </p>
+                            </div>
+
+                            <Divider class="border-gray-200".into() />
+
+                            <div class="space-y-1.5">
+                                <p class="text-sm text-gray-500">"Guests & Room"</p>
+                                <p class="text-lg font-semibold text-gray-900 leading-tight">
+                                    {move || {
+                                        let rooms = num_rooms();
+                                        let adults = adult_count();
+                                        let children = child_count();
+                                        let mut parts = vec![
+                                            format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
+                                            format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
+                                        ];
+                                        if children > 0 {
+                                            parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
                                         }
-                                    })
-                                }}
-                                {move || {
-                                    let (rating, reviews) = hotel_rating_and_reviews();
-                                    (rating.is_some() || reviews.is_some()).then(|| {
-                                        let badge = rating
-                                            .map(|r| format!("{:.1}", r))
-                                            .unwrap_or_else(|| "--".to_string());
-                                        let review_text = match (rating, reviews) {
-                                            (Some(_), Some(c)) => format!("Good ({c})"),
-                                            (Some(_), None) => "Good".to_string(),
-                                            (None, Some(c)) => format!("Reviews ({c})"),
-                                            (None, None) => "".to_string(),
-                                        };
-                                        view! {
-                                            <div class="flex items-center gap-2 text-sm text-gray-700 leading-tight">
-                                                <span class="inline-flex items-center rounded-md bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-semibold">
-                                                    {badge}
-                                                </span>
-                                                <span class="text-gray-800">{review_text}</span>
-                                            </div>
-                                        }
-                                    })
-                                }}
+                                        parts.join(" • ")
+                                    }}
+                                </p>
                             </div>
                         </div>
 
-                        <hr class="border-gray-200" />
+                        // Login prompt for non-logged users or Guest form for logged users
+                        <AuthGatedGuestForm />
 
-                        <div class="space-y-1">
-                            <p class="text-sm font-semibold text-gray-500">"Check-in & Check-out"</p>
-                            <p class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
-                                {move || format!("{} - {} ({})", checkin_date(), checkout_date(), formatted_nights())}
-                            </p>
-                        </div>
+                        // Promo code entry (temporarily disabled)
+                        // <PromoCodeSection />
 
-                        <hr class="border-gray-200" />
-
-                        <div class="space-y-1">
-                            <p class="text-sm font-semibold text-gray-500">"Guests & Room"</p>
-                            <p class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
-                                {move || {
-                                    let rooms = num_rooms();
-                                    let adults = adult_count();
-                                    let children = child_count();
-                                    let mut parts = vec![
-                                        format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
-                                        format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
-                                    ];
-                                    if children > 0 {
-                                        parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
-                                    }
-                                    parts.join(" • ")
-                                }}
-                            </p>
-                        </div>
+                        // Mobile price card
+                        <EnhancedPricingDisplay mobile=true booking_id_signal=booking_id_signal />
                     </div>
 
-                    // <!-- Selected rooms summary -->
-                    <SelectedRoomsSummary />
-
-                    // Mobile pricing summary
-                    <EnhancedPricingDisplay mobile=true />
-
-                    // Login prompt for non-logged users or Guest form for logged users
-                    <AuthGatedGuestForm />
-
-                    // Terms and conditions
-                    <TermsCheckbox />
-
-                    // Mobile confirm button
-                    <ConfirmButton mobile=true booking_id_signal=booking_id_signal />
-                </div>
-
-                // Right side - Desktop pricing summary
-                <div class="hidden lg:flex w-full lg:w-2/5 mb-8 lg:mb-0 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex-col items-stretch order-2 lg:sticky lg:top-28">
-                    <EnhancedPricingDisplay mobile=false />
-
-                    // Desktop confirm button
-                    <ConfirmButton mobile=false booking_id_signal=booking_id_signal />
-                </div>
+                    // Right side pricing
+                    <div class="w-full lg:w-2/5 flex flex-col gap-4 lg:sticky lg:top-24">
+                        <EnhancedPricingDisplay mobile=false booking_id_signal=booking_id_signal />
+                    </div>
                 </div>
 
                 // Payment Modal
                 <PaymentModal />
-            // </Show>
+            </div>
         </section>
     }
 }
 
 // <!-- Phase 2.2: Enhanced Pricing Display Component -->
 #[component]
-pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
-    let block_room_state: BlockRoomUIState = expect_context();
-
+pub fn EnhancedPricingDisplay(
+    mobile: bool,
+    #[prop(into)] booking_id_signal: Signal<Option<BookingId>>,
+) -> impl IntoView {
     let room_summary = move || BlockRoomUIState::get_room_selection_summary();
     let num_nights = move || BlockRoomUIState::get_num_nights();
 
@@ -534,38 +500,36 @@ pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
     };
 
     let container_class = if mobile {
-        "lg:hidden mb-6 rounded-2xl bg-white p-4 sm:p-8 shadow-xl flex flex-col items-stretch"
+        "lg:hidden w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-md flex flex-col items-stretch space-y-4"
     } else {
-        "mb-4"
+        "hidden lg:flex w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-md flex-col items-stretch space-y-4"
     };
+
+    let format_currency = |val: f64| format!("₹{:.0}", val);
 
     view! {
         <div class=container_class>
-            <h2 class="mb-4 text-2xl font-bold flex items-end">
-                <span class="text-3xl font-bold">{move || format!("${:.2}", rooms_total_per_night())}</span>
-                <span class="ml-1 text-base font-normal text-gray-600">/night</span>
-            </h2>
-
-            <Divider class="my-4".into() />
+            <div class="text-xs text-gray-500">"Price Breakup"</div>
 
             // <!-- Per-room breakdown -->
-            <div class="price-breakdown space-y-3 mt-4">
+            <div class="price-breakdown space-y-3">
                 <Show when=move || !room_summary().is_empty()>
                     {move || room_summary().into_iter().map(|room| {
                         let display_name = room.display_name();
                         let price_per_night = room.price_per_night;
                         let quantity = room.quantity;
+                        let line_total = price_per_night * quantity as f64 * num_nights() as f64;
                         view! {
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-700 flex-1 min-w-0">
-                                    <span class="truncate break-words whitespace-normal">{display_name}</span>
-                                    <span class="text-xs text-gray-500 ml-1">
-                                        "× " {quantity} " × " {num_nights()} " nights"
-                                    </span>
-                                </span>
-                                <span class="font-semibold ml-2">
-                                    ${format!("{:.2}", price_per_night * quantity as f64 * num_nights() as f64)}
-                                </span>
+                            <div class="flex justify-between items-start text-sm">
+                                <div class="flex-1 min-w-0 space-y-0.5">
+                                    <div class="font-medium text-gray-800 break-words">{display_name} " × " {num_nights()} " Nights"</div>
+                                    <div class="text-xs text-gray-500">
+                                        "(" {format_currency(price_per_night)} " × " {quantity} ")"
+                                    </div>
+                                </div>
+                                <div class="text-sm font-semibold text-gray-900 ml-3">
+                                    {format_currency(line_total)}
+                                </div>
                             </div>
                         }
                     }).collect::<Vec<_>>()}
@@ -575,27 +539,32 @@ pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
                 <Show when=move || room_summary().is_empty()>
                     <div class="flex justify-between items-center text-base">
                         <span class="text-gray-700">
-                            {move || format!("${:.2} x {} nights", rooms_total_per_night(), num_nights())}
+                            {move || format!("₹{:.0} x {} nights", rooms_total_per_night(), num_nights())}
                         </span>
                         <span class="font-semibold">
-                            {move || format!("${:.2}", calculated_total())}
+                            {move || format_currency(calculated_total())}
                         </span>
                     </div>
                 </Show>
 
                 // <!-- Taxes and fees -->
-                <div class="flex justify-between items-center text-base">
-                    <span class="text-gray-700">Taxes and fees</span>
-                    <span class="font-semibold">$0.00</span>
+                <div class="flex justify-between items-center text-sm pt-1 border-t border-dashed border-gray-200">
+                    <span class="text-gray-600">"Platform & Markup Fees"</span>
+                    <span class="font-semibold text-gray-900">"₹0"</span>
                 </div>
             </div>
 
-            <Divider class="my-4".into() />
+            <Divider class="my-2".into() />
 
             // <!-- Total -->
-            <div class="flex justify-between items-center font-bold text-lg mb-2">
+            <div class="flex justify-between items-center font-bold text-lg">
                 <span>Total</span>
-                <span class="text-2xl">{move || format!("${:.2}", calculated_total())}</span>
+                <span class="text-2xl">{move || format_currency(calculated_total())}</span>
+            </div>
+
+            <div class="pt-2 space-y-3">
+                <TermsCheckbox />
+                <ConfirmButton mobile=mobile booking_id_signal=booking_id_signal />
             </div>
         </div>
     }
@@ -604,13 +573,10 @@ pub fn EnhancedPricingDisplay(mobile: bool) -> impl IntoView {
 // <!-- Phase 2.1: Room Selection Summary Component -->
 #[component]
 pub fn SelectedRoomsSummary() -> impl IntoView {
-    let block_room_state: BlockRoomUIState = expect_context();
-
     let room_summary = move || BlockRoomUIState::get_room_selection_summary();
-    let hotel_context = move || BlockRoomUIState::get_hotel_context();
 
     view! {
-        <div class="bg-white rounded-2xl shadow p-4 sm:p-6 mb-6">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-5 sm:p-6">
             <h3 class="text-lg sm:text-xl font-bold mb-4">Selected Rooms</h3>
 
             <Show
@@ -650,7 +616,7 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
     let quantity = room.quantity;
     let price_per_night = room.price_per_night;
     view! {
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-lg p-3 sm:p-4 bg-gray-50">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-2xl p-3 sm:p-4 bg-gray-50">
             // <!-- Room details -->
             <div class="flex-1 min-w-0 mb-2 sm:mb-0">
                 <div class="font-semibold text-base min-w-0 break-words whitespace-normal truncate">
@@ -731,7 +697,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
 #[component]
 pub fn LoginPrompt() -> impl IntoView {
     view! {
-        <div class="bg-white rounded-2xl shadow p-6 text-center">
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-6 text-center">
             <div class="mb-4">
                 <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-4xl mx-auto mb-3" />
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">
@@ -761,7 +727,7 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let children_ages = ui_search_ctx.guests.children_ages.clone();
 
     view! {
-        <div class="guest-form mt-4 space-y-6">
+        <div class="guest-form mt-4 space-y-5 sm:space-y-6">
             {move || {
                 let rooms = ui_search_ctx.guests.rooms.get();
                 let adults = BlockRoomUIState::get_adults().len() as u32;
@@ -855,100 +821,180 @@ pub fn AdultFormSection(
             .unwrap_or_default()
     });
 
-    view! {
-        <div class="person-details mb-2">
-            <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
-                {if index == 0 {
-                    String::from("Primary Adult")
-                } else {
-                    format!("Adult {}", index + 1)
-                }}
-            </h3>
-            <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                // <!-- Phase 4.3: Enhanced form validation with real-time feedback -->
-                <input
-                    type="text"
-                    placeholder="First Name *"
-                    class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
-                    required=true
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev);
-                        update_adult("first_name", value.clone());
+    let email_valid = Signal::derive(move || {
+        let email = current_email.get();
+        !email.trim().is_empty() && BlockRoomUIState::is_valid_email(&email)
+    });
 
-                        // Real-time validation feedback
-                        if value.trim().is_empty() {
-                            // Could set individual field validation error here
+    let room_label = Signal::derive(move || {
+        let mut labels = vec![];
+        for room in BlockRoomUIState::get_room_selection_summary() {
+            for _ in 0..room.quantity {
+                labels.push(room.display_name());
+            }
+        }
+        labels
+            .get(index as usize)
+            .cloned()
+            .unwrap_or_else(|| format!("Room {}", index + 1))
+    });
+
+    let (country_code, set_country_code) = create_signal("+91".to_string());
+    let (phone_number, set_phone_number) = create_signal(String::new());
+
+    let combine_phone = |code: &str, number: &str| {
+        if number.trim().is_empty() {
+            String::new()
+        } else {
+            format!("{code} {number}")
+        }
+    };
+
+    view! {
+        <div class="person-details bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-7 space-y-5">
+            <div class="space-y-1">
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
+                    {move || {
+                        let descriptor = if index == 0 {
+                            "Primary Guest Detail"
+                        } else {
+                            "Guest Details"
+                        };
+                        format!("{}, {}", room_label.get(), descriptor)
+                    }}
+                </h3>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-800">
+                        "First Name"
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Enter Name"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        required=true
+                        on:input=move |ev| {
+                            let value = event_target_value(&ev);
+                            update_adult("first_name", value.clone());
+
+                            if value.trim().is_empty() {
+                                // spot reserved for inline validation messaging
+                            }
                         }
-                    }
-                    on:blur=move |_| {
-                        // Validate on blur for better UX
-                        BlockRoomUIState::validate_form();
-                    }
-                />
-                <input
-                    type="text"
-                    placeholder="Last Name"
-                    class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px]"
-                    on:input=move |ev| {
-                        update_adult("last_name", event_target_value(&ev));
-                    }
-                />
+                        on:blur=move |_| {
+                            BlockRoomUIState::validate_form();
+                        }
+                    />
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-800">
+                        "Last Name"
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Enter Surname"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        required=true
+                        on:input=move |ev| {
+                            update_adult("last_name", event_target_value(&ev));
+                        }
+                    />
+                </div>
             </div>
 
             // Primary adult gets email and phone fields
             {move || {
                 if index == 0 {
                     view! {
-                        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-2">
-                            // <!-- Phase 4.3: Enhanced email validation -->
-                            <input
-                                type="email"
-                                placeholder="Email *"
-                                class=move || {
-                                    if user_email.get().is_some() {
-                                        // User is logged in, make field readonly
-                                        "w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] bg-gray-50 cursor-not-allowed"
-                                    } else {
-                                        // User is not logged in, make field editable
-                                        "w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
-                                    }
-                                }
-                                required=true
-                                value=move || current_email.get()
-                                readonly=move || user_email.get().is_some()
-                                disabled=move || user_email.get().is_some()
-                                on:input=move |ev| {
-                                    // Only allow input if user is not logged in
-                                    if user_email.get().is_none() {
-                                        let value = event_target_value(&ev);
-                                        update_adult("email", value.clone());
-                                    }
-                                }
-                                on:blur=move |_| {
-                                    if user_email.get().is_none() {
-                                        BlockRoomUIState::validate_form();
-                                    }
-                                }
-                            />
-                            // <!-- Phase 4.3: Enhanced phone validation -->
-                            <input
-                                type="tel"
-                                placeholder="Phone *"
-                                class="w-full sm:w-1/2 rounded-md border border-gray-300 p-3 min-h-[44px] focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
-                                required=true
-                                on:input=move |ev| {
-                                    let value = event_target_value(&ev);
-                                    update_adult("phone", value.clone());
+                        <div class="grid grid-cols-1 gap-4 sm:gap-5">
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-gray-800">
+                                    "Email ID"
+                                    <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        type="email"
+                                        placeholder="Enter Email"
+                                        class=move || {
+                                            let base = "w-full rounded-xl border border-gray-200 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 pr-11";
+                                            if user_email.get().is_some() {
+                                                format!("{base} bg-gray-100 cursor-not-allowed")
+                                            } else {
+                                                format!("{base} bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors")
+                                            }
+                                        }
+                                        required=true
+                                        value=move || current_email.get()
+                                        readonly=move || user_email.get().is_some()
+                                        disabled=move || user_email.get().is_some()
+                                        on:input=move |ev| {
+                                            if user_email.get().is_none() {
+                                                let value = event_target_value(&ev);
+                                                update_adult("email", value.clone());
+                                            }
+                                        }
+                                        on:blur=move |_| {
+                                            if user_email.get().is_none() {
+                                                BlockRoomUIState::validate_form();
+                                            }
+                                        }
+                                    />
+                                    <Show when=move || email_valid.get()>
+                                        <span class="absolute inset-y-0 right-3 flex items-center text-green-500">
+                                            <Icon icon=icondata::AiCheckCircleOutlined class="text-xl" />
+                                        </span>
+                                    </Show>
+                                </div>
+                            </div>
 
-                                    // Real-time phone validation feedback
-                                    if !value.trim().is_empty() && !BlockRoomUIState::is_valid_phone(&value) {
-                                        // Phone format invalid - could show validation message
-                                    }
-                                }
-                                on:blur=move |_| {
-                                    BlockRoomUIState::validate_form();
-                                }
-                            />
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-gray-800">
+                                    "Phone Number"
+                                    <span class="text-red-500">*</span>
+                                </label>
+                                <div class="flex flex-col sm:flex-row gap-3">
+                                    <select
+                                        class="sm:w-28 w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                        value=move || country_code.get()
+                                        on:input=move |ev| {
+                                            let value = event_target_value(&ev);
+                                            let combined = combine_phone(&value, &phone_number.get_untracked());
+                                            set_country_code.set(value.clone());
+                                            update_adult("phone", combined);
+                                        }
+                                    >
+                                        <option value="+91">"India +91"</option>
+                                        <option value="+1">"USA +1"</option>
+                                        <option value="+44">"UK +44"</option>
+                                        <option value="+61">"AU +61"</option>
+                                    </select>
+                                    <input
+                                        type="tel"
+                                        placeholder="Enter Number"
+                                        class="flex-1 rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                        required=true
+                                        on:input=move |ev| {
+                                            let value = event_target_value(&ev);
+                                            set_phone_number.set(value.clone());
+                                            let combined =
+                                                combine_phone(&country_code.get_untracked(), &value);
+                                            update_adult("phone", combined);
+
+                                            if !value.trim().is_empty() && !BlockRoomUIState::is_valid_phone(&value) {
+                                                // reserved for inline validation messaging
+                                            }
+                                        }
+                                        on:blur=move |_| {
+                                            BlockRoomUIState::validate_form();
+                                        }
+                                    />
+                                </div>
+                            </div>
                         </div>
                     }.into_view()
                 } else {
@@ -971,49 +1017,66 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
     let age_value = ui_search_ctx.guests.children_ages.get_value_at(index);
 
     view! {
-        <div class="person-details mb-2">
-            <h3 class="font-semibold text-gray-700 text-sm sm:text-base mb-2">
-                {format!("Child {}", index + 1)}
-            </h3>
-            <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                <input
-                    type="text"
-                    placeholder="First Name *"
-                    class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
-                    required=true
-                    on:input=move |ev| {
-                        update_child("first_name", event_target_value(&ev));
-                    }
-                />
-                <input
-                    type="text"
-                    placeholder="Last Name"
-                    class="w-full sm:w-2/5 rounded-md border border-gray-300 p-3"
-                    on:input=move |ev| {
-                        update_child("last_name", event_target_value(&ev));
-                    }
-                />
-                <select
-                    class="w-full sm:w-1/5 rounded-md border border-gray-300 bg-white p-3"
-                    required=true
-                    on:input=move |ev| {
-                        update_child("age", event_target_value(&ev));
-                    }
-                >
-                    <option disabled selected>{age_value}</option>
-                    {(1..18)
-                        .map(|age| {
-                            let selected = if age == age_value {
-                                "selected"
-                            } else {
-                                ""
-                            };
-                            view! {
-                                <option value=age.to_string() {selected}>{age}</option>
-                            }
-                        })
-                        .collect::<Vec<_>>()}
-                </select>
+        <div class="person-details bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-7 space-y-5">
+            <div class="space-y-1">
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
+                    {format!("Child {}", index + 1)}
+                </h3>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-800">
+                        "First Name"
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Enter Name"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        required=true
+                        on:input=move |ev| {
+                            update_child("first_name", event_target_value(&ev));
+                        }
+                    />
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-800">"Last Name"</label>
+                    <input
+                        type="text"
+                        placeholder="Enter Surname"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        on:input=move |ev| {
+                            update_child("last_name", event_target_value(&ev));
+                        }
+                    />
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-800">
+                        "Age"
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        class="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        required=true
+                        on:input=move |ev| {
+                            update_child("age", event_target_value(&ev));
+                        }
+                    >
+                        <option disabled selected>{age_value}</option>
+                        {(1..18)
+                            .map(|age| {
+                                let selected = if age == age_value {
+                                    "selected"
+                                } else {
+                                    ""
+                                };
+                                view! {
+                                    <option value=age.to_string() {selected}>{age}</option>
+                                }
+                            })
+                            .collect::<Vec<_>>()}
+                    </select>
+                </div>
             </div>
         </div>
     }
@@ -1022,19 +1085,63 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
 #[component]
 pub fn TermsCheckbox() -> impl IntoView {
     view! {
-        <div class="mt-2 flex items-start">
+        <div class="flex items-start gap-2 text-sm text-gray-700">
             <input
                 type="checkbox"
                 id="agree"
-                class="mr-2 mt-1"
+                class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 on:change=move |ev| {
                     BlockRoomUIState::set_terms_accepted(event_target_checked(&ev));
                     BlockRoomUIState::validate_form();
                 }
             />
-            <label for="agree" class="text-xs sm:text-sm text-gray-600">
-                "Property once booked cannot be cancelled. Confirm the details before making payment."
+            <label for="agree" class="leading-relaxed">
+                "By continuing you accept our Cancellation Policy and Terms."
             </label>
+        </div>
+    }
+}
+
+#[component]
+pub fn PromoCodeSection() -> impl IntoView {
+    let (promo_code, set_promo_code) = create_signal(String::new());
+
+    let apply_code = move |_| {
+        let code = promo_code.get_untracked();
+        if !code.trim().is_empty() {
+            log!("Promo code apply clicked: {}", code);
+        }
+    };
+
+    let apply_button_class = move || {
+        if promo_code.get().trim().is_empty() {
+            "w-full sm:w-28 rounded-xl bg-blue-200 text-white font-semibold px-4 py-3 text-sm cursor-not-allowed"
+        } else {
+            "w-full sm:w-28 rounded-xl bg-blue-400 hover:bg-blue-500 text-white font-semibold px-4 py-3 text-sm transition-colors"
+        }
+    };
+
+    view! {
+        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-5 sm:p-6 space-y-3">
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900">"Redeem Promo Code"</h3>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    placeholder="Enter Code"
+                    class="flex-1 rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                    value=move || promo_code.get()
+                    on:input=move |ev| {
+                        set_promo_code.set(event_target_value(&ev));
+                    }
+                />
+                <button
+                    class=apply_button_class
+                    disabled=move || promo_code.get().trim().is_empty()
+                    on:click=apply_code
+                >
+                    "Apply"
+                </button>
+            </div>
         </div>
     }
 }
@@ -1167,17 +1274,14 @@ pub fn ConfirmButton(
     };
 
     // <!-- Phase 4.3: Enhanced button styling with validation feedback -->
-    let button_class = if mobile {
-        "mt-6 w-full rounded-full py-3 text-white text-base sm:text-lg font-bold shadow-lg block lg:hidden min-h-[44px] transition-all duration-200"
-    } else {
-        "mt-6 w-full rounded-full py-3 text-white text-base sm:text-lg font-bold shadow-lg hidden lg:block min-h-[44px] transition-all duration-200"
-    };
+    let button_class =
+        "mt-6 w-full rounded-2xl py-3.5 text-white text-base sm:text-lg font-semibold shadow-md min-h-[48px] transition-all duration-200";
 
     let button_style = move || {
         if is_form_valid() {
-            "bg-blue-600 hover:bg-blue-700 hover:shadow-xl transform hover:scale-105"
+            "bg-blue-500 hover:bg-blue-600 hover:shadow-lg"
         } else {
-            "bg-gray-300 cursor-not-allowed"
+            "bg-blue-200 cursor-not-allowed"
         }
     };
 
