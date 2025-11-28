@@ -329,6 +329,13 @@ impl Booking {
     pub fn get_number_of_children(&self) -> usize {
         self.guests.children.len()
     }
+    /// Number of rooms requested/booked
+    pub fn get_number_of_rooms(&self) -> usize {
+        self.user_selected_hotel_room_details
+            .room_details
+            .len()
+            .max(1)
+    }
     /// Amount paid by user
     pub fn get_amount_paid(&self) -> f64 {
         self.payment_details.payment_api_response.actually_paid
