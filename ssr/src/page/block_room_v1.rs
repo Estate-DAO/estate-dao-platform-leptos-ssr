@@ -505,7 +505,7 @@ pub fn EnhancedPricingDisplay(
         "hidden lg:flex w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-md flex-col items-stretch space-y-4"
     };
 
-    let format_currency = |val: f64| format!("₹{:.0}", val);
+    let format_currency = |val: f64| format!("${:.2}", val);
 
     view! {
         <div class=container_class>
@@ -539,7 +539,7 @@ pub fn EnhancedPricingDisplay(
                 <Show when=move || room_summary().is_empty()>
                     <div class="flex justify-between items-center text-base">
                         <span class="text-gray-700">
-                            {move || format!("₹{:.0} x {} nights", rooms_total_per_night(), num_nights())}
+                            {move || format!("${:.2} x {} nights", rooms_total_per_night(), num_nights())}
                         </span>
                         <span class="font-semibold">
                             {move || format_currency(calculated_total())}
@@ -550,7 +550,7 @@ pub fn EnhancedPricingDisplay(
                 // <!-- Taxes and fees -->
                 <div class="flex justify-between items-center text-sm pt-1 border-t border-dashed border-gray-200">
                     <span class="text-gray-600">"Platform & Markup Fees"</span>
-                    <span class="font-semibold text-gray-900">"₹0"</span>
+                    <span class="font-semibold text-gray-900">"$0.00"</span>
                 </div>
             </div>
 
