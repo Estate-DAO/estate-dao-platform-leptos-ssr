@@ -108,6 +108,115 @@ impl EmailClient {
 
     // #[tracing::instrument(skip(self, ssb_event))]
     // use tracing to add more logs to this function
+    //     pub async fn send_email_gmail(&self, ssb_event: &ServerSideBookingEvent) -> Result<(), String> {
+    //         // Check if the access token is expired
+    //         if self.is_token_expired().map_err(|f| f.to_string())? {
+    //             self.refresh_token().await.map_err(|e| e.to_string())?;
+    //         }
+
+    //         let mail_state = self.get_config().ok();
+
+    //         // get booking details from backend
+    //         let admin_canister = AdminCanisters::from_env();
+    //         let backend = admin_canister.backend_canister().await;
+    //         let booking_id = BookingId::from_order_id(&ssb_event.order_id).ok_or(format!(
+    //             "Failed to parse booking id: {}",
+    //             ssb_event.order_id
+    //         ))?;
+    //         let booking = backend
+    //             .get_booking_by_id(booking_id.into())
+    //             .await
+    //             .map_err(|e| format!("Failed to get booking: Got: Err({})", e))?
+    //             .ok_or("Booking not found")?;
+
+    //         let username = &booking.get_user_name();
+    //         let to = &booking.get_user_email();
+    //         // todo change this later
+    //         let cc = "abhishek@estatedao.org";
+    //         let booking_id = booking.get_booking_ref();
+    //         let check_in_date = booking.get_check_in_date();
+    //         let check_out_date = booking.get_check_out_date();
+    //         let hotel_name = booking.get_hotel_name();
+    //         let hotel_location = booking.get_hotel_location();
+    //         let number_of_adults = booking.get_number_of_adults();
+    //         let number_of_children = booking.get_number_of_children();
+    //         let amount_paid = booking.get_amount_paid();
+
+    //         match mail_state {
+    //             Some(state) => {
+    //                 let access_token = state.access_token;
+    //                 let subject = "Booking Confirmed with Nofeebooking";
+
+    //                 // are you sure that this created a valid good string in email body? in my email, I see some space on the left with this. can you fix that?
+    //                 let body = format!(
+    //                     r#"
+    // Hey {username},
+
+    // The adventure begins! Your hotel booking is confirmed and we'’re just as excited as you are! 👻🎒
+
+    // Here are your booking details:
+
+    // 🏨 Hotel: {hotel_name}
+    // 📍 Location: {hotel_location}
+    // 🆔 Booking ID / App Reference: {booking_id}
+    // 📅 Stay Dates: {check_in_date} to {check_out_date}
+    // 👥 Guests: {number_of_adults} Adults, {number_of_children} Children
+    // 💳 Amount Paid: {amount_paid}
+
+    // ⚡ Note: This booking is non-cancellable!! So pack those bags and bring your best vacay mode vibes! 😎
+
+    // We can't wait for you to check in, chill out, and make awesome memories. 🌴✨
+    // If you need anything, we’re just an email away.
+
+    // Sending best wanderlust wishes,
+    // Team Nofeebooking 🥳
+    //                 "#,
+    //                 );
+
+    //                 tracing::debug!("Email body: {}", body);
+
+    //                 let url = "https://www.googleapis.com/gmail/v1/users/me/messages/send";
+
+    //                 // Create the email message
+    //                 let email_raw = format!(
+    //                     "To: {}\r\nCc: {}\r\nSubject: {}\r\n\r\n{}",
+    //                     to, cc, subject, body
+    //                 );
+    //                 let encoded_message = general_purpose::STANDARD.encode(email_raw);
+    //                 let payload = serde_json::json!({
+    //                     "raw": encoded_message
+    //                 });
+
+    //                 let client = Client::new();
+    //                 let mut headers = HeaderMap::new();
+    //                 headers.insert(
+    //                     "Authorization",
+    //                     HeaderValue::from_str(&format!("Bearer {}", access_token.unwrap())).unwrap(),
+    //                 );
+    //                 headers.insert(
+    //                     "Content-Type",
+    //                     HeaderValue::from_str("application/json").unwrap(),
+    //                 );
+
+    //                 let response = client
+    //                     .post(url)
+    //                     .body(serde_json::to_vec(&payload).unwrap())
+    //                     .headers(headers)
+    //                     .send()
+    //                     .await;
+
+    //                 if response.as_ref().is_ok() && response.as_ref().unwrap().status().is_success() {
+    //                     Ok(())
+    //                 } else {
+    //                     let error_text = response.unwrap().text().await.map_err(|f| f.to_string())?;
+    //                     error!("Failed to send email: {:?}", error_text);
+    //                     Err(format!("Failed to send email: {:?}", error_text))
+    //                 }
+    //             }
+    //             None => Err("Failed to get mail config".to_string()),
+    //         }
+    //     }
+
     pub async fn send_email_gmail(&self, ssb_event: &ServerSideBookingEvent) -> Result<(), String> {
         // Check if the access token is expired
         if self.is_token_expired().map_err(|f| f.to_string())? {
@@ -138,6 +247,8 @@ impl EmailClient {
         let check_out_date = booking.get_check_out_date();
         let hotel_name = booking.get_hotel_name();
         let hotel_location = booking.get_hotel_location();
+        let hotel_code = booking.get_hotel_code();
+        let hotel_image = booking.get_hotel_image();
         let number_of_adults = booking.get_number_of_adults();
         let number_of_children = booking.get_number_of_children();
         let amount_paid = booking.get_amount_paid();
@@ -147,40 +258,110 @@ impl EmailClient {
                 let access_token = state.access_token;
                 let subject = "Booking Confirmed with Nofeebooking";
 
-                // are you sure that this created a valid good string in email body? in my email, I see some space on the left with this. can you fix that?
-                let body = format!(
-                    r#"
-Hey {username},
-
-The adventure begins! Your hotel booking is confirmed and we'’re just as excited as you are! 👻🎒
-
-Here are your booking details:
-
-🏨 Hotel: {hotel_name}
-📍 Location: {hotel_location}
-🆔 Booking ID / App Reference: {booking_id}
-📅 Stay Dates: {check_in_date} to {check_out_date}
-👥 Guests: {number_of_adults} Adults, {number_of_children} Children
-💳 Amount Paid: {amount_paid}
-
-⚡ Note: This booking is non-cancellable!! So pack those bags and bring your best vacay mode vibes! 😎
-
-We can't wait for you to check in, chill out, and make awesome memories. 🌴✨  
-If you need anything, we’re just an email away.
-
-Sending best wanderlust wishes,  
-Team Nofeebooking 🥳
-                "#,
+                let text_body = format!(
+                    "Hi {username},\n\
+Your booking is confirmed! Here are your details:\n\n\
+Hotel: {hotel_name}\n\
+Location: {hotel_location}\n\
+Booking ID / App Reference: {booking_id}\n\
+Stay Dates: {check_in_date} to {check_out_date}\n\
+Guests: {number_of_adults} Adults, {number_of_children} Children\n\
+Amount Paid: {amount_paid}\n\n\
+Note: This booking is non-cancellable. If you need anything, reply to this email.\n\n\
+Team Nofeebooking"
                 );
 
-                tracing::debug!("Email body: {}", body);
+                // Simple, modern HTML email with a CTA button and clean typography
+                let view_booking_url = format!("https://nofeebooking.com/account?page=bookings");
+                let hotel_details_url =
+                    format!("https://nofeebooking.com/hotel-details?hotelCode={hotel_code}");
+                let hero_image = {
+                    let trimmed = hotel_image.trim();
+                    let is_web_url =
+                        trimmed.starts_with("http://") || trimmed.starts_with("https://");
+                    if trimmed.is_empty() || !is_web_url {
+                        "https://nofeebooking.com/img/home.png".to_string()
+                    } else {
+                        trimmed.to_string()
+                    }
+                };
+                let html_body = format!(
+                    r#"<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f5f7fb;font-family:'Segoe UI',Arial,sans-serif;color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f7fb;padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(31,41,55,0.08);padding:32px;">
+            <tr>
+              <td style="text-align:left;">
+                <div style="font-size:13px;letter-spacing:0.08em;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:12px;">Booking Confirmed</div>
+                <h1 style="margin:0 0 12px;font-size:22px;color:#111827;">Hey {username}, your stay is locked in! 🎉</h1>
+                <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;">
+                  We’re excited to host you. Here are your trip details:
+                </p>
+                <a href="{hotel_details_url}" style="display:block; margin:0 0 16px; text-decoration:none;">
+                  <img src="{hero_image}" alt="{hotel_name}" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; border:1px solid #e5e7eb;" />
+                </a>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 16px;">
+                  <tr>
+                    <td style="padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
+                      <div style="font-size:15px;font-weight:600;margin-bottom:6px;color:#111827;">{hotel_name}</div>
+                      <div style="font-size:13px;color:#6b7280;margin-bottom:10px;">{hotel_location}</div>
+                      <div style="font-size:14px;color:#111827;line-height:1.5;">
+                        <div><strong>Booking ID:</strong> {booking_id}</div>
+                        <div><strong>Stay:</strong> {check_in_date} to {check_out_date}</div>
+                        <div><strong>Guests:</strong> {number_of_adults} Primary Adults, {number_of_children} Children</div>
+                        <div><strong>Amount Paid:</strong>$ {amount_paid}</div>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="display:inline-block;margin:0 0 18px;">
+                  <a href="{view_booking_url}" style="background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:600;font-size:14px;display:inline-block;">View Booking</a>
+                </div>
+
+                <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#374151;">
+                  Note: This booking is non-cancellable. If plans change or you need a hand, reply to this email and we’ll help out.
+                </p>
+
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#4b5563;">
+                  Safe travels,<br/>
+                  Team Nofeebooking
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"#,
+                );
+
+                let boundary = "noffee-boundary";
 
                 let url = "https://www.googleapis.com/gmail/v1/users/me/messages/send";
 
                 // Create the email message
                 let email_raw = format!(
-                    "To: {}\r\nCc: {}\r\nSubject: {}\r\n\r\n{}",
-                    to, cc, subject, body
+                    "To: {to}\r\n\
+Cc: {cc}\r\n\
+Subject: {subject}\r\n\
+MIME-Version: 1.0\r\n\
+Content-Type: multipart/alternative; boundary=\"{boundary}\"\r\n\
+\r\n\
+--{boundary}\r\n\
+Content-Type: text/plain; charset=\"UTF-8\"\r\n\r\n\
+{text_body}\r\n\
+\r\n\
+--{boundary}\r\n\
+Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
+{html_body}\r\n\
+\r\n\
+--{boundary}--",
                 );
                 let encoded_message = general_purpose::STANDARD.encode(email_raw);
                 let payload = serde_json::json!({

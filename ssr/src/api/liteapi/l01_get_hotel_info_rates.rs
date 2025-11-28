@@ -36,6 +36,8 @@ pub struct LiteApiHotelRatesRequest {
     pub guest_nationality: String,
     pub checkin: String,  // Format: "YYYY-MM-DD"
     pub checkout: String, // Format: "YYYY-MM-DD"
+    #[serde(rename = "roomMapping")]
+    pub room_mapping: bool,
 }
 
 // Response structures - only parsing necessary fields
@@ -63,11 +65,13 @@ pub struct LiteApiRetailRate {
 pub struct LiteApiRate {
     #[serde(rename = "rateId")]
     pub rate_id: String,
-    // #[serde(rename = "occupancyNumber")]
-    // pub occupancy_number: i32,
+    #[serde(rename = "occupancyNumber")]
+    pub occupancy_number: Option<u32>,
     pub name: String,
     #[serde(rename = "maxOccupancy")]
     pub max_occupancy: u32,
+    #[serde(rename = "mappedRoomId")]
+    pub mapped_room_id: u32,
     #[serde(rename = "adultCount")]
     pub adult_count: u32,
     #[serde(rename = "childCount")]

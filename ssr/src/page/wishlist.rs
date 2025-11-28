@@ -5,7 +5,7 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::app::AppRoutes;
 use crate::component::{Footer, Navbar, SkeletonCards};
-use crate::domain::DomainHotelDetails;
+use crate::domain::{DomainHotelCodeId, DomainHotelDetails};
 use crate::log;
 use crate::page::HotelCardTile;
 
@@ -75,7 +75,9 @@ pub fn WishlistComponent() -> impl IntoView {
 
                 for hotel_code in hotel_codes {
                     match api_client
-                        .get_hotel_details_without_rates(&hotel_code)
+                        .get_hotel_static_details(DomainHotelCodeId {
+                            hotel_id: hotel_code.clone(),
+                        })
                         .await
                     {
                         Ok(details) => {

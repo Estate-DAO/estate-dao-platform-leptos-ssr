@@ -6,6 +6,7 @@ pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 pub const USER_IDENTITY: &str = "estatedao_user_identity";
 pub const USER_EMAIL_MAPPING_SYNCED: &str = "estatedao_user_email_mapping_synced";
 pub const PAGINATION_LIMIT: i32 = 100;
+pub const ENFORCE_SINGLE_ROOM_TYPE_BOOKING: bool = true;
 // PROVAB_BASE_URL options
 pub const PROVAB_PROD_OLD_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
@@ -45,7 +46,7 @@ pub fn get_host() -> String {
             .to_string()
     }
 
-    #[cfg(not(feature = "hydrate"))]
+    #[cfg(all(feature = "ssr", not(feature = "hydrate")))]
     {
         use leptos::prelude::*;
 
@@ -59,6 +60,11 @@ pub fn get_host() -> String {
             .get("Host")
             .map(|h| h.to_str().unwrap_or_default().to_string())
             .unwrap_or_default()
+    }
+
+    #[cfg(all(not(feature = "ssr"), not(feature = "hydrate")))]
+    {
+        String::new()
     }
 }
 

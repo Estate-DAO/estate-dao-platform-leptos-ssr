@@ -706,11 +706,11 @@ pub fn HotelListPage() -> impl IntoView {
         class=move || {
             let is_expanded = InputGroupState::is_open_show_full_input();
             // Dynamically compute height class
-            let base = if is_expanded {
-                "h-56" // Default (mobile)
-            } else {
-                "h-24" // Collapsed
-            };
+            // let base = if is_expanded {
+            //     "h-56" // Default (mobile)
+            // } else {
+            //     "h-24" // Collapsed
+            // };
 
             // Apply smoother responsive overrides
             let responsive = if is_expanded {
@@ -721,15 +721,15 @@ pub fn HotelListPage() -> impl IntoView {
                 "sm:h-16 md:h-16 lg:h-16"
             };
 
-            format!("transition-all duration-300 ease-in-out {} {}", base, responsive)
+            format!("transition-all duration-300 ease-in-out {}", responsive)
         }
         ></div>
 
         // Main scrollable section
-        <section class="bg-slate-50 px-4 pb-2">
+        <section class="my-4 bg-slate-50 px-4 pb-2">
             // Desktop layout (lg screens and up) - centered with 85% width
             <div class="hidden lg:flex justify-center">
-                <div class="w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]">
+                <div class=" w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]">
                     // Fixed aside on left (desktop only)
                     <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
                     <div class="h-full overflow-y-auto p-4">
@@ -1649,18 +1649,12 @@ pub fn HotelCardTile(
     }
 }
 
-#[component]
-pub fn Wishlist(
-    hotel_code: String,
-    #[prop(optional, into)] class: Option<String>,
-) -> impl IntoView {
-    let wishlist_hotel_code = hotel_code.clone();
+pub fn add_to_wishlist_action(hotel_code: String) -> Action<(), ()> {
     let add_to_wishlist_action = Action::new(move |_: &()| {
-        let check_present =
-            AuthStateSignal::check_if_added_to_wishlist_untracked(&wishlist_hotel_code);
+        let check_present = AuthStateSignal::check_if_added_to_wishlist_untracked(&hotel_code);
         let toggle_action = if check_present { "remove" } else { "add" };
-        AuthStateSignal::toggle_wishlish(wishlist_hotel_code.clone());
-        let hotel_code = wishlist_hotel_code.clone();
+        AuthStateSignal::toggle_wishlish(hotel_code.clone());
+        let hotel_code = hotel_code.clone();
         async move {
             let url = format!("/api/user-wishlist/{toggle_action}/{hotel_code}");
             match gloo_net::http::Request::post(&url).send().await {
@@ -1675,6 +1669,16 @@ pub fn Wishlist(
             }
         }
     });
+    add_to_wishlist_action
+}
+
+#[component]
+pub fn Wishlist(
+    hotel_code: String,
+    #[prop(optional, into)] class: Option<String>,
+) -> impl IntoView {
+    let wishlist_hotel_code = hotel_code.clone();
+    let add_to_wishlist_action = add_to_wishlist_action(wishlist_hotel_code);
 
     view! {
         <Show when=move || AuthStateSignal::auth_state().get().is_authenticated() >
