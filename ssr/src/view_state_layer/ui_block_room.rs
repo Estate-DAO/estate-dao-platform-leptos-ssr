@@ -405,6 +405,16 @@ impl BlockRoomUIState {
         this.room_selection_summary.get()
     }
 
+    pub fn get_calculated_total_from_summary() -> f64 {
+        let this: Self = expect_context();
+        let nights = this.num_nights.get();
+        let summary = this.room_selection_summary.get();
+        summary
+            .iter()
+            .map(|room| room.price_per_night * room.quantity as f64 * nights as f64)
+            .sum()
+    }
+
     pub fn get_loading() -> bool {
         let this: Self = expect_context();
         this.loading.get()

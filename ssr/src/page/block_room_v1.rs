@@ -1342,7 +1342,7 @@ pub fn PaymentModal() -> impl IntoView {
     // let block_room_called = move || BlockRoomUIState::get_block_room_called();
 
     let room_price = move || BlockRoomUIState::get_room_price();
-    let total_price = move || BlockRoomUIState::get_total_price();
+    let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
     let num_nights = move || BlockRoomUIState::get_num_nights();
 
     // Note: Prebook API is now called when user clicks "Confirm & Book" button via action pattern
@@ -1390,7 +1390,7 @@ pub fn PaymentModal() -> impl IntoView {
                             <EnhancedErrorDisplay />
                         </Show>
 
-                        <Show when=move || BlockRoomUIState::get_error().is_none()>
+                        <Show when=move ||  true/* BlockRoomUIState::get_error().is_none() */>
                             <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                             <div class="flex flex-col gap-2 mb-6">
                                 <div class="flex justify-between items-end">
@@ -1408,7 +1408,7 @@ pub fn PaymentModal() -> impl IntoView {
                                 <Divider class="my-2".into() />
                                 <div class="flex justify-between items-center font-bold text-lg mb-2">
                                     <span>Total</span>
-                                    <span class="text-2xl">{move || format!("${:.2}", total_price())}</span>
+                                    <span class="text-2xl">{move || format!("${:.2}", calculated_total())}</span>
                                 </div>
                             </div>
 
@@ -1897,7 +1897,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
     let ui_search_ctx: UISearchCtx = expect_context();
 
     // Get pricing information
-    let total_price = move || BlockRoomUIState::get_total_price();
+    let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
 
     // Payment loading state
     let (payment_loading, set_payment_loading) = create_signal(false);
@@ -1966,7 +1966,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             let order_id = booking_id.to_order_id();
 
             // Get price information
-            let price_amount = total_price();
+            let price_amount = calculated_total();
 
             // Create domain request using proper URL helper functions
             let hotel_name = hotel_info_ctx.selected_hotel_name.get_untracked();
@@ -2052,7 +2052,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                             <span class="text-white text-sm font-bold">"NP"</span>
                         </div>
                         <div class="text-left">
-                            <div class="font-semibold text-gray-900">"NowPayments"</div>
+                            <div class="font-semibold text-gray-900">"Crypto"</div>
                             <div class="text-sm text-gray-600">"Pay with crypto currencies"</div>
                         </div>
                     </div>
