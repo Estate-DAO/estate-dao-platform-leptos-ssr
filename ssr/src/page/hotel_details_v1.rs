@@ -1487,7 +1487,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 
     // Calculate subtotal using helper method
     let subtotal = move || HotelDetailsUIState::calculate_subtotal_for_nights();
-    let total_for_stay = move || subtotal() * nights() as f64;
+    let total_for_stay = move || subtotal();
 
     // Check if any rooms are selected
     let has_rooms_selected = move || total_selected_rooms() > 0;
@@ -1505,6 +1505,14 @@ pub fn PricingBreakdownV1() -> impl IntoView {
         let selected = HotelDetailsUIState::get_selected_rooms();
         let options = HotelDetailsUIState::get_available_room_options();
         let default_code = currency_code.get();
+        let nights_val = {
+            let n = ui_search_ctx.date_range.get().no_of_nights();
+            if n == 0 {
+                1.0
+            } else {
+                n as f64
+            }
+        };
 
         selected
             .into_iter()
@@ -1520,7 +1528,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                     .find(|opt| opt.room_data.rate_key == rate_key)
                 {
                     room_name = opt.room_data.room_name.clone();
-                    price_per_night = opt.price.room_price;
+                    price_per_night = opt.price.room_price / nights_val;
                     code = opt.price.currency_code.clone();
                     meal_plan = opt.meal_plan.clone();
                 }
@@ -1544,6 +1552,14 @@ pub fn PricingBreakdownV1() -> impl IntoView {
         let navigate = navigate.clone();
         async move {
             booking_loading.set(true);
+            let nights_val = {
+                let n = ui_search_ctx.date_range.get().no_of_nights();
+                if n == 0 {
+                    1.0
+                } else {
+                    n as f64
+                }
+            };
 
             // <!-- Pass room selection data to BlockRoomUIState -->
             // Get selected rooms with quantities
@@ -1576,7 +1592,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                             room_name: room_option.room_data.room_name.clone(),
                             meal_plan: room_option.meal_plan.clone(),
                             quantity: *quantity,
-                            price_per_night: room_option.price.room_price,
+                            price_per_night: room_option.price.room_price / nights_val,
                             room_data: room_option.room_data.clone(),
                         };
                         room_selection_summary.push(summary);
@@ -1596,7 +1612,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                                 room_name: room_data.room_name.clone(),
                                 meal_plan: None,
                                 quantity: *quantity,
-                                price_per_night: fallback_price_per_room,
+                                price_per_night: fallback_price_per_room / nights_val,
                                 room_data: room_data.clone(),
                             };
                             room_selection_summary.push(summary);
@@ -1767,15 +1783,6 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    let currency_code = rate.price.currency_code.clone();
-    let price_text = format_currency_with_code(rate.price.room_price, &currency_code);
-    let meal_plan = rate
-        .meal_plan
-        .clone()
-        .unwrap_or_else(|| "Room Only".to_string());
-    let occupancy = format_occupancy_text(rate.occupancy_info.as_ref());
-    let room_key = room_id.clone();
-
     let nights = move || {
         let nights = ui_search_ctx.date_range.get().no_of_nights();
         if nights == 0 {
@@ -1784,6 +1791,16 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
             nights
         }
     };
+
+    let currency_code = rate.price.currency_code.clone();
+    let price_text =
+        format_currency_with_code(rate.price.room_price / nights() as f64, &currency_code);
+    let meal_plan = rate
+        .meal_plan
+        .clone()
+        .unwrap_or_else(|| "Room Only".to_string());
+    let occupancy = format_occupancy_text(rate.occupancy_info.as_ref());
+    let room_key = room_id.clone();
 
     let selection_key = room_key.clone();
     let selection_count = create_memo(move |_| {

@@ -2211,14 +2211,14 @@ impl LiteApiAdapter {
     ) -> DomainRoomOption {
         let room_price = rate
             .retail_rate
-            .suggested_selling_price
+            .total
             .first()
             .map(|amount| amount.amount)
             .unwrap_or(0.0);
 
         let currency_code = rate
             .retail_rate
-            .suggested_selling_price
+            .total
             .first()
             .map(|amount| amount.currency.clone())
             .unwrap_or_else(|| "USD".to_string());
