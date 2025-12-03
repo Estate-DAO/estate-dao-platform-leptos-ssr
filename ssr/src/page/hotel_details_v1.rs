@@ -1182,6 +1182,29 @@ fn dedup_rates_by_meal_plan(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption>
     deduped
 }
 
+fn dedup_rates_for_type_b(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
+    let mut rates_by_offer: HashMap<String, Vec<DomainRoomOption>> = HashMap::new();
+    for rate in rates {
+        rates_by_offer
+            .entry(rate.room_data.offer_id.clone())
+            .or_default()
+            .push(rate.clone());
+    }
+
+    let mut offer_representatives: Vec<DomainRoomOption> = Vec::new();
+    for (_, offer_rates) in rates_by_offer {
+        if let Some(first_rate) = offer_rates.first() {
+            let mut rep_rate = first_rate.clone();
+            let total_price: f64 = offer_rates.iter().map(|r| r.price.room_price).sum();
+            rep_rate.price.room_price = total_price;
+            offer_representatives.push(rep_rate);
+        }
+    }
+
+    // Now dedup by meal plan using the existing logic (lowest price per meal plan)
+    dedup_rates_by_meal_plan(&offer_representatives)
+}
+
 fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
     let mut type_a_map: HashMap<u32, RoomCard> = HashMap::new();
     let mut type_a_order: Vec<u32> = Vec::new();
@@ -1263,7 +1286,8 @@ fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
     for card_title in type_b_order {
         if let Some(mut card) = type_b_map.remove(&card_title) {
             // Deduplicate rates by meal plan, keeping the lowest price for each
-            card.rates = dedup_rates_by_meal_plan(&card.rates);
+            // For TYPE B, we first sum the prices of all rooms in the offer
+            card.rates = dedup_rates_for_type_b(&card.rates);
             cards.push(card);
         }
     }
@@ -1514,33 +1538,46 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             }
         };
 
-        selected
-            .into_iter()
-            .filter(|(_, qty)| *qty > 0)
-            .map(|(rate_key, quantity)| {
-                let mut room_name = "Selected Room".to_string();
-                let mut price_per_night = 0.0;
-                let mut code = default_code.clone();
-                let mut meal_plan = None;
-
-                if let Some(opt) = options
-                    .iter()
-                    .find(|opt| opt.room_data.rate_key == rate_key)
-                {
-                    room_name = opt.room_data.room_name.clone();
-                    price_per_night = opt.price.room_price / nights_val;
-                    code = opt.price.currency_code.clone();
-                    meal_plan = opt.meal_plan.clone();
-                }
-
-                (
+        // First pass: collect all individual rows
+        let mut raw_rows = Vec::new();
+        for (rate_key, quantity) in selected.into_iter().filter(|(_, qty)| *qty > 0) {
+            if let Some(opt) = options
+                .iter()
+                .find(|opt| opt.room_data.rate_key == rate_key)
+            {
+                let room_name = opt.room_data.room_name.clone();
+                let price_per_night = opt.price.room_price / nights_val;
+                let code = opt.price.currency_code.clone();
+                let meal_plan = opt.meal_plan.clone().unwrap_or_default();
+                raw_rows.push((
                     rate_key,
                     quantity,
                     room_name,
-                    meal_plan.unwrap_or_default(),
+                    meal_plan,
                     price_per_night,
                     code,
-                )
+                ));
+            }
+        }
+
+        // Second pass: group by room_name and meal_plan
+        // Key: (Name, MealPlan), Value: (TotalQty, TotalPriceSum, Code, FirstRateKey)
+        let mut grouped: HashMap<(String, String), (u32, f64, String, String)> = HashMap::new();
+
+        for (rate_key, qty, name, meal, price, code) in raw_rows {
+            let entry = grouped
+                .entry((name, meal))
+                .or_insert((0, 0.0, code, rate_key));
+            entry.0 += qty;
+            entry.1 += price * qty as f64;
+        }
+
+        // Convert back to vector
+        grouped
+            .into_iter()
+            .map(|((name, meal), (qty, total_price, code, rate_key))| {
+                let avg_price = total_price / qty as f64;
+                (rate_key, qty, name, meal, avg_price, code)
             })
             .collect::<Vec<_>>()
     };
@@ -1569,7 +1606,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             let hotel_details = HotelDetailsUIState::get_hotel_details();
 
             // Create room selection summary for block room page
-            let mut room_selection_summary = Vec::new();
+            let mut raw_summaries = Vec::new();
             let mut selected_rooms_with_data = std::collections::HashMap::new();
             let fallback_price_per_room = {
                 let total_rooms = HotelDetailsUIState::total_selected_rooms();
@@ -1582,46 +1619,56 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 
             for (rate_key, quantity) in selected_rooms.iter() {
                 if *quantity > 0 {
-                    let mut handled = false;
                     if let Some(room_option) = room_options
                         .iter()
                         .find(|opt| &opt.room_data.rate_key == rate_key)
                     {
-                        let summary = RoomSelectionSummary {
-                            room_id: rate_key.clone(),
-                            room_name: room_option.room_data.room_name.clone(),
-                            meal_plan: room_option.meal_plan.clone(),
-                            quantity: *quantity,
-                            price_per_night: room_option.price.room_price / nights_val,
-                            room_data: room_option.room_data.clone(),
-                        };
-                        room_selection_summary.push(summary);
+                        raw_summaries.push((room_option, *quantity));
                         selected_rooms_with_data
                             .insert(rate_key.clone(), (*quantity, room_option.room_data.clone()));
-                        handled = true;
-                    }
-
-                    // Find the corresponding room data
-                    if !handled {
-                        if let Some(room_data) =
-                            available_rooms.iter().find(|r| &r.rate_key == rate_key)
-                        {
-                            // Create summary entry
-                            let summary = RoomSelectionSummary {
-                                room_id: rate_key.clone(),
-                                room_name: room_data.room_name.clone(),
-                                meal_plan: None,
-                                quantity: *quantity,
-                                price_per_night: fallback_price_per_room / nights_val,
-                                room_data: room_data.clone(),
-                            };
-                            room_selection_summary.push(summary);
-                            selected_rooms_with_data
-                                .insert(rate_key.clone(), (*quantity, room_data.clone()));
-                        }
+                    } else if let Some(room_data) =
+                        available_rooms.iter().find(|r| &r.rate_key == rate_key)
+                    {
+                        selected_rooms_with_data
+                            .insert(rate_key.clone(), (*quantity, room_data.clone()));
                     }
                 }
             }
+
+            // Group by name and meal plan
+            let mut grouped_summaries: HashMap<
+                (String, String),
+                (u32, f64, crate::domain::DomainRoomData),
+            > = HashMap::new();
+
+            for (opt, qty) in raw_summaries {
+                let name = opt.room_data.room_name.clone();
+                let meal = opt.meal_plan.clone().unwrap_or_default();
+                let price_per_night = opt.price.room_price / nights_val;
+
+                let entry = grouped_summaries.entry((name, meal)).or_insert((
+                    0,
+                    0.0,
+                    opt.room_data.clone(),
+                ));
+                entry.0 += qty;
+                entry.1 += price_per_night * qty as f64;
+            }
+
+            let room_selection_summary: Vec<RoomSelectionSummary> = grouped_summaries
+                .into_iter()
+                .map(|((name, meal), (qty, total_price, room_data))| {
+                    let avg_price = total_price / qty as f64;
+                    RoomSelectionSummary {
+                        room_id: room_data.rate_key.clone(), // Use representative ID
+                        room_name: name,
+                        meal_plan: Some(meal),
+                        quantity: qty,
+                        price_per_night: avg_price,
+                        room_data,
+                    }
+                })
+                .collect();
 
             // Pass data to BlockRoomUIState
             BlockRoomUIState::set_selected_rooms(selected_rooms_with_data);
@@ -1816,10 +1863,22 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     let inc_key = room_key.clone();
     let rooms_requested_signal = ui_search_ctx.guests.rooms;
 
+    let offer_id = rate.room_data.offer_id.clone();
     let select_room = Action::new(move |_: &()| {
         if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
-            let requested_rooms = rooms_requested_signal.get_untracked();
-            HotelDetailsUIState::set_single_room_selection(room_key.clone(), requested_rooms);
+            // Multi-room selection logic: find all rooms in this offer
+            let all_options = HotelDetailsUIState::get_available_room_options();
+            let mut selections: HashMap<String, u32> = HashMap::new();
+
+            for option in all_options {
+                if option.room_data.offer_id == offer_id {
+                    let key = option.room_data.rate_key.clone();
+                    *selections.entry(key).or_insert(0) += 1;
+                }
+            }
+
+            let selection_vec: Vec<(String, u32)> = selections.into_iter().collect();
+            HotelDetailsUIState::set_multi_room_selection(selection_vec);
         } else {
             HotelDetailsUIState::increment_room_counter(room_key.clone());
         }

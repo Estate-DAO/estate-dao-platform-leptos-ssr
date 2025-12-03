@@ -674,6 +674,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
     // );
 
     // Return the reactive view - use move closure for reactivity
+    // Return the reactive view - use move closure for reactivity
     move || {
         // Check auth state from both sources (cookie takes priority)
         let is_logged_in = user_email.get().is_some();

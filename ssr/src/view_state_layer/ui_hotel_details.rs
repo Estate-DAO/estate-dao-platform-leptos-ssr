@@ -162,6 +162,19 @@ impl HotelDetailsUIState {
         Self::update_total_price();
     }
 
+    pub fn set_multi_room_selection(selections: Vec<(String, u32)>) {
+        let this: Self = expect_context();
+        let mut rooms = HashMap::new();
+        for (room_type, quantity) in selections {
+            if quantity > 0 {
+                let entry = rooms.entry(room_type).or_insert(0);
+                *entry += quantity;
+            }
+        }
+        this.selected_rooms.set(rooms);
+        Self::update_total_price();
+    }
+
     pub fn get_selected_rooms() -> HashMap<String, u32> {
         let this: Self = expect_context();
         this.selected_rooms.get()
