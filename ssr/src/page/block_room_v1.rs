@@ -1390,7 +1390,7 @@ pub fn PaymentModal() -> impl IntoView {
                             <EnhancedErrorDisplay />
                         </Show>
 
-                        <Show when=move ||  true/* BlockRoomUIState::get_error().is_none() */>
+                        <Show when=move || BlockRoomUIState::get_error().is_none()>
                             <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                             <div class="flex flex-col gap-2 mb-6">
                                 <div class="flex justify-between items-end">
