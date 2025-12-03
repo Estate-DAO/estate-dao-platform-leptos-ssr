@@ -1129,87 +1129,23 @@ impl LiteApiAdapter {
             })?;
 
         // Extract all rooms and rates from LiteAPI response
-        // let mut all_rooms = Vec::new();
-        let mut room_type_map: std::collections::HashMap<String, DomainRoomOption> =
-            std::collections::HashMap::new();
+        let mut all_rooms: Vec<DomainRoomOption> = Vec::new();
 
-        // Iterate through all room types and their rates
         if let Some(data) = &liteapi_rates_response.data {
             for hotel_data_item in data {
                 for room_type in &hotel_data_item.room_types {
                     for rate in &room_type.rates {
-                        // Extract price from rate
-                        let room_price = rate
-                            .retail_rate
-                            .suggested_selling_price // we want to use suggested selling price from liteapi
-                            .first()
-                            .map(|amount| amount.amount)
-                            .unwrap_or(0.0);
+                        let room_option = Self::map_liteapi_room_to_domain(
+                            rate.clone(),
+                            room_type.room_type_id.clone(),
+                            room_type.offer_id.clone(),
+                        );
 
-                        let currency_code = rate
-                            .retail_rate
-                            .suggested_selling_price
-                            .first()
-                            .map(|amount| amount.currency.clone())
-                            .unwrap_or_else(|| "USD".to_string());
-
-                        // todo: liteapi maybe get meal plan (future)
-                        let meal_plan = None;
-
-                        let occupancy_info = Some(crate::domain::DomainRoomOccupancy {
-                            max_occupancy: Some(rate.max_occupancy),
-                            adult_count: Some(rate.adult_count),
-                            child_count: Some(rate.child_count),
-                        });
-
-                        // Create room option
-                        let room_option = DomainRoomOption {
-                            mapped_room_id: rate.mapped_room_id,
-                            price: crate::domain::DomainDetailedPrice {
-                                published_price: room_price,
-                                published_price_rounded_off: room_price,
-                                offered_price: room_price,
-                                offered_price_rounded_off: room_price,
-                                room_price,
-                                // todo: get tax from liteapi currently deafult values
-                                tax: 0.0,
-                                extra_guest_charge: 0.0,
-                                child_charge: 0.0,
-                                other_charges: 0.0,
-                                currency_code: currency_code.clone(),
-                            },
-                            room_data: crate::domain::DomainRoomData {
-                                mapped_room_id: rate.mapped_room_id,
-                                occupancy_number: rate.occupancy_number,
-                                room_name: rate.name.clone(),
-                                room_unique_id: room_type.room_type_id.clone(),
-                                rate_key: rate.rate_id.clone(),
-                                offer_id: room_type.offer_id.clone(),
-                            },
-                            meal_plan,
-                            occupancy_info,
-                        };
-
-                        // Deduplicate by room_name, keeping the one with lowest price
-                        let room_name = rate.name.clone();
-                        match room_type_map.get(&room_name) {
-                            Some(existing_room) => {
-                                // Keep the room with the lower price
-                                if room_price < existing_room.price.room_price {
-                                    room_type_map.insert(room_name, room_option);
-                                }
-                            }
-                            None => {
-                                room_type_map.insert(room_name, room_option);
-                            }
-                        }
+                        all_rooms.push(room_option);
                     }
                 }
             }
         }
-
-        // Convert the deduplicated map back to a vector
-        let mut all_rooms: Vec<DomainRoomOption> = room_type_map.into_values().collect();
 
         // Sort rooms: unique names first, then repeated names at the end
         let mut name_counts: std::collections::HashMap<String, usize> =
