@@ -1850,13 +1850,24 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     let room_key = room_id.clone();
 
     let selection_key = room_key.clone();
+    let selection_offer_id = rate.room_data.offer_id.clone();
     let selection_count = create_memo(move |_| {
-        hotel_details_state
-            .selected_rooms
-            .get()
-            .get(&selection_key)
-            .copied()
-            .unwrap_or(0)
+        let selected_rooms = hotel_details_state.selected_rooms.get();
+        if !selection_offer_id.is_empty() {
+            let available_options = HotelDetailsUIState::get_available_room_options();
+            selected_rooms
+                .iter()
+                .filter_map(|(rate_key, qty)| {
+                    available_options
+                        .iter()
+                        .find(|option| option.room_data.rate_key == *rate_key)
+                        .filter(|option| option.room_data.offer_id == selection_offer_id)
+                        .map(|_| *qty)
+                })
+                .sum::<u32>()
+        } else {
+            selected_rooms.get(&selection_key).copied().unwrap_or(0)
+        }
     });
 
     let dec_key = room_key.clone();

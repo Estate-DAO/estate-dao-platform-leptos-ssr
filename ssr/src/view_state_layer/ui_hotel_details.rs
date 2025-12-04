@@ -163,15 +163,39 @@ impl HotelDetailsUIState {
     }
 
     pub fn set_multi_room_selection(selections: Vec<(String, u32)>) {
-        let this: Self = expect_context();
-        let mut rooms = HashMap::new();
-        for (room_type, quantity) in selections {
-            if quantity > 0 {
-                let entry = rooms.entry(room_type).or_insert(0);
-                *entry += quantity;
-            }
+        if selections.is_empty() {
+            return;
         }
-        this.selected_rooms.set(rooms);
+
+        let this: Self = expect_context();
+        use crate::view_state_layer::ui_search_state::UISearchCtx;
+        let ui_search_ctx: UISearchCtx = expect_context();
+        let max_rooms = ui_search_ctx.guests.rooms.get();
+        let remaining_rooms = max_rooms.saturating_sub(Self::total_selected_rooms());
+        if remaining_rooms == 0 {
+            return;
+        }
+
+        let mut remaining = remaining_rooms;
+        this.selected_rooms.update(move |rooms| {
+            for (room_type, quantity) in selections {
+                if remaining == 0 {
+                    break;
+                }
+
+                let key = room_type.clone();
+                if quantity == 0 {
+                    rooms.remove(&key);
+                    continue;
+                }
+
+                let add = quantity.min(remaining);
+                let entry = rooms.entry(key).or_insert(0);
+                *entry = entry.saturating_add(add);
+                remaining = remaining.saturating_sub(add);
+            }
+        });
+
         Self::update_total_price();
     }
 

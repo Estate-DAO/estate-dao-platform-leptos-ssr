@@ -139,7 +139,11 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
     // Navigation handler
     let go_back_to_details = move |_: ev::MouseEvent| {
-        let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
+        // Instead of this let's go to browser history back
+        web_sys::window()
+            .and_then(|win| win.history().ok())
+            .and_then(|history| history.back().ok());
+        // let _ = navigate(AppRoutes::HotelDetails.to_string(), Default::default());
     };
 
     // Get reactive signals using static methods
