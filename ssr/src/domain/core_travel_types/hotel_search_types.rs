@@ -203,6 +203,8 @@ pub struct DomainDetailedPrice {
     pub published_price_rounded_off: f64,
     pub offered_price: f64,
     pub offered_price_rounded_off: f64,
+    pub suggested_selling_price: f64,
+    pub suggested_selling_price_rounded_off: f64,
     pub room_price: f64,
     pub tax: f64,
     pub extra_guest_charge: f64,

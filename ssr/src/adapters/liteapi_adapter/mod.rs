@@ -1438,11 +1438,19 @@ impl LiteApiAdapter {
                 .and_then(|rr| rr.total.first().map(|a| a.currency.clone()))
                 .unwrap_or_else(|| currency.clone());
 
+            let suggested_price_amount = rate
+                .retail_rate
+                .as_ref()
+                .and_then(|rr| rr.suggested_selling_price.first().map(|a| a.amount))
+                .unwrap_or(room_price_amount);
+
             let detailed_price = DomainDetailedPrice {
                 published_price: room_price_amount,
                 published_price_rounded_off: room_price_amount.round(),
                 offered_price: room_price_amount,
                 offered_price_rounded_off: room_price_amount.round(),
+                suggested_selling_price: suggested_price_amount,
+                suggested_selling_price_rounded_off: suggested_price_amount.round(),
                 room_price: room_price_amount,
                 tax: 0.0,
                 extra_guest_charge: 0.0,
@@ -1474,6 +1482,8 @@ impl LiteApiAdapter {
                 published_price_rounded_off: data.suggested_selling_price.round(),
                 offered_price: data.price,
                 offered_price_rounded_off: data.price.round(),
+                suggested_selling_price: data.suggested_selling_price,
+                suggested_selling_price_rounded_off: data.suggested_selling_price.round(),
                 room_price: data.price,
                 tax: 0.0,
                 extra_guest_charge: 0.0,
@@ -1497,6 +1507,8 @@ impl LiteApiAdapter {
             published_price_rounded_off: data.suggested_selling_price.round(),
             offered_price: data.price,
             offered_price_rounded_off: data.price.round(),
+            suggested_selling_price: data.suggested_selling_price,
+            suggested_selling_price_rounded_off: data.suggested_selling_price.round(),
             room_price: data.price,
             tax: 0.0,
             extra_guest_charge: 0.0,
@@ -2243,6 +2255,13 @@ impl LiteApiAdapter {
             child_count: Some(rate.child_count),
         });
 
+        let suggested_price = rate
+            .retail_rate
+            .suggested_selling_price
+            .first()
+            .map(|amount| amount.amount)
+            .unwrap_or(room_price);
+
         DomainRoomOption {
             mapped_room_id: rate.mapped_room_id,
             price: crate::domain::DomainDetailedPrice {
@@ -2250,6 +2269,8 @@ impl LiteApiAdapter {
                 published_price_rounded_off: room_price,
                 offered_price: room_price,
                 offered_price_rounded_off: room_price,
+                suggested_selling_price: suggested_price,
+                suggested_selling_price_rounded_off: suggested_price.round(),
                 room_price,
                 tax: 0.0,
                 extra_guest_charge: 0.0,
