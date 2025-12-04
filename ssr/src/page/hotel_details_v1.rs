@@ -780,11 +780,11 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
                 <div class="py-2  w-full max-w-7xl mx-auto px-4">
                     {/* Mobile: one big image */}
                     <div class="md:hidden">
-                        <div class="relative rounded-2xl overflow-hidden">
+                        <div class="relative rounded-2xl overflow-hidden aspect-[16/9] bg-gray-100">
                             <img
                                 src=move || images_signal()[main_index.get()].clone()
                                 alt="Hotel"
-                                class="w-full aspect-[16/9] object-cover"
+                                class="absolute inset-0 h-full w-full object-cover"
                                 on:click=move |_| open_from(main_index.get())
                             />
                         </div>
@@ -793,11 +793,11 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
                     {/* Desktop / tablet */}
                     <div class="hidden md:grid grid-cols-12 gap-6">
                         {/* Left: main image (driven by main_index) */}
-                        <div class="col-span-9 relative rounded-2xl overflow-hidden bg-gray-100">
+                        <div class="col-span-9 relative rounded-2xl overflow-hidden bg-gray-100 h-full min-h-0">
                             <img
                                 src=move || images_signal()[main_index.get()].clone()
                                 alt="Hotel main"
-                                class="w-full aspect-[16/9] object-cover"
+                                class="absolute inset-0 h-full w-full object-cover"
                                 on:click=move |_| open_from(main_index.get())
                             />
                             {/* arrows */}
