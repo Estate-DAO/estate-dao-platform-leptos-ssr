@@ -51,6 +51,10 @@ fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     }
 }
 
+fn round_up_to_cents(value: f64) -> f64 {
+    (value * 100.0).ceil() / 100.0
+}
+
 fn aggregate_tax_summary(
     rooms: Vec<RoomSelectionSummary>,
     include: bool,
@@ -595,6 +599,7 @@ pub fn EnhancedPricingDisplay(
     };
 
     let total_with_included = move || base_total() + included_taxes_total();
+    let rounded_total_with_included = move || round_up_to_cents(total_with_included());
 
     let format_currency = |val: f64| format!("${:.2}", val);
 
@@ -685,7 +690,7 @@ pub fn EnhancedPricingDisplay(
             <div class="flex justify-between items-center font-bold text-lg">
                 <span>Total</span>
                 <span class="text-2xl">
-                    {move || format_currency_with_code(total_with_included(), &included_tax_currency())}
+                    {move || format_currency_with_code(rounded_total_with_included(), &included_tax_currency())}
                 </span>
             </div>
 
@@ -2202,7 +2207,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                 <div class="flex items-center justify-between w-full">
                     <div class="flex items-center">
                         <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
-                            <span class="text-white text-sm font-bold">"NP"</span>
+                            <span class="text-white text-sm font-bold">"C"</span>
                         </div>
                         <div class="text-left">
                             <div class="font-semibold text-gray-900">"Crypto"</div>

@@ -410,9 +410,25 @@ impl BlockRoomUIState {
         let this: Self = expect_context();
         let nights = this.num_nights.get();
         let summary = this.room_selection_summary.get();
-        summary
+        let base_total = summary
             .iter()
             .map(|room| room.price_per_night * room.quantity as f64 * nights as f64)
+            .sum::<f64>();
+        base_total + Self::get_included_tax_total()
+    }
+
+    pub fn get_included_tax_total() -> f64 {
+        let this: Self = expect_context();
+        this.room_selection_summary
+            .get_untracked()
+            .iter()
+            .map(|room| {
+                room.tax_lines
+                    .iter()
+                    .filter(|line| line.included)
+                    .map(|line| line.amount * room.quantity as f64)
+                    .sum::<f64>()
+            })
             .sum()
     }
 
