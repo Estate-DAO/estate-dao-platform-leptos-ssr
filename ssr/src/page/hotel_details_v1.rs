@@ -22,6 +22,8 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
+use std::time::Duration;
+
 // <!-- Configuration constant for number of skeleton rooms to display during loading -->
 const NUMBER_OF_ROOMS: usize = 5;
 
@@ -475,18 +477,23 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 hotel_ids: vec![hotel_code],
                 search_criteria,
             };
-
-            match client.get_hotel_rates(criteria).await {
-                Ok(rates) => {
-                    HotelDetailsUIState::set_rates(Some(rates.clone()));
-                    HotelDetailsUIState::set_rates_loading(false);
-                    HotelDetailsUIState::set_error(None);
-                    Some(rates)
+            let mut retries_left = crate::api::consts::API_RETRY_COUNT;
+            loop {
+                if retries_left == 0 {
+                    break None;
                 }
-                Err(e) => {
-                    HotelDetailsUIState::set_error(Some(e));
-                    HotelDetailsUIState::set_rates_loading(false);
-                    None
+                match client.get_hotel_rates(criteria.clone()).await {
+                    Ok(rates) => {
+                        HotelDetailsUIState::set_rates(Some(rates.clone()));
+                        HotelDetailsUIState::set_rates_loading(false);
+                        HotelDetailsUIState::set_error(None);
+                        break Some(rates);
+                    }
+                    Err(e) => {
+                        HotelDetailsUIState::set_error(Some(e));
+                        HotelDetailsUIState::set_rates_loading(false);
+                        retries_left -= 1;
+                    }
                 }
             }
         },

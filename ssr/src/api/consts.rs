@@ -29,6 +29,8 @@ const PROD_APP_URL: &str = "https://nofeebooking.com";
 const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
 
 const BASE_URL: &str = crate::canister::APP_URL;
+
+pub const API_RETRY_COUNT: u8 = 4;
 // const for local environment
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
@@ -74,7 +76,7 @@ cfg_if! {
             env_w_default("NGROK_LOCALHOST_URL", LOCALHOST_APP_URL).unwrap().to_string()
         });
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
-        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
+        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else if #[cfg(feature = "prod-consts")] {
         pub static APP_URL: Lazy<String> = Lazy::new(||   env_w_default("APP_URL", PROD_APP_URL).unwrap().to_string());

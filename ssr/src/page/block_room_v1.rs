@@ -528,7 +528,20 @@ pub fn EnhancedPricingDisplay(
                                 <div class="flex-1 min-w-0 space-y-0.5">
                                     <div class="font-medium text-gray-800 break-words">{display_name} " × " {num_nights()} " Nights"</div>
                                     <div class="text-xs text-gray-500">
-                                        "(" {format_currency(price_per_night)} " × " {quantity} ")"
+                                        {let nights = num_nights();
+                                        let nights_label = if nights == 1 {
+                                            "1 night".to_string()
+                                        } else {
+                                            format!("{nights} nights")
+                                        };
+                                        let rooms_label = if quantity == 1 {
+                                            "1 room".to_string()
+                                        } else {
+                                            format!("{quantity} rooms")
+                                        };
+                                        view! {
+                                            "(" {format_currency(price_per_night)} "/night × " {nights_label} " × " {rooms_label} ")"
+                                        }}
                                     </div>
                                 </div>
                                 <div class="text-sm font-semibold text-gray-900 ml-3">
