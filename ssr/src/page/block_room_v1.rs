@@ -30,6 +30,58 @@ use crate::view_state_layer::ui_block_room::{
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
+use std::collections::HashMap;
+
+fn currency_symbol_for_code(code: &str) -> &str {
+    match code {
+        "INR" => "₹",
+        "EUR" => "€",
+        "GBP" => "£",
+        "USD" => "$",
+        _ => "$",
+    }
+}
+
+fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
+    let symbol = currency_symbol_for_code(currency_code);
+    if amount.fract() == 0.0 {
+        format!("{symbol}{:.0}", amount)
+    } else {
+        format!("{symbol}{:.2}", amount)
+    }
+}
+
+fn aggregate_tax_summary(
+    rooms: Vec<RoomSelectionSummary>,
+    include: bool,
+    multiply_by_quantity: bool,
+) -> Vec<(String, String, f64)> {
+    let mut aggregated: HashMap<(String, String), f64> = HashMap::new();
+    for room in rooms {
+        for tax in room
+            .tax_lines
+            .iter()
+            .filter(|line| line.included == include)
+        {
+            if tax.amount <= 0.0 {
+                continue;
+            }
+            let total_amount = if multiply_by_quantity {
+                tax.amount * room.quantity as f64
+            } else {
+                tax.amount
+            };
+            let key = (tax.description.clone(), tax.currency_code.clone());
+            *aggregated.entry(key).or_insert(0.0) += total_amount;
+        }
+    }
+    let mut entries: Vec<_> = aggregated
+        .into_iter()
+        .map(|((description, currency), amount)| (description, currency, amount))
+        .collect();
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    entries
+}
 
 #[component]
 pub fn BlockRoomV1Page() -> impl IntoView {
@@ -494,7 +546,7 @@ pub fn EnhancedPricingDisplay(
             .sum::<f64>()
     };
 
-    let calculated_total = move || {
+    let base_total = move || {
         let summary = room_summary();
         let nights = num_nights();
         summary
@@ -508,6 +560,41 @@ pub fn EnhancedPricingDisplay(
     } else {
         "hidden lg:flex w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-md flex-col items-stretch space-y-4"
     };
+
+    let included_taxes_summary =
+        create_memo(move |_| aggregate_tax_summary(room_summary(), true, true));
+    let excluded_taxes_summary =
+        create_memo(move |_| aggregate_tax_summary(room_summary(), false, false));
+
+    let included_taxes_total = move || {
+        included_taxes_summary()
+            .iter()
+            .map(|entry| entry.2)
+            .sum::<f64>()
+    };
+
+    let excluded_taxes_total = move || {
+        excluded_taxes_summary()
+            .iter()
+            .map(|entry| entry.2)
+            .sum::<f64>()
+    };
+
+    let included_tax_currency = move || {
+        included_taxes_summary()
+            .first()
+            .map(|entry| entry.1.clone())
+            .unwrap_or_else(|| "USD".to_string())
+    };
+
+    let excluded_tax_currency = move || {
+        excluded_taxes_summary()
+            .first()
+            .map(|entry| entry.1.clone())
+            .unwrap_or_else(|| "USD".to_string())
+    };
+
+    let total_with_included = move || base_total() + included_taxes_total();
 
     let format_currency = |val: f64| format!("${:.2}", val);
 
@@ -559,15 +646,36 @@ pub fn EnhancedPricingDisplay(
                             {move || format!("${:.2} x {} nights", rooms_total_per_night(), num_nights())}
                         </span>
                         <span class="font-semibold">
-                            {move || format_currency(calculated_total())}
+                            {move || format_currency(base_total())}
                         </span>
                     </div>
                 </Show>
 
                 // <!-- Taxes and fees -->
-                <div class="flex justify-between items-center text-sm pt-1 border-t border-dashed border-gray-200">
-                    <span class="text-gray-600">"Platform & Markup Fees"</span>
-                    <span class="font-semibold text-gray-900">"$0.00"</span>
+                <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-600">"Included taxes and fees"</span>
+                        <span class="font-semibold text-gray-900">
+                            {move || format_currency_with_code(included_taxes_total(), &included_tax_currency())}
+                        </span>
+                    </div>
+                    <Show when=move || !included_taxes_summary().is_empty()>
+                        <div class="space-y-1 text-xs text-gray-500">
+                            {move || included_taxes_summary()
+                                .iter()
+                                .map(|(description, currency, amount)| {
+                                    let desc = description.clone();
+                                    let currency_code = currency.clone();
+                                    view! {
+                                        <div class="flex justify-between">
+                                            <span>{desc}</span>
+                                            <span>{format_currency_with_code(*amount, &currency_code)}</span>
+                                        </div>
+                                    }
+                                })
+                                .collect::<Vec<_>>() }
+                        </div>
+                    </Show>
                 </div>
             </div>
 
@@ -576,7 +684,35 @@ pub fn EnhancedPricingDisplay(
             // <!-- Total -->
             <div class="flex justify-between items-center font-bold text-lg">
                 <span>Total</span>
-                <span class="text-2xl">{move || format_currency(calculated_total())}</span>
+                <span class="text-2xl">
+                    {move || format_currency_with_code(total_with_included(), &included_tax_currency())}
+                </span>
+            </div>
+
+            <div class="mt-2 space-y-1 text-sm">
+                <div class="flex justify-between items-center text-sm text-gray-600">
+                    <span>"Local fees (pay at property)"</span>
+                    <span class="font-semibold text-gray-900">
+                        {move || format_currency_with_code(excluded_taxes_total(), &excluded_tax_currency())}
+                    </span>
+                </div>
+                <Show when=move || !excluded_taxes_summary().is_empty()>
+                    <div class="space-y-1 text-xs text-gray-500">
+                        {move || excluded_taxes_summary()
+                            .iter()
+                            .map(|(description, currency, amount)| {
+                                let desc = description.clone();
+                                let currency_code = currency.clone();
+                                view! {
+                                    <div class="flex justify-between">
+                                        <span>{desc}</span>
+                                        <span>{format_currency_with_code(*amount, &currency_code)}</span>
+                                    </div>
+                                }
+                            })
+                            .collect::<Vec<_>>() }
+                    </div>
+                </Show>
             </div>
 
             <div class="pt-2 space-y-3">

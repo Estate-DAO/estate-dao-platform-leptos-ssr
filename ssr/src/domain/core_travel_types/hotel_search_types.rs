@@ -214,6 +214,14 @@ pub struct DomainDetailedPrice {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainTaxLine {
+    pub description: String,
+    pub amount: f64,
+    pub currency_code: String,
+    pub included: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 
 pub struct DomainRoomData {
     pub mapped_room_id: u32,
@@ -228,9 +236,29 @@ pub struct DomainRoomData {
 pub struct DomainRoomOption {
     pub mapped_room_id: u32,
     pub price: DomainDetailedPrice,
+    pub tax_lines: Vec<DomainTaxLine>,
     pub room_data: DomainRoomData,
     pub meal_plan: Option<String>, // Board type + board name (e.g., "Room Only")
     pub occupancy_info: Option<DomainRoomOccupancy>,
+}
+
+impl DomainRoomOption {
+    pub fn included_taxes_total(&self) -> f64 {
+        self.tax_lines
+            .iter()
+            .filter(|line| line.included)
+            .map(|line| line.amount)
+            .sum()
+    }
+
+    pub fn price_excluding_included_taxes(&self) -> f64 {
+        let base_price = self.price.room_price - self.included_taxes_total();
+        if base_price.is_sign_negative() {
+            0.0
+        } else {
+            base_price
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -50,10 +50,25 @@ pub struct LiteApiAmount {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiTaxAndFee {
+    #[serde(default)]
+    pub included: bool,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub amount: f64,
+    #[serde(default)]
+    pub currency: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRetailRate {
     pub total: Vec<LiteApiAmount>,
     #[serde(rename = "suggestedSellingPrice")]
     pub suggested_selling_price: Vec<LiteApiAmount>,
+    #[serde(rename = "taxesAndFees")]
+    pub taxes_and_fees: Option<Vec<LiteApiTaxAndFee>>,
     // #[serde(rename = "initialPrice")]
     // pub initial_price: Vec<LiteApiAmount>,
     // #[serde(rename = "taxesAndFees")]

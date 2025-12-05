@@ -2249,6 +2249,32 @@ impl LiteApiAdapter {
             }
         };
 
+        let tax_entries = rate.retail_rate.taxes_and_fees.as_deref().unwrap_or(&[]);
+        let tax_lines: Vec<crate::domain::DomainTaxLine> = tax_entries
+            .iter()
+            .filter(|tax| tax.amount > 0.0)
+            .map(|tax| {
+                let description = tax
+                    .description
+                    .as_ref()
+                    .map(|desc| desc.trim())
+                    .filter(|desc| !desc.is_empty())
+                    .map(|desc| desc.to_string())
+                    .unwrap_or_else(|| "Taxes & Fees".to_string());
+                let currency = if tax.currency.is_empty() {
+                    currency_code.clone()
+                } else {
+                    tax.currency.clone()
+                };
+                crate::domain::DomainTaxLine {
+                    description,
+                    amount: tax.amount,
+                    currency_code: currency,
+                    included: tax.included,
+                }
+            })
+            .collect();
+
         let occupancy_info = Some(crate::domain::DomainRoomOccupancy {
             max_occupancy: Some(rate.max_occupancy),
             adult_count: Some(rate.adult_count),
@@ -2262,6 +2288,12 @@ impl LiteApiAdapter {
             .map(|amount| amount.amount)
             .unwrap_or(room_price);
 
+        let excluded_tax_total: f64 = tax_lines
+            .iter()
+            .filter(|line| !line.included)
+            .map(|line| line.amount)
+            .sum();
+
         DomainRoomOption {
             mapped_room_id: rate.mapped_room_id,
             price: crate::domain::DomainDetailedPrice {
@@ -2272,12 +2304,13 @@ impl LiteApiAdapter {
                 suggested_selling_price: suggested_price,
                 suggested_selling_price_rounded_off: suggested_price.round(),
                 room_price,
-                tax: 0.0,
+                tax: excluded_tax_total,
                 extra_guest_charge: 0.0,
                 child_charge: 0.0,
                 other_charges: 0.0,
                 currency_code,
             },
+            tax_lines,
             room_data: crate::domain::DomainRoomData {
                 mapped_room_id: rate.mapped_room_id,
                 occupancy_number: rate.occupancy_number,

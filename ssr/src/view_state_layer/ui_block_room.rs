@@ -1,4 +1,4 @@
-use crate::domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData};
+use crate::domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData, DomainTaxLine};
 use crate::view_state_layer::{ui_search_state::UISearchCtx, GlobalStateForLeptos};
 use leptos::*;
 use std::collections::HashMap;
@@ -27,6 +27,7 @@ pub struct RoomSelectionSummary {
     pub meal_plan: Option<String>,
     pub quantity: u32,
     pub price_per_night: f64,
+    pub tax_lines: Vec<DomainTaxLine>,
     pub room_data: DomainRoomData,
 }
 

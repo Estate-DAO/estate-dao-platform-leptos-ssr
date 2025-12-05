@@ -243,8 +243,7 @@ impl HotelDetailsUIState {
         selected_rooms_with_data
             .iter()
             .fold(0.0, |acc, (room_option, quantity)| {
-                acc + (room_option.price.room_price * *quantity as f64)
-                // acc + (room_option.price.room_price * *quantity as f64 * nights as f64)
+                acc + (room_option.price_excluding_included_taxes() * *quantity as f64)
             })
     }
 
@@ -254,7 +253,7 @@ impl HotelDetailsUIState {
         quantity: u32,
         nights: u32,
     ) -> f64 {
-        room_option.price.room_price * quantity as f64
+        room_option.price_excluding_included_taxes() * quantity as f64
     }
 
     // <!-- Format room breakdown text -->
@@ -277,7 +276,7 @@ impl HotelDetailsUIState {
         let total = selected_rooms_with_data
             .iter()
             .fold(0.0, |acc, (room_option, quantity)| {
-                acc + (room_option.price.room_price * *quantity as f64)
+                acc + (room_option.price_excluding_included_taxes() * *quantity as f64)
             });
 
         this.total_price.set(total);

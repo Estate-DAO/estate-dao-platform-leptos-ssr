@@ -1381,6 +1381,15 @@ fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     }
 }
 
+fn included_taxes_for_rate(rate: &DomainRoomOption) -> f64 {
+    rate.included_taxes_total()
+}
+
+fn nightly_price_excluding_taxes(rate: &DomainRoomOption, nights: u32) -> f64 {
+    let valid_nights = if nights == 0 { 1 } else { nights } as f64;
+    rate.price_excluding_included_taxes() / valid_nights
+}
+
 fn format_occupancy_text(info: Option<&DomainRoomOccupancy>) -> String {
     if let Some(info) = info {
         let adults = info.adult_count.unwrap_or(0);
@@ -1553,7 +1562,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 .find(|opt| opt.room_data.rate_key == rate_key)
             {
                 let room_name = opt.room_data.room_name.clone();
-                let price_per_night = opt.price.room_price / nights_val;
+                let price_per_night = opt.price_excluding_included_taxes() / nights_val;
                 let code = opt.price.currency_code.clone();
                 let meal_plan = opt.meal_plan.clone().unwrap_or_default();
                 raw_rows.push((
@@ -1645,18 +1654,24 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             // Group by name and meal plan
             let mut grouped_summaries: HashMap<
                 (String, String),
-                (u32, f64, crate::domain::DomainRoomData),
+                (
+                    u32,
+                    f64,
+                    crate::domain::DomainRoomData,
+                    Vec<crate::domain::DomainTaxLine>,
+                ),
             > = HashMap::new();
 
             for (opt, qty) in raw_summaries {
                 let name = opt.room_data.room_name.clone();
                 let meal = opt.meal_plan.clone().unwrap_or_default();
-                let price_per_night = opt.price.room_price / nights_val;
+                let price_per_night = opt.price_excluding_included_taxes() / nights_val;
 
                 let entry = grouped_summaries.entry((name, meal)).or_insert((
                     0,
                     0.0,
                     opt.room_data.clone(),
+                    opt.tax_lines.clone(),
                 ));
                 entry.0 += qty;
                 entry.1 += price_per_night * qty as f64;
@@ -1664,7 +1679,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 
             let room_selection_summary: Vec<RoomSelectionSummary> = grouped_summaries
                 .into_iter()
-                .map(|((name, meal), (qty, total_price, room_data))| {
+                .map(|((name, meal), (qty, total_price, room_data, tax_lines))| {
                     let avg_price = total_price / qty as f64;
                     RoomSelectionSummary {
                         room_id: room_data.rate_key.clone(), // Use representative ID
@@ -1672,6 +1687,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                         meal_plan: Some(meal),
                         quantity: qty,
                         price_per_night: avg_price,
+                        tax_lines,
                         room_data,
                     }
                 })
@@ -1847,8 +1863,8 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     };
 
     let currency_code = rate.price.currency_code.clone();
-    let price_text =
-        format_currency_with_code(rate.price.room_price / nights() as f64, &currency_code);
+    let base_price_per_night = nightly_price_excluding_taxes(&rate, nights());
+    let price_text = format_currency_with_code(base_price_per_night, &currency_code);
     let meal_plan = rate
         .meal_plan
         .clone()
@@ -1961,14 +1977,15 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
             <div class="md:border-l md:border-gray-200 md:px-6 text-left md:text-center space-y-1 flex flex-col justify-center md:h-full">
                 <p class="text-2xl font-semibold text-gray-900">{price_text}</p>
                 <p class="text-[11px] text-gray-500">
-                    {move || {
-                        let nights = nights();
-                        format!(
-                            "({} night{}, 1 Room incl. taxes)",
-                            nights,
-                            if nights == 1 { "" } else { "s" }
-                        )
-                    }}
+                    // {move || {
+                    //     let nights = nights();
+                    //     format!(
+                    //         "({} night{}, 1 Room excl. taxes (payable at property))",
+                    //         nights,
+                    //         if nights == 1 { "" } else { "s" }
+                    //     )
+                    // }}
+                    (price per night)
                 </p>
             </div>
             <div class="md:border-l md:border-gray-200 md:pl-6 flex items-center justify-start md:justify-end w-full md:h-full">

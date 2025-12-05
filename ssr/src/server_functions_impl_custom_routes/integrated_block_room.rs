@@ -418,6 +418,7 @@ async fn build_hotel_details(
         .iter()
         .map(|room_data| DomainRoomOption {
             price: block_result.total_price.clone(),
+            tax_lines: vec![],
             room_data: room_data.clone(),
             meal_plan: None,
             occupancy_info: None,
