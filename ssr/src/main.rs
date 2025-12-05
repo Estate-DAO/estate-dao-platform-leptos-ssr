@@ -3,6 +3,8 @@
 #![allow(non_snake_case)]
 
 use cfg_if::cfg_if;
+
+#[cfg(feature = "ssr")]
 use estate_fe::{
     api::{
         consts::EnvVarConfig,
@@ -17,18 +19,13 @@ use estate_fe::{
         pipeline_lock::PipelineLockManager, SSRBookingPipelineStep,
     },
     utils::{
-        admin::AdminCanisters,
-        app_reference::BookingId,
-        booking_id,
-        estate_tracing,
-        event_stream::event_stream_handler,
-        notifier::Notifier,
-        sort_json::sort_json, // notification_system::{NOTIFICATION_SYSTEM, Notification},
-                              // event_stream::{event_stream_handler, counter_events},
+        admin::AdminCanisters, app_reference::BookingId, booking_id, estate_tracing,
+        event_stream::event_stream_handler, notifier::Notifier, sort_json::sort_json,
     },
 };
 
 /// Detect payment provider from payment ID (sync version for main.rs)
+#[cfg(feature = "ssr")]
 fn detect_payment_provider_sync(payment_id: &Option<String>) -> String {
     if let Some(ref pid) = payment_id {
         if let Ok(provider) = PaymentServiceImpl::detect_provider_from_payment_id(pid) {
@@ -37,6 +34,11 @@ fn detect_payment_provider_sync(payment_id: &Option<String>) -> String {
     }
 
     // Fallback for unknown providers
+    "unknown".to_string()
+}
+
+#[cfg(not(feature = "ssr"))]
+fn detect_payment_provider_sync(_payment_id: &Option<String>) -> String {
     "unknown".to_string()
 }
 

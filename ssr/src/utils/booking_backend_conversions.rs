@@ -230,10 +230,12 @@ impl BookingBackendConversions {
             end: (2024, 1, 2),
         };
         let room_details = vec![DomainRoomData {
+            occupancy_number: Some(1),
             room_name: "Standard Room".to_string(),
             room_unique_id: "standard_room_1".to_string(),
             rate_key: "standard_rate".to_string(),
             offer_id: "offer_1".to_string(),
+            mapped_room_id: 1,
         }];
         let hotel_details = DomainHotelDetails {
             checkin: "2024-01-01".to_string(),
@@ -241,6 +243,9 @@ impl BookingBackendConversions {
             hotel_name,
             hotel_code: "HOTEL_001".to_string(),
             star_rating: 4,
+            rating: None,
+            review_count: None,
+            categories: Vec::new(),
             description: "Test hotel".to_string(),
             hotel_facilities: vec![],
             address: "Test Address".to_string(),

@@ -36,6 +36,8 @@ pub struct LiteApiHotelRatesRequest {
     pub guest_nationality: String,
     pub checkin: String,  // Format: "YYYY-MM-DD"
     pub checkout: String, // Format: "YYYY-MM-DD"
+    #[serde(rename = "roomMapping")]
+    pub room_mapping: bool,
 }
 
 // Response structures - only parsing necessary fields
@@ -48,10 +50,25 @@ pub struct LiteApiAmount {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiTaxAndFee {
+    #[serde(default)]
+    pub included: bool,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub amount: f64,
+    #[serde(default)]
+    pub currency: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRetailRate {
     pub total: Vec<LiteApiAmount>,
     #[serde(rename = "suggestedSellingPrice")]
     pub suggested_selling_price: Vec<LiteApiAmount>,
+    #[serde(rename = "taxesAndFees")]
+    pub taxes_and_fees: Option<Vec<LiteApiTaxAndFee>>,
     // #[serde(rename = "initialPrice")]
     // pub initial_price: Vec<LiteApiAmount>,
     // #[serde(rename = "taxesAndFees")]
@@ -63,11 +80,13 @@ pub struct LiteApiRetailRate {
 pub struct LiteApiRate {
     #[serde(rename = "rateId")]
     pub rate_id: String,
-    // #[serde(rename = "occupancyNumber")]
-    // pub occupancy_number: i32,
+    #[serde(rename = "occupancyNumber")]
+    pub occupancy_number: Option<u32>,
     pub name: String,
     #[serde(rename = "maxOccupancy")]
     pub max_occupancy: u32,
+    #[serde(rename = "mappedRoomId")]
+    pub mapped_room_id: u32,
     #[serde(rename = "adultCount")]
     pub adult_count: u32,
     #[serde(rename = "childCount")]

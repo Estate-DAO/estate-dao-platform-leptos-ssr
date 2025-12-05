@@ -603,7 +603,10 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                         <span class="text-gray-600 text-xs md:text-sm">"Guests & Rooms"</span>
                                     </div>
                                     <p class="text-sm md:text-base font-medium">
-                                        {format!("1 Room, {} Adult{} • {} children",
+                                        {format!(
+                                            "{} Room{}, {} Adult{} • {} children",
+                                            display_info.number_of_rooms,
+                                            if display_info.number_of_rooms == 1 { "" } else { "s" },
                                             display_info.number_of_adults,
                                             if display_info.number_of_adults > 1 { "s" } else { "" },
                                             display_info.number_of_children

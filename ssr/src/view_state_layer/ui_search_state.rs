@@ -79,12 +79,14 @@ impl UISearchCtx {
     pub fn set_guests(guests: GuestSelection) {
         let this: Self = expect_context();
 
-        this.guests.adults.set(guests.adults.get_untracked());
-        this.guests.children.set(guests.children.get_untracked());
-        this.guests.rooms.set(guests.rooms.get_untracked());
-        this.guests
-            .children_ages
-            .set_vec(guests.children_ages.get_untracked());
+        batch(|| {
+            this.guests.adults.set(guests.adults.get_untracked());
+            this.guests.children.set(guests.children.get_untracked());
+            this.guests.rooms.set(guests.rooms.get_untracked());
+            this.guests
+                .children_ages
+                .set_vec(guests.children_ages.get_untracked());
+        });
     }
 
     pub fn set_filters(filters: UISearchFilters) {

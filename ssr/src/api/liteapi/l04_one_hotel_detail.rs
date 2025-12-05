@@ -74,21 +74,8 @@ pub struct LiteApiRoomAmenity {
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRoomPhoto {
     pub url: String,
-    // #[serde(rename = "imageDescription")]
-    // pub image_description: String,
-    // #[serde(rename = "imageClass1")]
-    // pub image_class1: String,
-    // #[serde(rename = "imageClass2")]
-    // pub image_class2: String,
-    // #[serde(rename = "failoverPhoto")]
-    // pub failover_photo: String,
     #[serde(rename = "mainPhoto")]
     pub main_photo: bool,
-    // pub score: f64,
-    // #[serde(rename = "classId")]
-    // pub class_id: i32,
-    // #[serde(rename = "classOrder")]
-    // pub class_order: i32,
     #[serde(rename = "hd_url")]
     pub hd_url: String,
 }
@@ -101,15 +88,61 @@ pub struct LiteApiRoomView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiPolicy {
+    pub id: i32,
+    #[serde(rename = "policy_type", default)]
+    pub policy_type: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub child_allowed: String,
+    #[serde(default)]
+    pub pets_allowed: String,
+    #[serde(default)]
+    pub parking: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiCategory {
+    pub name: String,
+    pub rating: f64,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiSentimentAnalysis {
+    #[serde(default)]
+    pub categories: Vec<LiteApiCategory>,
+    // other sentiment fields can be added when needed
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
+pub struct LiteApiBedType {
+    pub quantity: i32,
+    #[serde(rename = "bedType")]
+    pub bed_type: String,
+    #[serde(rename = "bedSize")]
+    pub bed_size: String,
+    pub id: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiRoom {
     pub id: i32,
     #[serde(rename = "roomName")]
     pub room_name: String,
     pub description: String,
-    // #[serde(rename = "roomSizeSquare")]
-    // pub room_size_square: i32,
-    // #[serde(rename = "roomSizeUnit")]
-    // pub room_size_unit: String,
+    #[serde(rename = "roomSizeSquare")]
+    pub room_size_square: Option<f64>,
+    #[serde(rename = "roomSizeUnit", default)]
+    pub room_size_unit: Option<String>,
     #[serde(rename = "hotelId")]
     pub hotel_id: String,
     #[serde(rename = "maxAdults")]
@@ -118,14 +151,12 @@ pub struct LiteApiRoom {
     pub max_children: i32,
     #[serde(rename = "maxOccupancy")]
     pub max_occupancy: i32,
-    // #[serde(rename = "bedTypes")]
-    // pub bed_types: Vec<String>,
+    #[serde(rename = "bedTypes", default)]
+    pub bed_types: Vec<LiteApiBedType>,
     #[serde(rename = "roomAmenities")]
     pub room_amenities: Vec<LiteApiRoomAmenity>,
     pub photos: Vec<LiteApiRoomPhoto>,
     pub views: Vec<LiteApiRoomView>,
-    // #[serde(rename = "bedRelation")]
-    // pub bed_relation: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -176,6 +207,12 @@ pub struct LiteApiSingleHotelDetailData {
     pub rating: f64,
     #[serde(rename = "reviewCount", default)]
     pub review_count: i32,
+    #[serde(default)]
+    pub categories: Vec<LiteApiCategory>,
+    #[serde(default)]
+    pub sentiment_analysis: Option<LiteApiSentimentAnalysis>,
+    #[serde(default)]
+    pub policies: Vec<LiteApiPolicy>,
     #[serde(default)]
     pub parking: String,
     #[serde(rename = "groupRoomMin", default)]
