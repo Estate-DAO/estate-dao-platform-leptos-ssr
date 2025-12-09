@@ -717,11 +717,6 @@ pub fn HotelDetailsHeader(
                     >
                         {move || {
                             let is_wishlisted = is_wishlisted();
-                            let label = if is_wishlisted {
-                                "In Wishlist"
-                            } else {
-                                "Add to Wishlist"
-                            };
                             view! {
                                 <div class="flex items-center gap-2">
                                     <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
@@ -758,7 +753,7 @@ pub fn HotelDetailsHeader(
                                             }
                                         />
                                     </svg>
-                                    <span class="font-semibold text-gray-700">{label}</span>
+                                    <Show when=move || !is_wishlisted ><span class="font-semibold text-gray-700">"Add to Wishlist"</span></Show>
                                 </div>
                             }
                         }}
