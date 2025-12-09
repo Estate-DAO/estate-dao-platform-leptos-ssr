@@ -604,34 +604,28 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 view! { <></> }
             }}
             </Suspense>
+            <Show when=loaded /* fallback=|| view! {
+                // <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                //     <div class="bg-white rounded-xl shadow-md p-6">
+                //         <div class="text-xl font-semibold text-gray-600 text-center">
+                //             No hotel data available
+                //         </div>
+                //     </div>
+                // </div>
+            } */>
+                <HotelDetailsHeader hotel_name_signal=hotel_name_signal() star_rating_signal=star_rating_signal() address_signal=address_signal() hotel_code=hotel_code_signal() />
+                <HotelImages open_image_viewer/>
+                <DetailsSubnav />
+                <OverviewSection
+                    description_html=description_signal()
+                    address=address_signal()
+                    amenities=amenities_signal()
+                />
 
-            <Show
-                when=move || !is_loading()
-                fallback=FullScreenSpinnerGray
-            >
-                <Show when=loaded fallback=|| view! {
-                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                        <div class="bg-white rounded-xl shadow-md p-6">
-                            <div class="text-xl font-semibold text-gray-600 text-center">
-                                No hotel data available
-                            </div>
-                        </div>
-                    </div>
-                }>
-                    <HotelDetailsHeader hotel_name_signal=hotel_name_signal() star_rating_signal=star_rating_signal() address_signal=address_signal() hotel_code=hotel_code_signal() />
-                    <HotelImages open_image_viewer/>
-                    <DetailsSubnav />
-                    <OverviewSection
-                        description_html=description_signal()
-                        address=address_signal()
-                        amenities=amenities_signal()
-                    />
-
-                    <SelectRoomSection />
-                    <GuestReviewsSection />
-                    <PolicyRulesSection address=address_signal() />
-                    <SiteFooter />
-                </Show>
+                <SelectRoomSection />
+                <GuestReviewsSection />
+                <PolicyRulesSection address=address_signal() />
+                <SiteFooter />
             </Show>
             <Show when=move || error_message().is_some()>
                 <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">

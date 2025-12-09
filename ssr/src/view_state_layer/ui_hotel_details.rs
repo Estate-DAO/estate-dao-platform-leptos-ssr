@@ -40,6 +40,7 @@ impl HotelDetailsUIState {
         let previous = this.rates.get_untracked();
         let cloned = rates.clone();
         this.rates.set(rates);
+        this.selected_rooms.set(HashMap::new());
         Self::sync_selected_rooms_with_rates(
             cloned.as_ref().map(|r| r.as_slice()),
             previous.as_ref().map(|r| r.as_slice()),
