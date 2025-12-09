@@ -2,6 +2,7 @@ use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::{use_navigate, use_query_map, NavigateOptions};
 
+use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::api::consts::ENFORCE_SINGLE_ROOM_TYPE_BOOKING;
 use crate::app::AppRoutes;
@@ -679,7 +680,10 @@ pub fn HotelDetailsHeader(
     #[prop(into)] star_rating_signal: u8,
     #[prop(into)] hotel_code: String,
 ) -> impl IntoView {
-    let toggle_wishlist_action = add_to_wishlist_action(hotel_code);
+    let wishlist_code = hotel_code.clone();
+    let toggle_wishlist_action = add_to_wishlist_action(hotel_code.clone());
+    let is_wishlisted = move || AuthStateSignal::check_if_added_to_wishlist(&wishlist_code);
+    let heart_d = "M19.62 27.81C19.28 27.93 18.72 27.93 18.38 27.81C15.48 26.82 9 22.69 9 15.69C9 12.6 11.49 10.1 14.56 10.1C16.38 10.1 17.99 10.98 19 12.34C20.01 10.98 21.63 10.1 23.44 10.1C26.51 10.1 29 12.6 29 15.69C29 22.69 22.52 26.82 19.62 27.81Z";
     view! {
         <div class="my-4 w-full max-w-7xl mx-auto px-4 pt-4 pb-2 lg:pt-2 lg:pb-0">
             {/* on small: actions drop under title; on md+: they sit on the right */}
@@ -708,13 +712,56 @@ pub fn HotelDetailsHeader(
                 {/* actions */}
                 <div class="flex items-center gap-3 md:self-start">
                     <button
-                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm bg-white hover:bg-gray-50"
+                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm bg-white hover:bg-gray-50 group"
                         on:click=move |_| toggle_wishlist_action.dispatch(())
                     >
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20.8 4.6a5.3 5.3 0 0 0-7.5 0L12 5.9l-1.3-1.3a5.3 5.3 0 0 0-7.5 7.5l1.3 1.3L12 22l7.5-8.6 1.3-1.3a5.3 5.3 0 0 0 0-7.5z"/>
-                        </svg>
-                        "Add to Wishlist"
+                        {move || {
+                            let is_wishlisted = is_wishlisted();
+                            let label = if is_wishlisted {
+                                "In Wishlist"
+                            } else {
+                                "Add to Wishlist"
+                            };
+                            view! {
+                                <div class="flex items-center gap-2">
+                                    <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="19" cy="19" r="19" fill="white" />
+
+                                        // FILL heart (underneath)
+                                        <path
+                                            d=heart_d
+                                            fill="currentColor"
+                                            stroke="none"
+                                            class={
+                                                if is_wishlisted {
+                                                    "text-red-500 group-hover:text-blue-600 transition-colors"
+                                                } else {
+                                                    "text-transparent group-hover:text-blue-600 transition-colors"
+                                                }
+                                            }
+                                        />
+
+                                        // STROKE heart (outline, always gray)
+                                        <path
+                                            d=heart_d
+                                            fill="none"
+                                            stroke="#45556C"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            class={
+                                                if is_wishlisted {
+                                                    "stroke-red-500 group-hover:stroke-blue-600 transition-colors"
+                                                } else {
+                                                    "stroke-[#45556C] group-hover:stroke-blue-600 transition-colors"
+                                                }
+                                            }
+                                        />
+                                    </svg>
+                                    <span class="font-semibold text-gray-700">{label}</span>
+                                </div>
+                            }
+                        }}
                     </button>
                     <a href="#rooms" class="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 inline-flex items-center gap-2">
                         "Select A Room"
