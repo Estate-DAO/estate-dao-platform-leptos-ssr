@@ -118,12 +118,23 @@ impl HotelProviderPort for LiteApiAdapter {
             .room_types
             .into_iter()
             .flat_map(|rt| {
-                rt.rates
-                    .into_iter()
-                    .map(move |r| (rt.room_type_id.clone(), rt.offer_id.clone(), r))
+                let offer_retail_rate = rt.offer_retail_rate.clone();
+                rt.rates.into_iter().map(move |r| {
+                    (
+                        rt.room_type_id.clone(),
+                        rt.offer_id.clone(),
+                        offer_retail_rate.clone(),
+                        r,
+                    )
+                })
             })
-            .map(|(room_type_id, offer_id, rate)| {
-                Self::map_liteapi_room_to_domain(rate, room_type_id, offer_id)
+            .map(|(room_type_id, offer_id, offer_retail_rate, rate)| {
+                Self::map_liteapi_room_to_domain(
+                    rate,
+                    room_type_id,
+                    offer_id,
+                    Some(offer_retail_rate),
+                )
             })
             .collect();
 

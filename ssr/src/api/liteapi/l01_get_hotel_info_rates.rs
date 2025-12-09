@@ -122,6 +122,9 @@ pub struct LiteApiRoomType {
     // pub offer_retail_rate: LiteApiAmount,
     #[serde(rename = "suggestedSellingPrice")]
     pub suggested_selling_price: LiteApiAmount,
+
+    #[serde(rename = "offerRetailRate")]
+    pub offer_retail_rate: LiteApiAmount,
     // #[serde(rename = "offerInitialPrice")]
     // pub offer_initial_price: LiteApiAmount,
     // #[serde(rename = "priceType")]

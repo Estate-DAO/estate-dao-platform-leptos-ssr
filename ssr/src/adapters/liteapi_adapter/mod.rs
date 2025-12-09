@@ -1139,6 +1139,7 @@ impl LiteApiAdapter {
                             rate.clone(),
                             room_type.room_type_id.clone(),
                             room_type.offer_id.clone(),
+                            Some(room_type.offer_retail_rate.clone()),
                         );
 
                         all_rooms.push(room_option);
@@ -2220,6 +2221,7 @@ impl LiteApiAdapter {
         rate: crate::api::liteapi::LiteApiRate,
         room_type_id: String,
         offer_id: String,
+        offer_retail_rate: Option<crate::api::liteapi::l01_get_hotel_info_rates::LiteApiAmount>,
     ) -> DomainRoomOption {
         let room_price = rate
             .retail_rate
@@ -2321,6 +2323,12 @@ impl LiteApiAdapter {
             },
             meal_plan,
             occupancy_info,
+            offer_retail_rate: offer_retail_rate.map(|amount| {
+                crate::domain::DomainCurrencyAmount {
+                    amount: amount.amount,
+                    currency_code: amount.currency,
+                }
+            }),
         }
     }
 }

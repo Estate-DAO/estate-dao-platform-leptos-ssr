@@ -51,6 +51,21 @@ fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     }
 }
 
+fn format_tax_label(label: &str) -> String {
+    label
+        .replace('_', " ")
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => "".to_string(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn round_up_to_cents(value: f64) -> f64 {
     (value * 100.0).ceil() / 100.0
 }
@@ -669,7 +684,7 @@ pub fn EnhancedPricingDisplay(
                             {move || included_taxes_summary()
                                 .iter()
                                 .map(|(description, currency, amount)| {
-                                    let desc = description.clone();
+                                    let desc = format_tax_label(description);
                                     let currency_code = currency.clone();
                                     view! {
                                         <div class="flex justify-between">
@@ -703,13 +718,13 @@ pub fn EnhancedPricingDisplay(
                 </div>
                 <Show when=move || !excluded_taxes_summary().is_empty()>
                     <div class="space-y-1 text-xs text-gray-500">
-                        {move || excluded_taxes_summary()
-                            .iter()
-                            .map(|(description, currency, amount)| {
-                                let desc = description.clone();
-                                let currency_code = currency.clone();
-                                view! {
-                                    <div class="flex justify-between">
+                            {move || excluded_taxes_summary()
+                                .iter()
+                                .map(|(description, currency, amount)| {
+                                    let desc = format_tax_label(description);
+                                    let currency_code = currency.clone();
+                                    view! {
+                                        <div class="flex justify-between">
                                         <span>{desc}</span>
                                         <span>{format_currency_with_code(*amount, &currency_code)}</span>
                                     </div>
@@ -1382,24 +1397,24 @@ pub fn ConfirmButton(
             .block_room_with_backend_integration(booking_id.to_order_id(), email, None)
             .await
         {
-            Ok(_) => {
+            Ok(response) => {
                 log!("Integrated prebook action: Successfully completed block room + backend save");
 
                 // For now, we don't get detailed pricing from the integrated response
                 // The UI pricing calculations are sufficient until we need API pricing updates
-                let current_total = BlockRoomUIState::get_total_price();
+                let current_total = response.1.unwrap_or(BlockRoomUIState::get_total_price());
                 let current_room_price = BlockRoomUIState::get_room_price();
 
                 BlockRoomUIState::batch_update_on_success(
                     booking_id.to_order_id(),
                     current_total,
-                    current_room_price,
+                    current_total,
                 );
 
                 log!("Integrated prebook action: After batch_update_on_success - loading: {}, block_room_called: {}", 
                      BlockRoomUIState::get_loading(), BlockRoomUIState::get_block_room_called());
 
-                Some(booking_id.to_order_id())
+                Some((booking_id.to_order_id(), current_total))
             }
             Err(e) => {
                 log!(

@@ -7,8 +7,8 @@ use estate_fe::view_state_layer::AppState;
 use estate_fe::{
     api::{canister::add_booking::call_add_booking_backend, liteapi::LiteApiPrebookResponse},
     domain::{
-        BookingError, DomainDestination, DomainHotelDetails, DomainRoomData, DomainRoomOption,
-        DomainSelectedDateRange,
+        BookingError, DomainCurrencyAmount, DomainDestination, DomainHotelDetails, DomainRoomData,
+        DomainRoomOption, DomainSelectedDateRange,
     },
     utils::{app_reference::BookingId, booking_backend_conversions::BookingBackendConversions},
 };
@@ -419,6 +419,10 @@ async fn build_hotel_details(
         .map(|room_data| DomainRoomOption {
             price: block_result.total_price.clone(),
             tax_lines: vec![],
+            offer_retail_rate: Some(DomainCurrencyAmount {
+                amount: block_result.total_price.room_price,
+                currency_code: block_result.total_price.currency_code.clone(),
+            }),
             room_data: room_data.clone(),
             meal_plan: None,
             occupancy_info: None,

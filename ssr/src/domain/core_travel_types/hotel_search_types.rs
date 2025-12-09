@@ -214,6 +214,12 @@ pub struct DomainDetailedPrice {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainCurrencyAmount {
+    pub amount: f64,
+    pub currency_code: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainTaxLine {
     pub description: String,
     pub amount: f64,
@@ -237,6 +243,7 @@ pub struct DomainRoomOption {
     pub mapped_room_id: u32,
     pub price: DomainDetailedPrice,
     pub tax_lines: Vec<DomainTaxLine>,
+    pub offer_retail_rate: Option<DomainCurrencyAmount>,
     pub room_data: DomainRoomData,
     pub meal_plan: Option<String>, // Board type + board name (e.g., "Room Only")
     pub occupancy_info: Option<DomainRoomOccupancy>,

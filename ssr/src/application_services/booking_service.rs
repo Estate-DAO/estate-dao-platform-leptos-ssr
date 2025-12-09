@@ -98,7 +98,7 @@ impl BookingService {
         booking_id: String,
         email: String,
         hotel_token: Option<String>,
-    ) -> Result<String, BookingError> {
+    ) -> Result<(String, Option<f64>), BookingError> {
         let response = self
             .block_room_integrated(booking_id.clone(), email, hotel_token)
             .await?;
@@ -108,7 +108,10 @@ impl BookingService {
                 "Successfully completed integrated block room for booking_id: {}",
                 booking_id
             );
-            Ok(booking_id)
+            let price = response
+                .block_room_response
+                .map(|f| f.total_price.room_price);
+            Ok((booking_id, price))
         } else {
             Err(BookingError::BackendError(response.message))
         }
