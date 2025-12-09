@@ -674,7 +674,7 @@ pub fn EnhancedPricingDisplay(
                 // <!-- Taxes and fees -->
                 <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
                     <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-600">"Included taxes and fees"</span>
+                        <span class="text-gray-600">"Taxes and fees"</span>
                         <span class="font-semibold text-gray-900">
                             {move || format_currency_with_code(included_taxes_total(), &included_tax_currency())}
                         </span>
@@ -709,31 +709,33 @@ pub fn EnhancedPricingDisplay(
                 </span>
             </div>
 
-            <div class="mt-2 space-y-1 text-sm">
-                <div class="flex justify-between items-center text-sm text-gray-600">
-                    <span>"Local fees (pay at property)"</span>
-                    <span class="font-semibold text-gray-900">
-                        {move || format_currency_with_code(excluded_taxes_total(), &excluded_tax_currency())}
-                    </span>
-                </div>
-                <Show when=move || !excluded_taxes_summary().is_empty()>
-                    <div class="space-y-1 text-xs text-gray-500">
-                            {move || excluded_taxes_summary()
-                                .iter()
-                                .map(|(description, currency, amount)| {
-                                    let desc = format_tax_label(description);
-                                    let currency_code = currency.clone();
-                                    view! {
-                                        <div class="flex justify-between">
-                                        <span>{desc}</span>
-                                        <span>{format_currency_with_code(*amount, &currency_code)}</span>
-                                    </div>
-                                }
-                            })
-                            .collect::<Vec<_>>() }
+            <Show when=move || (excluded_taxes_total().abs() > 0.0)>
+                <div class="mt-2 space-y-1 text-sm">
+                    <div class="flex justify-between items-center text-sm text-gray-600">
+                        <span>"Local fees (pay at property)"</span>
+                        <span class="font-semibold text-gray-900">
+                            {move || format_currency_with_code(excluded_taxes_total(), &excluded_tax_currency())}
+                        </span>
                     </div>
-                </Show>
-            </div>
+                    <Show when=move || !excluded_taxes_summary().is_empty()>
+                        <div class="space-y-1 text-xs text-gray-500">
+                                {move || excluded_taxes_summary()
+                                    .iter()
+                                    .map(|(description, currency, amount)| {
+                                        let desc = format_tax_label(description);
+                                        let currency_code = currency.clone();
+                                        view! {
+                                            <div class="flex justify-between">
+                                            <span>{desc}</span>
+                                            <span>{format_currency_with_code(*amount, &currency_code)}</span>
+                                        </div>
+                                    }
+                                })
+                                .collect::<Vec<_>>() }
+                        </div>
+                    </Show>
+                </div>
+            </Show>
 
             <div class="pt-2 space-y-3">
                 <TermsCheckbox />
@@ -883,9 +885,7 @@ pub fn LoginPrompt() -> impl IntoView {
             </div>
             // <!-- Centered login button with improved mobile styling -->
             <div class="w-full flex justify-center">
-                <div class="w-full max-w-sm">
-                    <YralAuthProvider />
-                </div>
+                <YralAuthProvider />
             </div>
         </div>
     }
