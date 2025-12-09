@@ -15,7 +15,7 @@ pub fn HotelListNavbar() -> impl IntoView {
                 </a>
 
                 {/* Center: Search (desktop only) */}
-                <div class="hidden md:flex flex-1 justify-center">
+                <div class="hidden lg:flex flex-1 justify-center">
                     <div class="w-full max-w-3xl">
                         <InputGroupContainer
                         default_expanded=true
@@ -34,7 +34,7 @@ pub fn HotelListNavbar() -> impl IntoView {
         </nav>
 
         // Mobile search as a normal flow element (NOT fixed)
-        <div class="md:hidden bg-white px-4 pt-16 pb-3">
+        <div class="lg:hidden bg-white px-4 pt-16 pb-3">
             // pt-16 matches the fixed bar height (h-14 ≈ 56px -> 14 * 4px = 56; we add a tad more to be safe)
             <InputGroupContainer
                 default_expanded=false

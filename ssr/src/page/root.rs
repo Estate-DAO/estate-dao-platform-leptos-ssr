@@ -13,6 +13,8 @@ use crate::component::{
     /* DestinationPickerV5, */ CryptoCarousel, DestinationPickerV6, DestinationsSection,
     FeaturesSection, FeedbackSection, Footer, MostPopular, Navbar,
 };
+use crate::page::InputGroupContainer;
+use crate::utils::date::*;
 use crate::{
     api::canister::greet_call::greet_backend,
     app::AppRoutes,
@@ -24,9 +26,7 @@ use crate::{
     utils::query_params::QueryParamsSync,
     view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx},
 };
-// use chrono::{Datelike, NaiveDate};
-use crate::page::InputGroupContainer;
-use crate::utils::date::*;
+use chrono::Datelike;
 use leptos::ev::MouseEvent;
 use leptos_query::{query_persister, *};
 use leptos_use::{on_click_outside, use_timestamp_with_controls, UseTimestampReturn};
@@ -236,6 +236,25 @@ pub fn InputGroup(
             <button
                 on:click=move |ev| {
                     ev.prevent_default();
+
+                    // Auto-set dates if not selected
+                    let current_dates = search_ctx.date_range.get();
+                    let has_no_dates = current_dates.start == (0, 0, 0) || current_dates.end == (0, 0, 0);
+
+                    if has_no_dates {
+                        log!("[InputGroup] No dates selected, auto-setting to next week");
+                        let today = chrono::Local::now().date_naive();
+                        let checkin = today + chrono::Duration::days(7);
+                        let checkout = today + chrono::Duration::days(8);
+
+                        let date_range = SelectedDateRange {
+                            start: (checkin.year() as u32, checkin.month(), checkin.day()),
+                            end: (checkout.year() as u32, checkout.month(), checkout.day()),
+                        };
+
+                        UISearchCtx::set_date_range(date_range);
+                    }
+
                     UIPaginationState::reset_to_first_page();
                     search_action.dispatch(());
                 }
