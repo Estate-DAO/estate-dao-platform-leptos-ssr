@@ -177,6 +177,18 @@ impl GuestSelection {
         let search_ctx: UISearchCtx = expect_context();
         let this = search_ctx.guests;
         this.rooms.update(|n| *n += 1);
+
+        // Auto-increment adults if rooms exceed adults (ensure at least 1 adult per room)
+        let rooms_count = this.rooms.get_untracked();
+        let adults_count = this.adults.get_untracked();
+        if rooms_count > adults_count {
+            this.adults.set(rooms_count);
+            log!(
+                "[rooms_signal] Auto-incrementing adults to {} to match rooms count",
+                rooms_count
+            );
+        }
+
         log!(
             "[rooms_signal] Incrementing rooms count to: {}",
             this.rooms.get_untracked()
