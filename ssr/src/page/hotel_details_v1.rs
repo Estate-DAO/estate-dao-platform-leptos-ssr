@@ -2562,22 +2562,42 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
                         }
                     >
                         <div class="space-y-3">
-                            <For
-                                each=move || policies.get()
-                                key=|p| p.name.clone()
-                                let:policy
-                            >
-                                <div>
-                                    <p class="font-semibold text-gray-900 text-sm">{policy.name.clone()}</p>
-                                    <p class="text-sm text-gray-700 whitespace-pre-line">
-                                        {if policy.description.trim().is_empty() {
+                            {move || {
+                                use std::collections::HashMap;
+
+                                // Group policies by name
+                                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+                                for policy in policies.get() {
+                                    grouped.entry(policy.name.clone())
+                                        .or_insert_with(Vec::new)
+                                        .push(if policy.description.trim().is_empty() {
                                             "Details not provided.".to_string()
                                         } else {
                                             policy.description.clone()
-                                        }}
-                                    </p>
-                                </div>
-                            </For>
+                                        });
+                                }
+
+                                // Convert to sorted vec for consistent ordering
+                                let mut policy_groups: Vec<(String, Vec<String>)> = grouped.into_iter().collect();
+                                policy_groups.sort_by(|a, b| a.0.cmp(&b.0));
+
+                                policy_groups.into_iter().map(|(name, descriptions)| {
+                                    view! {
+                                        <div>
+                                            <p class="font-semibold text-gray-900 text-sm">{name}</p>
+                                            <ul class="space-y-1">
+                                                {descriptions.into_iter().map(|desc| {
+                                                    view! {
+                                                        <li class="text-sm text-gray-700 whitespace-pre-line">
+                                                            {desc}
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+                                            </ul>
+                                        </div>
+                                    }
+                                }).collect_view()
+                            }}
                         </div>
                     </Show>
                 </div>
