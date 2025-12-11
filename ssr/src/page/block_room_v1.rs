@@ -592,6 +592,8 @@ pub fn EnhancedPricingDisplay(
             .sum::<f64>()
     };
 
+    let platform_markup_total = move || 0.0;
+
     let excluded_taxes_total = move || {
         excluded_taxes_summary()
             .iter()
@@ -605,6 +607,8 @@ pub fn EnhancedPricingDisplay(
             .map(|entry| entry.1.clone())
             .unwrap_or_else(|| "USD".to_string())
     };
+
+    let platform_markup_currency = move || "USD".to_string();
 
     let excluded_tax_currency = move || {
         excluded_taxes_summary()
@@ -696,6 +700,17 @@ pub fn EnhancedPricingDisplay(
                                 .collect::<Vec<_>>() }
                         </div>
                     </Show>
+                </div>
+            </div>
+
+            <Divider class="my-2".into() />
+                // <!-- Plaforme and Markup fees -->
+            <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">"Plaforme and Markup fees"</span>
+                    <span class="font-semibold text-gray-900">
+                        {move || format_currency_with_code(platform_markup_total(), &platform_markup_currency())}
+                    </span>
                 </div>
             </div>
 
