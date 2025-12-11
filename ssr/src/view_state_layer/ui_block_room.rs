@@ -553,7 +553,11 @@ impl BlockRoomUIState {
 
         let total: f64 = summary
             .iter()
-            .map(|room| room.price_per_night * room.quantity as f64 * num_nights as f64)
+            .map(|room| {
+                // Round price to 2 decimals to match displayed value
+                let rounded_price = (room.price_per_night * 100.0).round() / 100.0;
+                rounded_price * room.quantity as f64 * num_nights as f64
+            })
             .sum();
 
         this.total_price.set(total);

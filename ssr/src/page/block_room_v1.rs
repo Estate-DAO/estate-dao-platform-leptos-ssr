@@ -1591,10 +1591,10 @@ pub fn PaymentModal() -> impl IntoView {
                         <Show when=move || BlockRoomUIState::get_error().is_none()>
                             <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
                             <div class="flex flex-col gap-2 mb-6">
-                                <div class="flex justify-between items-end">
-                                    <span class="text-lg font-bold">{move || format!("${:.2}", room_price())}</span>
-                                    // <span class="ml-1 text-base font-normal text-gray-600">/night</span>
-                                </div>
+                                // <div class="flex justify-between items-end">
+                                //     <span class="text-lg font-bold">{move || format!("${:.2}", room_price())}</span>
+                                //     // <span class="ml-1 text-base font-normal text-gray-600">/night</span>
+                                // </div>
                                 // <div class="flex justify-between items-center text-base">
                                 //     // <span class="text-gray-700">
                                 //     //     {move || format!("${:.2} x {} nights", room_price(), num_nights())}
