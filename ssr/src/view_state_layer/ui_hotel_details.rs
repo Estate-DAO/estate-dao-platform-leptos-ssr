@@ -237,14 +237,30 @@ impl HotelDetailsUIState {
             .collect()
     }
 
-    // <!-- Calculate subtotal for given number of nights -->
+    // <! -- Calculate subtotal for given number of nights -->
     pub fn calculate_subtotal_for_nights() -> f64 {
+        use crate::view_state_layer::ui_search_state::UISearchCtx;
+        let ui_search_ctx: UISearchCtx = expect_context();
+        let nights = {
+            let n = ui_search_ctx.date_range.get().no_of_nights();
+            if n == 0 {
+                1.0
+            } else {
+                n as f64
+            }
+        };
+
         let selected_rooms_with_data = Self::get_selected_rooms_with_data();
 
         selected_rooms_with_data
             .iter()
             .fold(0.0, |acc, (room_option, quantity)| {
-                acc + (room_option.price_excluding_included_taxes() * *quantity as f64)
+                // Calculate per-night price and round to 2 decimals to match display
+                let total_price = room_option.price_excluding_included_taxes();
+                let price_per_night = total_price / nights;
+                let rounded_price = (price_per_night * 100.0).round() / 100.0;
+                let line_total = rounded_price * *quantity as f64 * nights;
+                acc + line_total
             })
     }
 

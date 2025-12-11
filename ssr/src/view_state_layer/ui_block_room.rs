@@ -412,7 +412,11 @@ impl BlockRoomUIState {
         let summary = this.room_selection_summary.get();
         let base_total = summary
             .iter()
-            .map(|room| room.price_per_night * room.quantity as f64 * nights as f64)
+            .map(|room| {
+                // Round price to 2 decimals to match displayed value
+                let rounded_price = (room.price_per_night * 100.0).round() / 100.0;
+                rounded_price * room.quantity as f64 * nights as f64
+            })
             .sum::<f64>();
         base_total + Self::get_included_tax_total()
     }

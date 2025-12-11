@@ -1598,7 +1598,8 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 .find(|opt| opt.room_data.rate_key == rate_key)
             {
                 let room_name = opt.room_data.room_name.clone();
-                let price_per_night = opt.price_excluding_included_taxes() / nights_val;
+                let total_price_for_stay = opt.price_excluding_included_taxes(); // Total for ALL nights
+                let price_per_night = total_price_for_stay / nights_val;
                 let code = opt.price.currency_code.clone();
                 let meal_plan = opt.meal_plan.clone().unwrap_or_default();
                 raw_rows.push((
@@ -1607,6 +1608,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                     room_name,
                     meal_plan,
                     price_per_night,
+                    total_price_for_stay,
                     code,
                 ));
             }
@@ -1614,23 +1616,28 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 
         // Second pass: group by room_name and meal_plan
         // Key: (Name, MealPlan), Value: (TotalQty, TotalPriceSum, Code, FirstRateKey)
-        let mut grouped: HashMap<(String, String), (u32, f64, String, String)> = HashMap::new();
+        let mut grouped: HashMap<(String, String), (u32, f64, f64, String, String)> =
+            HashMap::new();
 
-        for (rate_key, qty, name, meal, price, code) in raw_rows {
+        for (rate_key, qty, name, meal, price, total, code) in raw_rows {
             let entry = grouped
                 .entry((name, meal))
-                .or_insert((0, 0.0, code, rate_key));
+                .or_insert((0, 0.0, 0.0, code, rate_key));
             entry.0 += qty;
-            entry.1 += price * qty as f64;
+            entry.1 += price * qty as f64; // Accumulate per-night prices
+            entry.2 += total * qty as f64; // Accumulate total prices
         }
 
         // Convert back to vector
+        // Return: (rate_key, qty, name, meal, avg_price_per_night, code, total_for_all_nights_and_rooms)
         grouped
             .into_iter()
-            .map(|((name, meal), (qty, total_price, code, rate_key))| {
-                let avg_price = total_price / qty as f64;
-                (rate_key, qty, name, meal, avg_price, code)
-            })
+            .map(
+                |((name, meal), (qty, total_price_per_night, total_for_stay, code, rate_key))| {
+                    let avg_price = total_price_per_night / qty as f64;
+                    (rate_key, qty, name, meal, avg_price, code, total_for_stay)
+                },
+            )
             .collect::<Vec<_>>()
     };
     let guests = ui_search_ctx.guests;
@@ -1800,11 +1807,12 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                             resolved_selection_rows()
                                 .into_iter()
                                 .map(|selected| {
-                                    let (_, quantity, room_name, meal_plan, price_per_night, code) =
+                                    let (_, quantity, room_name, meal_plan, price_per_night, code, _) =
                                         selected;
                                     let nights = nights();
-                                    let line_total =
-                                        price_per_night * quantity as f64 * nights as f64;
+                                    // Round price to 2 decimals to match what's displayed, then calculate total
+                                    let rounded_price = (price_per_night * 100.0).round() / 100.0;
+                                    let line_total = rounded_price * quantity as f64 * nights as f64;
                                     let display_name = if meal_plan.is_empty() {
                                         room_name
                                     } else {

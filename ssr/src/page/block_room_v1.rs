@@ -342,7 +342,11 @@ pub fn BlockRoomV1Page() -> impl IntoView {
         let nights = num_nights();
         summary
             .iter()
-            .map(|room| room.price_per_night * room.quantity as f64 * nights as f64)
+            .map(|room| {
+                // Round price to 2 decimals to match displayed value
+                let rounded_price = (room.price_per_night * 100.0).round() / 100.0;
+                rounded_price * room.quantity as f64 * nights as f64
+            })
             .sum::<f64>()
     };
 
@@ -570,7 +574,11 @@ pub fn EnhancedPricingDisplay(
         let nights = num_nights();
         summary
             .iter()
-            .map(|room| room.price_per_night * room.quantity as f64 * nights as f64)
+            .map(|room| {
+                // Round price to 2 decimals to match displayed value
+                let rounded_price = (room.price_per_night * 100.0).round() / 100.0;
+                rounded_price * room.quantity as f64 * nights as f64
+            })
             .sum::<f64>()
     };
 
@@ -633,7 +641,9 @@ pub fn EnhancedPricingDisplay(
                         let display_name = room.display_name();
                         let price_per_night = room.price_per_night;
                         let quantity = room.quantity;
-                        let line_total = price_per_night * quantity as f64 * num_nights() as f64;
+                        // Round price to 2 decimals to match displayed value, then calculate total
+                        let rounded_price = (price_per_night * 100.0).round() / 100.0;
+                        let line_total = rounded_price * quantity as f64 * num_nights() as f64;
                         view! {
                             <div class="flex justify-between items-start text-sm">
                                 <div class="flex-1 min-w-0 space-y-0.5">
