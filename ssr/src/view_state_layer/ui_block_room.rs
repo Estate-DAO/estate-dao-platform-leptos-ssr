@@ -418,7 +418,9 @@ impl BlockRoomUIState {
                 rounded_price * room.quantity as f64 * nights as f64
             })
             .sum::<f64>();
-        base_total + Self::get_included_tax_total()
+        let total_with_tax = base_total + Self::get_included_tax_total();
+        // Round final total to 2 decimals to match display and eliminate floating point errors
+        (total_with_tax * 100.0).round() / 100.0
     }
 
     pub fn get_included_tax_total() -> f64 {
