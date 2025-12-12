@@ -2665,3 +2665,301 @@ pub fn SiteFooter() -> impl IntoView {
         </footer>
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{
+        DomainCurrencyAmount, DomainDetailedPrice, DomainPrice, DomainRoomData, DomainRoomOption,
+    };
+
+    // Helper function to create a test DomainRoomOption
+    fn create_test_room_option(
+        mapped_room_id: u32,
+        room_name: &str,
+        meal_plan: Option<&str>,
+        price: f64,
+        rate_key: &str,
+    ) -> DomainRoomOption {
+        DomainRoomOption {
+            mapped_room_id,
+            price: DomainDetailedPrice {
+                published_price: price,
+                published_price_rounded_off: price,
+                offered_price: price,
+                offered_price_rounded_off: price,
+                suggested_selling_price: price,
+                suggested_selling_price_rounded_off: price,
+                room_price: price,
+                tax: 0.0,
+                extra_guest_charge: 0.0,
+                child_charge: 0.0,
+                other_charges: 0.0,
+                currency_code: "USD".to_string(),
+            },
+            tax_lines: vec![],
+            offer_retail_rate: Some(DomainCurrencyAmount {
+                amount: price,
+                currency_code: "USD".to_string(),
+            }),
+            room_data: DomainRoomData {
+                mapped_room_id,
+                occupancy_number: Some(1),
+                room_name: room_name.to_string(),
+                room_unique_id: "test_unique_id".to_string(),
+                rate_key: rate_key.to_string(),
+                offer_id: "test_offer".to_string(),
+            },
+            meal_plan: meal_plan.map(String::from),
+            occupancy_info: Some(DomainRoomOccupancy {
+                max_occupancy: Some(2),
+                adult_count: Some(1),
+                child_count: Some(0),
+            }),
+        }
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_removes_duplicates() {
+        // Create rates with duplicate "Room Only" meal plans but different prices
+        let rates = vec![
+            create_test_room_option(1, "Rover Room", Some("Room Only (RO)"), 79.43, "rate1"),
+            create_test_room_option(1, "Rover Room", Some("Room Only (RO)"), 76.46, "rate2"),
+            create_test_room_option(
+                1,
+                "Rover Room",
+                Some("Breakfast Included (BI)"),
+                99.09,
+                "rate3",
+            ),
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        // Should have only 2 rates: 1 Room Only (lowest price) + 1 Breakfast
+        assert_eq!(
+            deduped.len(),
+            2,
+            "Should deduplicate to 2 unique meal plans"
+        );
+
+        // Find the Room Only rate
+        let room_only = deduped
+            .iter()
+            .find(|r| {
+                r.meal_plan
+                    .as_ref()
+                    .map_or(false, |mp| mp.contains("Room Only"))
+            })
+            .expect("Should have Room Only rate");
+
+        // Should keep the lowest price (76.46)
+        assert_eq!(
+            room_only.price.room_price, 76.46,
+            "Should keep the lowest price for Room Only"
+        );
+
+        // Find the Breakfast rate
+        let breakfast = deduped
+            .iter()
+            .find(|r| {
+                r.meal_plan
+                    .as_ref()
+                    .map_or(false, |mp| mp.contains("Breakfast"))
+            })
+            .expect("Should have Breakfast rate");
+
+        assert_eq!(
+            breakfast.price.room_price, 99.09,
+            "Should keep the Breakfast rate"
+        );
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_handles_none_meal_plan() {
+        // Test with None meal plans (should default to "Room Only")
+        let rates = vec![
+            create_test_room_option(1, "Test Room", None, 100.0, "rate1"),
+            create_test_room_option(1, "Test Room", None, 80.0, "rate2"),
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        // Should have only 1 rate with the lowest price
+        assert_eq!(deduped.len(), 1, "Should deduplicate None meal plans");
+        assert_eq!(
+            deduped[0].price.room_price, 80.0,
+            "Should keep the lowest price"
+        );
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_sorts_by_price() {
+        let rates = vec![
+            create_test_room_option(1, "Test Room", Some("Full Board (FB)"), 145.05, "rate1"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 79.43, "rate2"),
+            create_test_room_option(
+                1,
+                "Test Room",
+                Some("Breakfast Included (BI)"),
+                99.09,
+                "rate3",
+            ),
+            create_test_room_option(1, "Test Room", Some("Half Board (HB)"), 122.07, "rate4"),
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        // Should be sorted by price (ascending)
+        assert_eq!(deduped.len(), 4, "Should have 4 unique meal plans");
+        assert_eq!(
+            deduped[0].price.room_price, 79.43,
+            "First should be Room Only (cheapest)"
+        );
+        assert_eq!(
+            deduped[1].price.room_price, 99.09,
+            "Second should be Breakfast"
+        );
+        assert_eq!(
+            deduped[2].price.room_price, 122.07,
+            "Third should be Half Board"
+        );
+        assert_eq!(
+            deduped[3].price.room_price, 145.05,
+            "Fourth should be Full Board"
+        );
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_multiple_duplicates_same_meal_plan() {
+        // Test with multiple duplicates of the same meal plan
+        let rates = vec![
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 250.14, "rate1"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 250.8, "rate2"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 259.79, "rate3"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 245.0, "rate4"), // Lowest
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        assert_eq!(deduped.len(), 1, "Should have only 1 rate");
+        assert_eq!(
+            deduped[0].price.room_price, 245.0,
+            "Should keep the absolute lowest price"
+        );
+    }
+
+    #[test]
+    fn test_build_room_cards_deduplicates_type_a_rates() {
+        // Create an OfferGroup representing a TYPE A card (same mapped_room_id)
+        let offer1 = OfferGroup {
+            offer_id: "offer1".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Room Only (RO)"),
+                79.43,
+                "rate1",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offer2 = OfferGroup {
+            offer_id: "offer2".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Room Only (RO)"),
+                76.46,
+                "rate2",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offers = vec![offer1, offer2];
+        let cards = build_room_cards(offers);
+
+        // Should have only 1 card for this room type
+        assert_eq!(cards.len(), 1, "Should have 1 TYPE A card");
+
+        let card = &cards[0];
+        assert_eq!(
+            card.mapped_room_id,
+            Some(1321373764),
+            "Should have correct mapped_room_id"
+        );
+
+        // The card should have only 1 rate (deduplicated)
+        assert_eq!(
+            card.rates.len(),
+            1,
+            "Should have only 1 rate after deduplication"
+        );
+
+        // Should keep the lowest price
+        assert_eq!(
+            card.rates[0].price.room_price, 76.46,
+            "Should keep the lowest price"
+        );
+    }
+
+    #[test]
+    fn test_build_room_cards_preserves_different_meal_plans() {
+        // Create offers with same room but different meal plans
+        let offer1 = OfferGroup {
+            offer_id: "offer1".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Room Only (RO)"),
+                79.43,
+                "rate1",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offer2 = OfferGroup {
+            offer_id: "offer2".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Breakfast Included (BI)"),
+                99.09,
+                "rate2",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offers = vec![offer1, offer2];
+        let cards = build_room_cards(offers);
+
+        assert_eq!(cards.len(), 1, "Should have 1 TYPE A card");
+
+        let card = &cards[0];
+        // Should have 2 rates (different meal plans)
+        assert_eq!(
+            card.rates.len(),
+            2,
+            "Should have 2 rates with different meal plans"
+        );
+
+        // Verify both meal plans are present
+        let meal_plans: Vec<String> = card
+            .rates
+            .iter()
+            .filter_map(|r| r.meal_plan.clone())
+            .collect();
+
+        assert!(
+            meal_plans.iter().any(|mp| mp.contains("Room Only")),
+            "Should have Room Only"
+        );
+        assert!(
+            meal_plans.iter().any(|mp| mp.contains("Breakfast")),
+            "Should have Breakfast"
+        );
+    }
+}

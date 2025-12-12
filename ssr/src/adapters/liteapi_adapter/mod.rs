@@ -574,24 +574,40 @@ impl LiteApiAdapter {
         // Only process if we have data (not an error response)
         if let Some(data) = rates_response.data {
             for hotel_data in data {
-                if let Some(room_type) = hotel_data.room_types.first() {
-                    if let Some(rate) = room_type.rates.first() {
+                let mut min_price: Option<(f64, String)> = None;
+
+                // Iterate through ALL room types
+                for room_type in &hotel_data.room_types {
+                    // Iterate through ALL rates in this room type
+                    for rate in &room_type.rates {
+                        // Check all suggested selling prices
                         if let Some(amount) = rate.retail_rate.suggested_selling_price.first() {
-                            hotel_prices.insert(
-                                hotel_data.hotel_id.clone(),
-                                DomainPrice {
-                                    room_price: amount.amount,
-                                    currency_code: amount.currency.clone(),
-                                },
-                            );
-                        } else {
-                            warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no suggested selling price in rate");
+                            let price = amount.amount;
+                            let currency = amount.currency.clone();
+
+                            // Update minimum if this is lower or first price found
+                            match &min_price {
+                                None => min_price = Some((price, currency)),
+                                Some((current_min, _)) if price < *current_min => {
+                                    min_price = Some((price, currency));
+                                }
+                                _ => {}
+                            }
                         }
-                    } else {
-                        warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no rates in room type");
                     }
+                }
+
+                // Store the minimum price found for this hotel
+                if let Some((price, currency)) = min_price {
+                    hotel_prices.insert(
+                        hotel_data.hotel_id.clone(),
+                        DomainPrice {
+                            room_price: price,
+                            currency_code: currency,
+                        },
+                    );
                 } else {
-                    warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no room types available");
+                    warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no valid pricing across any room types or rates");
                 }
             }
         } else {
@@ -2330,5 +2346,375 @@ impl LiteApiAdapter {
                 }
             }),
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::liteapi::l01_get_hotel_info_rates::{
+        LiteApiAmount, LiteApiHotelData, LiteApiHotelRatesResponse, LiteApiRate, LiteApiRetailRate,
+        LiteApiRoomType,
+    };
+
+    // Helper to create test LiteApiAmount
+    fn create_amount(price: f64, currency: &str) -> LiteApiAmount {
+        LiteApiAmount {
+            amount: price,
+            currency: currency.to_string(),
+        }
+    }
+
+    // Helper to create test LiteApiRate
+    fn create_rate(rate_id: &str, name: &str, price: f64, mapped_room_id: u32) -> LiteApiRate {
+        LiteApiRate {
+            rate_id: rate_id.to_string(),
+            occupancy_number: Some(1),
+            name: name.to_string(),
+            max_occupancy: 2,
+            mapped_room_id,
+            adult_count: 1,
+            child_count: 0,
+            board_type: "RO".to_string(),
+            board_name: "Room Only".to_string(),
+            retail_rate: LiteApiRetailRate {
+                total: vec![create_amount(price, "USD")],
+                suggested_selling_price: vec![create_amount(price, "USD")],
+                taxes_and_fees: None,
+            },
+        }
+    }
+
+    // Helper to create test LiteApiRoomType
+    fn create_room_type(
+        room_type_id: &str,
+        offer_id: &str,
+        rates: Vec<LiteApiRate>,
+    ) -> LiteApiRoomType {
+        // Find min price for suggested_selling_price
+        let min_price = rates
+            .iter()
+            .filter_map(|r| r.retail_rate.suggested_selling_price.first())
+            .map(|a| a.amount)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap_or(0.0);
+
+        LiteApiRoomType {
+            room_type_id: room_type_id.to_string(),
+            offer_id: offer_id.to_string(),
+            rates,
+            suggested_selling_price: create_amount(min_price, "USD"),
+            offer_retail_rate: create_amount(min_price, "USD"),
+        }
+    }
+
+    #[test]
+    fn test_merge_pricing_finds_minimum_across_all_room_types() {
+        // Create a hotel with multiple room types and different prices
+        let room_type_1 = create_room_type(
+            "room_type_1",
+            "offer_1",
+            vec![
+                create_rate("rate_1_1", "Standard Room", 100.0, 101),
+                create_rate("rate_1_2", "Standard Room", 120.0, 101),
+            ],
+        );
+
+        let room_type_2 = create_room_type(
+            "room_type_2",
+            "offer_2",
+            vec![
+                create_rate("rate_2_1", "Deluxe Room", 85.0, 102), // This is the minimum
+                create_rate("rate_2_2", "Deluxe Room", 95.0, 102),
+            ],
+        );
+
+        let room_type_3 = create_room_type(
+            "room_type_3",
+            "offer_3",
+            vec![create_rate("rate_3_1", "Suite", 150.0, 103)],
+        );
+
+        let hotel_data = LiteApiHotelData {
+            hotel_id: "hotel_123".to_string(),
+            room_types: vec![room_type_1, room_type_2, room_type_3],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel_data]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "hotel_123".to_string(),
+                hotel_name: "Test Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "5 Star".to_string(),
+                star_rating: 5,
+                price: Some(DomainPrice {
+                    room_price: 0.0,
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "hotel_123".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Verify the minimum price is selected (85.0 from room_type_2)
+        assert_eq!(domain_results.hotel_results.len(), 1);
+        let hotel = &domain_results.hotel_results[0];
+        assert!(hotel.price.is_some(), "Price should be set");
+        let price = hotel.price.as_ref().unwrap();
+        assert_eq!(
+            price.room_price, 85.0,
+            "Should select the minimum price across all room types and rates"
+        );
+        assert_eq!(price.currency_code, "USD");
+    }
+
+    #[test]
+    fn test_merge_pricing_with_single_room_type_multiple_rates() {
+        // Test with one room type but multiple rates
+        let room_type = create_room_type(
+            "room_type_1",
+            "offer_1",
+            vec![
+                create_rate("rate_1", "Room Only", 79.43, 101),
+                create_rate("rate_2", "Room Only", 76.46, 101), // Minimum
+                create_rate("rate_3", "Breakfast Included", 99.09, 101),
+                create_rate("rate_4", "Half Board", 122.07, 101),
+                create_rate("rate_5", "Full Board", 145.05, 101),
+            ],
+        );
+
+        let hotel_data = LiteApiHotelData {
+            hotel_id: "rover_hotel".to_string(),
+            room_types: vec![room_type],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel_data]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "rover_hotel".to_string(),
+                hotel_name: "Rover Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "3 Star".to_string(),
+                star_rating: 3,
+                price: Some(DomainPrice {
+                    room_price: 0.0,
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "rover_hotel".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        let hotel = &domain_results.hotel_results[0];
+        let price = hotel.price.as_ref().unwrap();
+        assert_eq!(
+            price.room_price, 76.46,
+            "Should select the minimum price from all rates"
+        );
+    }
+
+    #[test]
+    fn test_merge_pricing_handles_multiple_hotels() {
+        // Test with multiple hotels, each should get their own minimum
+        let hotel1 = LiteApiHotelData {
+            hotel_id: "hotel_1".to_string(),
+            room_types: vec![create_room_type(
+                "rt1",
+                "o1",
+                vec![
+                    create_rate("r1", "Room", 100.0, 101),
+                    create_rate("r2", "Room", 90.0, 101), // Min for hotel1
+                ],
+            )],
+        };
+
+        let hotel2 = LiteApiHotelData {
+            hotel_id: "hotel_2".to_string(),
+            room_types: vec![create_room_type(
+                "rt2",
+                "o2",
+                vec![
+                    create_rate("r3", "Room", 150.0, 201),
+                    create_rate("r4", "Room", 130.0, 201), // Min for hotel2
+                ],
+            )],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel1, hotel2]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                DomainHotelAfterSearch {
+                    hotel_code: "hotel_1".to_string(),
+                    hotel_name: "Hotel 1".to_string(),
+                    hotel_address: None,
+                    hotel_category: "4 Star".to_string(),
+                    star_rating: 4,
+                    price: Some(DomainPrice {
+                        room_price: 0.0,
+                        currency_code: "USD".to_string(),
+                    }),
+                    hotel_picture: "".to_string(),
+                    amenities: vec![],
+                    property_type: None,
+                    result_token: "hotel_1".to_string(),
+                    distance_from_center_km: None,
+                },
+                DomainHotelAfterSearch {
+                    hotel_code: "hotel_2".to_string(),
+                    hotel_name: "Hotel 2".to_string(),
+                    hotel_address: None,
+                    hotel_category: "5 Star".to_string(),
+                    star_rating: 5,
+                    price: Some(DomainPrice {
+                        room_price: 0.0,
+                        currency_code: "USD".to_string(),
+                    }),
+                    hotel_picture: "".to_string(),
+                    amenities: vec![],
+                    property_type: None,
+                    result_token: "hotel_2".to_string(),
+                    distance_from_center_km: None,
+                },
+            ],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        assert_eq!(
+            domain_results.hotel_results[0]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            90.0,
+            "Hotel 1 should have minimum price 90.0"
+        );
+        assert_eq!(
+            domain_results.hotel_results[1]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            130.0,
+            "Hotel 2 should have minimum price 130.0"
+        );
+    }
+
+    #[test]
+    fn test_merge_pricing_handles_hotel_with_no_rates() {
+        // Test hotel with room types but no rates
+        let hotel_data = LiteApiHotelData {
+            hotel_id: "hotel_123".to_string(),
+            room_types: vec![LiteApiRoomType {
+                room_type_id: "rt1".to_string(),
+                offer_id: "o1".to_string(),
+                rates: vec![], // No rates!
+                suggested_selling_price: create_amount(0.0, "USD"),
+                offer_retail_rate: create_amount(0.0, "USD"),
+            }],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel_data]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "hotel_123".to_string(),
+                hotel_name: "Test Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "3 Star".to_string(),
+                star_rating: 3,
+                price: Some(DomainPrice {
+                    room_price: 999.0, // Initial price
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "hotel_123".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Price should remain unchanged since no valid rates were found
+        let hotel = &domain_results.hotel_results[0];
+        assert_eq!(
+            hotel.price.as_ref().unwrap().room_price,
+            999.0,
+            "Price should remain unchanged when no valid rates"
+        );
+    }
+
+    #[test]
+    fn test_merge_pricing_empty_data() {
+        // Test with empty data
+        let rates_response = LiteApiHotelRatesResponse {
+            data: None,
+            error: None,
+        };
+
+        let initial_price = 500.0;
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "hotel_123".to_string(),
+                hotel_name: "Test Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "3 Star".to_string(),
+                star_rating: 3,
+                price: Some(DomainPrice {
+                    room_price: initial_price,
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "hotel_123".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Price should remain unchanged
+        assert_eq!(
+            domain_results.hotel_results[0]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            initial_price,
+            "Price should remain unchanged when no data"
+        );
     }
 }
