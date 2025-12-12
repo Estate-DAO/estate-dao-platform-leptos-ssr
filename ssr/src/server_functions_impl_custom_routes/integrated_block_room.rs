@@ -416,17 +416,32 @@ async fn build_hotel_details(
 
     let all_rooms: Vec<DomainRoomOption> = room_details
         .iter()
-        .map(|room_data| DomainRoomOption {
-            price: block_result.total_price.clone(),
-            tax_lines: vec![],
-            offer_retail_rate: Some(DomainCurrencyAmount {
-                amount: block_result.total_price.room_price,
-                currency_code: block_result.total_price.currency_code.clone(),
-            }),
-            room_data: room_data.clone(),
-            meal_plan: None,
-            occupancy_info: None,
-            mapped_room_id: room_data.mapped_room_id,
+        .map(|room_data| {
+            // Find the corresponding blocked room to get cancellation policy and meal plan
+            let blocked_room = block_result
+                .blocked_rooms
+                .iter()
+                .find(|blocked| blocked.room_code == room_data.room_unique_id);
+
+            DomainRoomOption {
+                price: block_result.total_price.clone(),
+                tax_lines: vec![],
+                offer_retail_rate: Some(DomainCurrencyAmount {
+                    amount: block_result.total_price.room_price,
+                    currency_code: block_result.total_price.currency_code.clone(),
+                }),
+                room_data: room_data.clone(),
+                meal_plan: blocked_room.and_then(|br| br.meal_plan.clone()),
+                occupancy_info: None,
+                mapped_room_id: room_data.mapped_room_id,
+                // Map cancellation policy from blocked room (string) to structured format
+                // Note: blocked_room.cancellation_policy is a String, but we need DomainCancellationPolicies
+                // For now, store it in remarks until we parse it properly
+                cancellation_policies: None, // TODO: Parse cancellation_policy string into structured format
+                // perks: vec![],
+                promotions: None,
+                remarks: blocked_room.and_then(|br| br.cancellation_policy.clone()),
+            }
         })
         .collect();
 

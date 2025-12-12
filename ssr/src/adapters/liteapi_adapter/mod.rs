@@ -2345,6 +2345,32 @@ impl LiteApiAdapter {
                     currency_code: amount.currency,
                 }
             }),
+            // Map cancellation policies from LiteAPI to domain
+            cancellation_policies: Some(crate::domain::DomainCancellationPolicies {
+                cancel_policy_infos: rate
+                    .cancellation_policies
+                    .cancel_policy_infos
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|policy| crate::domain::DomainCancelPolicyInfo {
+                        cancel_time: policy.cancel_time,
+                        amount: policy.amount,
+                        policy_type: policy.policy_type,
+                        timezone: policy.timezone,
+                        currency: policy.currency,
+                    })
+                    .collect(),
+                hotel_remarks: rate
+                    .cancellation_policies
+                    .hotel_remarks
+                    .as_ref()
+                    .filter(|remarks| !remarks.is_empty())
+                    .map(|remarks| remarks.join(". ")),
+                refundable_tag: rate.cancellation_policies.refundable_tag,
+            }),
+            // perks: rate.perks,
+            promotions: rate.promotions,
+            remarks: rate.remarks,
         }
     }
 }
@@ -2366,6 +2392,7 @@ mod tests {
 
     // Helper to create test LiteApiRate
     fn create_rate(rate_id: &str, name: &str, price: f64, mapped_room_id: u32) -> LiteApiRate {
+        use crate::api::liteapi::l03_book::LiteApiCancellationPolicies;
         LiteApiRate {
             rate_id: rate_id.to_string(),
             occupancy_number: Some(1),
@@ -2381,6 +2408,14 @@ mod tests {
                 suggested_selling_price: vec![create_amount(price, "USD")],
                 taxes_and_fees: None,
             },
+            cancellation_policies: LiteApiCancellationPolicies {
+                cancel_policy_infos: None,
+                hotel_remarks: None,
+                refundable_tag: "NRF".to_string(),
+            },
+            // perks: vec![],
+            promotions: None,
+            remarks: None,
         }
     }
 

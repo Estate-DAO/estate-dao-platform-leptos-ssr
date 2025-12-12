@@ -95,14 +95,19 @@ pub struct LiteApiRate {
     pub board_type: String,
     #[serde(rename = "boardName")]
     pub board_name: String,
-    // pub remarks: String,
+    #[serde(default)]
+    pub remarks: Option<String>,
+    #[serde(rename = "retailRate")]
+    pub retail_rate: LiteApiRetailRate,
+    #[serde(rename = "cancellationPolicies")]
+    pub cancellation_policies: super::l03_book::LiteApiCancellationPolicies,
+    // #[serde(default)]
+    // pub perks: Vec<String>,
+    #[serde(default)]
+    pub promotions: Option<String>,
     // #[serde(rename = "priceType")]
     // pub price_type: String,
     // pub commission: Vec<LiteApiAmount>,
-    #[serde(rename = "retailRate")]
-    pub retail_rate: LiteApiRetailRate,
-    // #[serde(rename = "cancellationPolicies")]
-    // pub cancellation_policies: LiteApiCancellationPolicies,
     // #[serde(rename = "paymentTypes")]
     // pub payment_types: Vec<String>,
 }

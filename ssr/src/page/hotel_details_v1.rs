@@ -2715,6 +2715,10 @@ mod tests {
                 adult_count: Some(1),
                 child_count: Some(0),
             }),
+            cancellation_policies: None,
+            // perks: vec![],
+            promotions: None,
+            remarks: None,
         }
     }
 

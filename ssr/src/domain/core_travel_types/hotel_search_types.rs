@@ -247,6 +247,11 @@ pub struct DomainRoomOption {
     pub room_data: DomainRoomData,
     pub meal_plan: Option<String>, // Board type + board name (e.g., "Room Only")
     pub occupancy_info: Option<DomainRoomOccupancy>,
+    // New fields from LiteAPI rates enrichment
+    pub cancellation_policies: Option<super::booking_types::DomainCancellationPolicies>,
+    // pub perks: Vec<String>,
+    pub promotions: Option<String>,
+    pub remarks: Option<String>,
 }
 
 impl DomainRoomOption {
