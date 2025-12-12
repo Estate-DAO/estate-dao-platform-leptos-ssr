@@ -1321,6 +1321,8 @@ fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
             if card.card_title.is_empty() {
                 card.card_title = card.room_names.join(" + ");
             }
+            // Deduplicate rates by meal plan, keeping the lowest price for each
+            card.rates = dedup_rates_by_meal_plan(&card.rates);
             cards.push(card);
         }
     }
