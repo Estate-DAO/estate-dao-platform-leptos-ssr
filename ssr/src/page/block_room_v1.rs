@@ -714,10 +714,10 @@ pub fn EnhancedPricingDisplay(
             </div>
 
             <Divider class="my-2".into() />
-                // <!-- Plaforme and Markup fees -->
-            <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
+                // <!-- Platform and Markup fees -->
+            <div class="space-y-1">
                 <div class="flex justify-between items-center text-sm">
-                    <span class="text-gray-600">"Plaforme and Markup fees"</span>
+                    <span class="text-gray-600">"Platform and Markup fees"</span>
                     <span class="font-semibold text-gray-900">
                         {move || format_currency_with_code(platform_markup_total(), &platform_markup_currency())}
                     </span>
