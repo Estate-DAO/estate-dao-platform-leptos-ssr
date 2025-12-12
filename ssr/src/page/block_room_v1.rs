@@ -66,8 +66,10 @@ fn format_tax_label(label: &str) -> String {
         .join(" ")
 }
 
-fn round_up_to_cents(value: f64) -> f64 {
-    (value * 100.0).ceil() / 100.0
+/// Round a value to the nearest cent using proper rounding rules.
+/// This ensures displayed totals accurately match the sum of line items.
+fn round_to_cents(value: f64) -> f64 {
+    (value * 100.0).round() / 100.0
 }
 
 fn aggregate_tax_summary(
@@ -626,7 +628,7 @@ pub fn EnhancedPricingDisplay(
     };
 
     let total_with_included = move || base_total() + included_taxes_total();
-    let rounded_total_with_included = move || round_up_to_cents(total_with_included());
+    let rounded_total_with_included = move || round_to_cents(total_with_included());
 
     let format_currency = |val: f64| format!("${:.2}", val);
 
@@ -2304,5 +2306,95 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                 </div>
             </Show>
         </div>
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_round_to_cents_standard_rounding() {
+        // Test standard rounding rules
+        assert_eq!(round_to_cents(1056.164), 1056.16, "Should round down");
+        assert_eq!(
+            round_to_cents(1056.165),
+            1056.17,
+            "Should round up (0.165 rounds to nearest even number up)"
+        );
+        assert_eq!(round_to_cents(1056.166), 1056.17, "Should round up");
+    }
+
+    #[test]
+    fn test_round_to_cents_bug_report_case() {
+        // Test the specific case from the bug report
+        let room_cost = 955.68;
+        let taxes = 100.48;
+        let total = room_cost + taxes;
+
+        // Due to floating point precision, total might be 1056.1599999999999
+        // The key test is that round_to_cents produces the correct result
+        assert_eq!(
+            round_to_cents(total),
+            1056.16,
+            "Rounded total should be 1056.16, not 1056.17"
+        );
+    }
+
+    #[test]
+    fn test_round_to_cents_edge_cases() {
+        // Test exact values (no rounding needed)
+        assert_eq!(round_to_cents(100.00), 100.00);
+        assert_eq!(round_to_cents(50.50), 50.50);
+
+        // Test very small amounts
+        assert_eq!(round_to_cents(0.01), 0.01);
+        assert_eq!(round_to_cents(0.004), 0.00);
+        assert_eq!(round_to_cents(0.005), 0.01); // 0.005 rounds up to 0.01
+
+        // Test larger amounts - use exact floating point representations
+        assert_eq!(round_to_cents(10000.125), 10000.13); // 0.125 rounds up to even
+        assert_eq!(round_to_cents(10000.126), 10000.13);
+    }
+
+    #[test]
+    fn test_round_to_cents_vs_ceil_behavior() {
+        // Demonstrate the difference between round and ceil
+        let value = 1056.16;
+
+        // With proper rounding
+        assert_eq!(round_to_cents(value), 1056.16);
+
+        // Show case where they differ - use a clear difference
+        let value_with_fraction = 1056.164; // Just slightly above .16
+
+        // round() gives us 1056.16 (rounds down)
+        assert_eq!(
+            round_to_cents(value_with_fraction),
+            1056.16,
+            "round correctly rounds to nearest cent"
+        );
+
+        // ceil() would give us 1056.17 (rounds up)
+        let old_ceil = (value_with_fraction * 100.0).ceil() / 100.0;
+        assert_eq!(
+            old_ceil, 1056.17,
+            "ceil would incorrectly round up even tiny fractions"
+        );
+    }
+
+    #[test]
+    fn test_round_to_cents_negative_values() {
+        // Test negative values (for completeness)
+        // For negative numbers, round() rounds towards zero when exactly at .5
+        assert_eq!(round_to_cents(-10.124), -10.12);
+        assert_eq!(round_to_cents(-10.126), -10.13);
+    }
+
+    #[test]
+    fn test_round_to_cents_precision() {
+        // Ensure we're maintaining proper precision
+        assert_eq!(round_to_cents(123.456), 123.46);
+        assert_eq!(round_to_cents(123.454), 123.45);
+        assert_eq!(round_to_cents(123.455), 123.46);
     }
 }
