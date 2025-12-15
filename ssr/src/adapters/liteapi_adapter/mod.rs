@@ -479,84 +479,55 @@ impl LiteApiAdapter {
             return Ok(domain_results);
         }
 
-        // Use the lightweight min-rates endpoint instead of full rates
-        // This returns just the minimum price per hotel, not all room details
-        use crate::api::liteapi::{
-            LiteApiMinRatesRequest, LiteApiMinRatesResponse, LiteApiOccupancy,
-        };
-
-        let occupancies: Vec<LiteApiOccupancy> = search_criteria
-            .room_guests
-            .iter()
-            .map(|guest| LiteApiOccupancy {
-                adults: guest.no_of_adults,
-                children: guest.children_ages.clone().map(|ages| {
-                    ages.iter()
-                        .filter_map(|age| age.parse::<u32>().ok())
-                        .collect()
-                }),
-            })
-            .collect();
-
-        let min_rates_request = LiteApiMinRatesRequest {
+        // Create hotel info criteria for rates call
+        let hotel_info_criteria = DomainHotelInfoCriteria {
+            // todo: liteapi does not need this token
+            token: String::new(),
             hotel_ids: hotel_ids.clone(),
-            occupancies,
-            currency: "USD".to_string(),
-            guest_nationality: search_criteria.guest_nationality.clone(),
-            checkin: format!(
-                "{:04}-{:02}-{:02}",
-                search_criteria.check_in_date.0,
-                search_criteria.check_in_date.1,
-                search_criteria.check_in_date.2
-            ),
-            checkout: format!(
-                "{:04}-{:02}-{:02}",
-                search_criteria.check_out_date.0,
-                search_criteria.check_out_date.1,
-                search_criteria.check_out_date.2
-            ),
-            timeout: Some(10),
+            search_criteria: search_criteria.clone(),
         };
 
-        crate::log!(
-            "min_rates_request for {} hotels: {:#?}",
-            min_rates_request.hotel_ids.len(),
-            min_rates_request
-        );
+        // Call get_hotel_rates to get pricing
+        let rates_request = Self::map_domain_info_to_liteapi_rates(&hotel_info_criteria)?;
 
-        let min_rates_response: LiteApiMinRatesResponse = self
+        crate::log!("rates_request: {:#?}", rates_request);
+
+        let rates_response: LiteApiHotelRatesResponse = self
             .client
-            .send(min_rates_request)
+            .send(rates_request)
             .await
             .map_err(|e: ApiError| {
                 // Log but don't fail the entire search if rates fail
                 ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelSearch)
             })?;
 
-        // Log the min-rates response
-        if let Some(error) = &min_rates_response.error {
-            error!(?error, "Error in liteapi min-rates response");
+        // Log the rates response structure
+        if let Some(error) = &rates_response.error {
+            error!(?error, "Error in liteapi rates response");
         }
 
-        if let Some(data) = &min_rates_response.data {
-            info!("Got min-rates for {} hotels", data.len());
+        if let Some(data) = &rates_response.data {
+            info!(?data, "Got liteapi rates response data");
         }
 
-        // Check if response indicates no availability
-        if min_rates_response.is_no_availability() {
+        // Check if rates response indicates no availability
+        if rates_response.is_no_availability() {
             return Ok(DomainHotelListAfterSearch {
                 hotel_results: vec![],
                 pagination: None,
             });
         }
 
-        // Merge min-rates pricing data into search results
-        Self::merge_min_pricing_into_search_results(&mut domain_results, &min_rates_response);
+        // Check if it's an error response
+        if rates_response.is_error_response() {
+            // Continue processing but without pricing data
+        }
 
-        // Filter out hotels with no pricing
-        domain_results
-            .hotel_results
-            .retain(|hotel| hotel.price.is_some());
+        // Merge pricing data into search results
+        Self::merge_pricing_into_search_results(&mut domain_results, rates_response.clone());
+
+        // Filter out hotels with zero pricing
+        Self::filter_hotels_with_valid_pricing(&mut domain_results, &rates_response);
 
         // Add pagination metadata if pagination params are provided
         if let Some(ref pagination_params) = search_criteria.pagination {
@@ -640,10 +611,22 @@ impl LiteApiAdapter {
                 for room_type in &hotel_data.room_types {
                     // Iterate through ALL rates in this room type
                     for rate in &room_type.rates {
-                        // Check all suggested selling prices
-                        if let Some(amount) = rate.retail_rate.suggested_selling_price.first() {
-                            let price = amount.amount;
+                        // Use total (base price) and subtract included taxes for lowest display price
+                        if let Some(amount) = rate.retail_rate.total.first() {
+                            let mut price = amount.amount;
                             let currency = amount.currency.clone();
+
+                            // Subtract any included taxes to show the lowest possible price
+                            if let Some(taxes) = &rate.retail_rate.taxes_and_fees {
+                                for tax in taxes {
+                                    if tax.included {
+                                        price -= tax.amount;
+                                    }
+                                }
+                            }
+
+                            // Ensure price doesn't go negative
+                            price = price.max(0.0);
 
                             // Update minimum if this is lower or first price found
                             match &min_price {
