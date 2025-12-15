@@ -15,6 +15,7 @@ use crate::domain::{
 use crate::log;
 use crate::page::{add_to_wishlist_action, HotelDetailsParams, HotelListNavbar};
 use crate::utils::query_params::QueryParamsSync;
+use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
