@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::collections::HashSet;
 use std::time::{Duration, Instant};
 use tokio::time;
 use tracing::{debug, error, info, instrument, warn};
@@ -16,6 +17,7 @@ use crate::canister::backend::{self, BeBookRoomResponse, Booking};
 use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::app_reference::BookingId;
+use crate::utils::backend_default_impl::decode_room_id_with_occupancy;
 use crate::utils::booking_id::PaymentIdentifiers;
 
 // New imports for v1 implementation
@@ -324,16 +326,59 @@ fn backend_booking_to_domain_book_room_request(
         )));
     }
 
-    // FIXED: Create one PRIMARY CONTACT per room (not per adult)
+    // Decode any stored occupancy numbers (encoded in room_unique_id) so we can map guests accurately
+    let mut stored_occupancy_numbers: Vec<u32> = Vec::new();
+    let mut used_numbers: HashSet<u32> = HashSet::new();
+    let mut pending_indices: Vec<usize> = Vec::new();
+    for room in backend_booking
+        .user_selected_hotel_room_details
+        .room_details
+        .iter()
+        .take(number_of_rooms as usize)
+    {
+        let (_id, occ) = decode_room_id_with_occupancy(&room.room_unique_id);
+        if let Some(num) = occ {
+            if num > 0 && used_numbers.insert(num) {
+                stored_occupancy_numbers.push(num);
+                continue;
+            }
+        }
+        stored_occupancy_numbers.push(0);
+        pending_indices.push(stored_occupancy_numbers.len() - 1);
+    }
+
+    while stored_occupancy_numbers.len() < number_of_rooms as usize {
+        stored_occupancy_numbers.push(0);
+        pending_indices.push(stored_occupancy_numbers.len() - 1);
+    }
+
+    let mut next = 1u32;
+    for idx in pending_indices {
+        while used_numbers.contains(&next) {
+            next += 1;
+        }
+        stored_occupancy_numbers[idx] = next;
+        used_numbers.insert(next);
+        next += 1;
+    }
+
+    for (idx, value) in stored_occupancy_numbers.iter_mut().enumerate() {
+        *value = (idx + 1) as u32;
+    }
+
+    // Create one PRIMARY CONTACT per room (not per adult)
     // LiteAPI Rule: Need exactly one guest per room as the primary contact/room manager
     let guests: Vec<DomainBookingGuest> = backend_booking
         .guests
         .adults
         .iter()
-        .take(number_of_rooms as usize) // 🔑 KEY FIX: Limit to room count, not adult count
+        .take(number_of_rooms as usize)
         .enumerate()
         .map(|(index, adult)| DomainBookingGuest {
-            occupancy_number: (index + 1) as u32, // Room number (1, 2, 3...)
+            occupancy_number: stored_occupancy_numbers
+                .get(index)
+                .copied()
+                .unwrap_or((index + 1) as u32),
             first_name: adult.first_name.clone(),
             last_name: adult.last_name.clone().unwrap_or_default(),
             email: adult.email.clone().unwrap_or_default(),

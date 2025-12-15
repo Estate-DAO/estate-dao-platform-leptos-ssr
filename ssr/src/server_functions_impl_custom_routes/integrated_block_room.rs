@@ -5,10 +5,10 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    api::canister::add_booking::call_add_booking_backend,
+    api::{canister::add_booking::call_add_booking_backend, liteapi::LiteApiPrebookResponse},
     domain::{
-        BookingError, DomainDestination, DomainHotelDetails, DomainRoomData, DomainRoomOption,
-        DomainSelectedDateRange,
+        BookingError, DomainCurrencyAmount, DomainDestination, DomainHotelDetails, DomainRoomData,
+        DomainRoomOption, DomainSelectedDateRange,
     },
     utils::{app_reference::BookingId, booking_backend_conversions::BookingBackendConversions},
 };
@@ -121,7 +121,9 @@ async fn create_backend_booking(
     let booking_id_struct = parse_booking_id(&request.booking_id)?;
     let destination = extract_destination_from_request(request);
     let date_range = extract_date_range_from_request(request);
-    let room_details = extract_room_details_from_request(request);
+    let mut room_details = extract_room_details_from_request(request);
+    enrich_room_details_with_provider_data(&mut room_details, block_result);
+    align_room_details_with_blocked_rooms(&mut room_details, block_result);
     let hotel_details =
         build_hotel_details(state, request, block_result, &date_range, &room_details).await;
 
@@ -253,8 +255,129 @@ fn extract_room_details_from_request(request: &IntegratedBlockRoomRequest) -> Ve
         .block_room_request
         .selected_rooms
         .iter()
-        .map(|room| room.room_data.clone())
+        .flat_map(|room| {
+            // Repeat the room_data according to quantity so we track each room instance
+            let qty = room.quantity.max(1);
+            std::iter::repeat(room.room_data.clone()).take(qty as usize)
+        })
         .collect()
+}
+
+/// Use provider data from LiteAPI to attach occupancy numbers to selected rooms
+fn enrich_room_details_with_provider_data(
+    room_details: &mut Vec<DomainRoomData>,
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+) {
+    if room_details.is_empty() {
+        return;
+    }
+
+    let provider_data = match &block_result.provider_data {
+        Some(data) => data,
+        None => return,
+    };
+
+    let prebook_response: LiteApiPrebookResponse = match serde_json::from_str(provider_data) {
+        Ok(resp) => resp,
+        Err(e) => {
+            tracing::warn!("Failed to parse LiteAPI prebook provider data: {}", e);
+            return;
+        }
+    };
+
+    let data = match prebook_response.data {
+        Some(data) => data,
+        None => return,
+    };
+
+    use std::collections::{HashMap, HashSet};
+    let mut occupancy_by_rate: HashMap<String, u32> = HashMap::new();
+    for room_type in data.room_types {
+        for rate in room_type.rates {
+            let occupancy = rate.occupancy_number.max(0) as u32;
+            occupancy_by_rate.insert(rate.rate_id, occupancy);
+        }
+    }
+
+    let mut fallback_needed = false;
+    let mut used_occupancies: HashSet<u32> = HashSet::new();
+    for room in room_details.iter_mut() {
+        if let Some(rate_key) = occupancy_by_rate.get(&room.rate_key) {
+            room.occupancy_number = Some(*rate_key);
+            used_occupancies.insert(*rate_key);
+        } else if room.occupancy_number.is_none() {
+            fallback_needed = true;
+        }
+    }
+
+    if fallback_needed {
+        for (idx, room) in room_details.iter_mut().enumerate() {
+            room.occupancy_number.get_or_insert((idx + 1) as u32);
+        }
+    }
+
+    // If we have more occupancies from provider than room_details, add clones to match counts
+    let missing: Vec<u32> = occupancy_by_rate
+        .values()
+        .copied()
+        .filter(|occ| !used_occupancies.contains(occ))
+        .collect();
+
+    if !missing.is_empty() {
+        if let Some(template) = room_details.first().cloned() {
+            for occ in missing {
+                let mut new_room = template.clone();
+                new_room.occupancy_number = Some(occ);
+                // encode occupancy in room_unique_id to keep entries distinct
+                new_room.room_unique_id =
+                    estate_fe::utils::backend_default_impl::encode_room_id_with_occupancy(
+                        &template.room_unique_id,
+                        Some(occ),
+                    );
+                room_details.push(new_room);
+            }
+        }
+    }
+}
+
+/// Ensure we only keep room details for rooms that were actually blocked by the provider.
+fn align_room_details_with_blocked_rooms(
+    room_details: &mut Vec<DomainRoomData>,
+    block_result: &estate_fe::domain::DomainBlockRoomResponse,
+) {
+    if room_details.is_empty() || block_result.blocked_rooms.is_empty() {
+        return;
+    }
+
+    use std::collections::HashSet;
+    let blocked_codes: HashSet<_> = block_result
+        .blocked_rooms
+        .iter()
+        .map(|room| room.room_code.clone())
+        .collect();
+
+    let original_rooms = room_details.clone();
+    room_details.retain(|room| blocked_codes.contains(&room.room_unique_id));
+
+    if room_details.is_empty() {
+        for blocked in &block_result.blocked_rooms {
+            if let Some(original) = original_rooms
+                .iter()
+                .find(|room| room.room_unique_id == blocked.room_code)
+            {
+                room_details.push(original.clone());
+            } else {
+                room_details.push(DomainRoomData {
+                    room_name: blocked.room_name.clone(),
+                    room_unique_id: blocked.room_code.clone(),
+                    mapped_room_id: 0,
+                    occupancy_number: Some(1),
+                    rate_key: String::new(),
+                    offer_id: String::new(),
+                });
+            }
+        }
+    }
 }
 
 /// Fetch actual hotel details from hotel service
@@ -293,11 +416,32 @@ async fn build_hotel_details(
 
     let all_rooms: Vec<DomainRoomOption> = room_details
         .iter()
-        .map(|room_data| DomainRoomOption {
-            price: block_result.total_price.clone(),
-            room_data: room_data.clone(),
-            meal_plan: None,
-            occupancy_info: None,
+        .map(|room_data| {
+            // Find the corresponding blocked room to get cancellation policy and meal plan
+            let blocked_room = block_result
+                .blocked_rooms
+                .iter()
+                .find(|blocked| blocked.room_code == room_data.room_unique_id);
+
+            DomainRoomOption {
+                price: block_result.total_price.clone(),
+                tax_lines: vec![],
+                offer_retail_rate: Some(DomainCurrencyAmount {
+                    amount: block_result.total_price.room_price,
+                    currency_code: block_result.total_price.currency_code.clone(),
+                }),
+                room_data: room_data.clone(),
+                meal_plan: blocked_room.and_then(|br| br.meal_plan.clone()),
+                occupancy_info: None,
+                mapped_room_id: room_data.mapped_room_id,
+                // Map cancellation policy from blocked room (string) to structured format
+                // Note: blocked_room.cancellation_policy is a String, but we need DomainCancellationPolicies
+                // For now, store it in remarks until we parse it properly
+                cancellation_policies: None, // TODO: Parse cancellation_policy string into structured format
+                // perks: vec![],
+                promotions: None,
+                remarks: blocked_room.and_then(|br| br.cancellation_policy.clone()),
+            }
         })
         .collect();
 
@@ -349,6 +493,9 @@ async fn build_hotel_details(
         hotel_name: actual_hotel_name,
         hotel_code: request.block_room_request.hotel_info_criteria.token.clone(),
         star_rating: actual_star_rating,
+        rating: None,
+        review_count: None,
+        categories: Vec::new(),
         description: actual_description,
         hotel_facilities: actual_facilities,
         address: actual_address,

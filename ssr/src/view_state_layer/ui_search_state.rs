@@ -79,12 +79,14 @@ impl UISearchCtx {
     pub fn set_guests(guests: GuestSelection) {
         let this: Self = expect_context();
 
-        this.guests.adults.set(guests.adults.get_untracked());
-        this.guests.children.set(guests.children.get_untracked());
-        this.guests.rooms.set(guests.rooms.get_untracked());
-        this.guests
-            .children_ages
-            .set_vec(guests.children_ages.get_untracked());
+        batch(|| {
+            this.guests.adults.set(guests.adults.get_untracked());
+            this.guests.children.set(guests.children.get_untracked());
+            this.guests.rooms.set(guests.rooms.get_untracked());
+            this.guests
+                .children_ages
+                .set_vec(guests.children_ages.get_untracked());
+        });
     }
 
     pub fn set_filters(filters: UISearchFilters) {
@@ -165,17 +167,103 @@ impl SearchListResults {
         let search_result_signal = Self::from_leptos_context().search_result;
 
         if let Some(new_response) = hotel_search_response {
+            // Apply deduplication at the lowest level - this ensures dedup happens
+            // regardless of where state is updated from
+            let deduplicated_response = Self::dedup_hotels_by_name(new_response);
+
             search_result_signal.update(|current_result| {
                 if let Some(current) = current_result {
-                    current.hotel_results.extend(new_response.hotel_results);
-                    current.pagination = new_response.pagination;
+                    current
+                        .hotel_results
+                        .extend(deduplicated_response.hotel_results);
+                    // Re-dedup after extending in case there are duplicates between batches
+                    let combined = std::mem::take(current);
+                    *current = Self::dedup_hotels_by_name(combined);
+                    current.pagination = deduplicated_response.pagination;
                 } else {
-                    *current_result = Some(new_response);
+                    *current_result = Some(deduplicated_response);
                 }
             });
         } else {
             search_result_signal.set(None);
         }
+    }
+
+    /// Deduplicate hotels by name, keeping the one with the lowest price.
+    /// This prevents confusion from duplicate hotel entries in search results.
+    fn dedup_hotels_by_name(mut results: DomainHotelListAfterSearch) -> DomainHotelListAfterSearch {
+        use std::collections::HashMap;
+
+        let mut seen_hotels: HashMap<String, usize> = HashMap::new();
+        let mut hotels_to_keep: Vec<bool> = vec![true; results.hotel_results.len()];
+
+        for (idx, hotel) in results.hotel_results.iter().enumerate() {
+            let hotel_name = hotel.hotel_name.trim().to_lowercase();
+
+            if let Some(&existing_idx) = seen_hotels.get(&hotel_name) {
+                // Found a duplicate - keep the one with lower price
+                let existing_price = results.hotel_results[existing_idx]
+                    .price
+                    .as_ref()
+                    .map(|p| p.room_price)
+                    .unwrap_or(f64::MAX);
+
+                let current_price = hotel
+                    .price
+                    .as_ref()
+                    .map(|p| p.room_price)
+                    .unwrap_or(f64::MAX);
+
+                if current_price < existing_price {
+                    // Current hotel has lower price, keep it and remove the previous one
+                    hotels_to_keep[existing_idx] = false;
+                    seen_hotels.insert(hotel_name, idx);
+                } else {
+                    // Existing hotel has lower or equal price, remove current one
+                    hotels_to_keep[idx] = false;
+                }
+            } else {
+                // First occurrence of this hotel name
+                seen_hotels.insert(hotel_name, idx);
+            }
+        }
+
+        // Filter out duplicate hotels
+        let original_count = results.hotel_results.len();
+        results.hotel_results = results
+            .hotel_results
+            .into_iter()
+            .enumerate()
+            .filter_map(|(idx, hotel)| {
+                if hotels_to_keep[idx] {
+                    Some(hotel)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let deduplicated_count = results.hotel_results.len();
+        let removed_count = original_count - deduplicated_count;
+
+        if removed_count > 0 {
+            log!(
+                "[DEDUP] Removed {} duplicate hotel(s) by name (original: {}, after dedup: {})",
+                removed_count,
+                original_count,
+                deduplicated_count
+            );
+        }
+
+        results
+    }
+
+    /// Public wrapper for dedup_hotels_by_name for backward compatibility with tests
+    /// and external callers that need to dedup without setting state.
+    pub fn dedup_hotels_by_name_public(
+        results: DomainHotelListAfterSearch,
+    ) -> DomainHotelListAfterSearch {
+        Self::dedup_hotels_by_name(results)
     }
 
     pub fn get_hotel_code_results_token_map() -> HashMap<String, String> {

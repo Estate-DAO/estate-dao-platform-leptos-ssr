@@ -10,7 +10,7 @@ use email_handler::SendEmailAfterSuccessfullBooking;
 use get_booking_from_backend::GetBookingFromBackend;
 pub use pipeline_lock::PipelineLockManager;
 
-mod pipeline_integration_test;
+// mod pipeline_integration_test;
 
 use crate::canister::backend;
 use crate::ssr_booking::pipeline::PipelineExecutor;

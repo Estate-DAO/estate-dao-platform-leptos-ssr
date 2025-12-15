@@ -1,5 +1,7 @@
 use std::future::Future;
 
+use std::collections::HashMap;
+
 use crate::{
     application_services::UISearchFilters,
     domain::{
@@ -7,7 +9,7 @@ use crate::{
         DomainBookRoomResponse, DomainGetBookingRequest, DomainGetBookingResponse,
         DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelListAfterSearch,
         DomainHotelSearchCriteria, DomainHotelStaticDetails, DomainPlaceDetails,
-        DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload,
+        DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload, DomainPrice,
         DomainRoomOption,
     },
     ports::hotel_provider_port::ProviderError,
@@ -42,6 +44,14 @@ pub trait HotelProviderPort {
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<Vec<DomainRoomOption>, ProviderError>;
+
+    /// Get minimum rates for multiple hotels (lightweight endpoint for search results)
+    /// Returns a map of hotel_id -> minimum price
+    async fn get_min_rates(
+        &self,
+        criteria: DomainHotelSearchCriteria,
+        hotel_ids: Vec<String>,
+    ) -> Result<HashMap<String, DomainPrice>, ProviderError>;
 
     // <!-- Block room operation - reserves room before payment -->
     async fn block_room(

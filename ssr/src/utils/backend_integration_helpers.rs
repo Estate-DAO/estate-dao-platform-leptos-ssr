@@ -87,6 +87,7 @@ impl BackendIntegrationHelper {
             user_phone: booking.get_user_phone(),
             number_of_adults: booking.get_number_of_adults(),
             number_of_children: booking.get_number_of_children(),
+            number_of_rooms: booking.get_number_of_rooms(),
             amount_paid: booking.get_amount_paid(),
         }
     }
@@ -122,5 +123,6 @@ pub struct BookingDisplayInfo {
     pub user_phone: String,
     pub number_of_adults: usize,
     pub number_of_children: usize,
+    pub number_of_rooms: usize,
     pub amount_paid: f64,
 }

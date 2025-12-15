@@ -6,6 +6,7 @@ pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 pub const USER_IDENTITY: &str = "estatedao_user_identity";
 pub const USER_EMAIL_MAPPING_SYNCED: &str = "estatedao_user_email_mapping_synced";
 pub const PAGINATION_LIMIT: i32 = 100;
+pub const ENFORCE_SINGLE_ROOM_TYPE_BOOKING: bool = true;
 // PROVAB_BASE_URL options
 pub const PROVAB_PROD_OLD_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";
@@ -28,6 +29,8 @@ const PROD_APP_URL: &str = "https://nofeebooking.com";
 const AGENT_URL_REMOTE: &str = "https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.ic0.app";
 
 const BASE_URL: &str = crate::canister::APP_URL;
+
+pub const API_RETRY_COUNT: u8 = 4;
 // const for local environment
 const AGENT_URL_LOCAL: &str = "http://localhost:4943";
 
@@ -45,7 +48,7 @@ pub fn get_host() -> String {
             .to_string()
     }
 
-    #[cfg(not(feature = "hydrate"))]
+    #[cfg(all(feature = "ssr", not(feature = "hydrate")))]
     {
         use leptos::prelude::*;
 
@@ -60,6 +63,11 @@ pub fn get_host() -> String {
             .map(|h| h.to_str().unwrap_or_default().to_string())
             .unwrap_or_default()
     }
+
+    #[cfg(all(not(feature = "ssr"), not(feature = "hydrate")))]
+    {
+        String::new()
+    }
 }
 
 cfg_if! {
@@ -68,7 +76,7 @@ cfg_if! {
             env_w_default("NGROK_LOCALHOST_URL", LOCALHOST_APP_URL).unwrap().to_string()
         });
         pub const AGENT_URL: &str = AGENT_URL_LOCAL;
-        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 4;
+        pub const SEARCH_COMPONENT_ROOMS_DEFAULT: u32 = 1;
     }
     else if #[cfg(feature = "prod-consts")] {
         pub static APP_URL: Lazy<String> = Lazy::new(||   env_w_default("APP_URL", PROD_APP_URL).unwrap().to_string());

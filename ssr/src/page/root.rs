@@ -13,6 +13,8 @@ use crate::component::{
     /* DestinationPickerV5, */ CryptoCarousel, DestinationPickerV6, DestinationsSection,
     FeaturesSection, FeedbackSection, Footer, MostPopular, Navbar,
 };
+use crate::page::InputGroupContainer;
+use crate::utils::date::*;
 use crate::{
     api::canister::greet_call::greet_backend,
     app::AppRoutes,
@@ -24,9 +26,7 @@ use crate::{
     utils::query_params::QueryParamsSync,
     view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx},
 };
-// use chrono::{Datelike, NaiveDate};
-use crate::page::InputGroupContainer;
-use crate::utils::date::*;
+use chrono::Datelike;
 use leptos::ev::MouseEvent;
 use leptos_query::{query_persister, *};
 use leptos_use::{on_click_outside, use_timestamp_with_controls, UseTimestampReturn};
@@ -166,10 +166,28 @@ pub fn InputGroup(
     let search_action = create_search_action_with_ui_state(local_disabled);
     let parent_div_ref: NodeRef<html::Div> = create_node_ref();
 
+    let size_clone = size.clone();
+    let size_clone1 = size.clone();
     let height_class = move || {
+        match size_clone.get().as_str() {
+            "small" => "h-12", // 48px in navbar
+            _ => "h-14",       // 56px default (hero)
+        }
+    };
+
+    // add this helper next to height_class / row_h
+    let btn_w = move || {
+        match size_clone1.get().as_str() {
+            "small" => "min-w-[48px] w-12", // compact button in navbar (48px)
+            _ => "min-w-[56px]",            // 56px in hero/large
+        }
+    };
+
+    // Height for each row/segment (destination/date/guests)
+    let row_h = move || {
         match size.get().as_str() {
-            "small" => "h-12 lg:w-12 md:w-full", // navbar version
-            "large" | _ => "h-[56px] lg:w-[56px] md:w-full", // hero section default
+            "small" => "h-12", // 48px in navbar
+            _ => "h-14",       // 56px default
         }
     };
 
@@ -177,16 +195,15 @@ pub fn InputGroup(
         <div
             node_ref=parent_div_ref
             class=move || format!(
-                "relative flex flex-col md:flex-row items-stretch md:items-center max-w-4xl w-full z-[70]
-                 {bg} rounded-md border border-gray-200 shadow-md
-                 overflow-hidden md:overflow-visible
+                "relative flex flex-col md:flex-row items-stretch md:items-center max-w-4xl w-full z-[70] \
+                 {bg} rounded-md border border-gray-200 shadow-md overflow-hidden md:overflow-visible \
                  md:space-y-0 space-y-3",
                 bg = bg_class()
             )
         >
 
             // Destination
-            <div class="flex-1 flex items-center px-2 h-[56px]">
+            <div class=format!("flex-1 flex items-center px-2 {}", (row_h.clone())())>
                 <Show when=move || !disabled.get()>
                     <DestinationPickerV6 />
                 </Show>
@@ -204,14 +221,14 @@ pub fn InputGroup(
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Date range
-            <div class="flex-1 flex items-center px-2 h-[56px] border-t md:border-t-0 relative z-[80]">
+            <div class=format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative z-[80]", (row_h.clone())())>
                 <DateTimeRangePickerCustom />
             </div>
 
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Guests
-            <div class="flex-1 flex items-center px-2 h-[56px] border-t md:border-t-0 relative z-[80]">
+            <div class=move || format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative z-[80]", row_h())>
                 <GuestQuantity />
             </div>
 
@@ -219,28 +236,47 @@ pub fn InputGroup(
             <button
                 on:click=move |ev| {
                     ev.prevent_default();
+
+                    // Auto-set dates if not selected
+                    let current_dates = search_ctx.date_range.get();
+                    let has_no_dates = current_dates.start == (0, 0, 0) || current_dates.end == (0, 0, 0);
+
+                    if has_no_dates {
+                        log!("[InputGroup] No dates selected, auto-setting to next week");
+                        let today = chrono::Local::now().date_naive();
+                        let checkin = today + chrono::Duration::days(7);
+                        let checkout = today + chrono::Duration::days(8);
+
+                        let date_range = SelectedDateRange {
+                            start: (checkin.year() as u32, checkin.month(), checkin.day()),
+                            end: (checkout.year() as u32, checkout.month(), checkout.day()),
+                        };
+
+                        UISearchCtx::set_date_range(date_range);
+                    }
+
                     UIPaginationState::reset_to_first_page();
                     search_action.dispatch(());
                 }
                 class=move || format!(
-                    "flex items-center justify-center gap-2 transition-all duration-200 font-medium
-                    {}
-                    rounded-b-md md:rounded-b-none md:rounded-r-md border-l border-white
-                    leading-none {}",
-                    height_class(),
+                    "flex items-center justify-center gap-2 transition-all duration-200 font-medium \
+                    {} {} flex-shrink-0 \
+                    rounded-b-md md:rounded-b-none md:rounded-r-md border-l border-white leading-none {}",
+                    height_class(),            // h-12 or h-14
+                    btn_w(),                   // <- new width/min-width
                     bg_search_class()
-                )>
+                )
+                title="Search"
+            >
                 <Icon
                     icon=icondata::AiSearchOutlined
                     class=format!(
-                        "{} text-[20px] md:text-[20px] flex-shrink-0 leading-none",
+                        "{} text-[22px] md:text-[22px] leading-none",
                         bg_search_icon_class()
                     )
                 />
                 <span class="block md:hidden text-sm font-medium leading-none">"Search"</span>
             </button>
-
-
         </div>
     }
 }

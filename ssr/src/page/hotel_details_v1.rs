@@ -1,31 +1,144 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::{use_navigate, use_query_map};
+use leptos_router::{use_navigate, use_query_map, NavigateOptions};
 
-use crate::api::client_side_api::{ClientSideApiClient, Place};
+use crate::api::auth::auth_state::AuthStateSignal;
+use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::consts::ENFORCE_SINGLE_ROOM_TYPE_BOOKING;
 use crate::app::AppRoutes;
 use crate::component::ImageLightbox;
-use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray, Navbar, StarRating};
+use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray};
 use crate::domain::{
     DomainHotelCodeId, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest,
+    DomainRoomOccupancy, DomainRoomOption, DomainStaticRoom,
 };
 use crate::log;
-use crate::page::{HotelDetailsParams, HotelListNavbar, InputGroupContainer};
+use crate::page::{add_to_wishlist_action, HotelDetailsParams, HotelListNavbar};
 use crate::utils::query_params::QueryParamsSync;
-use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
+use std::cmp::Ordering;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::Arc;
+
+use std::time::Duration;
 
 // <!-- Configuration constant for number of skeleton rooms to display during loading -->
 const NUMBER_OF_ROOMS: usize = 5;
 
 #[derive(Clone)]
-struct Amenity {
+pub struct Amenity {
     icon: icondata::Icon,
     text: String,
 }
+
+#[derive(Clone)]
+struct OfferGroup {
+    offer_id: String,
+    mapped_room_id: Option<u32>,
+    rates: Vec<DomainRoomOption>,
+    room_names: Vec<String>,
+}
+
+#[derive(Clone)]
+struct RoomCard {
+    mapped_room_id: Option<u32>,
+    room_names: Vec<String>,
+    card_title: String,
+    rates: Vec<DomainRoomOption>,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct RateRowKey {
+    mapped_room_id: Option<u32>,
+    occupancy_number: Option<u32>,
+    meal_plan: String,
+    price_bits: u64,
+}
+
+impl RateRowKey {
+    fn from_rate(rate: &DomainRoomOption, include_occupancy: bool) -> Self {
+        let mapped_room = (rate.mapped_room_id != 0).then_some(rate.mapped_room_id);
+        let meal_plan = rate
+            .meal_plan
+            .clone()
+            .unwrap_or_else(|| "Room Only".to_string());
+        RateRowKey {
+            mapped_room_id: mapped_room,
+            occupancy_number: if include_occupancy {
+                rate.room_data.occupancy_number
+            } else {
+                None
+            },
+            meal_plan,
+            price_bits: rate.price.room_price.to_bits(),
+        }
+    }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct OfferRoomSignature {
+    mapped_room_id: u32,
+    occupancy_number: Option<u32>,
+    meal_plan: String,
+    price_bits: u64,
+}
+
+#[derive(Default, Clone)]
+struct RoomDetailsLookup {
+    by_id: HashMap<u32, DomainStaticRoom>,
+    by_name: HashMap<String, DomainStaticRoom>,
+}
+
+#[derive(Clone, Copy)]
+struct GuestReviewSnippet {
+    name: &'static str,
+    stay_info: &'static str,
+    rating: f32,
+    title: &'static str,
+    body: &'static str,
+    tags: &'static [&'static str],
+}
+
+const REVIEW_CATEGORY_SCORES: [(&str, f32); 6] = [
+    ("Cleanliness", 7.4),
+    ("Room Quality", 9.3),
+    ("Location", 7.4),
+    ("Food & Beverage", 9.3),
+    ("Service", 9.3),
+    ("Amenities", 9.3),
+];
+
+const REVIEW_HIGHLIGHT_TAGS: [&str; 3] = ["Central Location", "Great Breakfast", "Polite Staff"];
+
+const SAMPLE_REVIEWS: [GuestReviewSnippet; 3] = [
+    GuestReviewSnippet {
+        name: "Raghunathan Sharma",
+        stay_info: "2 night stay · Couple",
+        rating: 7.1,
+        title: "Great hospitality and convenient location",
+        body: "Small room but spotless with friendly staff and hot water. Indian restaurant onsite was lovely and breakfast was amazing. Close to most attractions in the city so we could walk everywhere.",
+        tags: &["Central Location", "Great Breakfast"],
+    },
+    GuestReviewSnippet {
+        name: "Haider Nair",
+        stay_info: "2 night stay · Family",
+        rating: 7.0,
+        title: "Comfortable base for a short break",
+        body: "Room was compact yet very comfortable. Shower was clean with hot water. Team helped with late check-in and arranged cabs. Excellent value for the location.",
+        tags: &["Helpful Staff", "Value for Money"],
+    },
+    GuestReviewSnippet {
+        name: "Gorden",
+        stay_info: "2 night stay · Solo traveller",
+        rating: 8.2,
+        title: "Would stay again",
+        body: "Super friendly service and solid WiFi for remote work. Easy to get around and plenty of food options around the property. Perfect for a quick work trip.",
+        tags: &["Fast WiFi", "Great Service"],
+    },
+];
 
 /// **Phase 4 UI Enhancement: Skeleton Loading Component**
 ///
@@ -136,7 +249,7 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
                 .iter()
                 .find(|(key, _)| lower_text.contains(*key))
                 .map(|(_, icon)| *icon)
-                .unwrap_or(icondata::IoWifi);
+                .unwrap_or(icondata::IoCheckmark);
 
             // todo: truncate if needed later.
             // let display_text = if text.len() > 10 {
@@ -150,6 +263,34 @@ fn convert_to_amenities(amenities: Vec<String>) -> Vec<Amenity> {
             Amenity { icon, text }
         })
         .collect()
+}
+
+fn normalized_room_key(value: &str) -> String {
+    value
+        .to_lowercase()
+        .chars()
+        .map(|ch| if ch.is_alphanumeric() { ch } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn room_details_lookup_for_state(state: &HotelDetailsUIState) -> RoomDetailsLookup {
+    if let Some(details) = state.static_details.get() {
+        let mut by_id = HashMap::new();
+        let mut by_name = HashMap::new();
+        for room in details.rooms.into_iter() {
+            let normalized = normalized_room_key(&room.room_name);
+            by_name.insert(normalized, room.clone());
+            if let Ok(id) = room.room_id.trim().parse::<u32>() {
+                by_id.insert(id, room);
+            }
+        }
+        RoomDetailsLookup { by_id, by_name }
+    } else {
+        RoomDetailsLookup::default()
+    }
 }
 
 fn clip_to_30_words(text: &str) -> String {
@@ -337,24 +478,30 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 hotel_ids: vec![hotel_code],
                 search_criteria,
             };
-
-            match client.get_hotel_rates(criteria).await {
-                Ok(rates) => {
-                    HotelDetailsUIState::set_rates(Some(rates.clone()));
-                    HotelDetailsUIState::set_rates_loading(false);
-                    Some(rates)
+            let mut retries_left = crate::api::consts::API_RETRY_COUNT;
+            loop {
+                if retries_left == 0 {
+                    break None;
                 }
-                Err(e) => {
-                    HotelDetailsUIState::set_error(Some(e));
-                    HotelDetailsUIState::set_rates_loading(false);
-                    None
+                match client.get_hotel_rates(criteria.clone()).await {
+                    Ok(rates) => {
+                        HotelDetailsUIState::set_rates(Some(rates.clone()));
+                        HotelDetailsUIState::set_rates_loading(false);
+                        HotelDetailsUIState::set_error(None);
+                        break Some(rates);
+                    }
+                    Err(e) => {
+                        HotelDetailsUIState::set_error(Some(e));
+                        HotelDetailsUIState::set_rates_loading(false);
+                        retries_left -= 1;
+                    }
                 }
             }
         },
     );
 
     let is_loading =
-        move || hotel_details_state.loading.get() || hotel_details_state.rates_loading.get();
+        move || /* hotel_details_state.loading.get() ||*/  hotel_details_state.rates_loading.get();
     let error_message = move || hotel_details_state.error.get();
 
     let loaded = move || static_details_resource.get().and_then(|d| d).is_some();
@@ -367,9 +514,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         }
     };
 
+    let hotel_code_signal = move || {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
+            hotel_details.hotel_code
+        } else {
+            "".to_string()
+        }
+    };
+
     let star_rating_signal = move || {
         if let Some(hotel_details) = hotel_details_state.static_details.get() {
-            hotel_details.star_rating
+            hotel_details.star_rating as u8
         } else {
             0
         }
@@ -418,21 +573,20 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     let open_image_viewer = RwSignal::new(false);
 
     view! {
-        <section class="relative min-h-screen bg-gray-50">
+        <section class="relative min-h-screen bg-gray-50 pt-16 md:pt-16">
             <HotelListNavbar />
-            <div class={
-            let is_input_expanded = move || InputGroupState::is_open_show_full_input();
-            move || format!(
-                "transition-all duration-300 {}",
-                if is_input_expanded() {
-                    // Larger spacer when input is expanded on mobile/tablet, normal on desktop
-                    "h-96 sm:h-96 md:h-80 lg:h-48"
-                } else {
-                    // Normal spacer when collapsed on all screens
-                    "h-24"
-                }
-            )
-            }></div>
+            // <div class=move || {
+            //     let is_expanded = InputGroupState::is_open_show_full_input();
+            //     if is_expanded {
+            //         // tall when expanded
+            //         "transition-all duration-300 h-96 sm:h-96 md:h-80 lg:h-24"
+            //     } else {
+            //         // keep space for fixed navbar (don't use lg:h-0)
+            //         "transition-all duration-300 h-24 sm:h-16 md:h-12 lg:h-16"
+            //     }
+            // }/>
+
+
 
             // <Navbar />
             // <Show when=move || !open_image_viewer.get()>
@@ -451,89 +605,28 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 view! { <></> }
             }}
             </Suspense>
+            <Show when=loaded /* fallback=|| view! {
+                // <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
+                //     <div class="bg-white rounded-xl shadow-md p-6">
+                //         <div class="text-xl font-semibold text-gray-600 text-center">
+                //             No hotel data available
+                //         </div>
+                //     </div>
+                // </div>
+            } */>
+                <HotelDetailsHeader hotel_name_signal=hotel_name_signal() star_rating_signal=star_rating_signal() address_signal=address_signal() hotel_code=hotel_code_signal() />
+                <HotelImages open_image_viewer/>
+                <DetailsSubnav />
+                <OverviewSection
+                    description_html=description_signal()
+                    address=address_signal()
+                    amenities=amenities_signal()
+                />
 
-            <Show
-                when=move || !is_loading()
-                fallback=FullScreenSpinnerGray
-            >
-                <Show when=loaded fallback=|| view! {
-                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                        <div class="bg-white rounded-xl shadow-md p-6">
-                            <div class="text-xl font-semibold text-gray-600 text-center">
-                                No hotel data available
-                            </div>
-                        </div>
-                    </div>
-                }>
-                    <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
-                        <div class="flex flex-col">
-                            <StarRating rating=move || star_rating_signal() as u8 />
-                            <div class="text-2xl md:text-3xl font-semibold">{hotel_name_signal}</div>
-                        </div>
-
-                        <div class="mt-4 md:mt-6">
-                            <HotelImages open_image_viewer/>
-                        </div>
-
-                        <div class="flex flex-col md:flex-row mt-6 md:mt-8 md:space-x-4">
-                            <div class="w-full md:w-3/5 flex flex-col space-y-6">
-                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                    <div class="text-xl mb-2 font-semibold">About</div>
-                                    <div class="mb-2 text-gray-700" inner_html=move || description_signal()></div>
-                                </div>
-
-                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                    <div class="text-xl mb-2 font-semibold">Address</div>
-                                    <div class="text-gray-700">{address_signal}</div>
-                                </div>
-
-                                <div class="bg-white rounded-xl shadow-md p-6 mb-2">
-                                    <div class="text-xl mb-4 font-semibold">Amenities</div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                        <For
-                                            each=amenities_signal
-                                            key=|amenity| amenity.text.clone()
-                                            let:amenity
-                                        >
-                                            <AmenitiesIconText icon=amenity.icon text=amenity.text />
-                                        </For>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="w-full md:w-2/5 mt-8 md:mt-0 flex flex-col space-y-4">
-                                <div class="bg-white rounded-xl shadow-md p-6">
-                                    <div class="text-xl mb-4 font-semibold">Hotel Information</div>
-                                    <div class="space-y-2">
-                                        <div class="text-sm text-gray-600">Check-in: {move || {
-                                            let range = ui_search_ctx.date_range.get();
-                                            if range.start == (0,0,0) {
-                                                "N/A".to_string()
-                                            } else {
-                                                format!("{:04}-{:02}-{:02}", range.start.0, range.start.1, range.start.2)
-                                            }
-                                        }}</div>
-                                        <div class="text-sm text-gray-600">Check-out: {move || {
-                                            let range = ui_search_ctx.date_range.get();
-                                            if range.end == (0,0,0) {
-                                                "N/A".to_string()
-                                            } else {
-                                                format!("{:04}-{:02}-{:02}", range.end.0, range.end.1, range.end.2)
-                                            }
-                                        }}</div>
-                                    </div>
-                                </div>
-
-                                // <!-- Pricing and Booking Section -->
-                                <Show when=move || hotel_details_state.rates.get().is_some()>
-                                    <div class="bg-white rounded-xl shadow-md">
-                                        <PricingBookNowV1 />
-                                    </div>
-                                </Show>
-                            </div>
-                        </div>
-                    </div>
-                </Show>
+                <SelectRoomSection />
+                <GuestReviewsSection />
+                <PolicyRulesSection address=address_signal() />
+                <SiteFooter />
             </Show>
             <Show when=move || error_message().is_some()>
                 <div class="w-full max-w-4xl mx-auto py-4 px-2 md:py-8 md:px-0">
@@ -581,19 +674,120 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 }
 
 #[component]
+pub fn HotelDetailsHeader(
+    #[prop(into)] hotel_name_signal: String,
+    #[prop(into)] address_signal: String,
+    #[prop(into)] star_rating_signal: u8,
+    #[prop(into)] hotel_code: String,
+) -> impl IntoView {
+    let wishlist_code = hotel_code.clone();
+    let toggle_wishlist_action = add_to_wishlist_action(hotel_code.clone());
+    let is_wishlisted = move || AuthStateSignal::check_if_added_to_wishlist(&wishlist_code);
+    let heart_d = "M19.62 27.81C19.28 27.93 18.72 27.93 18.38 27.81C15.48 26.82 9 22.69 9 15.69C9 12.6 11.49 10.1 14.56 10.1C16.38 10.1 17.99 10.98 19 12.34C20.01 10.98 21.63 10.1 23.44 10.1C26.51 10.1 29 12.6 29 15.69C29 22.69 22.52 26.82 19.62 27.81Z";
+    view! {
+        <div class="my-4 w-full max-w-7xl mx-auto px-4 pt-4 pb-2 lg:pt-2 lg:pb-0">
+            {/* on small: actions drop under title; on md+: they sit on the right */}
+            <div class="py-2 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div class="min-w-0">
+                    // {/* tiny blue stars + rating */}
+                    // <div class="flex items-center gap-2 text-blue-600">
+                    //     <StarRating rating=move || star_rating_signal />
+                    //     // <span class="text-sm"> {format!("{}.0", star_rating_signal)} </span>
+                    // </div>
+                    <h1 class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 break-words">
+                        {hotel_name_signal}
+                    </h1>
+
+                    {/* address row */}
+                    <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                        </svg>
+                        <span class="truncate">{address_signal}</span>
+                        <span class="text-gray-300">{"|"}</span>
+                        <a href="#map" class="text-blue-600 hover:underline">"Show in Map"</a>
+                    </div>
+                </div>
+
+                {/* actions */}
+                <div class="flex items-center gap-3 md:self-start">
+                    <button
+                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm bg-white hover:bg-gray-50 group"
+                        on:click=move |_| toggle_wishlist_action.dispatch(())
+                    >
+                        {move || {
+                            let is_wishlisted = is_wishlisted();
+                            view! {
+                                <div class="flex items-center gap-2">
+                                    <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="19" cy="19" r="19" fill="white" />
+
+                                        // FILL heart (underneath)
+                                        <path
+                                            d=heart_d
+                                            fill="currentColor"
+                                            stroke="none"
+                                            class={
+                                                if is_wishlisted {
+                                                    "text-red-500 group-hover:text-blue-600 transition-colors"
+                                                } else {
+                                                    "text-transparent group-hover:text-blue-600 transition-colors"
+                                                }
+                                            }
+                                        />
+
+                                        // STROKE heart (outline, always gray)
+                                        <path
+                                            d=heart_d
+                                            fill="none"
+                                            stroke="#45556C"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            class={
+                                                if is_wishlisted {
+                                                    "stroke-red-500 group-hover:stroke-blue-600 transition-colors"
+                                                } else {
+                                                    "stroke-[#45556C] group-hover:stroke-blue-600 transition-colors"
+                                                }
+                                            }
+                                        />
+                                    </svg>
+                                    <Show when=move || !is_wishlisted ><span class="font-semibold text-gray-700">"Add to Wishlist"</span></Show>
+                                </div>
+                            }
+                        }}
+                    </button>
+                    <a href="#rooms" class="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 inline-flex items-center gap-2">
+                        "Select A Room"
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M13 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+/* ===================== Image Gallery ===================== */
+
+#[component]
 pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
 
-    // let (show_viewer, set_show_viewer) = create_signal(false);
+    // index used for the big image on the page
+    let (main_index, set_main_index) = create_signal(0);
+    // index to start from when opening the lightbox
     let (selected_index, set_selected_index) = create_signal(0);
 
     let images_signal = create_memo(move |_| {
-        if let Some(hotel_details) = hotel_details_state.static_details.get() {
-            let mut images = hotel_details.images.clone();
+        if let Some(h) = hotel_details_state.static_details.get() {
+            let mut images = h.images.clone();
             if images.len() < 6 {
-                let repeat_count = 6 - images.len();
-                let repeated_images = images.clone();
-                images.extend(repeated_images.into_iter().take(repeat_count));
+                let repeat = 6 - images.len();
+                let dup = images.clone();
+                images.extend(dup.into_iter().take(repeat));
             }
             images
         } else {
@@ -601,88 +795,104 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
         }
     });
 
+    // open viewer from current/explicit index
+    let open_from = move |i: usize| {
+        set_selected_index(i);
+        open_image_viewer.set(true);
+    };
+
+    // go next/prev on the PAGE (updates the big image)
+    let next = move |_| {
+        let n = images_signal().len();
+        if n > 0 {
+            set_main_index((main_index.get() + 1) % n);
+        }
+    };
+    let prev = move |_| {
+        let n = images_signal().len();
+        if n > 0 {
+            set_main_index((main_index.get() + n - 1) % n);
+        }
+    };
+
     move || {
         if images_signal().is_empty() {
-            view! { <div class="text-gray-500 text-center py-8">No images available</div> }
+            view! { <div class="text-gray-500 text-center py-8">"No images available"</div> }
         } else {
             view! {
-                <div>
-                    <div class="block sm:hidden">
-                        <img
-                            src=move || images_signal()[0].clone()
-                            alt="Hotel"
-                            class="w-full h-64 rounded-xl object-cover cursor-pointer"
-                            on:click=move |_| {
-                                set_selected_index(0);
-                                open_image_viewer.set(true);
-                            }
-                        />
-                    </div>
-                    <div class="hidden sm:flex flex-col space-y-3">
-                        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                <div class="py-2  w-full max-w-7xl mx-auto px-4">
+                    {/* Mobile: one big image */}
+                    <div class="md:hidden">
+                        <div class="relative rounded-2xl overflow-hidden aspect-[16/9] bg-gray-100">
                             <img
-                                src=move || images_signal()[0].clone()
+                                src=move || images_signal()[main_index.get()].clone()
                                 alt="Hotel"
-                                class="w-full sm:w-3/5 h-64 sm:h-96 rounded-xl object-cover cursor-pointer"
-                                on:click=move |_| {
-                                    set_selected_index(0);
-                                    open_image_viewer.set(true);
-                                }
+                                class="absolute inset-0 h-full w-full object-cover"
+                                on:click=move |_| open_from(main_index.get())
                             />
-                            <div class="flex flex-row sm:flex-col space-x-3 sm:space-x-0 sm:space-y-3 w-full sm:w-2/5">
-                                <img
-                                    src=move || images_signal().get(1).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                    alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
-                                    on:click=move |_| {
-                                        set_selected_index(1);
-                                        open_image_viewer.set(true);
-                                    }
-                                />
-                                <img
-                                    src=move || images_signal().get(2).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                    alt="Hotel"
-                                    class="w-1/2 sm:w-full h-32 sm:h-[186px] rounded-xl object-cover sm:object-fill cursor-pointer"
-                                    on:click=move |_| {
-                                        set_selected_index(2);
-                                        open_image_viewer.set(true);
-                                    }
-                                />
-                            </div>
                         </div>
-                        <div class="flex justify-between space-x-3">
+                    </div>
+
+                    {/* Desktop / tablet */}
+                    <div class="hidden md:grid grid-cols-12 gap-6">
+                        {/* Left: main image (driven by main_index) */}
+                        <div class="col-span-9 relative rounded-2xl overflow-hidden bg-gray-100 h-full min-h-0">
                             <img
-                                src=move || images_signal().get(3).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
-                                on:click=move |_| {
-                                    set_selected_index(3);
-                                    open_image_viewer.set(true);
-                                }
+                                src=move || images_signal()[main_index.get()].clone()
+                                alt="Hotel main"
+                                class="absolute inset-0 h-full w-full object-cover"
+                                on:click=move |_| open_from(main_index.get())
+                            />
+                            {/* arrows */}
+                            <button
+                                class="absolute left-4 top-1/2 -translate-y-1/2 grid place-items-center w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow"
+                                on:click=prev aria-label="Previous"
+                            >
+                                <span class="text-lg">"‹"</span>
+                            </button>
+                            <button
+                                class="absolute right-4 top-1/2 -translate-y-1/2 grid place-items-center w-10 h-10 rounded-full bg-white/95 hover:bg-white shadow"
+                                on:click=next aria-label="Next"
+                            >
+                                <span class="text-lg">"›"</span>
+                            </button>
+                        </div>
+
+                        {/* Right: vertical stack of 3 thumbs (static) */}
+                        <div class="col-span-3 flex flex-col gap-6">
+                            <img
+                                src=move || images_signal().get(1).cloned().unwrap_or_else(|| images_signal()[0].clone())
+                                alt="Thumb 1"
+                                class="w-full aspect-[16/9] rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| set_main_index(1)  // change main image
                             />
                             <img
-                                src=move || images_signal().get(4).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                alt="Hotel"
-                                class="w-72 h-48 rounded-xl object-cover cursor-pointer"
-                                on:click=move |_| {
-                                    set_selected_index(4);
-                                    open_image_viewer.set(true);
-                                }
+                                src=move || images_signal().get(2).cloned().unwrap_or_else(|| images_signal()[0].clone())
+                                alt="Thumb 2"
+                                class="w-full aspect-[16/9] rounded-xl object-cover cursor-pointer"
+                                on:click=move |_| set_main_index(2)
                             />
-                            <div class="relative w-72 h-48 rounded-xl">
+                            <div class="relative">
                                 <img
-                                    src=move || images_signal().get(5).cloned().unwrap_or_else(|| images_signal()[0].clone())
-                                    alt="Hotel"
-                                    class="object-cover h-full w-full rounded-xl cursor-pointer"
-                                    on:click=move |_| {
-                                        set_selected_index(5);
-                                        open_image_viewer.set(true);
-                                    }
+                                    src=move || images_signal().get(3).cloned().unwrap_or_else(|| images_signal()[0].clone())
+                                    alt="Thumb 3"
+                                    class="w-full aspect-[16/9] rounded-xl object-cover cursor-pointer"
+                                    on:click=move |_| set_main_index(3)
                                 />
+                                {/* "Show All Pictures" overlay opens viewer at current main_index */}
+                                <button
+                                    class="absolute left-4 right-4 top-1/2 -translate-y-1/2 rounded-xl bg-white/95 px-4 py-3 text-sm leading-tight shadow hover:bg-white"
+                                    on:click=move |_| open_from(main_index.get())
+                                >
+                                    <div class="flex flex-col items-center">
+                                        <span>"Show All Pictures"</span>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
 
+                    {/* Lightbox uses selected_index */}
                     {move || open_image_viewer.get().then(|| {
                         view! {
                             <ImageLightbox
@@ -699,14 +909,542 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
     }
 }
 
+/* ---------------- Sub-nav tabs ---------------- */
+
 #[component]
-pub fn AmenitiesIconText(icon: icondata::Icon, #[prop(into)] text: String) -> impl IntoView {
+pub fn DetailsSubnav() -> impl IntoView {
+    let tabs = vec![
+        ("overview", "Overview"),
+        ("facilities", "Facilities"),
+        ("rooms", "Select A Room"),
+        ("reviews", "Guest Reviews"),
+        ("rules", "Rules & Policies"),
+    ];
     view! {
-        <div class="flex items-center">
-        // todo: for now, we are showing a bullet only
-            <Icon class="inline text-xl text-gray-600" icon=icondata::BsDot />
-            <span class="inline ml-2 text-sm text-gray-700">{text}</span>
+        <div class="w-full max-w-7xl mx-auto px-4 pt-2 md:pt-4">
+            <div class="flex items-center gap-8 text-gray-600 text-sm md:text-base overflow-x-auto">
+                <For each=move || tabs.clone() key=|(id, _)| id.to_string() let:tab>
+                    {let (id, label) = tab;
+                    view!{
+                        <a href={format!("#{id}")} class="relative py-3 whitespace-nowrap hover:text-gray-900 group">
+                            <span class="">{label}</span>
+                            <span class="absolute left-0 -bottom-[1px] h-[3px] w-0 bg-blue-500 rounded-full group-hover:w-full transition-all"></span>
+                        </a>
+                    }}
+                </For>
+            </div>
+            <div class="mt-3 h-px w-full bg-gray-200"></div>
         </div>
+    }
+}
+
+#[component]
+pub fn SectionTitle(#[prop(into)] id: String, #[prop(into)] title: String) -> impl IntoView {
+    view! {
+        // <div id=id class="scroll-mt-24"/>
+        <h2 id=id  class="scroll-mt-24 pl-4 border-l-4 border-blue-500 text-2xl md:text-[28px] font-semibold text-gray-900">
+            {title}
+        </h2>
+    }
+}
+
+#[component]
+pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
+    let hotel_details_state: HotelDetailsUIState = expect_context();
+
+    let location_signal = move || {
+        if let Some(hotel_details) = hotel_details_state.static_details.get() {
+            hotel_details.location
+        } else {
+            None
+        }
+    };
+
+    view! {
+        <div id="map" class="scroll-mt-24 mt-4">
+            <div class="flex items-center justify-between">
+                <span class="font-semibold text-gray-800">Map</span>
+                <a href="#map" class="text-sm text-blue-600 hover:underline">"Show Map"</a>
+            </div>
+
+            <div class="mt-2 rounded-xl overflow-hidden bg-gray-200">
+                <Show
+                    when=move || location_signal().is_some()
+                    fallback=|| view! {
+                        <div class="w-full aspect-[21/9] bg-[url('/img/map-placeholder.webp')] bg-cover bg-center"></div>
+                    }
+                >
+                    {
+                        let location = location_signal().unwrap();
+                        let map_url = format!(
+                            "https://www.openstreetmap.org/export/embed.html?bbox={},{},{},{}&layer=mapnik&marker={:.6},{:.6}",
+                            location.longitude - 0.01,
+                            location.latitude - 0.01,
+                            location.longitude + 0.01,
+                            location.latitude + 0.01,
+                            location.latitude,
+                            location.longitude
+                        );
+                        view! {
+                            <iframe
+                                class="w-full"
+                                frameborder="0"
+                                scrolling="no"
+                                marginheight="0"
+                                marginwidth="0"
+                                src=map_url
+                            ></iframe>
+                        }
+                    }
+                </Show>
+            </div>
+
+            <div class="mt-3 flex items-start gap-2 text-gray-700">
+                <svg class="w-[18px] h-[18px] text-blue-600 mt-[2px]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                </svg>
+                <span class="text-sm md:text-base">{address}</span>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn FacilityChips(amenities: Vec<Amenity>) -> impl IntoView {
+    let top = amenities.into_iter().take(10).collect::<Vec<_>>();
+    view! {
+        <div class="flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Most Popular facilities</span>
+            <a href="#facilities" class="text-sm text-blue-600 hover:underline">Show All</a>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-x-6 gap-y-4">
+            <For each=move || top.clone() key=|a| a.text.clone() let:item>
+                <div class="inline-flex items-center text-gray-800">
+                    <div class="w-2 h-2 bg-blue-600 rounded-full mr-2"></div>
+                    <span class="text-sm md:text-base">{item.text}</span>
+                </div>
+            </For>
+        </div>
+    }
+}
+
+#[component]
+pub fn OverviewSection(
+    #[prop(into)] description_html: String,
+    #[prop(into)] address: String,
+    amenities: Vec<Amenity>,
+) -> impl IntoView {
+    view! {
+        <section class="w-full max-w-7xl mx-auto px-4 mt-6 md:mt-8">
+            <SectionTitle id="overview" title="Overview"/>
+            <div class="mt-3 text-gray-700 leading-7" inner_html=description_html></div>
+
+            <MapBlock address=address />
+
+            <div class="mt-10">
+                <SectionTitle id="facilities" title="Facility"/>
+                <div class="mt-4">
+                    <FacilityChips amenities/>
+                </div>
+            </div>
+        </section>
+    }
+}
+
+fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<OfferGroup> {
+    let mut grouped_by_offer: BTreeMap<String, OfferGroup> = BTreeMap::new();
+    let mut offer_room_signatures: HashMap<String, HashSet<OfferRoomSignature>> = HashMap::new();
+
+    let mut seen_rate_keys = HashSet::new();
+
+    for rate in rates {
+        if !seen_rate_keys.insert(rate.room_data.rate_key.clone()) {
+            continue;
+        }
+        let offer_key = rate.room_data.offer_id.clone();
+        let signature = OfferRoomSignature {
+            mapped_room_id: rate.mapped_room_id,
+            occupancy_number: rate.room_data.occupancy_number,
+            meal_plan: rate.meal_plan.clone().unwrap_or_else(String::new),
+            price_bits: rate.price.room_price.to_bits(),
+        };
+        let set = offer_room_signatures
+            .entry(offer_key.clone())
+            .or_insert_with(HashSet::new);
+        if !set.insert(signature) {
+            continue;
+        }
+        grouped_by_offer
+            .entry(offer_key.clone())
+            .and_modify(|entry| {
+                if entry.mapped_room_id.is_none() && rate.mapped_room_id != 0 {
+                    entry.mapped_room_id = Some(rate.mapped_room_id);
+                }
+                entry.rates.push(rate.clone());
+                if !entry
+                    .room_names
+                    .iter()
+                    .any(|name| name == &rate.room_data.room_name)
+                {
+                    entry.room_names.push(rate.room_data.room_name.clone());
+                }
+            })
+            .or_insert_with(|| OfferGroup {
+                offer_id: offer_key.clone(),
+                mapped_room_id: (rate.mapped_room_id != 0).then_some(rate.mapped_room_id),
+                rates: vec![rate.clone()],
+                room_names: vec![rate.room_data.room_name.clone()],
+            });
+    }
+
+    let mut groups: Vec<OfferGroup> = grouped_by_offer.into_values().collect();
+
+    for group in &mut groups {
+        group.rates.sort_by(|a, b| {
+            a.price
+                .room_price
+                .partial_cmp(&b.price.room_price)
+                .unwrap_or(Ordering::Equal)
+        });
+    }
+
+    groups.sort_by(|a, b| {
+        let a_price = a
+            .rates
+            .first()
+            .map(|rate| rate.price.room_price)
+            .unwrap_or(f64::MAX);
+        let b_price = b
+            .rates
+            .first()
+            .map(|rate| rate.price.room_price)
+            .unwrap_or(f64::MAX);
+        a_price.partial_cmp(&b_price).unwrap_or(Ordering::Equal)
+    });
+
+    groups
+}
+
+fn same_mapped_room_id(offer: &OfferGroup) -> Option<u32> {
+    let mut room_id: Option<u32> = None;
+    for rate in &offer.rates {
+        if rate.mapped_room_id == 0 {
+            return None;
+        }
+        match room_id {
+            None => room_id = Some(rate.mapped_room_id),
+            Some(existing) if existing == rate.mapped_room_id => {}
+            _ => return None,
+        }
+    }
+    room_id
+}
+
+fn build_type_b_title(rates: &[DomainRoomOption]) -> Option<String> {
+    if rates.is_empty() {
+        return None;
+    }
+    let mut counts: HashMap<(Option<u32>, String), (String, usize)> = HashMap::new();
+    for rate in rates {
+        let mapped = (rate.mapped_room_id != 0).then_some(rate.mapped_room_id);
+        let normalized_name = normalized_room_key(&rate.room_data.room_name);
+        let key = (mapped, normalized_name);
+        let entry = counts
+            .entry(key)
+            .or_insert((rate.room_data.room_name.clone(), 0));
+        entry.1 += 1;
+    }
+
+    let mut entries: Vec<(Option<u32>, String, usize)> = counts
+        .into_iter()
+        .map(|((mapped, _), (display_name, count))| (mapped, display_name, count))
+        .collect();
+    entries.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.1.cmp(&b.1)));
+
+    let title = entries
+        .into_iter()
+        .map(|(_, name, count)| format!("{count} x {name}"))
+        .collect::<Vec<_>>()
+        .join(" + ");
+
+    if title.is_empty() {
+        None
+    } else {
+        Some(title)
+    }
+}
+
+fn dedup_rates(rates: &[DomainRoomOption], include_occupancy: bool) -> Vec<DomainRoomOption> {
+    let mut seen = HashSet::new();
+    let mut deduped = Vec::new();
+    for rate in rates {
+        let key = RateRowKey::from_rate(rate, include_occupancy);
+        if seen.insert(key) {
+            deduped.push(rate.clone());
+        }
+    }
+    deduped.sort_by(|a, b| {
+        a.price
+            .room_price
+            .partial_cmp(&b.price.room_price)
+            .unwrap_or(Ordering::Equal)
+    });
+    deduped
+}
+
+/// Deduplicate TYPE B rates by meal plan only, keeping the lowest price for each meal plan.
+/// This prevents showing multiple rows with the same meal plan but different prices on TYPE B cards.
+fn dedup_rates_by_meal_plan(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
+    let mut best_by_meal_plan: HashMap<String, DomainRoomOption> = HashMap::new();
+
+    for rate in rates {
+        let meal_plan = rate
+            .meal_plan
+            .clone()
+            .unwrap_or_else(|| "Room Only".to_string());
+
+        best_by_meal_plan
+            .entry(meal_plan)
+            .and_modify(|existing| {
+                // Keep the rate with the lower price
+                if rate.price.room_price < existing.price.room_price {
+                    *existing = rate.clone();
+                }
+            })
+            .or_insert_with(|| rate.clone());
+    }
+
+    let mut deduped: Vec<DomainRoomOption> = best_by_meal_plan.into_values().collect();
+    deduped.sort_by(|a, b| {
+        a.price
+            .room_price
+            .partial_cmp(&b.price.room_price)
+            .unwrap_or(Ordering::Equal)
+    });
+    deduped
+}
+
+fn dedup_rates_for_type_b(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
+    let mut rates_by_offer: HashMap<String, Vec<DomainRoomOption>> = HashMap::new();
+    for rate in rates {
+        rates_by_offer
+            .entry(rate.room_data.offer_id.clone())
+            .or_default()
+            .push(rate.clone());
+    }
+
+    let mut offer_representatives: Vec<DomainRoomOption> = Vec::new();
+    for (_, offer_rates) in rates_by_offer {
+        if let Some(first_rate) = offer_rates.first() {
+            let mut rep_rate = first_rate.clone();
+            let total_price: f64 = offer_rates.iter().map(|r| r.price.room_price).sum();
+            rep_rate.price.room_price = total_price;
+            offer_representatives.push(rep_rate);
+        }
+    }
+
+    // Now dedup by meal plan using the existing logic (lowest price per meal plan)
+    dedup_rates_by_meal_plan(&offer_representatives)
+}
+
+fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
+    let mut type_a_map: HashMap<u32, RoomCard> = HashMap::new();
+    let mut type_a_order: Vec<u32> = Vec::new();
+    // Group TYPE B cards by their card title (room combination)
+    let mut type_b_map: HashMap<String, RoomCard> = HashMap::new();
+    let mut type_b_order: Vec<String> = Vec::new();
+
+    for offer in offers {
+        let offer_rate = offer.rates.first().cloned();
+        let normalized_title = offer.room_names.join(" + ");
+
+        if let Some(mapped_id) = same_mapped_room_id(&offer) {
+            // TYPE A: Single room type
+            if let Some(best_rate) = offer_rate {
+                let entry = type_a_map.entry(mapped_id).or_insert_with(|| RoomCard {
+                    mapped_room_id: Some(mapped_id),
+                    room_names: offer.room_names.clone(),
+                    card_title: normalized_title.clone(),
+                    rates: Vec::new(),
+                });
+                for name in &offer.room_names {
+                    if !entry.room_names.contains(name) {
+                        entry.room_names.push(name.clone());
+                    }
+                }
+                if entry.card_title.is_empty() {
+                    entry.card_title = entry.room_names.join(" + ");
+                }
+                entry.rates.push(best_rate);
+                if !type_a_order.contains(&mapped_id) {
+                    type_a_order.push(mapped_id);
+                }
+            }
+        } else {
+            // TYPE B: Multiple room types
+            let card_title =
+                build_type_b_title(&offer.rates).unwrap_or_else(|| normalized_title.clone());
+
+            // Group TYPE B cards by card_title (room combination)
+            let entry = type_b_map.entry(card_title.clone()).or_insert_with(|| {
+                // Track order of TYPE B cards
+                if !type_b_order.contains(&card_title) {
+                    type_b_order.push(card_title.clone());
+                }
+                RoomCard {
+                    mapped_room_id: None,
+                    room_names: offer.room_names.clone(),
+                    card_title: card_title.clone(),
+                    rates: Vec::new(),
+                }
+            });
+
+            // Merge room names from this offer
+            for name in &offer.room_names {
+                if !entry.room_names.contains(name) {
+                    entry.room_names.push(name.clone());
+                }
+            }
+
+            // Add all rates from this offer to the card
+            entry.rates.extend(offer.rates);
+        }
+    }
+
+    // Build final card list
+    let mut cards = Vec::new();
+
+    // Add TYPE A cards in order
+    for mapped_id in type_a_order {
+        if let Some(mut card) = type_a_map.remove(&mapped_id) {
+            if card.card_title.is_empty() {
+                card.card_title = card.room_names.join(" + ");
+            }
+            // Deduplicate rates by meal plan, keeping the lowest price for each
+            card.rates = dedup_rates_by_meal_plan(&card.rates);
+            cards.push(card);
+        }
+    }
+
+    // Add TYPE B cards in order, deduplicating rates by meal plan
+    for card_title in type_b_order {
+        if let Some(mut card) = type_b_map.remove(&card_title) {
+            // Deduplicate rates by meal plan, keeping the lowest price for each
+            // For TYPE B, we first sum the prices of all rooms in the offer
+            card.rates = dedup_rates_for_type_b(&card.rates);
+            cards.push(card);
+        }
+    }
+
+    cards
+}
+
+fn grouped_rooms_for_state(state: &HotelDetailsUIState) -> Vec<RoomCard> {
+    let rates = match state.rates.get() {
+        Some(rates) => rates,
+        None => return vec![],
+    };
+
+    if rates.is_empty() {
+        return vec![];
+    }
+
+    let mut grouped = group_room_options_by_type(rates);
+
+    if let Some(static_details) = state.static_details.get() {
+        if !static_details.rooms.is_empty() {
+            let mut ordered_groups = Vec::new();
+
+            for room in &static_details.rooms {
+                let room_id = room.room_id.trim().parse::<u32>().ok();
+                let position = if let Some(id) = room_id {
+                    grouped
+                        .iter()
+                        .position(|group| group.mapped_room_id == Some(id))
+                } else {
+                    grouped.iter().position(|group| {
+                        group.room_names.iter().any(|name| {
+                            normalized_room_key(name) == normalized_room_key(&room.room_name)
+                        })
+                    })
+                };
+
+                if let Some(pos) = position {
+                    ordered_groups.push(grouped.remove(pos));
+                }
+            }
+
+            if !ordered_groups.is_empty() {
+                ordered_groups.extend(grouped);
+                grouped = ordered_groups;
+            }
+        }
+    }
+
+    build_room_cards(grouped)
+}
+
+fn fallback_image_for_state(state: &HotelDetailsUIState) -> Option<String> {
+    state
+        .static_details
+        .get()
+        .and_then(|details| details.images.first().cloned())
+}
+
+fn amenity_preview_for_state(state: &HotelDetailsUIState) -> Vec<Amenity> {
+    state
+        .static_details
+        .get()
+        .map(|details| convert_to_amenities(details.hotel_facilities))
+        .unwrap_or_default()
+}
+
+fn currency_symbol_for_code(code: &str) -> &str {
+    match code {
+        "INR" => "₹",
+        "EUR" => "€",
+        "GBP" => "£",
+        "USD" => "$",
+        _ => "$",
+    }
+}
+
+fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
+    let symbol = currency_symbol_for_code(currency_code);
+    if amount.fract() == 0.0 {
+        format!("{symbol}{:.0}", amount)
+    } else {
+        format!("{symbol}{:.2}", amount)
+    }
+}
+
+fn included_taxes_for_rate(rate: &DomainRoomOption) -> f64 {
+    rate.included_taxes_total()
+}
+
+fn nightly_price_excluding_taxes(rate: &DomainRoomOption, nights: u32) -> f64 {
+    let valid_nights = if nights == 0 { 1 } else { nights } as f64;
+    rate.price_excluding_included_taxes() / valid_nights
+}
+
+fn format_occupancy_text(info: Option<&DomainRoomOccupancy>) -> String {
+    if let Some(info) = info {
+        let adults = info.adult_count.unwrap_or(0);
+        let children = info.child_count.unwrap_or(0);
+        let max = info.max_occupancy.unwrap_or(adults + children);
+        if children > 0 {
+            format!(
+                "Sleeps up to {} · {} adults + {} children",
+                max, adults, children
+            )
+        } else if adults > 0 {
+            format!("Sleeps up to {} · {} adults", max, adults)
+        } else {
+            format!("Sleeps {}", max)
+        }
+    } else {
+        "Occupancy details not provided".to_string()
     }
 }
 
@@ -802,7 +1540,6 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
 /// **UX Features**: Loading states, disabled states, validation
 #[component]
 pub fn PricingBreakdownV1() -> impl IntoView {
-    let hotel_details_state: HotelDetailsUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
     let navigate = use_navigate();
 
@@ -814,12 +1551,21 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 
     // Calculate number of nights
     let number_of_nights = move || date_range().no_of_nights();
+    let nights = move || {
+        let nights = number_of_nights();
+        if nights == 0 {
+            1
+        } else {
+            nights
+        }
+    };
 
     // Calculate total selected rooms
     let total_selected_rooms = move || HotelDetailsUIState::total_selected_rooms();
 
     // Calculate subtotal using helper method
     let subtotal = move || HotelDetailsUIState::calculate_subtotal_for_nights();
+    let total_for_stay = move || subtotal();
 
     // Check if any rooms are selected
     let has_rooms_selected = move || total_selected_rooms() > 0;
@@ -827,44 +1573,170 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     // Create memo for button disabled state
     let button_disabled = create_memo(move |_| !has_rooms_selected() || booking_loading.get());
 
+    let currency_code = create_memo(move |_| {
+        HotelDetailsUIState::get_available_room_options()
+            .first()
+            .map(|opt| opt.price.currency_code.clone())
+            .unwrap_or_else(|| "USD".to_string())
+    });
+    let resolved_selection_rows = move || {
+        let selected = HotelDetailsUIState::get_selected_rooms();
+        let options = HotelDetailsUIState::get_available_room_options();
+        let default_code = currency_code.get();
+        let nights_val = {
+            let n = ui_search_ctx.date_range.get().no_of_nights();
+            if n == 0 {
+                1.0
+            } else {
+                n as f64
+            }
+        };
+
+        // First pass: collect all individual rows
+        let mut raw_rows = Vec::new();
+        for (rate_key, quantity) in selected.into_iter().filter(|(_, qty)| *qty > 0) {
+            if let Some(opt) = options
+                .iter()
+                .find(|opt| opt.room_data.rate_key == rate_key)
+            {
+                let room_name = opt.room_data.room_name.clone();
+                let total_price_for_stay = opt.price_excluding_included_taxes(); // Total for ALL nights
+                let price_per_night = total_price_for_stay / nights_val;
+                let code = opt.price.currency_code.clone();
+                let meal_plan = opt.meal_plan.clone().unwrap_or_default();
+                raw_rows.push((
+                    rate_key,
+                    quantity,
+                    room_name,
+                    meal_plan,
+                    price_per_night,
+                    total_price_for_stay,
+                    code,
+                ));
+            }
+        }
+
+        // Second pass: group by room_name and meal_plan
+        // Key: (Name, MealPlan), Value: (TotalQty, TotalPriceSum, Code, FirstRateKey)
+        let mut grouped: HashMap<(String, String), (u32, f64, f64, String, String)> =
+            HashMap::new();
+
+        for (rate_key, qty, name, meal, price, total, code) in raw_rows {
+            let entry = grouped
+                .entry((name, meal))
+                .or_insert((0, 0.0, 0.0, code, rate_key));
+            entry.0 += qty;
+            entry.1 += price * qty as f64; // Accumulate per-night prices
+            entry.2 += total * qty as f64; // Accumulate total prices
+        }
+
+        // Convert back to vector
+        // Return: (rate_key, qty, name, meal, avg_price_per_night, code, total_for_all_nights_and_rooms)
+        grouped
+            .into_iter()
+            .map(
+                |((name, meal), (qty, total_price_per_night, total_for_stay, code, rate_key))| {
+                    let avg_price = total_price_per_night / qty as f64;
+                    (rate_key, qty, name, meal, avg_price, code, total_for_stay)
+                },
+            )
+            .collect::<Vec<_>>()
+    };
+    let guests = ui_search_ctx.guests;
+    let adults_count = move || guests.adults.get();
+
     // Create action for Book Now button
     let book_now_action = create_action(move |_: &()| {
         let navigate = navigate.clone();
         async move {
             booking_loading.set(true);
+            let nights_val = {
+                let n = ui_search_ctx.date_range.get().no_of_nights();
+                if n == 0 {
+                    1.0
+                } else {
+                    n as f64
+                }
+            };
 
             // <!-- Pass room selection data to BlockRoomUIState -->
             // Get selected rooms with quantities
             let selected_rooms = HotelDetailsUIState::get_selected_rooms();
             let available_rooms = HotelDetailsUIState::get_available_rooms();
+            let room_options = HotelDetailsUIState::get_available_room_options();
             let hotel_details = HotelDetailsUIState::get_hotel_details();
 
             // Create room selection summary for block room page
-            let mut room_selection_summary = Vec::new();
+            let mut raw_summaries = Vec::new();
             let mut selected_rooms_with_data = std::collections::HashMap::new();
+            let fallback_price_per_room = {
+                let total_rooms = HotelDetailsUIState::total_selected_rooms();
+                if total_rooms > 0 {
+                    HotelDetailsUIState::total_room_price() / total_rooms as f64
+                } else {
+                    0.0
+                }
+            };
 
-            for (room_id, quantity) in selected_rooms.iter() {
+            for (rate_key, quantity) in selected_rooms.iter() {
                 if *quantity > 0 {
-                    // Find the corresponding room data
-                    if let Some(room_data) = available_rooms
+                    if let Some(room_option) = room_options
                         .iter()
-                        .find(|r| &r.room_unique_id == room_id)
+                        .find(|opt| &opt.room_data.rate_key == rate_key)
                     {
-                        // Create summary entry
-                        let summary = RoomSelectionSummary {
-                            room_id: room_id.clone(),
-                            room_name: room_data.room_name.clone(),
-                            quantity: *quantity,
-                            price_per_night: HotelDetailsUIState::total_room_price()
-                                / HotelDetailsUIState::total_selected_rooms() as f64,
-                            room_data: room_data.clone(),
-                        };
-                        room_selection_summary.push(summary);
+                        raw_summaries.push((room_option, *quantity));
                         selected_rooms_with_data
-                            .insert(room_id.clone(), (*quantity, room_data.clone()));
+                            .insert(rate_key.clone(), (*quantity, room_option.room_data.clone()));
+                    } else if let Some(room_data) =
+                        available_rooms.iter().find(|r| &r.rate_key == rate_key)
+                    {
+                        selected_rooms_with_data
+                            .insert(rate_key.clone(), (*quantity, room_data.clone()));
                     }
                 }
             }
+
+            // Group by name and meal plan
+            let mut grouped_summaries: HashMap<
+                (String, String),
+                (
+                    u32,
+                    f64,
+                    crate::domain::DomainRoomData,
+                    Vec<crate::domain::DomainTaxLine>,
+                ),
+            > = HashMap::new();
+
+            for (opt, qty) in raw_summaries {
+                let name = opt.room_data.room_name.clone();
+                let meal = opt.meal_plan.clone().unwrap_or_default();
+                let price_per_night = opt.price_excluding_included_taxes() / nights_val;
+
+                let entry = grouped_summaries.entry((name, meal)).or_insert((
+                    0,
+                    0.0,
+                    opt.room_data.clone(),
+                    opt.tax_lines.clone(),
+                ));
+                entry.0 += qty;
+                entry.1 += price_per_night * qty as f64;
+            }
+
+            let room_selection_summary: Vec<RoomSelectionSummary> = grouped_summaries
+                .into_iter()
+                .map(|((name, meal), (qty, total_price, room_data, tax_lines))| {
+                    let avg_price = total_price / qty as f64;
+                    RoomSelectionSummary {
+                        room_id: room_data.rate_key.clone(), // Use representative ID
+                        room_name: name,
+                        meal_plan: Some(meal),
+                        quantity: qty,
+                        price_per_night: avg_price,
+                        tax_lines,
+                        room_data,
+                    }
+                })
+                .collect();
 
             // Pass data to BlockRoomUIState
             BlockRoomUIState::set_selected_rooms(selected_rooms_with_data);
@@ -903,84 +1775,104 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     };
 
     view! {
-        <div class="bg-white rounded-xl shadow-md p-6">
-            <div class="text-xl mb-4 font-semibold">Price Breakdown</div>
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl shadow-sm p-5 space-y-5">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <div class="text-lg font-semibold text-gray-900">"Cart"</div>
+                    <p class="text-sm text-gray-500">
+                        {move || {
+                            if has_rooms_selected() {
+                                format!(
+                                    "{} room{} selected",
+                                    total_selected_rooms(),
+                                    if total_selected_rooms() == 1 { "" } else { "s" }
+                                )
+                            } else {
+                                "Pick a room to continue with your booking.".to_string()
+                            }
+                        }}
+                    </p>
+                </div>
+            </div>
 
             <Show
                 when=has_rooms_selected
                 fallback=|| view! {
-                    <div class="text-gray-500 text-center py-4">
-                        "Select rooms to see pricing"
+                    <div class="border border-dashed border-gray-200 rounded-xl bg-white text-sm text-gray-600 px-4 py-5 text-center">
+                        "You haven't selected any rooms yet."
                     </div>
                 }
             >
-                <div class="space-y-3">
-                    // <!-- Price calculation display - breakdown per room type -->
-                    // <For
-                    //     each=move || HotelDetailsUIState::get_selected_rooms_with_data()
-                    //     key=|(room_option, _)| room_option.room_data.room_unique_id.clone()
-                    //     let:room_data
-                    // >
-                    //     {
-                    //         let (room_option, quantity) = room_data;
-                    //         let room_name = room_option.room_data.room_name.clone();
-                    //         let room_price = room_option.price.room_price;
-                    //
-                    //         view! {
-                    //             <div class="flex justify-between items-center text-gray-700">
-                    //                 <span class="text-sm">
-                    //                     {move || {
-                    //                         let nights = number_of_nights();
-                    //                         HotelDetailsUIState::format_room_breakdown_text(&room_name, quantity, nights)
-                    //                     }}
-                    //                 </span>
-                    //                 <span class="font-medium text-sm">
-                    //                     {move || {
-                    //                         let nights = number_of_nights();
-                    //                         let line_total = HotelDetailsUIState::calculate_room_line_total(&room_option, quantity, nights);
-                    //                         format!("${:.2}", line_total)
-                    //                     }}
-                    //                 </span>
-                    //             </div>
-                    //         }
-                    //     }
-                    // </For>
-
-                    // <!-- Divider -->
-                    // <div class="border-t border-gray-200 my-3"></div>
-
-                    // <!-- Total -->
-                    <div class="flex justify-between items-center text-lg font-semibold">
-                        <span>"Total"</span>
-                        <span class="text-blue-600">
-                            {move || format!("${:.2}", subtotal())}
-                        </span>
+                <div class="space-y-4">
+                    <div class="space-y-3">
+                        {move || {
+                            resolved_selection_rows()
+                                .into_iter()
+                                .map(|selected| {
+                                    let (_, quantity, room_name, meal_plan, price_per_night, code, _) =
+                                        selected;
+                                    let nights = nights();
+                                    // Round price to 2 decimals to match what's displayed, then calculate total
+                                    let rounded_price = (price_per_night * 100.0).round() / 100.0;
+                                    let line_total = rounded_price * quantity as f64 * nights as f64;
+                                    let display_name = if meal_plan.is_empty() {
+                                        room_name
+                                    } else {
+                                        format!("{room_name} ({meal_plan})")
+                                    };
+                                    view! {
+                                        <div class="rounded-xl border border-gray-200 bg-white px-4 py-4 space-y-3">
+                                            <div class="text-base font-semibold text-gray-900">{display_name}</div>
+                                            <div class="grid grid-cols-2 gap-y-2 text-sm text-gray-700">
+                                                <span>"Price Per Night"</span>
+                                                <span class="text-right font-medium text-gray-900">{format_currency_with_code(price_per_night, &code)}</span>
+                                                <span>"Total Rooms"</span>
+                                                <span class="text-right font-medium text-gray-900">{format!("x{}", quantity)}</span>
+                                                <span>"Total Nights"</span>
+                                                <span class="text-right font-medium text-gray-900">{format!("x{}", nights)}</span>
+                                                <span>"Sub total"</span>
+                                                <span class="text-right font-semibold text-gray-900">{format_currency_with_code(line_total, &code)}</span>
+                                            </div>
+                                        </div>
+                                    }
+                                })
+                                .collect_view()
+                        }}
                     </div>
 
-                    // <!-- Crypto payment info -->
-                    <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-                        <div class="flex items-center text-sm text-blue-700">
-                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                            </svg>
-                            "Cryptocurrency payments accepted!"
+                    <div class="pt-2">
+                        <div class="text-3xl font-semibold text-gray-900">
+                            {move || format_currency_with_code(total_for_stay(), &currency_code.get())}
                         </div>
-                    </div>
-
-                    // <!-- Book Now Button -->
-                    <div class="mt-6">
-                        <LoadingButton
-                            is_loading=booking_loading.into()
-                            loading_text="Processing..."
-                            on_click=on_book_now
-                            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
-                            disabled=button_disabled
-                        >
-                            "Book Now"
-                        </LoadingButton>
+                        <p class="text-sm text-gray-600 mt-1">
+                            {move || {
+                                let nights = nights();
+                                let rooms = total_selected_rooms();
+                                let adults = adults_count();
+                                format!(
+                                    "{} Night{}, {} Room{}, {} Adult{}",
+                                    nights,
+                                    if nights == 1 { "" } else { "s" },
+                                    rooms,
+                                    if rooms == 1 { "" } else { "s" },
+                                    adults,
+                                    if adults == 1 { "" } else { "s" }
+                                )
+                            }}
+                        </p>
                     </div>
                 </div>
             </Show>
+
+            <LoadingButton
+                is_loading=booking_loading.into()
+                loading_text="Processing..."
+                on_click=on_book_now
+                class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600 disabled:hover:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
+                disabled=button_disabled
+            >
+                "Continue Booking"
+            </LoadingButton>
         </div>
     }
 }
@@ -995,135 +1887,1083 @@ pub fn PricingBreakdownV1() -> impl IntoView {
 // / **Navigation**: Seamless flow to Block Room page for booking completion
 #[component]
 pub fn PricingBookNowV1() -> impl IntoView {
+    view! {
+        <div class="lg:sticky lg:top-24">
+            <PricingBreakdownV1 />
+        </div>
+    }
+}
+
+#[component]
+fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
-    // **Smart Room Data Management**:
-    // **Primary**: Uses real room data from get_hotel_rates() API
-    // **Fallback**: Mock data when API is loading or unavailable
-    // **Price Source**: Extracts room_price from hotel_details.all_rooms
-    // **Data Structure**: (room_name, price_per_night, room_unique_id)
-    let available_rooms = move || {
-        if let Some(rates) = hotel_details_state.rates.get() {
-            // Use real room data from all_rooms with individual pricing
-            rates
-                .into_iter()
-                .take(5) // <!-- Limit to maximum 5 rooms for display -->
-                .map(|room_option| {
-                    (
-                        room_option.room_data.room_name.clone(),
-                        room_option.price.room_price,
-                        room_option.room_data.room_unique_id.clone(),
-                    )
+    let nights = move || {
+        let nights = ui_search_ctx.date_range.get().no_of_nights();
+        if nights == 0 {
+            1
+        } else {
+            nights
+        }
+    };
+
+    let currency_code = rate.price.currency_code.clone();
+    let base_price_per_night = nightly_price_excluding_taxes(&rate, nights());
+    let price_text = format_currency_with_code(base_price_per_night, &currency_code);
+    let meal_plan = rate
+        .meal_plan
+        .clone()
+        .unwrap_or_else(|| "Room Only".to_string());
+    let occupancy = format_occupancy_text(rate.occupancy_info.as_ref());
+    let room_key = room_id.clone();
+
+    let selection_key = room_key.clone();
+    let selection_offer_id = rate.room_data.offer_id.clone();
+    let selection_count = create_memo(move |_| {
+        let selected_rooms = hotel_details_state.selected_rooms.get();
+        if !selection_offer_id.is_empty() {
+            let available_options = HotelDetailsUIState::get_available_room_options();
+            selected_rooms
+                .iter()
+                .filter_map(|(rate_key, qty)| {
+                    available_options
+                        .iter()
+                        .find(|option| option.room_data.rate_key == *rate_key)
+                        .filter(|option| option.room_data.offer_id == selection_offer_id)
+                        .map(|_| *qty)
                 })
-                .collect::<Vec<_>>()
+                .sum::<u32>()
         } else {
-            // No fallback rooms - show empty list when no hotel data available
-            vec![]
+            selected_rooms.get(&selection_key).copied().unwrap_or(0)
         }
-    };
+    });
 
-    let is_rooms_loading = move || hotel_details_state.loading.get();
+    let dec_key = room_key.clone();
+    let inc_key = room_key.clone();
+    let rooms_requested_signal = ui_search_ctx.guests.rooms;
 
-    // Reactive signals for display
-    let total_price = create_memo(move |_| HotelDetailsUIState::total_room_price());
-    let has_price = create_memo(move |_| total_price.get() > 0.0);
-    let date_range = move || ui_search_ctx.date_range.get();
-    let guests = ui_search_ctx.guests;
+    let offer_id = rate.room_data.offer_id.clone();
+    let select_room = Action::new(move |_: &()| {
+        if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
+            // Multi-room selection logic: find all rooms in this offer
+            let all_options = HotelDetailsUIState::get_available_room_options();
+            let mut selections: HashMap<String, u32> = HashMap::new();
 
-    // Format dates for display
-    let check_in_display = move || {
-        let range = date_range();
-        if range.start == (0, 0, 0) {
-            "Check-in".to_string()
+            for option in all_options {
+                if option.room_data.offer_id == offer_id {
+                    let key = option.room_data.rate_key.clone();
+                    *selections.entry(key).or_insert(0) += 1;
+                }
+            }
+
+            let selection_vec: Vec<(String, u32)> = selections.into_iter().collect();
+            HotelDetailsUIState::set_multi_room_selection(selection_vec);
         } else {
-            format!(
-                "{:04}-{:02}-{:02}",
-                range.start.0, range.start.1, range.start.2
-            )
+            HotelDetailsUIState::increment_room_counter(room_key.clone());
         }
-    };
-
-    let check_out_display = move || {
-        let range = date_range();
-        if range.end == (0, 0, 0) {
-            "Check-out".to_string()
+        async {}
+    });
+    let decrement = Action::new(move |_: &()| {
+        if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
+            let current = HotelDetailsUIState::get_selected_rooms()
+                .get(&dec_key)
+                .copied()
+                .unwrap_or(0);
+            let new_qty = 0;
+            HotelDetailsUIState::set_single_room_selection(dec_key.clone(), new_qty);
         } else {
-            format!("{:04}-{:02}-{:02}", range.end.0, range.end.1, range.end.2)
+            HotelDetailsUIState::decrement_room_counter(dec_key.clone());
         }
-    };
+        async {}
+    });
+    let increment = Action::new(move |_: &()| {
+        if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
+            if HotelDetailsUIState::can_increment_room_selection() {
+                let current = HotelDetailsUIState::get_selected_rooms()
+                    .get(&inc_key)
+                    .copied()
+                    .unwrap_or(0);
+                HotelDetailsUIState::set_single_room_selection(inc_key.clone(), current + 1);
+            }
+        } else {
+            HotelDetailsUIState::increment_room_counter(inc_key.clone());
+        }
+        async {}
+    });
 
-    let adults_count = move || guests.adults.get();
-    let rooms_count = move || guests.rooms.get();
+    let mut rate_details = Vec::new();
+    let lower_meal = meal_plan.to_lowercase();
+    let meal_desc = if lower_meal.contains("full board") || lower_meal.contains("(fb)") {
+        "Breakfast, lunch, and dinner included"
+    } else if lower_meal.contains("half board") || lower_meal.contains("(hb)") {
+        "Breakfast and dinner included"
+    } else if lower_meal.contains("breakfast") || lower_meal.contains("(bi)") {
+        "Breakfast included"
+    } else {
+        "No meals included"
+    };
+    rate_details.push(meal_desc.to_string());
+    rate_details.push("Non-Refundable".to_string());
 
     view! {
-        <div class="flex flex-col space-y-4 shadow-lg rounded-xl p-4 md:p-8 bg-white">
-            // <!-- Total Price Display (if price > 0) -->
-            // <Show when=has_price>
-            //     <div class="bg-blue-50 rounded-lg p-4 mb-4">
-            //         <div class="text-2xl font-bold text-blue-800 text-center">
-            //             {move || format!("Total: ${:.2}", total_price.get())}
-            //         </div>
-            //     </div>
-            // </Show>
-
-            // <!-- Search Context Summary -->
-            <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-
-                // <!-- Dates -->
-                <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::BiCalendarRegular />
-                    <span class="text-gray-700">
-                        {check_in_display} " to " {check_out_display}
-                    </span>
-                </div>
-
-                // <!-- Adults -->
-                <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::BiUserRegular />
-                    <span class="text-gray-700">
-                        {adults_count} {move || if adults_count() == 1 { "adult" } else { "adults" }}
-                    </span>
-                </div>
-
-                // <!-- Rooms -->
-                <div class="flex items-center space-x-2">
-                    <Icon class="text-blue-600 text-lg" icon=icondata::RiHomeSmile2BuildingsLine />
-                    <span class="text-gray-700">
-                        {rooms_count} {move || if rooms_count() == 1 { "room" } else { "rooms" }}
-                    </span>
-                </div>
-            </div>
-
-            // <!-- Room Selection Interface -->
-            <div class="space-y-4">
-                <div class="text-lg font-semibold text-gray-800">Select room type:</div>
-
-                // <!-- Room Type Listing -->
-                <div class="space-y-3">
-                    <Show
-                        when=move || !is_rooms_loading()
-                        fallback=|| view! { <RoomSelectionSkeleton /> }
+        <div class="flex flex-col md:grid md:grid-cols-[1.5fr_1fr_auto] md:items-stretch gap-4 md:gap-0">
+            <div class="space-y-2 md:pr-6">
+                <p class="text-base font-semibold text-gray-900">{meal_plan}</p>
+                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                    <For
+                        each=move || rate_details.clone()
+                        key=|item| item.clone()
+                        let:item
                     >
-                        <For
-                            each=available_rooms
-                            key=|(_, _, room_id)| room_id.clone()
-                            let:room_data
-                        >
-                            <RoomCounterV1
-                                room_type=room_data.0.to_string()
-                                room_price=room_data.1
-                                room_unique_id=room_data.2.to_string()
-                            />
-                        </For>
-                    </Show>
-                </div>
+                        <li>{item}</li>
+                    </For>
+                </ul>
             </div>
+            <div class="md:border-l md:border-gray-200 md:px-6 text-left md:text-center space-y-1 flex flex-col justify-center md:h-full">
+                <p class="text-2xl font-semibold text-gray-900">{price_text}</p>
+                <p class="text-[11px] text-gray-500">
+                    // {move || {
+                    //     let nights = nights();
+                    //     format!(
+                    //         "({} night{}, 1 Room excl. taxes (payable at property))",
+                    //         nights,
+                    //         if nights == 1 { "" } else { "s" }
+                    //     )
+                    // }}
+                    (price per night)
+                </p>
+            </div>
+            <div class="md:border-l md:border-gray-200 md:pl-6 flex items-center justify-start md:justify-end w-full md:h-full">
+                <Show
+                    when=move || selection_count.get() == 0
+                    fallback=move ||
+                        view! {
+                            <div class="inline-flex items-center overflow-hidden rounded-lg border border-blue-100 bg-blue-50 text-blue-700">
+                                <button
+                                    class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled=move || selection_count.get() == 0
+                                    on:click=move|_|decrement.dispatch(())
+                                >
+                                    "−"
+                                </button>
+                                <span class="px-3 text-sm font-semibold">{move || selection_count.get()}</span>
+                                <button
+                                    class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled=move || HotelDetailsUIState::is_at_room_selection_limit()
+                                    on:click=move|_|increment.dispatch(())
+                                >
+                                    "+"
+                                </button>
+                            </div>
+                        }
 
-            // <!-- Pricing Breakdown Section -->
-            <div class="mt-6">
-                <PricingBreakdownV1 />
+                >
+                    <button
+                        class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors duration-150 w-full md:w-auto"
+                        on:click=move|_| select_room.dispatch(())
+                    >
+                        "Select Room"
+                    </button>
+                </Show>
             </div>
         </div>
+    }
+}
+
+#[component]
+fn RoomTypeCard(
+    room_group: RoomCard,
+    fallback_image: Option<String>,
+    amenity_preview: Vec<Amenity>,
+    room_details: Option<DomainStaticRoom>,
+    #[prop(optional)] is_recommended: bool,
+) -> impl IntoView {
+    let open_image_viewer = RwSignal::new(false);
+    let RoomCard {
+        mapped_room_id: _,
+        room_names,
+        card_title,
+        rates,
+    } = room_group;
+
+    let rates_for_render = rates.clone();
+
+    let room_images = room_details
+        .as_ref()
+        .map(|details| details.photos.clone())
+        .unwrap_or_default();
+
+    let hero_image = room_details
+        .as_ref()
+        .and_then(|details| details.photos.first().cloned())
+        .or_else(|| fallback_image.clone())
+        .unwrap_or_else(|| "/img/home.png".to_string());
+
+    let occupancy_from_rates = rates_for_render
+        .iter()
+        .find_map(|rate| rate.occupancy_info.as_ref());
+    let occupancy_summary = room_details.as_ref().and_then(|details| {
+        details.max_occupancy.map(|occ| {
+            let adults = details.max_adults.unwrap_or(occ);
+            let children = details.max_children.unwrap_or(0);
+            if children > 0 {
+                format!("Sleeps {occ} · {adults} adults + {children} children")
+            } else {
+                format!("Sleeps {occ} · {adults} adults")
+            }
+        })
+    });
+    let occupancy_text = if let Some(info) = occupancy_from_rates {
+        format_occupancy_text(Some(info))
+    } else if let Some(summary) = occupancy_summary.clone() {
+        summary
+    } else {
+        "Sleeps up to 2 guests".to_string()
+    };
+
+    let room_specific_amenities = room_details
+        .as_ref()
+        .map(|details| convert_to_amenities(details.amenities.clone()))
+        .unwrap_or_default();
+    let amenities_for_render = if room_specific_amenities.is_empty() {
+        amenity_preview.into_iter().take(5).collect::<Vec<_>>()
+    } else {
+        room_specific_amenities
+            .into_iter()
+            .take(5)
+            .collect::<Vec<_>>()
+    };
+
+    let room_display_name = if card_title.is_empty() {
+        if room_names.len() == 1 {
+            room_names[0].clone()
+        } else {
+            room_names.join(" + ")
+        }
+    } else {
+        card_title.clone()
+    };
+    let room_size_text = room_details.as_ref().and_then(|details| {
+        details.room_size_square.map(|size| {
+            let unit = details
+                .room_size_unit
+                .clone()
+                .unwrap_or_else(|| "m²".to_string());
+            format!("{size:.0} {unit}")
+        })
+    });
+    let bed_text = room_details
+        .as_ref()
+        .and_then(|details| details.bed_types.first().cloned());
+    let quick_facts: Vec<(usize, icondata::Icon, String)> = {
+        let mut facts: Vec<(icondata::Icon, String)> = Vec::new();
+        if let Some(size) = room_size_text.clone() {
+            facts.push((icondata::FaRulerCombinedSolid, size));
+        }
+        facts.push((icondata::BiUserRegular, occupancy_text.clone()));
+        if let Some(bed) = bed_text {
+            facts.push((icondata::FaBedSolid, bed));
+        }
+        facts
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (icon, label))| (idx, icon, label))
+            .collect()
+    };
+
+    view! {
+        {move || open_image_viewer.get().then(|| {
+            let room_images = room_images.clone();
+            view! {
+                <ImageLightbox
+                    images=room_images
+                    initial_index=0
+                    loop_images=true
+                    on_close=Callback::new(move |_| open_image_viewer.set(false))
+                />
+            }
+        })}
+        <div class="bg-[#f9f9f9] border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 pt-5 pb-0">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-xl font-semibold text-gray-900">{room_display_name}</h3>
+                    <Show when=move || is_recommended>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1">
+                            <Icon class="text-sm" icon=icondata::FaThumbsUpSolid />
+                            "Recommended"
+                        </span>
+                    </Show>
+                </div>
+
+                <div class="mt-5 flex flex-col lg:grid lg:grid-cols-[320px_1fr] items-start gap-5">
+                    <button
+                        type="button"
+                        class="w-full text-left"
+                        on:click=move |_| open_image_viewer.set(true)>
+                        <div class="w-full h-48 md:h-56 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
+                            <img
+                                src=hero_image.clone()
+                                // alt={format!("{} photo", room_display_name)}
+                                class="w-full h-full object-cover"
+                            />
+                        </div>
+                    </button>
+
+                    <div class="w-full flex flex-col gap-5">
+                        <div class="space-y-3">
+                            <p class="text-sm font-semibold text-gray-800">"Room Details"</p>
+                            <div class="flex flex-wrap items-center gap-4">
+                                <For
+                                    each=move || quick_facts.clone()
+                                    key=|(idx, _, _)| *idx
+                                    let:fact
+                                >
+                                    {let (_, icon, label) = fact;
+                                    view! {
+                                        <span class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                            <Icon class="text-blue-500 text-base" icon=icon />
+                                            {label}
+                                        </span>
+                                    }}
+                                </For>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-sm font-semibold text-gray-800">"Amenities"</p>
+                            <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                                <For
+                                    each=move || amenities_for_render.clone()
+                                    key=|amenity| amenity.text.clone()
+                                    let:amenity
+                                >
+                                    <span class="inline-flex items-center gap-2">
+                                        <Icon class="text-blue-500 text-sm" icon=amenity.icon />
+                                        {amenity.text.clone()}
+                                    </span>
+                                </For>
+                                <button type="button" class="text-sm font-semibold text-blue-600 hover:underline">
+                                    "See All Details"
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 border-t border-gray-200">
+                <For
+                    each=move || rates_for_render.clone()
+                    key=|rate| rate.room_data.rate_key.clone()
+                    let:rate
+                >
+                    <div class="px-5 py-4 border-b border-gray-200 last:border-b-0 bg-white">
+                        <RoomRateRow
+                            room_id=rate.room_data.rate_key.clone()
+                            rate=rate
+                        />
+                    </div>
+                </For>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn SelectRoomSection() -> impl IntoView {
+    let hotel_details_state: HotelDetailsUIState = expect_context();
+
+    let total_room_types_state = hotel_details_state.clone();
+    let total_room_types = move || grouped_rooms_for_state(&total_room_types_state).len();
+
+    let total_offers_state = hotel_details_state.clone();
+    let total_offers = move || {
+        grouped_rooms_for_state(&total_offers_state)
+            .iter()
+            .map(|card| card.rates.len())
+            .sum::<usize>()
+    };
+
+    view! {
+        <section class="w-full max-w-7xl mx-auto px-4 mt-10">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+                <SectionTitle id="rooms" title="Select A Room" />
+                <p class="text-sm text-gray-500">
+                    {move || format!("{} Room types | {} Offers", total_room_types(), total_offers())}
+                </p>
+            </div>
+            <div class="mt-6 grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6 items-start">
+                <div class="space-y-6">
+                    <div>
+                        <Show
+                            when={
+                                let state = hotel_details_state.clone();
+                                move || !grouped_rooms_for_state(&state).is_empty()
+                            }
+                            fallback=move || {
+                                if hotel_details_state.rates_loading.get() {
+                                    view! { <RoomSelectionSkeleton /> }.into_view()
+                                } else {
+                                    view! {
+                                        <div class="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center text-gray-500">
+                                            "No rooms available for the selected dates."
+                                        </div>
+                                    }
+                                    .into_view()
+                                }
+                            }
+                        >
+                            <div class="space-y-6">
+                                {
+                                    let state = hotel_details_state.clone();
+                                move || {
+                                    let fallback = fallback_image_for_state(&state);
+                                    let amenities = amenity_preview_for_state(&state);
+                                    let room_lookup = Arc::new(room_details_lookup_for_state(&state));
+                                    grouped_rooms_for_state(&state)
+                                        .into_iter()
+                                        .enumerate()
+                                        .map(|(idx, group)| {
+                                            let fallback_clone = fallback.clone();
+                                            let amenities_clone = amenities.clone();
+                                            let lookup = room_lookup.clone();
+                                            let room_details = group
+                                                .mapped_room_id
+                                                .and_then(|id| lookup.by_id.get(&id).cloned())
+                                                .or_else(|| {
+                                                    group
+                                                        .room_names
+                                                        .iter()
+                                                        .find_map(|name| {
+                                                            lookup
+                                                                .by_name
+                                                                .get(&normalized_room_key(name))
+                                                                .cloned()
+                                                        })
+                                                });
+                                            view! {
+                                                <RoomTypeCard
+                                                    room_group=group
+                                                    fallback_image=fallback_clone.clone()
+                                                    amenity_preview=amenities_clone.clone()
+                                                    room_details=room_details
+                                                    is_recommended=idx == 0
+                                                />
+                                            }
+                                        })
+                                        .collect_view()
+                                }
+                                }
+                            </div>
+                        </Show>
+                    </div>
+                </div>
+
+                <PricingBookNowV1 />
+            </div>
+        </section>
+    }
+}
+
+fn rating_label_for_score(score: f64) -> &'static str {
+    if score >= 9.0 {
+        "Superb"
+    } else if score >= 8.5 {
+        "Excellent"
+    } else if score >= 8.0 {
+        "Very Good"
+    } else if score >= 7.0 {
+        "Good"
+    } else if score >= 6.0 {
+        "Pleasant"
+    } else {
+        "Okay"
+    }
+}
+
+#[component]
+pub fn GuestReviewsSection() -> impl IntoView {
+    let hotel_details_state: HotelDetailsUIState = expect_context();
+    let summary_score = hotel_details_state
+        .static_details
+        .get()
+        .and_then(|d| d.rating)
+        .unwrap_or(7.1);
+    let summary_label = rating_label_for_score(summary_score);
+    let total_reviews = hotel_details_state
+        .static_details
+        .get()
+        .and_then(|d| d.review_count)
+        .unwrap_or(1136);
+    let review_cards = SAMPLE_REVIEWS.to_vec();
+    let categories_from_api = hotel_details_state
+        .static_details
+        .get()
+        .map(|d| d.categories.clone())
+        .unwrap_or_default();
+    let mut categories = if categories_from_api.is_empty() {
+        REVIEW_CATEGORY_SCORES
+            .iter()
+            .map(|(name, score)| (name.to_string(), *score))
+            .collect::<Vec<_>>()
+    } else {
+        categories_from_api
+            .into_iter()
+            .map(|c| (c.name, c.rating))
+            .collect::<Vec<_>>()
+    };
+    categories.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    let highlight_tag_vec = if !categories.is_empty() {
+        categories
+            .iter()
+            .take(3)
+            .map(|(name, _)| name.clone())
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
+
+    view! {
+        <section class="w-full max-w-7xl mx-auto px-4 mt-12">
+            <SectionTitle id="reviews" title="Guest Reviews" />
+            <div class="mt-6 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+                    <div class="flex items-start gap-4 md:gap-6">
+                        <div class="flex items-center justify-center bg-yellow-400 text-white font-semibold text-xl w-12 h-12 rounded-lg">
+                            {format!("{summary_score:.1}")}
+                        </div>
+                        <div>
+                            <p class="text-lg font-semibold text-gray-900">{summary_label}</p>
+                            <p class="text-sm text-gray-500">"Based on " {total_reviews} " reviews"</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-gray-900">"Categories"</p>
+                            <button class="text-sm font-semibold text-blue-600 hover:underline" type="button">
+                                "Show All"
+                            </button>
+                        </div>
+                        <div class="grid gap-3 md:grid-cols-3">
+                            {
+                                move || {
+                                    categories
+                                        .clone()
+                                        .into_iter()
+                                        .map(|(label, score)| {
+                                            let percent = (score / 10.0 * 100.0).clamp(0.0, 100.0);
+                                            view! {
+                                                <div class="space-y-1">
+                                                    <div class="flex items-center justify-between text-sm text-gray-700">
+                                                        <span>{label}</span>
+                                                        <span>{format!("{score:.1}")}</span>
+                                                    </div>
+                                                    <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                                                        <div
+                                                            class="h-full bg-blue-500 rounded-full"
+                                                            style=move || format!("width: {percent:.0}%;")
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        })
+                                        .collect_view()
+                                }
+                            }
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        {move || {
+                            highlight_tag_vec
+                                .clone()
+                                .into_iter()
+                                .map(|tag| {
+                                    view! {
+                                        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">{tag}</span>
+                                    }
+                                })
+                                .collect_view()
+                        }}
+                    </div>
+                </div>
+                // <div class="space-y-4">
+                //     {
+                //         move || {
+                //             review_cards
+                //                 .clone()
+                //                 .into_iter()
+                //                 .map(|review| {
+                //                     view! {
+                //                         <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+                //                             <div class="flex items-center justify-between">
+                //                                 <div>
+                //                                     <p class="font-semibold text-gray-900">{review.name}</p>
+                //                                     <p class="text-xs text-gray-500">{review.stay_info}</p>
+                //                                 </div>
+                //                                 <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold">{format!("{:.1}", review.rating)}</span>
+                //                             </div>
+                //                             <p class="text-sm font-semibold text-gray-800">{review.title}</p>
+                //                             <p class="text-sm text-gray-600 leading-6">{review.body}</p>
+                //                             <div class="flex flex-wrap gap-2">
+                //                                 {review.tags.iter().map(|tag| view! {
+                //                                     <span class="text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1">{*tag}</span>
+                //                                 }).collect_view()}
+                //                             </div>
+                //                             <button class="text-sm text-blue-600 hover:underline">"Read More"</button>
+                //                         </div>
+                //                     }
+                //                 })
+                //                 .collect_view()
+                //         }
+                //     }
+                //     <button class="w-full rounded-xl border border-gray-200 py-3 text-sm font-semibold text-blue-600 hover:border-blue-400">
+                //         "View All Reviews"
+                //     </button>
+                // </div>
+            </div>
+        </section>
+    }
+}
+
+#[component]
+pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
+    let hotel_details_state: HotelDetailsUIState = expect_context();
+    let static_details = hotel_details_state.static_details.get();
+    let static_details_clone = static_details.clone();
+    let policies = Memo::new(move |_| {
+        static_details
+            .as_ref()
+            .map(|d| d.policies.clone())
+            .unwrap_or_default()
+    });
+
+    let is_policies_empty = move || policies.get().is_empty();
+    let check_times = static_details_clone
+        .as_ref()
+        .and_then(|d| d.checkin_checkout_times.clone());
+
+    view! {
+        <section class="w-full max-w-7xl mx-auto px-4 mt-12">
+            <SectionTitle id="rules" title="Policy & Rules" />
+            <div class="mt-4 grid gap-6 md:grid-cols-2">
+                <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                    <p class="text-gray-700 leading-7">
+                        "Please review the key policies for this property before confirming your stay. "
+                        "Property address: " {address.clone()} "."
+                    </p>
+                    <Show
+                        when=move || !is_policies_empty()
+                        fallback=|| view! {
+                            <ul class="space-y-3 text-sm text-gray-700">
+                                <li>
+                                    <span class="font-semibold text-gray-900">"Children & extra beds: "</span>
+                                    "Children are welcome. Extra beds depend on the room you choose; please check the individual room capacity."
+                                </li>
+                                <li>
+                                    <span class="font-semibold text-gray-900">"Pets: "</span>
+                                    "Pets are not allowed at this property."
+                                </li>
+                                <li>
+                                    <span class="font-semibold text-gray-900">"Payment methods: "</span>
+                                    "Major cards and digital payments accepted at the front desk."
+                                </li>
+                            </ul>
+                        }
+                    >
+                        <div class="space-y-3">
+                            {move || {
+                                use std::collections::HashMap;
+
+                                // Group policies by name
+                                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+                                for policy in policies.get() {
+                                    grouped.entry(policy.name.clone())
+                                        .or_insert_with(Vec::new)
+                                        .push(if policy.description.trim().is_empty() {
+                                            "Details not provided.".to_string()
+                                        } else {
+                                            policy.description.clone()
+                                        });
+                                }
+
+                                // Convert to sorted vec for consistent ordering
+                                let mut policy_groups: Vec<(String, Vec<String>)> = grouped.into_iter().collect();
+                                policy_groups.sort_by(|a, b| a.0.cmp(&b.0));
+
+                                policy_groups.into_iter().map(|(name, descriptions)| {
+                                    view! {
+                                        <div>
+                                            <p class="font-semibold text-gray-900 text-sm">{name}</p>
+                                            <ul class="space-y-1">
+                                                {descriptions.into_iter().map(|desc| {
+                                                    view! {
+                                                        <li class="text-sm text-gray-700 whitespace-pre-line">
+                                                            {desc}
+                                                        </li>
+                                                    }
+                                                }).collect_view()}
+                                            </ul>
+                                        </div>
+                                    }
+                                }).collect_view()
+                            }}
+                        </div>
+                    </Show>
+                </div>
+                <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                            "Check-in / Check-out"
+                        </p>
+                        <p class="text-sm text-gray-700 mt-1">
+                            {move || {
+                                if let Some(times) = check_times.clone() {
+                                    let checkin = if times.checkin.is_empty() { "03:00 PM".to_string() } else { times.checkin };
+                                    let checkout = if times.checkout.is_empty() { "12:00 PM".to_string() } else { times.checkout };
+                                    format!("Check-in from {checkin} · Check-out until {checkout}")
+                                } else {
+                                    "Check-in from 03:00 PM · Check-out until 12:00 PM".to_string()
+                                }
+                            }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                            "Important Info"
+                        </p>
+                        <p class="text-sm text-gray-700 mt-1">
+                            "Policies vary by room type and rate plan. Please review specific rate details before booking."
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                            "Cancellation / Prepayment"
+                        </p>
+                        <p class="text-sm text-gray-700 mt-1">
+                            "Cancellation and prepayment policies vary according to the room rate selected. Review the plan before confirming."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+}
+
+#[component]
+pub fn SiteFooter() -> impl IntoView {
+    view! {
+        <footer class="mt-16 border-t border-gray-200 py-10">
+            <div class="w-full max-w-7xl mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm text-gray-500">
+                <span>"Copyright © 2024 EstateDAO. All Rights Reserved."</span>
+                <div class="flex items-center gap-4">
+                    <a href="#" class="hover:text-blue-600">"Twitter"</a>
+                    <a href="#" class="hover:text-blue-600">"Facebook"</a>
+                    <a href="#" class="hover:text-blue-600">"Instagram"</a>
+                </div>
+            </div>
+        </footer>
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{
+        DomainCurrencyAmount, DomainDetailedPrice, DomainPrice, DomainRoomData, DomainRoomOption,
+    };
+
+    // Helper function to create a test DomainRoomOption
+    fn create_test_room_option(
+        mapped_room_id: u32,
+        room_name: &str,
+        meal_plan: Option<&str>,
+        price: f64,
+        rate_key: &str,
+    ) -> DomainRoomOption {
+        DomainRoomOption {
+            mapped_room_id,
+            price: DomainDetailedPrice {
+                published_price: price,
+                published_price_rounded_off: price,
+                offered_price: price,
+                offered_price_rounded_off: price,
+                suggested_selling_price: price,
+                suggested_selling_price_rounded_off: price,
+                room_price: price,
+                tax: 0.0,
+                extra_guest_charge: 0.0,
+                child_charge: 0.0,
+                other_charges: 0.0,
+                currency_code: "USD".to_string(),
+            },
+            tax_lines: vec![],
+            offer_retail_rate: Some(DomainCurrencyAmount {
+                amount: price,
+                currency_code: "USD".to_string(),
+            }),
+            room_data: DomainRoomData {
+                mapped_room_id,
+                occupancy_number: Some(1),
+                room_name: room_name.to_string(),
+                room_unique_id: "test_unique_id".to_string(),
+                rate_key: rate_key.to_string(),
+                offer_id: "test_offer".to_string(),
+            },
+            meal_plan: meal_plan.map(String::from),
+            occupancy_info: Some(DomainRoomOccupancy {
+                max_occupancy: Some(2),
+                adult_count: Some(1),
+                child_count: Some(0),
+            }),
+            cancellation_policies: None,
+            // perks: vec![],
+            promotions: None,
+            remarks: None,
+        }
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_removes_duplicates() {
+        // Create rates with duplicate "Room Only" meal plans but different prices
+        let rates = vec![
+            create_test_room_option(1, "Rover Room", Some("Room Only (RO)"), 79.43, "rate1"),
+            create_test_room_option(1, "Rover Room", Some("Room Only (RO)"), 76.46, "rate2"),
+            create_test_room_option(
+                1,
+                "Rover Room",
+                Some("Breakfast Included (BI)"),
+                99.09,
+                "rate3",
+            ),
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        // Should have only 2 rates: 1 Room Only (lowest price) + 1 Breakfast
+        assert_eq!(
+            deduped.len(),
+            2,
+            "Should deduplicate to 2 unique meal plans"
+        );
+
+        // Find the Room Only rate
+        let room_only = deduped
+            .iter()
+            .find(|r| {
+                r.meal_plan
+                    .as_ref()
+                    .map_or(false, |mp| mp.contains("Room Only"))
+            })
+            .expect("Should have Room Only rate");
+
+        // Should keep the lowest price (76.46)
+        assert_eq!(
+            room_only.price.room_price, 76.46,
+            "Should keep the lowest price for Room Only"
+        );
+
+        // Find the Breakfast rate
+        let breakfast = deduped
+            .iter()
+            .find(|r| {
+                r.meal_plan
+                    .as_ref()
+                    .map_or(false, |mp| mp.contains("Breakfast"))
+            })
+            .expect("Should have Breakfast rate");
+
+        assert_eq!(
+            breakfast.price.room_price, 99.09,
+            "Should keep the Breakfast rate"
+        );
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_handles_none_meal_plan() {
+        // Test with None meal plans (should default to "Room Only")
+        let rates = vec![
+            create_test_room_option(1, "Test Room", None, 100.0, "rate1"),
+            create_test_room_option(1, "Test Room", None, 80.0, "rate2"),
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        // Should have only 1 rate with the lowest price
+        assert_eq!(deduped.len(), 1, "Should deduplicate None meal plans");
+        assert_eq!(
+            deduped[0].price.room_price, 80.0,
+            "Should keep the lowest price"
+        );
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_sorts_by_price() {
+        let rates = vec![
+            create_test_room_option(1, "Test Room", Some("Full Board (FB)"), 145.05, "rate1"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 79.43, "rate2"),
+            create_test_room_option(
+                1,
+                "Test Room",
+                Some("Breakfast Included (BI)"),
+                99.09,
+                "rate3",
+            ),
+            create_test_room_option(1, "Test Room", Some("Half Board (HB)"), 122.07, "rate4"),
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        // Should be sorted by price (ascending)
+        assert_eq!(deduped.len(), 4, "Should have 4 unique meal plans");
+        assert_eq!(
+            deduped[0].price.room_price, 79.43,
+            "First should be Room Only (cheapest)"
+        );
+        assert_eq!(
+            deduped[1].price.room_price, 99.09,
+            "Second should be Breakfast"
+        );
+        assert_eq!(
+            deduped[2].price.room_price, 122.07,
+            "Third should be Half Board"
+        );
+        assert_eq!(
+            deduped[3].price.room_price, 145.05,
+            "Fourth should be Full Board"
+        );
+    }
+
+    #[test]
+    fn test_dedup_rates_by_meal_plan_multiple_duplicates_same_meal_plan() {
+        // Test with multiple duplicates of the same meal plan
+        let rates = vec![
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 250.14, "rate1"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 250.8, "rate2"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 259.79, "rate3"),
+            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 245.0, "rate4"), // Lowest
+        ];
+
+        let deduped = dedup_rates_by_meal_plan(&rates);
+
+        assert_eq!(deduped.len(), 1, "Should have only 1 rate");
+        assert_eq!(
+            deduped[0].price.room_price, 245.0,
+            "Should keep the absolute lowest price"
+        );
+    }
+
+    #[test]
+    fn test_build_room_cards_deduplicates_type_a_rates() {
+        // Create an OfferGroup representing a TYPE A card (same mapped_room_id)
+        let offer1 = OfferGroup {
+            offer_id: "offer1".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Room Only (RO)"),
+                79.43,
+                "rate1",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offer2 = OfferGroup {
+            offer_id: "offer2".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Room Only (RO)"),
+                76.46,
+                "rate2",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offers = vec![offer1, offer2];
+        let cards = build_room_cards(offers);
+
+        // Should have only 1 card for this room type
+        assert_eq!(cards.len(), 1, "Should have 1 TYPE A card");
+
+        let card = &cards[0];
+        assert_eq!(
+            card.mapped_room_id,
+            Some(1321373764),
+            "Should have correct mapped_room_id"
+        );
+
+        // The card should have only 1 rate (deduplicated)
+        assert_eq!(
+            card.rates.len(),
+            1,
+            "Should have only 1 rate after deduplication"
+        );
+
+        // Should keep the lowest price
+        assert_eq!(
+            card.rates[0].price.room_price, 76.46,
+            "Should keep the lowest price"
+        );
+    }
+
+    #[test]
+    fn test_build_room_cards_preserves_different_meal_plans() {
+        // Create offers with same room but different meal plans
+        let offer1 = OfferGroup {
+            offer_id: "offer1".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Room Only (RO)"),
+                79.43,
+                "rate1",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offer2 = OfferGroup {
+            offer_id: "offer2".to_string(),
+            mapped_room_id: Some(1321373764),
+            rates: vec![create_test_room_option(
+                1321373764,
+                "Rover Room",
+                Some("Breakfast Included (BI)"),
+                99.09,
+                "rate2",
+            )],
+            room_names: vec!["Rover Room".to_string()],
+        };
+
+        let offers = vec![offer1, offer2];
+        let cards = build_room_cards(offers);
+
+        assert_eq!(cards.len(), 1, "Should have 1 TYPE A card");
+
+        let card = &cards[0];
+        // Should have 2 rates (different meal plans)
+        assert_eq!(
+            card.rates.len(),
+            2,
+            "Should have 2 rates with different meal plans"
+        );
+
+        // Verify both meal plans are present
+        let meal_plans: Vec<String> = card
+            .rates
+            .iter()
+            .filter_map(|r| r.meal_plan.clone())
+            .collect();
+
+        assert!(
+            meal_plans.iter().any(|mp| mp.contains("Room Only")),
+            "Should have Room Only"
+        );
+        assert!(
+            meal_plans.iter().any(|mp| mp.contains("Breakfast")),
+            "Should have Breakfast"
+        );
     }
 }

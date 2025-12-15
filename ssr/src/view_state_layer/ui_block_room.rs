@@ -1,5 +1,5 @@
-use crate::domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData};
-use crate::view_state_layer::GlobalStateForLeptos;
+use crate::domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData, DomainTaxLine};
+use crate::view_state_layer::{ui_search_state::UISearchCtx, GlobalStateForLeptos};
 use leptos::*;
 use std::collections::HashMap;
 
@@ -24,9 +24,26 @@ pub struct ChildDetail {
 pub struct RoomSelectionSummary {
     pub room_id: String,
     pub room_name: String,
+    pub meal_plan: Option<String>,
     pub quantity: u32,
     pub price_per_night: f64,
+    pub tax_lines: Vec<DomainTaxLine>,
     pub room_data: DomainRoomData,
+}
+
+impl RoomSelectionSummary {
+    pub fn display_name(&self) -> String {
+        if let Some(plan) = self
+            .meal_plan
+            .as_ref()
+            .map(|plan| plan.trim())
+            .filter(|plan| !plan.is_empty())
+        {
+            format!("{} - {}", self.room_name, plan)
+        } else {
+            self.room_name.clone()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -61,7 +78,7 @@ pub struct BlockRoomUIState {
 
     // <!-- Room selection data from hotel details -->
     pub selected_rooms: RwSignal<HashMap<String, (u32, DomainRoomData)>>, // room_id -> (quantity, room_data)
-    pub hotel_context: RwSignal<Option<DomainHotelDetails>>,
+    pub hotel_context: RwSignal<Option<DomainHotelStaticDetails>>,
     pub room_selection_summary: RwSignal<Vec<RoomSelectionSummary>>,
 }
 
@@ -92,7 +109,20 @@ impl BlockRoomUIState {
 
     pub fn create_children(count: usize) {
         let this: Self = expect_context();
-        this.children.set(vec![ChildDetail::default(); count]);
+        let search_ctx: UISearchCtx = expect_context();
+        let ages_from_search = search_ctx.guests.children_ages.get_untracked();
+
+        let children: Vec<ChildDetail> = (0..count)
+            .map(|idx| {
+                let age = ages_from_search.get(idx).copied().map(|a| a as u8);
+                ChildDetail {
+                    age,
+                    ..Default::default()
+                }
+            })
+            .collect();
+
+        this.children.set(children);
     }
 
     pub fn update_adult(index: usize, field: &str, value: String) {
@@ -214,6 +244,8 @@ impl BlockRoomUIState {
         let this: Self = expect_context();
         let adult_list = this.adults.get_untracked();
         let child_list = this.children.get_untracked();
+        let ui_search_ctx: UISearchCtx = expect_context();
+        let required_primary_contacts = ui_search_ctx.guests.rooms.get_untracked().max(1) as usize;
 
         // Validate primary adult
         let primary_adult_valid = adult_list.first().is_some_and(|adult| {
@@ -227,6 +259,9 @@ impl BlockRoomUIState {
                     .as_ref()
                     .map_or(false, |p| !p.trim().is_empty() && Self::is_valid_phone(p))
         });
+
+        // Need at least one primary contact per room
+        let has_primary_contact_per_room = adult_list.len() >= required_primary_contacts;
 
         // Validate other adults
         let other_adults_valid = adult_list
@@ -242,7 +277,11 @@ impl BlockRoomUIState {
         // Check if terms are accepted
         let terms_valid = this.terms_accepted.get_untracked();
 
-        let is_valid = primary_adult_valid && other_adults_valid && children_valid && terms_valid;
+        let is_valid = has_primary_contact_per_room
+            && primary_adult_valid
+            && other_adults_valid
+            && children_valid
+            && terms_valid;
         this.form_valid.set(is_valid);
         is_valid
     }
@@ -367,6 +406,38 @@ impl BlockRoomUIState {
         this.room_selection_summary.get()
     }
 
+    pub fn get_calculated_total_from_summary() -> f64 {
+        let this: Self = expect_context();
+        let nights = this.num_nights.get();
+        let summary = this.room_selection_summary.get();
+        let base_total = summary
+            .iter()
+            .map(|room| {
+                // Round price to 2 decimals to match displayed value
+                let rounded_price = (room.price_per_night * 100.0).round() / 100.0;
+                rounded_price * room.quantity as f64 * nights as f64
+            })
+            .sum::<f64>();
+        let total_with_tax = base_total + Self::get_included_tax_total();
+        // Round final total to 2 decimals to match display and eliminate floating point errors
+        (total_with_tax * 100.0).round() / 100.0
+    }
+
+    pub fn get_included_tax_total() -> f64 {
+        let this: Self = expect_context();
+        this.room_selection_summary
+            .get_untracked()
+            .iter()
+            .map(|room| {
+                room.tax_lines
+                    .iter()
+                    .filter(|line| line.included)
+                    .map(|line| line.amount * room.quantity as f64)
+                    .sum::<f64>()
+            })
+            .sum()
+    }
+
     pub fn get_loading() -> bool {
         let this: Self = expect_context();
         this.loading.get()
@@ -392,7 +463,7 @@ impl BlockRoomUIState {
         this.error.get()
     }
 
-    pub fn get_hotel_context() -> Option<DomainHotelDetails> {
+    pub fn get_hotel_context() -> Option<DomainHotelStaticDetails> {
         let this: Self = expect_context();
         this.hotel_context.get()
     }
@@ -456,12 +527,12 @@ impl BlockRoomUIState {
         this.selected_rooms.get_untracked()
     }
 
-    pub fn set_hotel_context(hotel_details: Option<DomainHotelDetails>) {
+    pub fn set_hotel_context(hotel_details: Option<DomainHotelStaticDetails>) {
         let this: Self = expect_context();
         this.hotel_context.set(hotel_details);
     }
 
-    pub fn get_hotel_context_untracked() -> Option<DomainHotelDetails> {
+    pub fn get_hotel_context_untracked() -> Option<DomainHotelStaticDetails> {
         let this: Self = expect_context();
         this.hotel_context.get_untracked()
     }
@@ -484,7 +555,11 @@ impl BlockRoomUIState {
 
         let total: f64 = summary
             .iter()
-            .map(|room| room.price_per_night * room.quantity as f64 * num_nights as f64)
+            .map(|room| {
+                // Round price to 2 decimals to match displayed value
+                let rounded_price = (room.price_per_night * 100.0).round() / 100.0;
+                rounded_price * room.quantity as f64 * num_nights as f64
+            })
             .sum();
 
         this.total_price.set(total);
@@ -588,6 +663,9 @@ impl From<DomainHotelStaticDetails> for DomainHotelDetails {
             hotel_name: static_details.hotel_name,
             hotel_code: static_details.hotel_code,
             star_rating: static_details.star_rating,
+            rating: static_details.rating,
+            review_count: static_details.review_count,
+            categories: static_details.categories,
             description: static_details.description,
             hotel_facilities: static_details.hotel_facilities,
             address: static_details.address,

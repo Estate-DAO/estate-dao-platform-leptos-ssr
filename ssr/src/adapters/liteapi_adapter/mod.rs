@@ -10,6 +10,7 @@ mod map_facility_id;
 
 use crate::api::api_client::ApiClient;
 use crate::api::consts::PAGINATION_LIMIT;
+use crate::api::liteapi::l04_one_hotel_detail::LiteApiRoom;
 use crate::api::liteapi::{
     liteapi_hotel_details, liteapi_hotel_rates, liteapi_hotel_search, liteapi_prebook,
     LiteApiError, LiteApiGetBookingRequest, LiteApiGetBookingResponse, LiteApiGetPlaceRequest,
@@ -562,7 +563,38 @@ impl LiteApiAdapter {
         Ok(domain_results)
     }
 
-    // Helper method to merge pricing data into search results
+    /// Helper method to merge min-rates pricing data into search results
+    /// Uses the lightweight min-rates response format (just hotel_id + prices)
+    fn merge_min_pricing_into_search_results(
+        domain_results: &mut DomainHotelListAfterSearch,
+        min_rates_response: &crate::api::liteapi::LiteApiMinRatesResponse,
+    ) {
+        // Get price map from min-rates response
+        let price_map = min_rates_response.to_price_map();
+
+        // Update each hotel with its price
+        for hotel in &mut domain_results.hotel_results {
+            if let Some((price, _suggested_price)) = price_map.get(&hotel.hotel_code) {
+                hotel.price = Some(DomainPrice {
+                    // Use base price (not suggested_selling_price)
+                    room_price: *price,
+                    currency_code: "USD".to_string(),
+                });
+            }
+        }
+
+        crate::log!(
+            "Merged min-rates pricing for {} hotels (price map had {} entries)",
+            domain_results
+                .hotel_results
+                .iter()
+                .filter(|h| h.price.is_some())
+                .count(),
+            price_map.len()
+        );
+    }
+
+    // Helper method to merge pricing data into search results (LEGACY - used by full rates API)
     fn merge_pricing_into_search_results(
         domain_results: &mut DomainHotelListAfterSearch,
         rates_response: LiteApiHotelRatesResponse,
@@ -573,24 +605,52 @@ impl LiteApiAdapter {
         // Only process if we have data (not an error response)
         if let Some(data) = rates_response.data {
             for hotel_data in data {
-                if let Some(room_type) = hotel_data.room_types.first() {
-                    if let Some(rate) = room_type.rates.first() {
-                        if let Some(amount) = rate.retail_rate.suggested_selling_price.first() {
-                            hotel_prices.insert(
-                                hotel_data.hotel_id.clone(),
-                                DomainPrice {
-                                    room_price: amount.amount,
-                                    currency_code: amount.currency.clone(),
-                                },
-                            );
-                        } else {
-                            warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no suggested selling price in rate");
+                let mut min_price: Option<(f64, String)> = None;
+
+                // Iterate through ALL room types
+                for room_type in &hotel_data.room_types {
+                    // Iterate through ALL rates in this room type
+                    for rate in &room_type.rates {
+                        // Use total (base price) and subtract included taxes for lowest display price
+                        if let Some(amount) = rate.retail_rate.total.first() {
+                            let mut price = amount.amount;
+                            let currency = amount.currency.clone();
+
+                            // Subtract any included taxes to show the lowest possible price
+                            if let Some(taxes) = &rate.retail_rate.taxes_and_fees {
+                                for tax in taxes {
+                                    if tax.included {
+                                        price -= tax.amount;
+                                    }
+                                }
+                            }
+
+                            // Ensure price doesn't go negative
+                            price = price.max(0.0);
+
+                            // Update minimum if this is lower or first price found
+                            match &min_price {
+                                None => min_price = Some((price, currency)),
+                                Some((current_min, _)) if price < *current_min => {
+                                    min_price = Some((price, currency));
+                                }
+                                _ => {}
+                            }
                         }
-                    } else {
-                        warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no rates in room type");
                     }
+                }
+
+                // Store the minimum price found for this hotel
+                if let Some((price, currency)) = min_price {
+                    hotel_prices.insert(
+                        hotel_data.hotel_id.clone(),
+                        DomainPrice {
+                            room_price: price,
+                            currency_code: currency,
+                        },
+                    );
                 } else {
-                    warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no room types available");
+                    warn!(hotel_id = %hotel_data.hotel_id, "Hotel has no valid pricing across any room types or rates");
                 }
             }
         } else {
@@ -723,27 +783,99 @@ impl LiteApiAdapter {
     ) -> Result<LiteApiHotelRatesRequest, ProviderError> {
         let search_criteria = &domain_criteria.search_criteria;
 
-        // Convert room guests to occupancies
-        let occupancies: Vec<LiteApiOccupancy> = search_criteria
-            .room_guests
-            .iter()
-            .map(|room_guest| {
-                let children = if room_guest.no_of_children > 0 {
-                    room_guest.children_ages.as_ref().map(|ages| {
-                        ages.iter()
-                            .filter_map(|age_str| age_str.parse::<u32>().ok())
-                            .collect()
-                    })
-                } else {
-                    None
-                };
+        // Normalize occupancies so LiteAPI gets one entry per room
+        let room_count = if search_criteria.no_of_rooms == 0 {
+            let derived = search_criteria.room_guests.len() as u32;
+            if derived == 0 {
+                1
+            } else {
+                derived
+            }
+        } else {
+            search_criteria.no_of_rooms
+        };
 
-                LiteApiOccupancy {
-                    adults: room_guest.no_of_adults,
-                    children,
+        let map_guest_to_occupancy = |room_guest: &DomainRoomGuest| -> LiteApiOccupancy {
+            let children = if room_guest.no_of_children > 0 {
+                room_guest.children_ages.as_ref().map(|ages| {
+                    ages.iter()
+                        .filter_map(|age_str| age_str.parse::<u32>().ok())
+                        .collect()
+                })
+            } else {
+                None
+            };
+
+            LiteApiOccupancy {
+                adults: room_guest.no_of_adults,
+                children,
+            }
+        };
+
+        let occupancies: Vec<LiteApiOccupancy> =
+            if search_criteria.room_guests.len() as u32 == room_count {
+                // Already have one guest group per room
+                search_criteria
+                    .room_guests
+                    .iter()
+                    .map(map_guest_to_occupancy)
+                    .collect()
+            } else {
+                // Spread total guests evenly across rooms
+                let total_adults: u32 = search_criteria
+                    .room_guests
+                    .iter()
+                    .map(|rg| rg.no_of_adults)
+                    .sum();
+                let total_children: u32 = search_criteria
+                    .room_guests
+                    .iter()
+                    .map(|rg| rg.no_of_children)
+                    .sum();
+                let children_ages: Vec<u32> = search_criteria
+                    .room_guests
+                    .iter()
+                    .filter_map(|rg| rg.children_ages.as_ref())
+                    .flat_map(|ages| ages.iter())
+                    .filter_map(|age_str| age_str.parse::<u32>().ok())
+                    .collect();
+
+                let base_adults = total_adults / room_count;
+                let mut extra_adults = total_adults % room_count;
+                let base_children = total_children / room_count;
+                let mut extra_children = total_children % room_count;
+                let mut age_iter = children_ages.into_iter();
+
+                let mut distributed = Vec::with_capacity(room_count as usize);
+                for _ in 0..room_count {
+                    let adults = base_adults
+                        + if extra_adults > 0 {
+                            extra_adults -= 1;
+                            1
+                        } else {
+                            0
+                        };
+                    let children_for_room = base_children
+                        + if extra_children > 0 {
+                            extra_children -= 1;
+                            1
+                        } else {
+                            0
+                        };
+
+                    let children = if children_for_room > 0 {
+                        let kids: Vec<u32> =
+                            age_iter.by_ref().take(children_for_room as usize).collect();
+                        Some(kids)
+                    } else {
+                        None
+                    };
+
+                    distributed.push(LiteApiOccupancy { adults, children });
                 }
-            })
-            .collect();
+
+                distributed
+            };
 
         // Format dates as YYYY-MM-DD
         let checkin = utils::date::date_tuple_to_yyyy_mm_dd(search_criteria.check_in_date);
@@ -767,6 +899,7 @@ impl LiteApiAdapter {
         };
 
         Ok(LiteApiHotelRatesRequest {
+            room_mapping: true,
             hotel_ids,
             occupancies,
             currency: "USD".to_string(), // Could be configurable
@@ -867,6 +1000,11 @@ impl LiteApiAdapter {
     fn map_liteapi_to_domain_static_details(
         details: LiteApiSingleHotelDetailData,
     ) -> DomainHotelStaticDetails {
+        let sentiment_categories = details
+            .sentiment_analysis
+            .as_ref()
+            .map(|s| s.categories.clone())
+            .unwrap_or_default();
         let mut images = Vec::new();
         if !details.main_photo.is_empty() {
             images.push(details.main_photo.clone());
@@ -888,16 +1026,114 @@ impl LiteApiAdapter {
             }
         }
 
+        let location = details.location;
+
         DomainHotelStaticDetails {
             hotel_code: details.id,
             hotel_name: details.name,
             star_rating: details.star_rating,
+            rating: if details.rating > 0.0 {
+                Some(details.rating)
+            } else {
+                None
+            },
+            review_count: if details.review_count > 0 {
+                Some(details.review_count as u32)
+            } else {
+                None
+            },
+            categories: if !sentiment_categories.is_empty() {
+                sentiment_categories
+            } else {
+                details.categories
+            }
+            .into_iter()
+            .map(|c| DomainReviewCategory {
+                name: c.name,
+                rating: c.rating as f32,
+                description: if c.description.trim().is_empty() {
+                    None
+                } else {
+                    Some(c.description)
+                },
+            })
+            .collect(),
             description: details.hotel_description,
             address: details.address,
             images,
             hotel_facilities: details.hotel_facilities,
             amenities: vec![], // This can be populated if needed from other sources
+            rooms: Self::map_room_details(details.rooms),
+            location: location.map(|location| DomainLocation {
+                latitude: location.latitude,
+                longitude: location.longitude,
+            }),
+            checkin_checkout_times: Some(DomainCheckinCheckoutTimes {
+                checkin: details.checkin_checkout_times.checkin,
+                checkout: details.checkin_checkout_times.checkout,
+            }),
+            policies: details
+                .policies
+                .into_iter()
+                .map(|p| DomainPolicy {
+                    policy_type: if p.policy_type.is_empty() {
+                        None
+                    } else {
+                        Some(p.policy_type)
+                    },
+                    name: p.name,
+                    description: p.description,
+                })
+                .collect(),
         }
+    }
+
+    fn map_room_details(rooms: Option<Vec<LiteApiRoom>>) -> Vec<DomainStaticRoom> {
+        rooms
+            .unwrap_or_default()
+            .into_iter()
+            .map(|room| {
+                let amenities = room.room_amenities.into_iter().map(|a| a.name).collect();
+                let photos = room
+                    .photos
+                    .into_iter()
+                    .filter_map(|photo| {
+                        if !photo.hd_url.trim().is_empty() {
+                            Some(photo.hd_url)
+                        } else if !photo.url.trim().is_empty() {
+                            Some(photo.url)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                let bed_types = room
+                    .bed_types
+                    .into_iter()
+                    .map(|bed| {
+                        let mut label = format!("{} {}", bed.quantity, bed.bed_type);
+                        if !bed.bed_size.trim().is_empty() {
+                            label.push_str(&format!(" ({})", bed.bed_size));
+                        }
+                        label
+                    })
+                    .collect();
+
+                DomainStaticRoom {
+                    room_id: room.id.to_string(),
+                    room_name: room.room_name,
+                    description: room.description,
+                    room_size_square: room.room_size_square,
+                    room_size_unit: room.room_size_unit,
+                    max_adults: Some(room.max_adults as u32),
+                    max_children: Some(room.max_children as u32),
+                    max_occupancy: Some(room.max_occupancy as u32),
+                    amenities,
+                    photos,
+                    bed_types,
+                }
+            })
+            .collect()
     }
 
     #[tracing::instrument]
@@ -952,84 +1188,24 @@ impl LiteApiAdapter {
             })?;
 
         // Extract all rooms and rates from LiteAPI response
-        // let mut all_rooms = Vec::new();
-        let mut room_type_map: std::collections::HashMap<String, DomainRoomOption> =
-            std::collections::HashMap::new();
+        let mut all_rooms: Vec<DomainRoomOption> = Vec::new();
 
-        // Iterate through all room types and their rates
         if let Some(data) = &liteapi_rates_response.data {
             for hotel_data_item in data {
                 for room_type in &hotel_data_item.room_types {
                     for rate in &room_type.rates {
-                        // Extract price from rate
-                        let room_price = rate
-                            .retail_rate
-                            .suggested_selling_price // we want to use suggested selling price from liteapi
-                            .first()
-                            .map(|amount| amount.amount)
-                            .unwrap_or(0.0);
+                        let room_option = Self::map_liteapi_room_to_domain(
+                            rate.clone(),
+                            room_type.room_type_id.clone(),
+                            room_type.offer_id.clone(),
+                            Some(room_type.offer_retail_rate.clone()),
+                        );
 
-                        let currency_code = rate
-                            .retail_rate
-                            .suggested_selling_price
-                            .first()
-                            .map(|amount| amount.currency.clone())
-                            .unwrap_or_else(|| "USD".to_string());
-
-                        // todo: liteapi maybe get meal plan (future)
-                        let meal_plan = None;
-
-                        let occupancy_info = Some(crate::domain::DomainRoomOccupancy {
-                            max_occupancy: Some(rate.max_occupancy),
-                            adult_count: Some(rate.adult_count),
-                            child_count: Some(rate.child_count),
-                        });
-
-                        // Create room option
-                        let room_option = DomainRoomOption {
-                            price: crate::domain::DomainDetailedPrice {
-                                published_price: room_price,
-                                published_price_rounded_off: room_price,
-                                offered_price: room_price,
-                                offered_price_rounded_off: room_price,
-                                room_price,
-                                // todo: get tax from liteapi currently deafult values
-                                tax: 0.0,
-                                extra_guest_charge: 0.0,
-                                child_charge: 0.0,
-                                other_charges: 0.0,
-                                currency_code: currency_code.clone(),
-                            },
-                            room_data: crate::domain::DomainRoomData {
-                                room_name: rate.name.clone(),
-                                room_unique_id: room_type.room_type_id.clone(),
-                                rate_key: rate.rate_id.clone(),
-                                offer_id: room_type.offer_id.clone(),
-                            },
-                            meal_plan,
-                            occupancy_info,
-                        };
-
-                        // Deduplicate by room_name, keeping the one with lowest price
-                        let room_name = rate.name.clone();
-                        match room_type_map.get(&room_name) {
-                            Some(existing_room) => {
-                                // Keep the room with the lower price
-                                if room_price < existing_room.price.room_price {
-                                    room_type_map.insert(room_name, room_option);
-                                }
-                            }
-                            None => {
-                                room_type_map.insert(room_name, room_option);
-                            }
-                        }
+                        all_rooms.push(room_option);
                     }
                 }
             }
         }
-
-        // Convert the deduplicated map back to a vector
-        let mut all_rooms: Vec<DomainRoomOption> = room_type_map.into_values().collect();
 
         // Sort rooms: unique names first, then repeated names at the end
         let mut name_counts: std::collections::HashMap<String, usize> =
@@ -1230,6 +1406,9 @@ impl LiteApiAdapter {
             hotel_name: hotel_name.clone(),
             hotel_code: hotel_data.hotel_id.clone(),
             star_rating,
+            rating: None,
+            review_count: None,
+            categories: Vec::new(),
             description: description.clone(),
             hotel_facilities: hotel_facilities.clone(),
             address: address.clone(),
@@ -1297,57 +1476,113 @@ impl LiteApiAdapter {
             .data
             .expect("Data should exist after error handling");
 
-        // Extract price information from prebook response
-        let total_price = data.price;
-        let suggested_selling_price = data.suggested_selling_price;
-        let currency = data.currency.clone();
+        // Flatten all rates returned in prebook so we can reflect multiple rooms of the same offer
+        let mut flattened_rates: Vec<crate::api::liteapi::l02_prebook::LiteApiPrebookRate> =
+            Vec::new();
+        for room_type in &data.room_types {
+            flattened_rates.extend(room_type.rates.clone());
+        }
 
-        // Get room details from first room type and rate if available
-        let (room_name, cancellation_policy, meal_plan) =
-            if let Some(room_type) = data.room_types.first() {
-                if let Some(rate) = room_type.rates.first() {
-                    (
-                        rate.name.clone(),
-                        Some(rate.cancellation_policies.refundable_tag.clone()),
-                        Some(format!("{} - {}", rate.board_type, rate.board_name)),
-                    )
-                } else {
-                    (original_request.selected_room.room_name.clone(), None, None)
-                }
-            } else {
-                (original_request.selected_room.room_name.clone(), None, None)
+        // Build blocked rooms from rates, defaulting to selected_room info if missing
+        let currency = data.currency.clone();
+        let mut blocked_rooms = Vec::new();
+        for rate in &flattened_rates {
+            let room_price_amount = rate
+                .retail_rate
+                .as_ref()
+                .and_then(|rr| rr.total.first().map(|a| a.amount))
+                .unwrap_or(data.price);
+            let room_currency = rate
+                .retail_rate
+                .as_ref()
+                .and_then(|rr| rr.total.first().map(|a| a.currency.clone()))
+                .unwrap_or_else(|| currency.clone());
+
+            let suggested_price_amount = rate
+                .retail_rate
+                .as_ref()
+                .and_then(|rr| rr.suggested_selling_price.first().map(|a| a.amount))
+                .unwrap_or(room_price_amount);
+
+            let detailed_price = DomainDetailedPrice {
+                published_price: room_price_amount,
+                published_price_rounded_off: room_price_amount.round(),
+                offered_price: room_price_amount,
+                offered_price_rounded_off: room_price_amount.round(),
+                suggested_selling_price: suggested_price_amount,
+                suggested_selling_price_rounded_off: suggested_price_amount.round(),
+                room_price: room_price_amount,
+                tax: 0.0,
+                extra_guest_charge: 0.0,
+                child_charge: 0.0,
+                other_charges: 0.0,
+                currency_code: room_currency,
             };
 
-        // Create detailed price from prebook response
-        let detailed_price = DomainDetailedPrice {
-            published_price: suggested_selling_price,
-            published_price_rounded_off: suggested_selling_price.round(),
-            offered_price: total_price,
-            offered_price_rounded_off: total_price.round(),
-            room_price: total_price,
-            tax: 0.0, // Could extract from taxes_and_fees if needed
+            let room_name = if !rate.name.is_empty() {
+                rate.name.clone()
+            } else {
+                original_request.selected_room.room_name.clone()
+            };
+
+            blocked_rooms.push(DomainBlockedRoom {
+                room_code: original_request.selected_room.room_unique_id.clone(),
+                room_name,
+                room_type_code: Some(original_request.selected_room.room_unique_id.clone()),
+                price: detailed_price,
+                cancellation_policy: Some(rate.cancellation_policies.refundable_tag.clone()),
+                meal_plan: Some(format!("{} - {}", rate.board_type, rate.board_name)),
+            });
+        }
+
+        // If nothing came back, fall back to a single placeholder room
+        if blocked_rooms.is_empty() {
+            let fallback_price = DomainDetailedPrice {
+                published_price: data.suggested_selling_price,
+                published_price_rounded_off: data.suggested_selling_price.round(),
+                offered_price: data.price,
+                offered_price_rounded_off: data.price.round(),
+                suggested_selling_price: data.suggested_selling_price,
+                suggested_selling_price_rounded_off: data.suggested_selling_price.round(),
+                room_price: data.price,
+                tax: 0.0,
+                extra_guest_charge: 0.0,
+                child_charge: 0.0,
+                other_charges: 0.0,
+                currency_code: currency.clone(),
+            };
+            blocked_rooms.push(DomainBlockedRoom {
+                room_code: original_request.selected_room.room_unique_id.clone(),
+                room_name: original_request.selected_room.room_name.clone(),
+                room_type_code: Some(original_request.selected_room.room_unique_id.clone()),
+                price: fallback_price,
+                cancellation_policy: None,
+                meal_plan: None,
+            });
+        }
+
+        // Total price from provider (already includes multiple rooms if applicable)
+        let total_price = DomainDetailedPrice {
+            published_price: data.suggested_selling_price,
+            published_price_rounded_off: data.suggested_selling_price.round(),
+            offered_price: data.price,
+            offered_price_rounded_off: data.price.round(),
+            suggested_selling_price: data.suggested_selling_price,
+            suggested_selling_price_rounded_off: data.suggested_selling_price.round(),
+            room_price: data.price,
+            tax: 0.0,
             extra_guest_charge: 0.0,
             child_charge: 0.0,
             other_charges: 0.0,
             currency_code: currency.clone(),
         };
 
-        // Create a blocked room entry from the prebook response
-        let blocked_room = DomainBlockedRoom {
-            room_code: original_request.selected_room.room_unique_id.clone(),
-            room_name,
-            room_type_code: Some(original_request.selected_room.room_unique_id.clone()),
-            price: detailed_price.clone(),
-            cancellation_policy,
-            meal_plan,
-        };
-
         DomainBlockRoomResponse {
             block_id: data.prebook_id.clone(),
             is_price_changed: data.price_difference_percent != 0.0,
             is_cancellation_policy_changed: data.cancellation_changed,
-            blocked_rooms: vec![blocked_room],
-            total_price: detailed_price,
+            blocked_rooms,
+            total_price,
             provider_data: Some(provider_data_json),
         }
     }
@@ -2045,22 +2280,61 @@ impl LiteApiAdapter {
         rate: crate::api::liteapi::LiteApiRate,
         room_type_id: String,
         offer_id: String,
+        offer_retail_rate: Option<crate::api::liteapi::l01_get_hotel_info_rates::LiteApiAmount>,
     ) -> DomainRoomOption {
         let room_price = rate
             .retail_rate
-            .suggested_selling_price
+            .total
             .first()
             .map(|amount| amount.amount)
             .unwrap_or(0.0);
 
         let currency_code = rate
             .retail_rate
-            .suggested_selling_price
+            .total
             .first()
             .map(|amount| amount.currency.clone())
             .unwrap_or_else(|| "USD".to_string());
 
-        let meal_plan = None; // LiteAPI does not provide this in a structured way yet
+        let meal_plan = {
+            let board_name = rate.board_name.trim();
+            let board_type = rate.board_type.trim();
+            if board_name.is_empty() && board_type.is_empty() {
+                None
+            } else if board_type.is_empty() {
+                Some(board_name.to_string())
+            } else if board_name.is_empty() {
+                Some(board_type.to_string())
+            } else {
+                Some(format!("{} ({})", rate.board_name, rate.board_type))
+            }
+        };
+
+        let tax_entries = rate.retail_rate.taxes_and_fees.as_deref().unwrap_or(&[]);
+        let tax_lines: Vec<crate::domain::DomainTaxLine> = tax_entries
+            .iter()
+            .filter(|tax| tax.amount > 0.0)
+            .map(|tax| {
+                let description = tax
+                    .description
+                    .as_ref()
+                    .map(|desc| desc.trim())
+                    .filter(|desc| !desc.is_empty())
+                    .map(|desc| desc.to_string())
+                    .unwrap_or_else(|| "Taxes & Fees".to_string());
+                let currency = if tax.currency.is_empty() {
+                    currency_code.clone()
+                } else {
+                    tax.currency.clone()
+                };
+                crate::domain::DomainTaxLine {
+                    description,
+                    amount: tax.amount,
+                    currency_code: currency,
+                    included: tax.included,
+                }
+            })
+            .collect();
 
         let occupancy_info = Some(crate::domain::DomainRoomOccupancy {
             max_occupancy: Some(rate.max_occupancy),
@@ -2068,20 +2342,39 @@ impl LiteApiAdapter {
             child_count: Some(rate.child_count),
         });
 
+        let suggested_price = rate
+            .retail_rate
+            .suggested_selling_price
+            .first()
+            .map(|amount| amount.amount)
+            .unwrap_or(room_price);
+
+        let excluded_tax_total: f64 = tax_lines
+            .iter()
+            .filter(|line| !line.included)
+            .map(|line| line.amount)
+            .sum();
+
         DomainRoomOption {
+            mapped_room_id: rate.mapped_room_id,
             price: crate::domain::DomainDetailedPrice {
                 published_price: room_price,
                 published_price_rounded_off: room_price,
                 offered_price: room_price,
                 offered_price_rounded_off: room_price,
+                suggested_selling_price: suggested_price,
+                suggested_selling_price_rounded_off: suggested_price.round(),
                 room_price,
-                tax: 0.0,
+                tax: excluded_tax_total,
                 extra_guest_charge: 0.0,
                 child_charge: 0.0,
                 other_charges: 0.0,
                 currency_code,
             },
+            tax_lines,
             room_data: crate::domain::DomainRoomData {
+                mapped_room_id: rate.mapped_room_id,
+                occupancy_number: rate.occupancy_number,
                 room_name: rate.name,
                 room_unique_id: room_type_id,
                 rate_key: rate.rate_id,
@@ -2089,6 +2382,417 @@ impl LiteApiAdapter {
             },
             meal_plan,
             occupancy_info,
+            offer_retail_rate: offer_retail_rate.map(|amount| {
+                crate::domain::DomainCurrencyAmount {
+                    amount: amount.amount,
+                    currency_code: amount.currency,
+                }
+            }),
+            // Map cancellation policies from LiteAPI to domain
+            cancellation_policies: Some(crate::domain::DomainCancellationPolicies {
+                cancel_policy_infos: rate
+                    .cancellation_policies
+                    .cancel_policy_infos
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|policy| crate::domain::DomainCancelPolicyInfo {
+                        cancel_time: policy.cancel_time,
+                        amount: policy.amount,
+                        policy_type: policy.policy_type,
+                        timezone: policy.timezone,
+                        currency: policy.currency,
+                    })
+                    .collect(),
+                hotel_remarks: rate
+                    .cancellation_policies
+                    .hotel_remarks
+                    .as_ref()
+                    .filter(|remarks| !remarks.is_empty())
+                    .map(|remarks| remarks.join(". ")),
+                refundable_tag: rate.cancellation_policies.refundable_tag,
+            }),
+            // perks: rate.perks,
+            promotions: rate.promotions,
+            remarks: rate.remarks,
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::liteapi::l01_get_hotel_info_rates::{
+        LiteApiAmount, LiteApiHotelData, LiteApiHotelRatesResponse, LiteApiRate, LiteApiRetailRate,
+        LiteApiRoomType,
+    };
+
+    // Helper to create test LiteApiAmount
+    fn create_amount(price: f64, currency: &str) -> LiteApiAmount {
+        LiteApiAmount {
+            amount: price,
+            currency: currency.to_string(),
+        }
+    }
+
+    // Helper to create test LiteApiRate
+    fn create_rate(rate_id: &str, name: &str, price: f64, mapped_room_id: u32) -> LiteApiRate {
+        use crate::api::liteapi::l03_book::LiteApiCancellationPolicies;
+        LiteApiRate {
+            rate_id: rate_id.to_string(),
+            occupancy_number: Some(1),
+            name: name.to_string(),
+            max_occupancy: 2,
+            mapped_room_id,
+            adult_count: 1,
+            child_count: 0,
+            board_type: "RO".to_string(),
+            board_name: "Room Only".to_string(),
+            retail_rate: LiteApiRetailRate {
+                total: vec![create_amount(price, "USD")],
+                suggested_selling_price: vec![create_amount(price, "USD")],
+                taxes_and_fees: None,
+            },
+            cancellation_policies: LiteApiCancellationPolicies {
+                cancel_policy_infos: None,
+                hotel_remarks: None,
+                refundable_tag: "NRF".to_string(),
+            },
+            // perks: vec![],
+            promotions: None,
+            remarks: None,
+        }
+    }
+
+    // Helper to create test LiteApiRoomType
+    fn create_room_type(
+        room_type_id: &str,
+        offer_id: &str,
+        rates: Vec<LiteApiRate>,
+    ) -> LiteApiRoomType {
+        // Find min price for suggested_selling_price
+        let min_price = rates
+            .iter()
+            .filter_map(|r| r.retail_rate.suggested_selling_price.first())
+            .map(|a| a.amount)
+            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap_or(0.0);
+
+        LiteApiRoomType {
+            room_type_id: room_type_id.to_string(),
+            offer_id: offer_id.to_string(),
+            rates,
+            suggested_selling_price: create_amount(min_price, "USD"),
+            offer_retail_rate: create_amount(min_price, "USD"),
+        }
+    }
+
+    #[test]
+    fn test_merge_pricing_finds_minimum_across_all_room_types() {
+        // Create a hotel with multiple room types and different prices
+        let room_type_1 = create_room_type(
+            "room_type_1",
+            "offer_1",
+            vec![
+                create_rate("rate_1_1", "Standard Room", 100.0, 101),
+                create_rate("rate_1_2", "Standard Room", 120.0, 101),
+            ],
+        );
+
+        let room_type_2 = create_room_type(
+            "room_type_2",
+            "offer_2",
+            vec![
+                create_rate("rate_2_1", "Deluxe Room", 85.0, 102), // This is the minimum
+                create_rate("rate_2_2", "Deluxe Room", 95.0, 102),
+            ],
+        );
+
+        let room_type_3 = create_room_type(
+            "room_type_3",
+            "offer_3",
+            vec![create_rate("rate_3_1", "Suite", 150.0, 103)],
+        );
+
+        let hotel_data = LiteApiHotelData {
+            hotel_id: "hotel_123".to_string(),
+            room_types: vec![room_type_1, room_type_2, room_type_3],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel_data]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "hotel_123".to_string(),
+                hotel_name: "Test Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "5 Star".to_string(),
+                star_rating: 5,
+                price: Some(DomainPrice {
+                    room_price: 0.0,
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "hotel_123".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Verify the minimum price is selected (85.0 from room_type_2)
+        assert_eq!(domain_results.hotel_results.len(), 1);
+        let hotel = &domain_results.hotel_results[0];
+        assert!(hotel.price.is_some(), "Price should be set");
+        let price = hotel.price.as_ref().unwrap();
+        assert_eq!(
+            price.room_price, 85.0,
+            "Should select the minimum price across all room types and rates"
+        );
+        assert_eq!(price.currency_code, "USD");
+    }
+
+    #[test]
+    fn test_merge_pricing_with_single_room_type_multiple_rates() {
+        // Test with one room type but multiple rates
+        let room_type = create_room_type(
+            "room_type_1",
+            "offer_1",
+            vec![
+                create_rate("rate_1", "Room Only", 79.43, 101),
+                create_rate("rate_2", "Room Only", 76.46, 101), // Minimum
+                create_rate("rate_3", "Breakfast Included", 99.09, 101),
+                create_rate("rate_4", "Half Board", 122.07, 101),
+                create_rate("rate_5", "Full Board", 145.05, 101),
+            ],
+        );
+
+        let hotel_data = LiteApiHotelData {
+            hotel_id: "rover_hotel".to_string(),
+            room_types: vec![room_type],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel_data]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "rover_hotel".to_string(),
+                hotel_name: "Rover Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "3 Star".to_string(),
+                star_rating: 3,
+                price: Some(DomainPrice {
+                    room_price: 0.0,
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "rover_hotel".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        let hotel = &domain_results.hotel_results[0];
+        let price = hotel.price.as_ref().unwrap();
+        assert_eq!(
+            price.room_price, 76.46,
+            "Should select the minimum price from all rates"
+        );
+    }
+
+    #[test]
+    fn test_merge_pricing_handles_multiple_hotels() {
+        // Test with multiple hotels, each should get their own minimum
+        let hotel1 = LiteApiHotelData {
+            hotel_id: "hotel_1".to_string(),
+            room_types: vec![create_room_type(
+                "rt1",
+                "o1",
+                vec![
+                    create_rate("r1", "Room", 100.0, 101),
+                    create_rate("r2", "Room", 90.0, 101), // Min for hotel1
+                ],
+            )],
+        };
+
+        let hotel2 = LiteApiHotelData {
+            hotel_id: "hotel_2".to_string(),
+            room_types: vec![create_room_type(
+                "rt2",
+                "o2",
+                vec![
+                    create_rate("r3", "Room", 150.0, 201),
+                    create_rate("r4", "Room", 130.0, 201), // Min for hotel2
+                ],
+            )],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel1, hotel2]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                DomainHotelAfterSearch {
+                    hotel_code: "hotel_1".to_string(),
+                    hotel_name: "Hotel 1".to_string(),
+                    hotel_address: None,
+                    hotel_category: "4 Star".to_string(),
+                    star_rating: 4,
+                    price: Some(DomainPrice {
+                        room_price: 0.0,
+                        currency_code: "USD".to_string(),
+                    }),
+                    hotel_picture: "".to_string(),
+                    amenities: vec![],
+                    property_type: None,
+                    result_token: "hotel_1".to_string(),
+                    distance_from_center_km: None,
+                },
+                DomainHotelAfterSearch {
+                    hotel_code: "hotel_2".to_string(),
+                    hotel_name: "Hotel 2".to_string(),
+                    hotel_address: None,
+                    hotel_category: "5 Star".to_string(),
+                    star_rating: 5,
+                    price: Some(DomainPrice {
+                        room_price: 0.0,
+                        currency_code: "USD".to_string(),
+                    }),
+                    hotel_picture: "".to_string(),
+                    amenities: vec![],
+                    property_type: None,
+                    result_token: "hotel_2".to_string(),
+                    distance_from_center_km: None,
+                },
+            ],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        assert_eq!(
+            domain_results.hotel_results[0]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            90.0,
+            "Hotel 1 should have minimum price 90.0"
+        );
+        assert_eq!(
+            domain_results.hotel_results[1]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            130.0,
+            "Hotel 2 should have minimum price 130.0"
+        );
+    }
+
+    #[test]
+    fn test_merge_pricing_handles_hotel_with_no_rates() {
+        // Test hotel with room types but no rates
+        let hotel_data = LiteApiHotelData {
+            hotel_id: "hotel_123".to_string(),
+            room_types: vec![LiteApiRoomType {
+                room_type_id: "rt1".to_string(),
+                offer_id: "o1".to_string(),
+                rates: vec![], // No rates!
+                suggested_selling_price: create_amount(0.0, "USD"),
+                offer_retail_rate: create_amount(0.0, "USD"),
+            }],
+        };
+
+        let rates_response = LiteApiHotelRatesResponse {
+            data: Some(vec![hotel_data]),
+            error: None,
+        };
+
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "hotel_123".to_string(),
+                hotel_name: "Test Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "3 Star".to_string(),
+                star_rating: 3,
+                price: Some(DomainPrice {
+                    room_price: 999.0, // Initial price
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "hotel_123".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Price should remain unchanged since no valid rates were found
+        let hotel = &domain_results.hotel_results[0];
+        assert_eq!(
+            hotel.price.as_ref().unwrap().room_price,
+            999.0,
+            "Price should remain unchanged when no valid rates"
+        );
+    }
+
+    #[test]
+    fn test_merge_pricing_empty_data() {
+        // Test with empty data
+        let rates_response = LiteApiHotelRatesResponse {
+            data: None,
+            error: None,
+        };
+
+        let initial_price = 500.0;
+        let mut domain_results = DomainHotelListAfterSearch {
+            hotel_results: vec![DomainHotelAfterSearch {
+                hotel_code: "hotel_123".to_string(),
+                hotel_name: "Test Hotel".to_string(),
+                hotel_address: None,
+                hotel_category: "3 Star".to_string(),
+                star_rating: 3,
+                price: Some(DomainPrice {
+                    room_price: initial_price,
+                    currency_code: "USD".to_string(),
+                }),
+                hotel_picture: "".to_string(),
+                amenities: vec![],
+                property_type: None,
+                result_token: "hotel_123".to_string(),
+                distance_from_center_km: None,
+            }],
+            pagination: None,
+        };
+
+        LiteApiAdapter::merge_pricing_into_search_results(&mut domain_results, rates_response);
+
+        // Price should remain unchanged
+        assert_eq!(
+            domain_results.hotel_results[0]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            initial_price,
+            "Price should remain unchanged when no data"
+        );
     }
 }

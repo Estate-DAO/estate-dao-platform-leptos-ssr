@@ -75,6 +75,17 @@ impl PreviousSearchContext {
     }
 }
 
+/// Deduplicate hotels by name, keeping the one with the lowest price.
+/// This prevents confusion from duplicate hotel entries in search results.
+///
+/// NOTE: This is now centralized in `SearchListResults::set_search_results` and is
+/// automatically applied when search results are set. This function is kept for
+/// backward compatibility with tests.
+pub fn dedup_hotels_by_name(results: DomainHotelListAfterSearch) -> DomainHotelListAfterSearch {
+    // Re-use the centralized implementation
+    SearchListResults::dedup_hotels_by_name_public(results)
+}
+
 //
 
 #[component]
@@ -323,6 +334,7 @@ pub fn HotelListPage() -> impl IntoView {
                                 UIPaginationState::set_pagination_meta(response.pagination.clone());
                             }
 
+                            // Dedup is now handled automatically in set_search_results
                             SearchListResults::set_search_results(Some(response.clone()));
                             latest_result = Some(response);
                         }
@@ -706,11 +718,11 @@ pub fn HotelListPage() -> impl IntoView {
         class=move || {
             let is_expanded = InputGroupState::is_open_show_full_input();
             // Dynamically compute height class
-            let base = if is_expanded {
-                "h-56" // Default (mobile)
-            } else {
-                "h-24" // Collapsed
-            };
+            // let base = if is_expanded {
+            //     "h-56" // Default (mobile)
+            // } else {
+            //     "h-24" // Collapsed
+            // };
 
             // Apply smoother responsive overrides
             let responsive = if is_expanded {
@@ -721,15 +733,15 @@ pub fn HotelListPage() -> impl IntoView {
                 "sm:h-16 md:h-16 lg:h-16"
             };
 
-            format!("transition-all duration-300 ease-in-out {} {}", base, responsive)
+            format!("transition-all duration-300 ease-in-out {}", responsive)
         }
         ></div>
 
         // Main scrollable section
-        <section class="bg-slate-50 px-4 pb-2">
+        <section class="my-4 bg-slate-50 px-4 pb-2">
             // Desktop layout (lg screens and up) - centered with 85% width
             <div class="hidden lg:flex justify-center">
-                <div class="w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]">
+                <div class=" w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]">
                     // Fixed aside on left (desktop only)
                     <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
                     <div class="h-full overflow-y-auto p-4">
@@ -1466,6 +1478,11 @@ pub fn HotelCardTile(
 
     let search_list_page: SearchListResults = expect_context();
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
+
+    // Calculate number of nights for per-night pricing
+    let num_nights = search_ctx.date_range.get_untracked().no_of_nights().max(1);
+    let price_per_night = price_copy.map(|p| p / num_nights as f64);
 
     let navigate = use_navigate();
 
@@ -1622,7 +1639,7 @@ pub fn HotelCardTile(
                     }>
                         <div class="text-right flex-shrink-0">
                             {move || {
-                                if let Some(p) = price_copy {
+                                if let Some(p) = price_per_night {
                                     view! {
                                         <p class="text-lg font-bold">
                                             ${format!("{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
@@ -1649,18 +1666,12 @@ pub fn HotelCardTile(
     }
 }
 
-#[component]
-pub fn Wishlist(
-    hotel_code: String,
-    #[prop(optional, into)] class: Option<String>,
-) -> impl IntoView {
-    let wishlist_hotel_code = hotel_code.clone();
+pub fn add_to_wishlist_action(hotel_code: String) -> Action<(), ()> {
     let add_to_wishlist_action = Action::new(move |_: &()| {
-        let check_present =
-            AuthStateSignal::check_if_added_to_wishlist_untracked(&wishlist_hotel_code);
+        let check_present = AuthStateSignal::check_if_added_to_wishlist_untracked(&hotel_code);
         let toggle_action = if check_present { "remove" } else { "add" };
-        AuthStateSignal::toggle_wishlish(wishlist_hotel_code.clone());
-        let hotel_code = wishlist_hotel_code.clone();
+        AuthStateSignal::toggle_wishlish(hotel_code.clone());
+        let hotel_code = hotel_code.clone();
         async move {
             let url = format!("/api/user-wishlist/{toggle_action}/{hotel_code}");
             match gloo_net::http::Request::post(&url).send().await {
@@ -1675,6 +1686,16 @@ pub fn Wishlist(
             }
         }
     });
+    add_to_wishlist_action
+}
+
+#[component]
+pub fn Wishlist(
+    hotel_code: String,
+    #[prop(optional, into)] class: Option<String>,
+) -> impl IntoView {
+    let wishlist_hotel_code = hotel_code.clone();
+    let add_to_wishlist_action = add_to_wishlist_action(wishlist_hotel_code);
 
     view! {
         <Show when=move || AuthStateSignal::auth_state().get().is_authenticated() >
@@ -1734,5 +1755,322 @@ pub fn Wishlist(
                 }
             </button>
         </Show>
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{DomainHotelAfterSearch, DomainHotelListAfterSearch, DomainPrice};
+
+    // Helper function to create a test hotel
+    fn create_test_hotel(
+        hotel_code: &str,
+        hotel_name: &str,
+        price: Option<f64>,
+    ) -> DomainHotelAfterSearch {
+        DomainHotelAfterSearch {
+            hotel_code: hotel_code.to_string(),
+            hotel_name: hotel_name.to_string(),
+            hotel_address: None,
+            hotel_category: "3 Star".to_string(),
+            star_rating: 3,
+            price: price.map(|p| DomainPrice {
+                room_price: p,
+                currency_code: "USD".to_string(),
+            }),
+            hotel_picture: "".to_string(),
+            amenities: vec![],
+            property_type: None,
+            result_token: hotel_code.to_string(),
+            distance_from_center_km: None,
+        }
+    }
+
+    #[test]
+    fn test_dedup_hotels_removes_exact_duplicates() {
+        // Two hotels with exact same name, different prices
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", Some(150.0)),
+                create_test_hotel("hotel2", "Grand Hotel", Some(120.0)), // Lower price - should be kept
+                create_test_hotel("hotel3", "Beach Resort", Some(200.0)),
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have 2 hotels (one Grand Hotel and one Beach Resort)
+        assert_eq!(deduplicated.hotel_results.len(), 2);
+
+        // Check that the cheaper Grand Hotel was kept
+        let grand_hotel = deduplicated
+            .hotel_results
+            .iter()
+            .find(|h| h.hotel_name == "Grand Hotel")
+            .expect("Grand Hotel should exist");
+
+        assert_eq!(
+            grand_hotel.price.as_ref().unwrap().room_price,
+            120.0,
+            "Should keep the hotel with lower price"
+        );
+        assert_eq!(grand_hotel.hotel_code, "hotel2");
+    }
+
+    #[test]
+    fn test_dedup_hotels_case_insensitive() {
+        // Hotels with same name but different cases
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "GRAND HOTEL", Some(150.0)),
+                create_test_hotel("hotel2", "grand hotel", Some(120.0)), // Lower price
+                create_test_hotel("hotel3", "Grand Hotel", Some(140.0)),
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have only 1 hotel (all are the same name)
+        assert_eq!(
+            deduplicated.hotel_results.len(),
+            1,
+            "Should deduplicate case-insensitively"
+        );
+
+        // Should keep the one with lowest price (120.0)
+        assert_eq!(
+            deduplicated.hotel_results[0]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            120.0
+        );
+    }
+
+    #[test]
+    fn test_dedup_hotels_with_whitespace() {
+        // Hotels with same name but different whitespace
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "  Grand Hotel  ", Some(150.0)),
+                create_test_hotel("hotel2", "Grand Hotel", Some(120.0)), // Lower price
+                create_test_hotel("hotel3", " Grand Hotel ", Some(140.0)),
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have only 1 hotel (all are the same name after trimming)
+        assert_eq!(
+            deduplicated.hotel_results.len(),
+            1,
+            "Should trim whitespace before comparing"
+        );
+
+        // Should keep the one with lowest price
+        assert_eq!(
+            deduplicated.hotel_results[0]
+                .price
+                .as_ref()
+                .unwrap()
+                .room_price,
+            120.0
+        );
+    }
+
+    #[test]
+    fn test_dedup_hotels_no_duplicates() {
+        // All hotels have unique names
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", Some(150.0)),
+                create_test_hotel("hotel2", "Beach Resort", Some(120.0)),
+                create_test_hotel("hotel3", "City Inn", Some(80.0)),
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have all 3 hotels
+        assert_eq!(
+            deduplicated.hotel_results.len(),
+            3,
+            "Should keep all hotels when no duplicates"
+        );
+    }
+
+    #[test]
+    fn test_dedup_hotels_multiple_duplicates_same_name() {
+        // Multiple hotels with the same name
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", Some(150.0)),
+                create_test_hotel("hotel2", "Grand Hotel", Some(120.0)),
+                create_test_hotel("hotel3", "Grand Hotel", Some(100.0)), // Lowest - should be kept
+                create_test_hotel("hotel4", "Grand Hotel", Some(180.0)),
+                create_test_hotel("hotel5", "Beach Resort", Some(200.0)),
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have 2 hotels (one Grand Hotel and one Beach Resort)
+        assert_eq!(deduplicated.hotel_results.len(), 2);
+
+        // Find Grand Hotel
+        let grand_hotel = deduplicated
+            .hotel_results
+            .iter()
+            .find(|h| h.hotel_name == "Grand Hotel")
+            .expect("Grand Hotel should exist");
+
+        // Should keep the one with absolute lowest price
+        assert_eq!(
+            grand_hotel.price.as_ref().unwrap().room_price,
+            100.0,
+            "Should keep the hotel with absolute lowest price"
+        );
+        assert_eq!(grand_hotel.hotel_code, "hotel3");
+    }
+
+    #[test]
+    fn test_dedup_hotels_with_none_prices() {
+        // Hotels with same name, some without prices
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", None), // No price
+                create_test_hotel("hotel2", "Grand Hotel", Some(120.0)), // Has price - should be kept
+                create_test_hotel("hotel3", "Grand Hotel", None),        // No price
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have only 1 hotel
+        assert_eq!(deduplicated.hotel_results.len(), 1);
+
+        // Should keep the one with a price
+        assert!(
+            deduplicated.hotel_results[0].price.is_some(),
+            "Should keep hotel with price over hotels without price"
+        );
+        assert_eq!(deduplicated.hotel_results[0].hotel_code, "hotel2");
+    }
+
+    #[test]
+    fn test_dedup_hotels_all_none_prices() {
+        // Hotels with same name, all without prices
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", None),
+                create_test_hotel("hotel2", "Grand Hotel", None),
+                create_test_hotel("hotel3", "Grand Hotel", None),
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have only 1 hotel (first one encountered)
+        assert_eq!(deduplicated.hotel_results.len(), 1);
+        assert_eq!(deduplicated.hotel_results[0].hotel_code, "hotel1");
+    }
+
+    #[test]
+    fn test_dedup_hotels_preserves_other_hotels() {
+        // Mix of duplicates and unique hotels
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", Some(150.0)),
+                create_test_hotel("hotel2", "Beach Resort", Some(200.0)),
+                create_test_hotel("hotel3", "Grand Hotel", Some(120.0)), // Duplicate, lower price
+                create_test_hotel("hotel4", "City Inn", Some(80.0)),
+                create_test_hotel("hotel5", "Beach Resort", Some(180.0)), // Duplicate, lower price
+            ],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have 3 unique hotels
+        assert_eq!(deduplicated.hotel_results.len(), 3);
+
+        // Verify each hotel and their prices
+        let hotel_map: std::collections::HashMap<String, f64> = deduplicated
+            .hotel_results
+            .iter()
+            .map(|h| (h.hotel_name.clone(), h.price.as_ref().unwrap().room_price))
+            .collect();
+
+        assert_eq!(hotel_map.get("Grand Hotel"), Some(&120.0));
+        assert_eq!(hotel_map.get("Beach Resort"), Some(&180.0));
+        assert_eq!(hotel_map.get("City Inn"), Some(&80.0));
+    }
+
+    #[test]
+    fn test_dedup_hotels_empty_list() {
+        // Empty hotel list
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should remain empty
+        assert_eq!(deduplicated.hotel_results.len(), 0);
+    }
+
+    #[test]
+    fn test_dedup_hotels_single_hotel() {
+        // Single hotel in list
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![create_test_hotel("hotel1", "Grand Hotel", Some(150.0))],
+            pagination: None,
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Should have the same single hotel
+        assert_eq!(deduplicated.hotel_results.len(), 1);
+        assert_eq!(deduplicated.hotel_results[0].hotel_name, "Grand Hotel");
+    }
+
+    #[test]
+    fn test_dedup_hotels_preserves_pagination() {
+        use crate::domain::DomainPaginationMeta;
+
+        // Test that pagination metadata is preserved
+        let results = DomainHotelListAfterSearch {
+            hotel_results: vec![
+                create_test_hotel("hotel1", "Grand Hotel", Some(150.0)),
+                create_test_hotel("hotel2", "Grand Hotel", Some(120.0)),
+            ],
+            pagination: Some(DomainPaginationMeta {
+                page: 1,
+                page_size: 10,
+                total_results: Some(50),
+                has_next_page: true,
+                has_previous_page: false,
+            }),
+        };
+
+        let deduplicated = dedup_hotels_by_name(results);
+
+        // Pagination should be preserved
+        assert!(deduplicated.pagination.is_some());
+        let pagination = deduplicated.pagination.unwrap();
+        assert_eq!(pagination.page, 1);
+        assert_eq!(pagination.page_size, 10);
+        assert_eq!(pagination.total_results, Some(50));
+        assert_eq!(pagination.has_next_page, true);
+        assert_eq!(pagination.has_previous_page, false);
     }
 }

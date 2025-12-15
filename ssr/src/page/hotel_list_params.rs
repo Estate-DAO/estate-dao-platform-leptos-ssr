@@ -11,7 +11,7 @@ use crate::{
         build_query_string, individual_params, update_url_with_params, update_url_with_state,
         FilterMap, QueryParamsSync, SortDirection,
     },
-    view_state_layer::ui_search_state::{UIPaginationState, UISearchCtx},
+    view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx},
 };
 use chrono::Datelike;
 use leptos::*;
@@ -652,8 +652,31 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
 
         // Set destination if available
         if let Some(place) = &self.place {
-            // If place_details not already available, fetch from API using placeId
-            if self.place_details.is_none() {
+            // Check if we need to fetch place details:
+            // 1. If place_details is None, OR
+            // 2. If the incoming placeId is different from the currently stored place
+            let current_place = search_ctx.place.get_untracked();
+            let should_fetch = self.place_details.is_none()
+                || current_place.as_ref().map_or(true, |current| {
+                    // Fetch if placeId has changed
+                    current.place_id != place.place_id
+                });
+
+            // If place has changed, clear search results to trigger hotel search resource
+            if current_place
+                .as_ref()
+                .map_or(false, |current| current.place_id != place.place_id)
+            {
+                log!(
+                    "[sync_to_app_state] Place changed from {:?} to {:?}, clearing search results",
+                    current_place.as_ref().map(|p| &p.place_id),
+                    Some(&place.place_id)
+                );
+                SearchListResults::reset();
+                UIPaginationState::reset_to_first_page();
+            }
+
+            if should_fetch {
                 let place_id = place.place_id.clone();
                 let place_for_update = place.clone();
                 spawn_local(async move {
@@ -673,7 +696,7 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                     }
                 });
             } else {
-                // If we already have place_details, update the place with proper names
+                // If we already have place_details and placeId matches, update the place with proper names
                 if let Some(ref details) = self.place_details {
                     let updated_place = Place {
                         place_id: place.place_id.clone(),

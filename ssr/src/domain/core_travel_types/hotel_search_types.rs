@@ -203,6 +203,8 @@ pub struct DomainDetailedPrice {
     pub published_price_rounded_off: f64,
     pub offered_price: f64,
     pub offered_price_rounded_off: f64,
+    pub suggested_selling_price: f64,
+    pub suggested_selling_price_rounded_off: f64,
     pub room_price: f64,
     pub tax: f64,
     pub extra_guest_charge: f64,
@@ -212,8 +214,24 @@ pub struct DomainDetailedPrice {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainCurrencyAmount {
+    pub amount: f64,
+    pub currency_code: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainTaxLine {
+    pub description: String,
+    pub amount: f64,
+    pub currency_code: String,
+    pub included: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 
 pub struct DomainRoomData {
+    pub mapped_room_id: u32,
+    pub occupancy_number: Option<u32>,
     pub room_name: String,
     pub room_unique_id: String,
     pub rate_key: String,
@@ -222,10 +240,37 @@ pub struct DomainRoomData {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainRoomOption {
+    pub mapped_room_id: u32,
     pub price: DomainDetailedPrice,
+    pub tax_lines: Vec<DomainTaxLine>,
+    pub offer_retail_rate: Option<DomainCurrencyAmount>,
     pub room_data: DomainRoomData,
     pub meal_plan: Option<String>, // Board type + board name (e.g., "Room Only")
     pub occupancy_info: Option<DomainRoomOccupancy>,
+    // New fields from LiteAPI rates enrichment
+    pub cancellation_policies: Option<super::booking_types::DomainCancellationPolicies>,
+    // pub perks: Vec<String>,
+    pub promotions: Option<String>,
+    pub remarks: Option<String>,
+}
+
+impl DomainRoomOption {
+    pub fn included_taxes_total(&self) -> f64 {
+        self.tax_lines
+            .iter()
+            .filter(|line| line.included)
+            .map(|line| line.amount)
+            .sum()
+    }
+
+    pub fn price_excluding_included_taxes(&self) -> f64 {
+        let base_price = self.price.room_price - self.included_taxes_total();
+        if base_price.is_sign_negative() {
+            0.0
+        } else {
+            base_price
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -236,6 +281,21 @@ pub struct DomainRoomOccupancy {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainStaticRoom {
+    pub room_id: String,
+    pub room_name: String,
+    pub description: String,
+    pub room_size_square: Option<f64>,
+    pub room_size_unit: Option<String>,
+    pub max_adults: Option<u32>,
+    pub max_children: Option<u32>,
+    pub max_occupancy: Option<u32>,
+    pub amenities: Vec<String>,
+    pub photos: Vec<String>,
+    pub bed_types: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 
 pub struct DomainHotelDetails {
     pub checkin: String,
@@ -243,6 +303,9 @@ pub struct DomainHotelDetails {
     pub hotel_name: String,
     pub hotel_code: String,
     pub star_rating: i32,
+    pub rating: Option<f64>,
+    pub review_count: Option<u32>,
+    pub categories: Vec<DomainReviewCategory>,
     pub description: String,
     pub hotel_facilities: Vec<String>,
     pub address: String,
@@ -258,11 +321,18 @@ pub struct DomainHotelStaticDetails {
     pub hotel_name: String,
     pub hotel_code: String,
     pub star_rating: i32,
+    pub rating: Option<f64>,
+    pub review_count: Option<u32>,
+    pub categories: Vec<DomainReviewCategory>,
     pub description: String,
     pub hotel_facilities: Vec<String>,
     pub address: String,
     pub images: Vec<String>,
     pub amenities: Vec<String>,
+    pub rooms: Vec<DomainStaticRoom>,
+    pub location: Option<DomainLocation>,
+    pub checkin_checkout_times: Option<DomainCheckinCheckoutTimes>,
+    pub policies: Vec<DomainPolicy>,
 }
 
 impl DomainHotelStaticDetails {
@@ -280,6 +350,9 @@ impl DomainHotelStaticDetails {
             hotel_name: self.hotel_name.clone(),
             hotel_code: self.hotel_code.clone(),
             star_rating: self.star_rating,
+            rating: self.rating,
+            review_count: self.review_count,
+            categories: self.categories.clone(),
             description: self.description.clone(),
             hotel_facilities: self.hotel_facilities.clone(),
             address: self.address.clone(),
@@ -290,6 +363,26 @@ impl DomainHotelStaticDetails {
             search_criteria,
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct DomainCheckinCheckoutTimes {
+    pub checkin: String,
+    pub checkout: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
+pub struct DomainPolicy {
+    pub policy_type: Option<String>,
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct DomainReviewCategory {
+    pub name: String,
+    pub rating: f32,
+    pub description: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
