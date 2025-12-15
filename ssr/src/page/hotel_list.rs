@@ -77,71 +77,13 @@ impl PreviousSearchContext {
 
 /// Deduplicate hotels by name, keeping the one with the lowest price.
 /// This prevents confusion from duplicate hotel entries in search results.
-fn dedup_hotels_by_name(mut results: DomainHotelListAfterSearch) -> DomainHotelListAfterSearch {
-    use std::collections::HashMap;
-
-    let mut seen_hotels: HashMap<String, usize> = HashMap::new();
-    let mut hotels_to_keep: Vec<bool> = vec![true; results.hotel_results.len()];
-
-    for (idx, hotel) in results.hotel_results.iter().enumerate() {
-        let hotel_name = hotel.hotel_name.trim().to_lowercase();
-
-        if let Some(&existing_idx) = seen_hotels.get(&hotel_name) {
-            // Found a duplicate - keep the one with lower price
-            let existing_price = results.hotel_results[existing_idx]
-                .price
-                .as_ref()
-                .map(|p| p.room_price)
-                .unwrap_or(f64::MAX);
-
-            let current_price = hotel
-                .price
-                .as_ref()
-                .map(|p| p.room_price)
-                .unwrap_or(f64::MAX);
-
-            if current_price < existing_price {
-                // Current hotel has lower price, keep it and remove the previous one
-                hotels_to_keep[existing_idx] = false;
-                seen_hotels.insert(hotel_name, idx);
-            } else {
-                // Existing hotel has lower or equal price, remove current one
-                hotels_to_keep[idx] = false;
-            }
-        } else {
-            // First occurrence of this hotel name
-            seen_hotels.insert(hotel_name, idx);
-        }
-    }
-
-    // Filter out duplicate hotels
-    let original_count = results.hotel_results.len();
-    results.hotel_results = results
-        .hotel_results
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, hotel)| {
-            if hotels_to_keep[idx] {
-                Some(hotel)
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    let deduplicated_count = results.hotel_results.len();
-    let removed_count = original_count - deduplicated_count;
-
-    if removed_count > 0 {
-        log!(
-            "[DEDUP] Removed {} duplicate hotel(s) by name (original: {}, after dedup: {})",
-            removed_count,
-            original_count,
-            deduplicated_count
-        );
-    }
-
-    results
+///
+/// NOTE: This is now centralized in `SearchListResults::set_search_results` and is
+/// automatically applied when search results are set. This function is kept for
+/// backward compatibility with tests.
+pub fn dedup_hotels_by_name(results: DomainHotelListAfterSearch) -> DomainHotelListAfterSearch {
+    // Re-use the centralized implementation
+    SearchListResults::dedup_hotels_by_name_public(results)
 }
 
 //
@@ -392,12 +334,9 @@ pub fn HotelListPage() -> impl IntoView {
                                 UIPaginationState::set_pagination_meta(response.pagination.clone());
                             }
 
-                            // Deduplicate hotels by name before setting results
-                            let deduplicated_response = dedup_hotels_by_name(response.clone());
-                            SearchListResults::set_search_results(Some(
-                                deduplicated_response.clone(),
-                            ));
-                            latest_result = Some(deduplicated_response);
+                            // Dedup is now handled automatically in set_search_results
+                            SearchListResults::set_search_results(Some(response.clone()));
+                            latest_result = Some(response);
                         }
                         None => {
                             log!(
