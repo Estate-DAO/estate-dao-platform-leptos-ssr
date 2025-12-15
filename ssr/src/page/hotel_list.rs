@@ -1478,6 +1478,11 @@ pub fn HotelCardTile(
 
     let search_list_page: SearchListResults = expect_context();
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
+
+    // Calculate number of nights for per-night pricing
+    let num_nights = search_ctx.date_range.get_untracked().no_of_nights().max(1);
+    let price_per_night = price_copy.map(|p| p / num_nights as f64);
 
     let navigate = use_navigate();
 
@@ -1634,7 +1639,7 @@ pub fn HotelCardTile(
                     }>
                         <div class="text-right flex-shrink-0">
                             {move || {
-                                if let Some(p) = price_copy {
+                                if let Some(p) = price_per_night {
                                     view! {
                                         <p class="text-lg font-bold">
                                             ${format!("{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>

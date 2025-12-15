@@ -27,6 +27,12 @@ cfg_if::cfg_if! {
             LiteApiRate, LiteApiRoomType,
         };
 
+        pub use l01_get_hotel_min_rates::liteapi_hotel_min_rates;
+        pub mod l01_get_hotel_min_rates;
+        pub use l01_get_hotel_min_rates::{
+            LiteApiMinRatesRequest, LiteApiMinRatesResponse, LiteApiMinRateHotel,
+        };
+
         pub use l02_prebook::liteapi_prebook;
         pub mod l02_prebook;
         pub use l02_prebook::{

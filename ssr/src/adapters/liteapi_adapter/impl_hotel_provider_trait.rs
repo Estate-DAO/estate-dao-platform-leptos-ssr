@@ -276,6 +276,84 @@ impl HotelProviderPort for LiteApiAdapter {
             e
         })
     }
+
+    /// Get minimum rates for multiple hotels using lightweight min-rates endpoint
+    #[tracing::instrument(skip(self))]
+    async fn get_min_rates(
+        &self,
+        criteria: DomainHotelSearchCriteria,
+        hotel_ids: Vec<String>,
+    ) -> Result<std::collections::HashMap<String, DomainPrice>, ProviderError> {
+        use crate::api::liteapi::{LiteApiMinRatesRequest, LiteApiMinRatesResponse};
+
+        if hotel_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+
+        // Build occupancies from search criteria
+        let occupancies: Vec<LiteApiOccupancy> = criteria
+            .room_guests
+            .iter()
+            .map(|guest| LiteApiOccupancy {
+                adults: guest.no_of_adults,
+                children: guest.children_ages.clone().map(|ages| {
+                    ages.iter()
+                        .filter_map(|age| age.parse::<u32>().ok())
+                        .collect()
+                }),
+            })
+            .collect();
+
+        let min_rates_request = LiteApiMinRatesRequest {
+            hotel_ids,
+            occupancies,
+            currency: "USD".to_string(),
+            guest_nationality: criteria.guest_nationality.clone(),
+            checkin: format!(
+                "{:04}-{:02}-{:02}",
+                criteria.check_in_date.0, criteria.check_in_date.1, criteria.check_in_date.2
+            ),
+            checkout: format!(
+                "{:04}-{:02}-{:02}",
+                criteria.check_out_date.0, criteria.check_out_date.1, criteria.check_out_date.2
+            ),
+            timeout: Some(10), // 10 second timeout
+        };
+
+        crate::log!(
+            "LiteAPI get_min_rates: calling min-rates API for {} hotels",
+            min_rates_request.hotel_ids.len()
+        );
+
+        let min_rates_response: LiteApiMinRatesResponse = self
+            .client
+            .send(min_rates_request)
+            .await
+            .map_err(|e: ApiError| {
+                ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelSearch)
+            })?;
+
+        // Convert to HashMap<hotel_id, DomainPrice>
+        let mut result = std::collections::HashMap::new();
+        if let Some(data) = min_rates_response.data {
+            for hotel in data {
+                result.insert(
+                    hotel.hotel_id,
+                    DomainPrice {
+                        room_price: hotel.price,
+                        currency_code: "USD".to_string(),
+                    },
+                );
+            }
+        }
+
+        crate::log!(
+            "LiteAPI get_min_rates: received prices for {} hotels",
+            result.len()
+        );
+
+        Ok(result)
+    }
 }
 
 // <!-- Future methods to be implemented -->

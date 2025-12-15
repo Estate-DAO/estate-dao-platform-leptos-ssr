@@ -479,55 +479,84 @@ impl LiteApiAdapter {
             return Ok(domain_results);
         }
 
-        // Create hotel info criteria for rates call
-        let hotel_info_criteria = DomainHotelInfoCriteria {
-            // todo: liteapi does not need this token
-            token: String::new(),
-            hotel_ids: hotel_ids.clone(),
-            search_criteria: search_criteria.clone(),
+        // Use the lightweight min-rates endpoint instead of full rates
+        // This returns just the minimum price per hotel, not all room details
+        use crate::api::liteapi::{
+            LiteApiMinRatesRequest, LiteApiMinRatesResponse, LiteApiOccupancy,
         };
 
-        // Call get_hotel_rates to get pricing
-        let rates_request = Self::map_domain_info_to_liteapi_rates(&hotel_info_criteria)?;
+        let occupancies: Vec<LiteApiOccupancy> = search_criteria
+            .room_guests
+            .iter()
+            .map(|guest| LiteApiOccupancy {
+                adults: guest.no_of_adults,
+                children: guest.children_ages.clone().map(|ages| {
+                    ages.iter()
+                        .filter_map(|age| age.parse::<u32>().ok())
+                        .collect()
+                }),
+            })
+            .collect();
 
-        crate::log!("rates_request: {:#?}", rates_request);
+        let min_rates_request = LiteApiMinRatesRequest {
+            hotel_ids: hotel_ids.clone(),
+            occupancies,
+            currency: "USD".to_string(),
+            guest_nationality: search_criteria.guest_nationality.clone(),
+            checkin: format!(
+                "{:04}-{:02}-{:02}",
+                search_criteria.check_in_date.0,
+                search_criteria.check_in_date.1,
+                search_criteria.check_in_date.2
+            ),
+            checkout: format!(
+                "{:04}-{:02}-{:02}",
+                search_criteria.check_out_date.0,
+                search_criteria.check_out_date.1,
+                search_criteria.check_out_date.2
+            ),
+            timeout: Some(10),
+        };
 
-        let rates_response: LiteApiHotelRatesResponse = self
+        crate::log!(
+            "min_rates_request for {} hotels: {:#?}",
+            min_rates_request.hotel_ids.len(),
+            min_rates_request
+        );
+
+        let min_rates_response: LiteApiMinRatesResponse = self
             .client
-            .send(rates_request)
+            .send(min_rates_request)
             .await
             .map_err(|e: ApiError| {
                 // Log but don't fail the entire search if rates fail
                 ProviderError::from_api_error(e, ProviderNames::LiteApi, ProviderSteps::HotelSearch)
             })?;
 
-        // Log the rates response structure
-        if let Some(error) = &rates_response.error {
-            error!(?error, "Error in liteapi rates response");
+        // Log the min-rates response
+        if let Some(error) = &min_rates_response.error {
+            error!(?error, "Error in liteapi min-rates response");
         }
 
-        if let Some(data) = &rates_response.data {
-            info!(?data, "Got liteapi rates response data");
+        if let Some(data) = &min_rates_response.data {
+            info!("Got min-rates for {} hotels", data.len());
         }
 
-        // Check if rates response indicates no availability
-        if rates_response.is_no_availability() {
+        // Check if response indicates no availability
+        if min_rates_response.is_no_availability() {
             return Ok(DomainHotelListAfterSearch {
                 hotel_results: vec![],
                 pagination: None,
             });
         }
 
-        // Check if it's an error response
-        if rates_response.is_error_response() {
-            // Continue processing but without pricing data
-        }
+        // Merge min-rates pricing data into search results
+        Self::merge_min_pricing_into_search_results(&mut domain_results, &min_rates_response);
 
-        // Merge pricing data into search results
-        Self::merge_pricing_into_search_results(&mut domain_results, rates_response.clone());
-
-        // Filter out hotels with zero pricing
-        Self::filter_hotels_with_valid_pricing(&mut domain_results, &rates_response);
+        // Filter out hotels with no pricing
+        domain_results
+            .hotel_results
+            .retain(|hotel| hotel.price.is_some());
 
         // Add pagination metadata if pagination params are provided
         if let Some(ref pagination_params) = search_criteria.pagination {
@@ -563,7 +592,38 @@ impl LiteApiAdapter {
         Ok(domain_results)
     }
 
-    // Helper method to merge pricing data into search results
+    /// Helper method to merge min-rates pricing data into search results
+    /// Uses the lightweight min-rates response format (just hotel_id + prices)
+    fn merge_min_pricing_into_search_results(
+        domain_results: &mut DomainHotelListAfterSearch,
+        min_rates_response: &crate::api::liteapi::LiteApiMinRatesResponse,
+    ) {
+        // Get price map from min-rates response
+        let price_map = min_rates_response.to_price_map();
+
+        // Update each hotel with its price
+        for hotel in &mut domain_results.hotel_results {
+            if let Some((price, _suggested_price)) = price_map.get(&hotel.hotel_code) {
+                hotel.price = Some(DomainPrice {
+                    // Use base price (not suggested_selling_price)
+                    room_price: *price,
+                    currency_code: "USD".to_string(),
+                });
+            }
+        }
+
+        crate::log!(
+            "Merged min-rates pricing for {} hotels (price map had {} entries)",
+            domain_results
+                .hotel_results
+                .iter()
+                .filter(|h| h.price.is_some())
+                .count(),
+            price_map.len()
+        );
+    }
+
+    // Helper method to merge pricing data into search results (LEGACY - used by full rates API)
     fn merge_pricing_into_search_results(
         domain_results: &mut DomainHotelListAfterSearch,
         rates_response: LiteApiHotelRatesResponse,
