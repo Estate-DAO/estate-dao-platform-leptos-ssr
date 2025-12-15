@@ -136,6 +136,16 @@ pub fn BlockRoomV1Page() -> impl IntoView {
         let children_count = ui_search_ctx.guests.children.get() as usize;
         let children_ages = ui_search_ctx.guests.children_ages.clone();
 
+        // Check for state loss (e.g. page refresh)
+        let room_summary_check = BlockRoomUIState::get_room_selection_summary_untracked();
+        if room_summary_check.is_empty() {
+            log!("BlockRoomV1Page: State lost (refresh detected), navigating back");
+            web_sys::window()
+                .and_then(|win| win.history().ok())
+                .and_then(|history| history.back().ok());
+            return;
+        }
+
         // Initialize adults and children only once
         if !initialized.get_untracked() {
             log!(
