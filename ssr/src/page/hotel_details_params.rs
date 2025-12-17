@@ -1,4 +1,5 @@
 use crate::{
+    api::client_side_api::Place,
     component::{ChildrenAgesSignalExt, GuestSelection, SelectedDateRange},
     log,
     utils::query_params::{
@@ -22,6 +23,8 @@ pub struct HotelDetailsParams {
     pub children: Option<u32>,
     pub rooms: Option<u32>,
     pub children_ages: Vec<u32>,
+    // Place information for Navbar context restoration (only placeId, name is fetched from API)
+    pub place_id: Option<String>,
 }
 
 impl Default for HotelDetailsParams {
@@ -34,6 +37,7 @@ impl Default for HotelDetailsParams {
             children: Some(0),
             rooms: Some(1),
             children_ages: Vec::new(),
+            place_id: None,
         }
     }
 }
@@ -71,6 +75,10 @@ impl HotelDetailsParams {
         let rooms = Some(guests.rooms.get_untracked());
         let children_ages = guests.children_ages.get_untracked().into();
 
+        // Get place information from search context for Navbar context restoration
+        let place = search_ctx.place.get_untracked();
+        let place_id = place.map(|p| p.place_id);
+
         Some(Self {
             hotel_code: Some(hotel_code),
             checkin,
@@ -79,6 +87,7 @@ impl HotelDetailsParams {
             children,
             rooms,
             children_ages,
+            place_id,
         })
     }
 
@@ -170,6 +179,9 @@ impl HotelDetailsParams {
             .map(|s| parse_comma_separated_u32(s))
             .unwrap_or_default();
 
+        // Parse place information (only placeId, name will be fetched from API)
+        let place_id = params.get("placeId").cloned();
+
         Some(Self {
             hotel_code,
             checkin,
@@ -178,6 +190,7 @@ impl HotelDetailsParams {
             children,
             rooms,
             children_ages,
+            place_id,
         })
     }
 
@@ -216,6 +229,11 @@ impl HotelDetailsParams {
                 "childAges".to_string(),
                 join_comma_separated_u32(&self.children_ages),
             );
+        }
+
+        // Place information for Navbar context restoration (only placeId)
+        if let Some(ref place_id) = self.place_id {
+            params.insert("placeId".to_string(), place_id.clone());
         }
 
         params
@@ -268,6 +286,13 @@ impl QueryParamsSync<HotelDetailsParams> for HotelDetailsParams {
                 .set_ages(self.children_ages.clone());
 
             UISearchCtx::set_guests(guest_selection);
+
+            // Fetch place details from API if placeId is available
+            // This is done asynchronously; the sync is completed here,
+            // but place details will be fetched in a separate effect on the page
+            if let Some(place_id) = &self.place_id {
+                log!("[HotelDetailsParams] placeId found in URL: {}. Place details will be fetched asynchronously.", place_id);
+            }
         });
     }
 }

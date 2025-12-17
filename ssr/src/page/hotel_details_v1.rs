@@ -6,8 +6,8 @@ use crate::api::auth::auth_state::AuthStateSignal;
 use crate::api::client_side_api::ClientSideApiClient;
 use crate::api::consts::ENFORCE_SINGLE_ROOM_TYPE_BOOKING;
 use crate::app::AppRoutes;
-use crate::component::ImageLightbox;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray};
+use crate::component::{Footer, ImageLightbox};
 use crate::domain::{
     DomainHotelCodeId, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest,
     DomainRoomOccupancy, DomainRoomOption, DomainStaticRoom,
@@ -335,7 +335,66 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                     "[HotelDetailsV1Page] Parsed hotel params from URL: {:?}",
                     hotel_params
                 );
+
+                // Get placeId before syncing (for async fetch)
+                let place_id_to_fetch = hotel_params.place_id.clone();
+
                 hotel_params.sync_to_app_state();
+
+                // Fetch place details asynchronously if placeId is present
+                if let Some(place_id) = place_id_to_fetch {
+                    spawn_local(async move {
+                        log!(
+                            "[HotelDetailsV1Page] Fetching place details for placeId: {}",
+                            place_id
+                        );
+                        let api_client = ClientSideApiClient::new();
+                        match api_client.get_place_details_by_id(place_id.clone()).await {
+                            Ok(place_data) => {
+                                // Extract display name from address components
+                                // Combine locality + country for consistent display (e.g., "Bali, Indonesia")
+                                let locality = place_data
+                                    .address_components
+                                    .iter()
+                                    .find(|c| c.types.contains(&"locality".to_string()))
+                                    .or_else(|| {
+                                        place_data.address_components.iter().find(|c| {
+                                            c.types.contains(
+                                                &"administrative_area_level_1".to_string(),
+                                            )
+                                        })
+                                    })
+                                    .map(|c| c.long_text.clone());
+
+                                let country = place_data
+                                    .address_components
+                                    .iter()
+                                    .find(|c| c.types.contains(&"country".to_string()))
+                                    .map(|c| c.long_text.clone());
+
+                                let display_name = match (locality, country) {
+                                    (Some(loc), Some(ctry)) => format!("{}, {}", loc, ctry),
+                                    (Some(loc), None) => loc,
+                                    (None, Some(ctry)) => ctry,
+                                    (None, None) => "Unknown Location".to_string(),
+                                };
+
+                                let place = crate::api::client_side_api::Place {
+                                    place_id: place_id.clone(),
+                                    display_name,
+                                    formatted_address: String::new(),
+                                };
+                                UISearchCtx::set_place(place);
+                                log!(
+                                    "[HotelDetailsV1Page] Successfully set place context from API"
+                                );
+                            }
+                            Err(e) => {
+                                log!("[HotelDetailsV1Page] Failed to fetch place details: {}", e);
+                            }
+                        }
+                    });
+                }
             } else {
                 log!("[HotelDetailsV1Page] Could not parse hotel params from URL.");
             }
@@ -344,8 +403,17 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
 
     // <!-- Function to update URL with current search state -->
     // This can be called when navigating to this page from hotel list
+    // Preserves placeId from URL even if place context hasn't been set yet
     let update_url_with_current_state = move || {
-        if let Some(current_params) = HotelDetailsParams::from_current_context() {
+        if let Some(mut current_params) = HotelDetailsParams::from_current_context() {
+            // Preserve placeId from URL if not already in context
+            // This handles the race condition where async place fetch hasn't completed
+            if current_params.place_id.is_none() {
+                let url_params = query_map.get();
+                if let Some(place_id) = url_params.0.get("placeId") {
+                    current_params.place_id = Some(place_id.clone());
+                }
+            }
             current_params.update_url(); // Now uses individual query params
             log!(
                 "Updated URL with current hotel details state (individual params): {:?}",
@@ -952,6 +1020,7 @@ pub fn SectionTitle(#[prop(into)] id: String, #[prop(into)] title: String) -> im
 #[component]
 pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
+    let is_map_expanded = create_rw_signal(false);
 
     let location_signal = move || {
         if let Some(hotel_details) = hotel_details_state.static_details.get() {
@@ -961,11 +1030,50 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
         }
     };
 
+    // Generate map URL
+    let map_url_signal = move || {
+        location_signal().map(|location| {
+            format!(
+                "https://www.openstreetmap.org/export/embed.html?bbox={},{},{},{}&layer=mapnik&marker={:.6},{:.6}",
+                location.longitude - 0.01,
+                location.latitude - 0.01,
+                location.longitude + 0.01,
+                location.latitude + 0.01,
+                location.latitude,
+                location.longitude
+            )
+        })
+    };
+
+    // Generate expanded map URL (larger bounding box for better view)
+    let expanded_map_url_signal = move || {
+        location_signal().map(|location| {
+            format!(
+                "https://www.openstreetmap.org/export/embed.html?bbox={},{},{},{}&layer=mapnik&marker={:.6},{:.6}",
+                location.longitude - 0.05,
+                location.latitude - 0.05,
+                location.longitude + 0.05,
+                location.latitude + 0.05,
+                location.latitude,
+                location.longitude
+            )
+        })
+    };
+
     view! {
         <div id="map" class="scroll-mt-24 mt-4">
             <div class="flex items-center justify-between">
                 <span class="font-semibold text-gray-800">Map</span>
-                <a href="#map" class="text-sm text-blue-600 hover:underline">"Show Map"</a>
+                <button
+                    type="button"
+                    class="text-sm text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                    on:click=move |_| is_map_expanded.set(true)
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                    </svg>
+                    "Show Map"
+                </button>
             </div>
 
             <div class="mt-2 rounded-xl overflow-hidden bg-gray-200">
@@ -975,28 +1083,16 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
                         <div class="w-full aspect-[21/9] bg-[url('/img/map-placeholder.webp')] bg-cover bg-center"></div>
                     }
                 >
-                    {
-                        let location = location_signal().unwrap();
-                        let map_url = format!(
-                            "https://www.openstreetmap.org/export/embed.html?bbox={},{},{},{}&layer=mapnik&marker={:.6},{:.6}",
-                            location.longitude - 0.01,
-                            location.latitude - 0.01,
-                            location.longitude + 0.01,
-                            location.latitude + 0.01,
-                            location.latitude,
-                            location.longitude
-                        );
-                        view! {
-                            <iframe
-                                class="w-full"
-                                frameborder="0"
-                                scrolling="no"
-                                marginheight="0"
-                                marginwidth="0"
-                                src=map_url
-                            ></iframe>
-                        }
-                    }
+                    {move || map_url_signal().map(|url| view! {
+                        <iframe
+                            class="w-full"
+                            frameborder="0"
+                            scrolling="no"
+                            marginheight="0"
+                            marginwidth="0"
+                            src=url
+                        ></iframe>
+                    })}
                 </Show>
             </div>
 
@@ -1004,19 +1100,101 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
                 <svg class="w-[18px] h-[18px] text-blue-600 mt-[2px]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
                 </svg>
-                <span class="text-sm md:text-base">{address}</span>
+                <span class="text-sm md:text-base">{address.clone()}</span>
             </div>
         </div>
+
+        // Expanded Map Modal
+        <Show when=move || is_map_expanded.get()>
+            <div class="fixed inset-0 z-50 flex items-center justify-center">
+                // Backdrop
+                <div
+                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                    on:click=move |_| is_map_expanded.set(false)
+                ></div>
+
+                // Modal content
+                <div class="relative z-10 w-[95vw] h-[85vh] max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                    // Header
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                            </svg>
+                            <span class="font-semibold text-gray-800 text-lg">Hotel Location</span>
+                        </div>
+                        <button
+                            type="button"
+                            class="p-2 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+                            on:click=move |_| is_map_expanded.set(false)
+                            aria-label="Close map"
+                        >
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    // Map iframe
+                    <div class="flex-1 bg-gray-200">
+                        <Show
+                            when=move || location_signal().is_some()
+                            fallback=|| view! {
+                                <div class="w-full h-full bg-[url('/img/map-placeholder.webp')] bg-cover bg-center flex items-center justify-center">
+                                    <span class="text-gray-600 bg-white/80 px-4 py-2 rounded-lg">Map not available</span>
+                                </div>
+                            }
+                        >
+                            {move || expanded_map_url_signal().map(|url| view! {
+                                <iframe
+                                    class="w-full h-full"
+                                    frameborder="0"
+                                    scrolling="no"
+                                    marginheight="0"
+                                    marginwidth="0"
+                                    src=url
+                                ></iframe>
+                            })}
+                        </Show>
+                    </div>
+
+                    // Footer with address
+                    <div class="px-6 py-3 border-t border-gray-200 bg-gray-50">
+                        <div class="flex items-center gap-2 text-gray-700">
+                            <svg class="w-4 h-4 text-blue-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                            </svg>
+                            <span class="text-sm">{address.clone()}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Show>
     }
 }
 
 #[component]
 pub fn FacilityChips(amenities: Vec<Amenity>) -> impl IntoView {
-    let top = amenities.into_iter().take(10).collect::<Vec<_>>();
+    let is_expanded = create_rw_signal(false);
+    let total_count = amenities.len();
+    let top = amenities.iter().take(10).cloned().collect::<Vec<_>>();
+    let all_amenities = store_value(amenities);
+
     view! {
         <div class="flex items-center justify-between">
             <span class="font-semibold text-gray-800">Most Popular facilities</span>
-            <a href="#facilities" class="text-sm text-blue-600 hover:underline">Show All</a>
+            <Show when=move || { total_count > 10 }>
+                <button
+                    type="button"
+                    class="text-sm text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                    on:click=move |_| is_expanded.set(true)
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    {format!("Show All ({})", total_count)}
+                </button>
+            </Show>
         </div>
 
         <div class="mt-4 flex flex-wrap gap-x-6 gap-y-4">
@@ -1027,6 +1205,52 @@ pub fn FacilityChips(amenities: Vec<Amenity>) -> impl IntoView {
                 </div>
             </For>
         </div>
+
+        // Expanded Facilities Modal
+        <Show when=move || is_expanded.get()>
+            <div class="fixed inset-0 z-50 flex items-center justify-center">
+                // Backdrop
+                <div
+                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                    on:click=move |_| is_expanded.set(false)
+                ></div>
+
+                // Modal content
+                <div class="relative z-10 w-[95vw] max-w-2xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                    // Header
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span class="font-semibold text-gray-800 text-lg">{format!("All Facilities ({})", total_count)}</span>
+                        </div>
+                        <button
+                            type="button"
+                            class="p-2 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+                            on:click=move |_| is_expanded.set(false)
+                            aria-label="Close"
+                        >
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    // Facilities grid
+                    <div class="flex-1 overflow-y-auto p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                            <For each=move || all_amenities.get_value() key=|a| a.text.clone() let:item>
+                                <div class="inline-flex items-center text-gray-800">
+                                    <Icon icon=item.icon class="w-5 h-5 text-blue-600 mr-3 flex-shrink-0"/>
+                                    <span class="text-sm md:text-base">{item.text}</span>
+                                </div>
+                            </For>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Show>
     }
 }
 
@@ -2127,6 +2351,14 @@ fn RoomTypeCard(
         .as_ref()
         .map(|details| convert_to_amenities(details.amenities.clone()))
         .unwrap_or_default();
+
+    // Store all amenities for modal display
+    let all_room_amenities = store_value(if room_specific_amenities.is_empty() {
+        amenity_preview.clone()
+    } else {
+        room_specific_amenities.clone()
+    });
+
     let amenities_for_render = if room_specific_amenities.is_empty() {
         amenity_preview.into_iter().take(5).collect::<Vec<_>>()
     } else {
@@ -2145,6 +2377,8 @@ fn RoomTypeCard(
     } else {
         card_title.clone()
     };
+    let room_display_name_for_modal = room_display_name.clone();
+
     let room_size_text = room_details.as_ref().and_then(|details| {
         details.room_size_square.map(|size| {
             let unit = details
@@ -2154,9 +2388,15 @@ fn RoomTypeCard(
             format!("{size:.0} {unit}")
         })
     });
+    let room_size_text_for_modal = store_value(room_size_text.clone());
+
     let bed_text = room_details
         .as_ref()
         .and_then(|details| details.bed_types.first().cloned());
+    let bed_text_for_modal = store_value(bed_text.clone());
+
+    let occupancy_text_for_modal = store_value(occupancy_text.clone());
+
     let quick_facts: Vec<(usize, icondata::Icon, String)> = {
         let mut facts: Vec<(icondata::Icon, String)> = Vec::new();
         if let Some(size) = room_size_text.clone() {
@@ -2173,6 +2413,11 @@ fn RoomTypeCard(
             .collect()
     };
 
+    // Modal state for room details
+    let show_room_details_modal = create_rw_signal(false);
+    let room_images_for_modal = store_value(room_images.clone());
+    let total_amenities_count = all_room_amenities.get_value().len();
+
     view! {
         {move || open_image_viewer.get().then(|| {
             let room_images = room_images.clone();
@@ -2185,6 +2430,87 @@ fn RoomTypeCard(
                 />
             }
         })}
+
+        // Room Details Modal
+        <Show when=move || show_room_details_modal.get()>
+            <div class="fixed inset-0 z-50 flex items-center justify-center">
+                // Backdrop
+                <div
+                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                    on:click=move |_| show_room_details_modal.set(false)
+                ></div>
+
+                // Modal content
+                <div class="relative z-10 w-[95vw] max-w-3xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                    // Header
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <h3 class="font-semibold text-gray-900 text-lg">{room_display_name_for_modal.clone()}</h3>
+                        <button
+                            type="button"
+                            class="p-2 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+                            on:click=move |_| show_room_details_modal.set(false)
+                            aria-label="Close"
+                        >
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    // Content
+                    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                        // Room images preview
+                        <Show when=move || { !room_images_for_modal.get_value().is_empty() }>
+                            <div class="flex gap-2 overflow-x-auto pb-2">
+                                {move || room_images_for_modal.get_value().iter().take(4).cloned().collect::<Vec<_>>().into_iter().map(|img| {
+                                    view! {
+                                        <div class="flex-shrink-0 w-32 h-24 rounded-lg overflow-hidden bg-gray-100">
+                                            <img src=img class="w-full h-full object-cover"/>
+                                        </div>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                        </Show>
+
+                        // Room Facts
+                        <div class="space-y-3">
+                            <h4 class="text-sm font-semibold text-gray-800">Room Details</h4>
+                            <div class="flex flex-wrap gap-4">
+                                <Show when=move || room_size_text_for_modal.get_value().is_some()>
+                                    <span class="inline-flex items-center gap-2 text-sm text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
+                                        <Icon class="text-blue-500" icon=icondata::FaRulerCombinedSolid/>
+                                        {move || room_size_text_for_modal.get_value().unwrap_or_default()}
+                                    </span>
+                                </Show>
+                                <span class="inline-flex items-center gap-2 text-sm text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
+                                    <Icon class="text-blue-500" icon=icondata::BiUserRegular/>
+                                    {move || occupancy_text_for_modal.get_value()}
+                                </span>
+                                <Show when=move || bed_text_for_modal.get_value().is_some()>
+                                    <span class="inline-flex items-center gap-2 text-sm text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
+                                        <Icon class="text-blue-500" icon=icondata::FaBedSolid/>
+                                        {move || bed_text_for_modal.get_value().unwrap_or_default()}
+                                    </span>
+                                </Show>
+                            </div>
+                        </div>
+
+                        // All Amenities
+                        <div class="space-y-3">
+                            <h4 class="text-sm font-semibold text-gray-800">{format!("Room Amenities ({})", total_amenities_count)}</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                                <For each=move || all_room_amenities.get_value() key=|a| a.text.clone() let:amenity>
+                                    <div class="inline-flex items-center text-gray-700">
+                                        <Icon class="w-5 h-5 text-blue-500 mr-3 flex-shrink-0" icon=amenity.icon/>
+                                        <span class="text-sm">{amenity.text}</span>
+                                    </div>
+                                </For>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Show>
         <div class="bg-[#f9f9f9] border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 pt-5 pb-0">
                 <div class="flex items-center justify-between gap-3">
@@ -2243,7 +2569,11 @@ fn RoomTypeCard(
                                         {amenity.text.clone()}
                                     </span>
                                 </For>
-                                <button type="button" class="text-sm font-semibold text-blue-600 hover:underline">
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer"
+                                    on:click=move |_| show_room_details_modal.set(true)
+                                >
                                     "See All Details"
                                 </button>
                             </div>
@@ -2385,6 +2715,8 @@ fn rating_label_for_score(score: f64) -> &'static str {
 #[component]
 pub fn GuestReviewsSection() -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
+    let show_all_categories = create_rw_signal(false);
+
     let summary_score = hotel_details_state
         .static_details
         .get()
@@ -2414,14 +2746,22 @@ pub fn GuestReviewsSection() -> impl IntoView {
             .collect::<Vec<_>>()
     };
     categories.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    let highlight_tag_vec = if !categories.is_empty() {
-        categories
-            .iter()
-            .take(3)
-            .map(|(name, _)| name.clone())
-            .collect::<Vec<_>>()
-    } else {
-        Vec::new()
+
+    // Store all categories and create preview
+    let all_categories = store_value(categories.clone());
+    let total_categories_count = all_categories.get_value().len();
+    let preview_categories: Vec<(String, f32)> = categories.into_iter().take(6).collect();
+
+    let highlight_tag_vec = {
+        let cats = all_categories.get_value();
+        if !cats.is_empty() {
+            cats.iter()
+                .take(3)
+                .map(|(name, _)| name.clone())
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        }
     };
 
     view! {
@@ -2442,14 +2782,23 @@ pub fn GuestReviewsSection() -> impl IntoView {
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <p class="text-sm font-semibold text-gray-900">"Categories"</p>
-                            <button class="text-sm font-semibold text-blue-600 hover:underline" type="button">
-                                "Show All"
-                            </button>
+                            <Show when=move || { total_categories_count > 6 }>
+                                <button
+                                    class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                    type="button"
+                                    on:click=move |_| show_all_categories.set(true)
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                    </svg>
+                                    {format!("Show All ({})", total_categories_count)}
+                                </button>
+                            </Show>
                         </div>
                         <div class="grid gap-3 md:grid-cols-3">
                             {
                                 move || {
-                                    categories
+                                    preview_categories
                                         .clone()
                                         .into_iter()
                                         .map(|(label, score)| {
@@ -2488,6 +2837,68 @@ pub fn GuestReviewsSection() -> impl IntoView {
                         }}
                     </div>
                 </div>
+
+                // Categories Modal
+                <Show when=move || show_all_categories.get()>
+                    <div class="fixed inset-0 z-50 flex items-center justify-center">
+                        // Backdrop
+                        <div
+                            class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            on:click=move |_| show_all_categories.set(false)
+                        ></div>
+
+                        // Modal content
+                        <div class="relative z-10 w-[95vw] max-w-2xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                            // Header
+                            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center bg-yellow-400 text-white font-semibold text-lg w-10 h-10 rounded-lg">
+                                        {format!("{summary_score:.1}")}
+                                    </div>
+                                    <div>
+                                        <span class="font-semibold text-gray-800 text-lg">{format!("All Categories ({})", total_categories_count)}</span>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="p-2 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+                                    on:click=move |_| show_all_categories.set(false)
+                                    aria-label="Close"
+                                >
+                                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            // Categories grid
+                            <div class="flex-1 overflow-y-auto p-6">
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <For each=move || all_categories.get_value() key=|(label, _)| label.clone() let:item>
+                                        {
+                                            let (label, score) = item;
+                                            let percent = (score / 10.0 * 100.0).clamp(0.0, 100.0);
+                                            view! {
+                                                <div class="space-y-1">
+                                                    <div class="flex items-center justify-between text-sm text-gray-700">
+                                                        <span class="font-medium">{label}</span>
+                                                        <span class="font-semibold text-gray-900">{format!("{score:.1}")}</span>
+                                                    </div>
+                                                    <div class="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                                                        <div
+                                                            class="h-full bg-blue-500 rounded-full transition-all duration-300"
+                                                            style=format!("width: {percent:.0}%;")
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </For>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Show>
                 // <div class="space-y-4">
                 //     {
                 //         move || {
@@ -2654,16 +3065,19 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
 #[component]
 pub fn SiteFooter() -> impl IntoView {
     view! {
-        <footer class="mt-16 border-t border-gray-200 py-10">
-            <div class="w-full max-w-7xl mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm text-gray-500">
-                <span>"Copyright © 2024 EstateDAO. All Rights Reserved."</span>
-                <div class="flex items-center gap-4">
-                    <a href="#" class="hover:text-blue-600">"Twitter"</a>
-                    <a href="#" class="hover:text-blue-600">"Facebook"</a>
-                    <a href="#" class="hover:text-blue-600">"Instagram"</a>
-                </div>
-            </div>
-        </footer>
+        // <footer class="mt-16 border-t border-gray-200 py-10">
+        //     <div class="w-full max-w-7xl mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm text-gray-500">
+        //         <span>"Copyright © 2024 EstateDAO. All Rights Reserved."</span>
+        //         <div class="flex items-center gap-4">
+        //             <a href="#" class="hover:text-blue-600">"Twitter"</a>
+        //             <a href="#" class="hover:text-blue-600">"Facebook"</a>
+        //             <a href="#" class="hover:text-blue-600">"Instagram"</a>
+        //         </div>
+        //     </div>
+        // </footer>
+        <div class="mt-16 border-t border-gray-200">
+            <Footer />
+        </div>
     }
 }
 #[cfg(test)]
