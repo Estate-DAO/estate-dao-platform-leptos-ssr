@@ -376,17 +376,80 @@ pub fn DateTimeRangePickerCustom(
             </button>
 
             <Show when=move || is_open()>
-                // --- MOBILE: full-screen fixed bottom sheet ---
+                // --- MOBILE: full-screen modal ---
                 <div
-                    class="fixed inset-0 z-[9999] bg-black/50 md:hidden"
-                    style="touch-action: none; overscroll-behavior: contain;"
-                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
+                    class="fixed inset-0 z-[99999] bg-white md:hidden flex flex-col"
+                    style="touch-action: none; overscroll-behavior: contain; isolation: isolate;"
                 >
+                    // Header
+                    <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                        <h2 class="text-lg font-semibold text-gray-900">"Select Dates"</h2>
+                        <button
+                            type="button"
+                            class="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                        >
+                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    // Check-in / Nights / Check-out row
+                    <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                        <div class="text-left">
+                            <p class="text-xs text-gray-500">"Check-in"</p>
+                            <p class="text-sm font-medium text-gray-900">
+                                {move || {
+                                    let range = selected_range.get();
+                                    range.dd_month_yyyy_start()
+                                }}
+                            </p>
+                        </div>
+                        <div class="px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">
+                            {move || selected_range.get().formatted_nights()}
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500">"Check-out"</p>
+                            <p class="text-sm font-medium text-gray-900">
+                                {move || {
+                                    let range = selected_range.get();
+                                    range.dd_month_yyyy_end()
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    // Calendar content (scrollable)
                     <div
-                        class="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl z-[10000]"
-                        on:click=|e| e.stop_propagation()
+                        _ref=calendar_ref
+                        class="flex-1 overflow-y-auto px-4 py-4"
+                        style="-webkit-overflow-scrolling: touch;"
                     >
-                        {date_picker_inner_content(initial_date, next_month_date, selected_range, calendar_ref)}
+                        {date_picker_mobile_calendar_content(initial_date, selected_range)}
+                    </div>
+
+                    // Apply button
+                    <div class="px-4 py-4 border-t border-gray-100 bg-white">
+                        <button
+                            type="button"
+                            class=move || {
+                                let range = selected_range.get();
+                                let has_both_dates = range.start != (0, 0, 0) && range.end != (0, 0, 0);
+                                if has_both_dates {
+                                    "w-full bg-blue-500 text-white py-3 rounded-full font-medium hover:bg-blue-600 transition-colors"
+                                } else {
+                                    "w-full bg-gray-300 text-gray-500 py-3 rounded-full font-medium cursor-not-allowed"
+                                }
+                            }
+                            disabled=move || {
+                                let range = selected_range.get();
+                                !(range.start != (0, 0, 0) && range.end != (0, 0, 0))
+                            }
+                            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                        >
+                            "Apply"
+                        </button>
                     </div>
                 </div>
 
@@ -401,6 +464,45 @@ pub fn DateTimeRangePickerCustom(
                 </div>
             </Show>
 
+        </div>
+    }
+}
+
+// Mobile calendar content - shows current month + next months in scrollable view
+fn date_picker_mobile_calendar_content(
+    initial_date: ReadSignal<(u32, u32)>,
+    selected_range: RwSignal<SelectedDateRange>,
+) -> impl IntoView {
+    // Generate 12 months worth of calendar starting from initial_date
+    let months_to_show = create_memo(move |_| {
+        let (start_year, start_month) = initial_date.get();
+        let mut months = Vec::new();
+        let mut year = start_year;
+        let mut month = start_month;
+
+        for _ in 0..12 {
+            months.push((year, month));
+            month += 1;
+            if month > 12 {
+                month = 1;
+                year += 1;
+            }
+        }
+        months
+    });
+
+    view! {
+        <div class="space-y-8">
+            <For
+                each=move || months_to_show.get()
+                key=|(y, m)| (*y, *m)
+                let:year_month
+            >
+                <DateCells
+                    year_month=Signal::derive(move || year_month)
+                    selected_range=selected_range
+                />
+            </For>
         </div>
     }
 }
@@ -502,7 +604,7 @@ fn DateCells(
             </div>
 
             // !<-- Calendar Grid -->
-            <div class="grid grid-cols-7 gap-0.5">
+            <div class="grid grid-cols-7">
                 // !<-- Weekday Headers -->
                 {weekdays
                     .iter()
@@ -578,7 +680,14 @@ fn DateCells(
                                     )
                                     on:click=on_click
                                 >
-                                    <span class="text-xs font-normal">{day_num}</span>
+                                    <span class=move || inner_span_class(
+                                        selected_range.into(),
+                                        day_num,
+                                        year_signal(),
+                                        month_signal(),
+                                    )>
+                                        {day_num}
+                                    </span>
                                 </button>
                             }
                         })
@@ -597,29 +706,102 @@ pub fn class_signal(
 ) -> String {
     let range = selected_range.get();
     let date_tuple = (year, month, day_num);
-    let base_classes =
-        "w-9 h-9 rounded-full flex items-center justify-center text-sm transition-colors";
+    // Use full width cell with centered content
+    let base_classes = "w-full h-10 flex items-center justify-center text-sm transition-colors";
 
     // !<-- Past dates -->
     if is_date_in_past(year, month, day_num) {
         return format!("{} text-gray-300 cursor-not-allowed", base_classes);
     }
 
-    // !<-- Selected dates -->
-    if range.start == date_tuple || range.end == date_tuple {
-        return format!("{} bg-black text-white", base_classes);
+    // Normalize range to ensure start < end
+    let (start, end) = if range.start != (0, 0, 0) && range.end != (0, 0, 0) {
+        if range.start > range.end {
+            (range.end, range.start)
+        } else {
+            (range.start, range.end)
+        }
+    } else {
+        (range.start, range.end)
+    };
+
+    let has_range = start != (0, 0, 0) && end != (0, 0, 0);
+
+    // !<-- Start date: full circle with light background extending right -->
+    if date_tuple == start && start != (0, 0, 0) {
+        if has_range {
+            // Has range: blue square + light blue background on right half, clipped with rounded-l-md
+            return format!(
+                "{} bg-gradient-to-r from-transparent from-50% to-blue-100 to-50% overflow-hidden rounded-l-md",
+                base_classes
+            );
+        } else {
+            // Only start selected, no end yet
+            return format!("{}", base_classes);
+        }
     }
 
-    // !<-- Dates in range -->
-    if range.start != (0, 0, 0)
-        && range.end != (0, 0, 0)
-        && is_date_between(date_tuple, range.start, range.end)
-    {
-        return format!("{} bg-gray-100", base_classes);
+    // !<-- End date: full circle with light background extending left -->
+    if date_tuple == end && end != (0, 0, 0) {
+        if has_range {
+            // Has range: blue square + light blue background on left half, clipped with rounded-r-md
+            return format!(
+                "{} bg-gradient-to-l from-transparent from-50% to-blue-100 to-50% overflow-hidden rounded-r-md",
+                base_classes
+            );
+        } else {
+            return format!("{}", base_classes);
+        }
+    }
+
+    // !<-- Dates in range (full light background) -->
+    if has_range && is_date_between(date_tuple, start, end) {
+        return format!("{} bg-blue-100 text-blue-900", base_classes);
     }
 
     // !<-- Default state -->
-    format!("{} hover:bg-gray-50", base_classes)
+    format!("{} hover:bg-gray-100 rounded-full", base_classes)
+}
+
+/// Returns the class for the inner span (date number) - shows circular highlight for selected dates
+pub fn inner_span_class(
+    selected_range: Signal<SelectedDateRange>,
+    day_num: u32,
+    year: u32,
+    month: u32,
+) -> String {
+    let range = selected_range.get();
+    let date_tuple = (year, month, day_num);
+    let base_inner = "w-9 h-9 flex items-center justify-center text-sm rounded-full";
+
+    // Normalize range
+    let (start, end) = if range.start != (0, 0, 0) && range.end != (0, 0, 0) {
+        if range.start > range.end {
+            (range.end, range.start)
+        } else {
+            (range.start, range.end)
+        }
+    } else {
+        (range.start, range.end)
+    };
+
+    // Start or end date: show blue circle with rounded-md
+    if (date_tuple == start && start != (0, 0, 0)) || (date_tuple == end && end != (0, 0, 0)) {
+        return "w-9 h-9 flex items-center justify-center text-sm rounded-md bg-blue-500 text-white font-medium".to_string();
+    }
+
+    // Date in range: just text, background is on parent
+    if start != (0, 0, 0) && end != (0, 0, 0) && is_date_between(date_tuple, start, end) {
+        return format!("{} text-blue-900", base_inner);
+    }
+
+    // Past dates
+    if is_date_in_past(year, month, day_num) {
+        return format!("{} text-gray-300", base_inner);
+    }
+
+    // Default
+    base_inner.to_string()
 }
 
 /// Checks if a date is in the past (before today)

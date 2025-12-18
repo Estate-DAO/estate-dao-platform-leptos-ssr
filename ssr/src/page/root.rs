@@ -66,50 +66,31 @@ pub fn HeroSection() -> impl IntoView {
     let allow_outside_click = create_rw_signal(false);
 
     view! {
-        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] min-h-screen">
+        <section class="bg-top bg-cover bg-no-repeat bg-[url('/img/home.webp')] md:min-h-screen pb-8 md:pb-0">
             <Navbar />
             // <!-- Improved mobile spacing and padding -->
-            <div class="mt-16 md:mt-32 px-4 md:px-0">
+            <div class="mt-8 md:mt-32 px-4 md:px-0">
                 <div class="flex flex-col items-center justify-center h-full">
                     // <!-- Enhanced mobile typography with better line height -->
-                    <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight">
+                    <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-2 sm:mb-6 md:mb-8 text-center leading-tight">
                         Your Next Travel, Paid in Crypto.
                     </h1>
-                    <h6 class="font-semibold text-black my-2 sm:mb-6 md:mb-8 text-center leading-tight">
+                    <h6 class="font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight text-sm md:text-base">
                         Plan your next escape and pay in BTC, ETH, or your favorite token.
                     </h6>
 
                     <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click size="large" />
-                    <br />
-                    // todo: uncomment in v2 when implementing filtering and sorting
-                    // <FilterAndSortBy />
-                    <br />
-                    <br />
-                    <br />
-                    <br />
-                    // <!-- Improved mobile card layout with better responsive padding -->
-                    // <div class="flex flex-col md:flex-row items-center md:items-end px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white rounded-xl max-w-fit w-full text-center md:text-left mx-2 sm:mx-0">
-                    //     <span class="text-sm sm:text-base">
-                    //         "We're the first decentralized booking platform powered by ICP."
-                    //     </span>
-                    //     <div class="flex items-center mt-2 md:mt-0">
-                    //         <a
-                    //             href="https://internetcomputer.org/"
-                    //             target="_blank"
-                    //             rel="noopener noreferrer"
-                    //             class="font-semibold text-blue-500 md:ml-4 inline text-sm sm:text-base"
-                    //         >
-                    //             "Learn more about ICP "
-                    //         </a>
-                    //         <Icon
-                    //             class="w-5 h-5 sm:w-6 sm:h-6 font-semibold inline ml-2 text-blue-500"
-                    //             icon=icondata::CgArrowRight
-                    //         />
-                    //     </div>
-                    // </div>
-                    <br />
-                    <br />
-                    <br />
+
+                    // Extra spacing only on desktop
+                    <div class="hidden md:block">
+                        <br />
+                        <br />
+                        <br />
+                        <br />
+                        <br />
+                        <br />
+                        <br />
+                    </div>
                 </div>
             </div>
         </section>
@@ -221,14 +202,14 @@ pub fn InputGroup(
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Date range
-            <div class=format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative z-[80]", (row_h.clone())())>
+            <div class=format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative md:z-[80]", (row_h.clone())())>
                 <DateTimeRangePickerCustom />
             </div>
 
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Guests
-            <div class=move || format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative z-[80]", row_h())>
+            <div class=move || format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative md:z-[80]", row_h())>
                 <GuestQuantity />
             </div>
 
