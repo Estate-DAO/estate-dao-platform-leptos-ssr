@@ -1138,7 +1138,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                     // 3. Filter Drawer (Teleport/Fixed)
                     <Show when=move || is_filter_drawer_open.get()>
-                        <div class="fixed inset-0 z-[100] z-50 isolate">
+                        <div class="fixed inset-0 z-[1005] isolate">
                              // Backdrop
                             <div
                                 class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"

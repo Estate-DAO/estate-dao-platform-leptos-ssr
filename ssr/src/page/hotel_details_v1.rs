@@ -13,7 +13,9 @@ use crate::domain::{
     DomainRoomOccupancy, DomainRoomOption, DomainStaticRoom,
 };
 use crate::log;
-use crate::page::{add_to_wishlist_action, HotelDetailsParams, HotelListNavbar};
+use crate::page::{
+    add_to_wishlist_action, HotelDetailsParams, HotelListNavbar, InputGroupContainer,
+};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
@@ -644,25 +646,12 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     view! {
         <section class="relative min-h-screen bg-gray-50 pt-16 md:pt-16">
             <HotelListNavbar />
-            // <div class=move || {
-            //     let is_expanded = InputGroupState::is_open_show_full_input();
-            //     if is_expanded {
-            //         // tall when expanded
-            //         "transition-all duration-300 h-96 sm:h-96 md:h-80 lg:h-24"
-            //     } else {
-            //         // keep space for fixed navbar (don't use lg:h-0)
-            //         "transition-all duration-300 h-24 sm:h-16 md:h-12 lg:h-16"
-            //     }
-            // }/>
-
-
-
-            // <Navbar />
-            // <Show when=move || !open_image_viewer.get()>
-            //     <div class="flex flex-col items-center mt-6 p-4">
-            //         <InputGroupContainer default_expanded=false allow_outside_click_collapse=true />
-            //     </div>
-            // </Show>
+            <div class="lg:hidden px-4 py-4 mb-4">
+                <InputGroupContainer
+                    default_expanded=false
+                    allow_outside_click_collapse=true
+                />
+            </div>
 
             // <!-- Use resource pattern like prebook_resource in block_room_v1.rs -->
             // <!-- The resource automatically triggers data loading when dependencies change -->
