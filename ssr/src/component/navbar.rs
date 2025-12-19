@@ -6,9 +6,9 @@ use leptos_use::{use_cookie_with_options, UseCookieOptions};
 #[component]
 pub fn Navbar(#[prop(optional)] blue_header: bool) -> impl IntoView {
     let class = if blue_header {
-        "bg-blue-600 flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8"
+        "bg-blue-600 flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8 relative z-[1001]"
     } else {
-        "flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8"
+        "flex justify-between items-center py-6 sm:py-8 md:py-10 px-4 sm:px-6 md:px-8 relative z-[1001]"
     };
     let logo = if blue_header {
         "/img/logo_white.svg"
