@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_icons::*;
 use leptos_router::use_navigate;
 use std::collections::HashMap;
 use web_sys::MouseEvent;
@@ -636,7 +637,9 @@ pub fn HotelListPage() -> impl IntoView {
     };
 
     let disabled_filters = Signal::derive(move || false);
+    let disabled_filters = Signal::derive(move || false);
     let filters_collapsed = create_rw_signal(false);
+    let is_filter_drawer_open = create_rw_signal(false);
 
     // Watch for pagination changes and update URL (pagination should trigger API calls)
     let search_list_page_for_pagination_effect = search_list_page.clone();
@@ -1107,78 +1110,111 @@ pub fn HotelListPage() -> impl IntoView {
             </div>
 
             // Mobile layout (lg screens and below)
-            <div class="lg:hidden min-h-screen mt-16">
-                <div class="px-4 py-6">
-                    // Filter toggle button for mobile
-                    <div class="mb-4">
-                        <button
-                            type="button"
-                            class="w-full flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm"
-                            on:click=move |_| filters_collapsed.update(|c| *c = !*c)
-                        >
-                            <span class="font-medium">Filters</span>
-                            <svg
-                                class={move || format!("w-5 h-5 transition-transform {}", if filters_collapsed.get() { "rotate-180" } else { "" })}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
+            <div class="lg:hidden min-h-screen mt-[3.5rem] bg-slate-50 overflow-x-hidden">
+                <div class="px-4 py-4 space-y-4">
+                    // 1. Mobile Input Group
+                    <InputGroupContainer
+                        default_expanded=false
+                        given_disabled=disabled_input_group
+                        allow_outside_click_collapse=true
+                    />
+
+                    // 2. Filter / Sort Row
+                    <div class="flex items-center justify-between gap-3">
+                         // Filter Button
+                         <button
+                            class="flex items-center justify-center gap-2 bg-white border border-gray-200 shadow-sm rounded-lg py-2.5 px-4 text-sm font-medium text-gray-700 active:bg-gray-50 transition-colors"
+                            on:click=move |_| is_filter_drawer_open.set(true)
+                         >
+                            <Icon icon=icondata::BsSliders class="w-4 h-4" />
+                            "Filter"
+                         </button>
+
+                        // Sort Button
+                        <div class="flex-none">
+                            <SortBy />
+                        </div>
                     </div>
 
-                    // Collapsible filter section with max height to prevent footer overlap
-                    <Show when=move || !filters_collapsed.get()>
-                        <div class="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm max-h-96 overflow-y-auto">
-                            <div class="space-y-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <span class="text-sm font-semibold uppercase tracking-wide text-slate-600">
-                                        "Filters"
-                                    </span>
+                    // 3. Filter Drawer (Teleport/Fixed)
+                    <Show when=move || is_filter_drawer_open.get()>
+                        <div class="fixed inset-0 z-[100] z-50 isolate">
+                             // Backdrop
+                            <div
+                                class="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+                                on:click=move |_| is_filter_drawer_open.set(false)
+                            ></div>
+
+                            // Drawer Content
+                            <div class="relative w-full h-full bg-white shadow-2xl overflow-y-auto flex flex-col animate-in slide-in-from-right duration-300">
+                                // Header
+                                <div class="flex items-center justify-between p-4 border-b border-gray-100">
+                                    <h2 class="text-lg font-semibold text-gray-800">"Filters"</h2>
                                     <button
-                                        type="button"
-                                        class="text-xs font-medium text-blue-600 transition-colors duration-150 hover:text-blue-700 disabled:text-slate-400"
-                                        disabled=move || !has_active_filters.get()
-                                        on:click=clear_filters.clone()
+                                        class="p-2 text-gray-500 hover:bg-gray-100 rounded-full"
+                                        on:click=move |_| is_filter_drawer_open.set(false)
                                     >
-                                        "Clear filters"
+                                        <Icon icon=icondata::BsX class="w-6 h-6" />
                                     </button>
                                 </div>
 
-                                <PriceRangeFilter
-                                    value=price_filter_value
-                                    on_select=price_filter_on_select.clone()
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <StarRatingFilter
-                                    value=star_filter_value
-                                    on_select=star_filter_on_select.clone()
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <CheckboxFilter
-                                    title="Popular Filters".to_string()
-                                    options=popular_filters_options_signal
-                                    selected=popular_filters_selected_signal
-                                    on_toggle=popular_filters_on_toggle
-                                    on_clear=popular_filters_on_clear
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <CheckboxFilter
-                                    title="Amenities".to_string()
-                                    options=amenities_options_signal
-                                    selected=amenities_selected_signal
-                                    on_toggle=amenities_on_toggle
-                                    on_clear=amenities_on_clear
-                                />
-                                <div class="border-t border-slate-100"></div>
-                                <CheckboxFilter
-                                    title="Property Type".to_string()
-                                    options=property_type_options_signal
-                                    selected=property_types_selected_signal
-                                    on_toggle=property_type_on_toggle
-                                    on_clear=property_type_on_clear
-                                />
+                                // Filter List
+                                <div class="p-4 space-y-6 flex-1 overflow-y-auto">
+                                    <div class="flex items-center justify-between">
+                                         <button
+                                            type="button"
+                                            class="text-sm font-medium text-blue-600 hover:text-blue-700 disabled:text-gray-400"
+                                            disabled=move || !has_active_filters.get()
+                                            on:click=clear_filters.clone()
+                                        >
+                                            "Clear all"
+                                        </button>
+                                    </div>
+
+                                    <PriceRangeFilter
+                                        value=price_filter_value
+                                        on_select=price_filter_on_select.clone()
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <StarRatingFilter
+                                        value=star_filter_value
+                                        on_select=star_filter_on_select.clone()
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <CheckboxFilter
+                                        title="Popular Filters".to_string()
+                                        options=popular_filters_options_signal
+                                        selected=popular_filters_selected_signal
+                                        on_toggle=popular_filters_on_toggle
+                                        on_clear=popular_filters_on_clear
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <CheckboxFilter
+                                        title="Amenities".to_string()
+                                        options=amenities_options_signal
+                                        selected=amenities_selected_signal
+                                        on_toggle=amenities_on_toggle
+                                        on_clear=amenities_on_clear
+                                    />
+                                    <div class="border-t border-slate-100"></div>
+                                    <CheckboxFilter
+                                        title="Property Type".to_string()
+                                        options=property_type_options_signal
+                                        selected=property_types_selected_signal
+                                        on_toggle=property_type_on_toggle
+                                        on_clear=property_type_on_clear
+                                    />
+                                </div>
+
+                                // Footer action
+                                <div class="p-4 border-t border-gray-100">
+                                    <button
+                                        class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition"
+                                        on:click=move |_| is_filter_drawer_open.set(false)
+                                    >
+                                        "Show results"
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </Show>
@@ -1227,9 +1263,6 @@ pub fn HotelListPage() -> impl IntoView {
                                     }.into_view()
                                 }
                             }}
-                        </div>
-                        <div class="flex justify-start">
-                            <SortBy />
                         </div>
                     </div>
 

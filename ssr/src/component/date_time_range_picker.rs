@@ -215,6 +215,17 @@ impl SelectedDateRange {
         )
     }
 
+    // <!-- Returns date range in format '04 Nov - 08 Nov' -->
+    pub fn format_dd_month_short(&self) -> String {
+        use chrono::NaiveDate;
+        let format_dm = |(year, month, day): (u32, u32, u32)| {
+            NaiveDate::from_ymd_opt(year as i32, month, day)
+                .map(|d| d.format("%d %b").to_string())
+                .unwrap_or_default()
+        };
+        format!("{} - {}", format_dm(self.start), format_dm(self.end))
+    }
+
     // <!-- Returns formatted nights string, e.g. '2 Nights' or '-' if none -->
     pub fn formatted_nights(&self) -> String {
         let nights = self.no_of_nights();

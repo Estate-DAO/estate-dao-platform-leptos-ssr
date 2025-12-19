@@ -30,19 +30,19 @@ pub fn SortBy() -> impl IntoView {
 
     view! {
         <div class="relative inline-flex items-center gap-2">
-            <span class="text-gray-700 font-medium text-sm">"Sort By:"</span>
+            <span class="text-gray-700 font-medium text-xs sm:text-sm whitespace-nowrap">"Sort By:"</span>
             <div class="relative">
                 <button
-                    class="flex items-center justify-between w-44 bg-white border border-gray-300 text-gray-700 rounded-md px-3 py-2 text-sm font-medium hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    class="flex items-center justify-between w-32 sm:w-44 bg-white border border-gray-300 text-gray-700 rounded-md px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                     on:click=move |_| set_is_open.update(|open| *open = !*open)
                 >
-                    <span>{current_sort_display}</span>
-                    <Icon icon=icon class="w-4 h-4 text-gray-500" />
+                    <span class="truncate">{current_sort_display}</span>
+                    <Icon icon=icon class="flex-shrink-0 w-4 h-4 text-gray-500" />
                 </button>
 
                 <Show when=move || is_open()>
                     <div
-                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-50 overflow-hidden"
+                        class="absolute right-0 mt-1 w-32 sm:w-44 bg-white border border-gray-200 rounded-md shadow-lg z-50 overflow-hidden"
                     >
                         <SortOptions
                             set_is_open=set_is_open.into()

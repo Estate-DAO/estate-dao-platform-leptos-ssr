@@ -7,7 +7,7 @@ use crate::{component::yral_auth_provider::YralAuthProvider, page::InputGroupCon
 pub fn HotelListNavbar() -> impl IntoView {
     view! {
         // Fixed top bar only
-        <nav class="p-2 fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+        <nav class="hidden lg:block p-2 fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
             <div class="h-14 md:h-16 flex items-center gap-8 justify-between px-4 sm:px-6">
                 {/* Left: Logo */}
                 <a href="/" class="flex items-center space-x-2">
@@ -33,14 +33,32 @@ pub fn HotelListNavbar() -> impl IntoView {
             </div>
         </nav>
 
-        // Mobile search as a normal flow element (NOT fixed)
-        <div class="lg:hidden bg-white px-4 pt-16 pb-3">
-            // pt-16 matches the fixed bar height (h-14 ≈ 56px -> 14 * 4px = 56; we add a tad more to be safe)
-            <InputGroupContainer
-                default_expanded=false
-                given_disabled=false
-                allow_outside_click_collapse=false
-            />
-        </div>
+        // Mobile Header (lg:hidden)
+        <nav class="lg:hidden fixed top-0 left-0 right-0 z-[1001] bg-white shadow-sm h-14 flex items-center justify-between px-4">
+            <div class="flex items-center">
+                <button
+                    class="p-2 -ml-2 text-gray-700"
+                    on:click=move |_| {
+                        // navigate("/", Default::default()); // Or history back?
+                        // For now, let's just go home as a safe default or use window history if possible.
+                         if let Some(w) = web_sys::window() {
+                             let _ = w.history().unwrap().back();
+                         }
+                    }
+                >
+                    <Icon icon=icondata::BsChevronLeft class="w-6 h-6" />
+                </button>
+            </div>
+
+            <div class="absolute left-1/2 transform -translate-x-1/2">
+                 <a href="/" class="flex items-center">
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-8 w-auto" />
+                </a>
+            </div>
+
+            <div class="flex items-center">
+                <YralAuthProvider />
+            </div>
+        </nav>
     }
 }
