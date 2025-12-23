@@ -511,7 +511,8 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             )
         },
         move |(hotel_code, date_range, adults, children, rooms, children_ages)| async move {
-            if hotel_code.is_empty() || date_range.start == (0, 0, 0) {
+            if hotel_code.is_empty() || date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0)
+            {
                 return None;
             }
 
@@ -1989,7 +1990,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     };
 
     view! {
-        <div class="bg-gray-50 border border-gray-200 rounded-2xl shadow-sm p-5 space-y-5">
+        <div id="cart-section" class="scroll-mt-24 bg-gray-50 border border-gray-200 rounded-2xl shadow-sm p-5 space-y-5">
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <div class="text-lg font-semibold text-gray-900">"Cart"</div>
@@ -2275,7 +2276,14 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
                 >
                     <button
                         class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors duration-150 w-full md:w-auto"
-                        on:click=move|_| select_room.dispatch(())
+                        on:click=move|_| {
+                            select_room.dispatch(());
+                            set_timeout(move || {
+                                if let Some(element) = document().get_element_by_id("cart-section") {
+                                    element.scroll_into_view();
+                                }
+                            }, Duration::from_secs(1));
+                        }
                     >
                         "Select Room"
                     </button>
