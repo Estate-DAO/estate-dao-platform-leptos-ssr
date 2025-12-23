@@ -189,13 +189,14 @@ pub fn InputGroup(
                     <DestinationPickerV6 />
                 </Show>
                 <Show when=move || disabled.get()>
-                    <Icon icon=icondata::BsMap class="text-blue-500 text-lg" />
-                    <button
-                        class="flex-1 ml-3 text-base text-left font-medium truncate"
-                        disabled=disabled.get()
-                    >
-                        {move || place_display.get()}
-                    </button>
+                     <div class="relative w-full h-full flex items-center">
+                        <div class="absolute inset-y-0 left-2 flex items-center text-xl pointer-events-none">
+                             <Icon icon=icondata::BsMap class="text-blue-500 font-bold"/>
+                        </div>
+                        <div class="w-full pl-14 text-[15px] font-medium text-left truncate text-gray-500">
+                            {move || place_display.get()}
+                        </div>
+                    </div>
                 </Show>
             </div>
 

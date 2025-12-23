@@ -34,45 +34,58 @@ use crate::{
 };
 
 //  this is only for this page to track if the bar changes.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PreviousSearchContext {
-    pub place: Option<Place>,
-    pub place_details: Option<PlaceData>,
-    pub date_range: Option<SelectedDateRange>,
-    pub adults: u32,
-    pub children: u32,
-    pub rooms: u32,
+    pub place: RwSignal<Option<Place>>,
+    pub place_details: RwSignal<Option<PlaceData>>,
+    pub date_range: RwSignal<Option<SelectedDateRange>>,
+    pub adults: RwSignal<u32>,
+    pub children: RwSignal<u32>,
+    pub rooms: RwSignal<u32>,
     /// false by default
-    pub first_time_filled: bool,
+    pub first_time_filled: RwSignal<bool>,
+}
+
+impl Default for PreviousSearchContext {
+    fn default() -> Self {
+        Self {
+            place: create_rw_signal(None),
+            place_details: create_rw_signal(None),
+            date_range: create_rw_signal(None),
+            adults: create_rw_signal(0),
+            children: create_rw_signal(0),
+            rooms: create_rw_signal(0),
+            first_time_filled: create_rw_signal(false),
+        }
+    }
 }
 
 impl GlobalStateForLeptos for PreviousSearchContext {}
 
 impl PreviousSearchContext {
     pub fn update(new_ctx: UISearchCtx) {
-        let mut this: Self = expect_context();
+        let this: Self = expect_context();
         // let mut this = Self::get();
-        this.place = new_ctx.place.get_untracked();
-        this.place_details = new_ctx.place_details.get_untracked();
-        this.rooms = new_ctx.guests.rooms.get_untracked();
-        this.children = new_ctx.guests.children.get_untracked();
-        this.adults = new_ctx.guests.adults.get_untracked();
-        log!("[PreviousSearchContext] updated: {:?}", this);
-
-        provide_context(this);
+        this.place.set(new_ctx.place.get_untracked());
+        this.place_details
+            .set(new_ctx.place_details.get_untracked());
+        this.date_range
+            .set(Some(new_ctx.date_range.get_untracked())); // Added missing date_range update
+        this.rooms.set(new_ctx.guests.rooms.get_untracked());
+        this.children.set(new_ctx.guests.children.get_untracked());
+        this.adults.set(new_ctx.guests.adults.get_untracked());
+        log!("[PreviousSearchContext] updated");
     }
 
     pub fn update_first_time_filled(new_ctx: UISearchCtx) {
-        let mut this: Self = expect_context();
+        let this: Self = expect_context();
         Self::update(new_ctx);
-        this.first_time_filled = true;
-        provide_context(this);
+        this.first_time_filled.set(true);
     }
 
     pub fn reset_first_time_filled() {
-        let mut this: Self = expect_context();
-        this.first_time_filled = false;
-        provide_context(this);
+        let this: Self = expect_context();
+        this.first_time_filled.set(false);
     }
 }
 
@@ -236,25 +249,47 @@ pub fn HotelListPage() -> impl IntoView {
                 (None, Default::default(), 0, 0, 0, 0)
             }
         },
-        move |(is_ready_place, _date_range, _adults, _rooms, current_page, page_size)| {
+        move |(is_ready_place, date_range, adults, rooms, current_page, page_size)| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             let search_results_clone = search_list_results.clone();
+
+            // Capture previous context to check for criteria changes
+            let prev_ctx = use_context::<PreviousSearchContext>().unwrap_or_default();
+
             async move {
                 let is_ready = is_ready_place.is_some();
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Async block called with is_ready={}, current_page={}, page_size={}", is_ready, current_page, page_size);
+
+                // Check if core search criteria changed
+                let criteria_changed = is_ready_place != prev_ctx.place.get()
+                    || Some(date_range) != prev_ctx.date_range.get()
+                    || adults != prev_ctx.adults.get()
+                    || rooms != prev_ctx.rooms.get()
+                    || search_ctx_clone.place_details.get() != prev_ctx.place_details.get();
 
                 if !is_ready {
-                    log!("[PAGINATION-DEBUG] [hotel_search_resource] Not ready yet, waiting for search criteria...");
                     return None;
                 }
-
-                log!("[PAGINATION-DEBUG] [hotel_search_resource] Search criteria ready, evaluating pagination requirements...");
 
                 let target_page = current_page.max(INITIAL_PAGE);
                 let effective_page_size = if page_size == 0 { 1 } else { page_size };
 
-                let existing_results = search_results_clone.search_result.get_untracked();
+                // If criteria changed, we must ignore existing results (they are stale)
+                if criteria_changed {
+                    // Clear existing results in the UI immediately to show loading state if desired,
+                    // or just locally ignore them so we fetch fresh data.
+                    // For smoother UX, we might keep showing old results until new ones arrive,
+                    // but logically we need to fetch.
+                    SearchListResults::set_search_results(None);
+                    UIPaginationState::set_pagination_meta(None);
+                }
+
+                let existing_results = if criteria_changed {
+                    None
+                } else {
+                    search_results_clone.search_result.get_untracked()
+                };
+
                 let had_existing_results = existing_results.is_some();
                 let existing_results_count = existing_results
                     .as_ref()

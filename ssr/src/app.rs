@@ -197,6 +197,7 @@ pub fn App() -> impl IntoView {
     provide_context(InputGroupState::default());
 
     provide_context(UIPaginationState::default());
+    provide_context(PreviousSearchContext::default());
 
     provide_context(PreviousSearchContext::default());
     provide_context(UISearchCtx::default());

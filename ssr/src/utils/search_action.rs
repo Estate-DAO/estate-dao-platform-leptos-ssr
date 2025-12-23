@@ -51,7 +51,18 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
             config.navigate_with_params
         );
 
-        if config.reset_search_results {
+        // Check if criteria changed
+        let current_place = search_ctx.place.get_untracked();
+        let current_date_range = search_ctx.date_range.get_untracked();
+        let current_adults = search_ctx.guests.adults.get_untracked();
+        let current_rooms = search_ctx.guests.rooms.get_untracked();
+
+        let criteria_changed = current_place != previous_search_ctx.place.get_untracked()
+            || Some(current_date_range) != previous_search_ctx.date_range.get_untracked()
+            || current_adults != previous_search_ctx.adults.get_untracked()
+            || current_rooms != previous_search_ctx.rooms.get_untracked();
+
+        if config.reset_search_results && criteria_changed {
             SearchListResults::reset();
         }
 
@@ -78,8 +89,25 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
                 .as_ref()
                 .and_then(|p| Some(p.place_id.clone()));
 
+            let place_id_clone = place_id.clone();
             let place_details = if let Some(place_id) = place_id {
-                api_client.get_place_details_by_id(place_id).await
+                // Optimize: Check if we already have details for this place_id
+                // We check against the current 'place' in context because PlaceData doesn't store the ID itself.
+                let current_place = search_ctx.place.get_untracked();
+                let existing_details = search_ctx.place_details.get_untracked();
+
+                if let (Some(place), Some(details)) = (current_place, existing_details) {
+                    if place.place_id == place_id {
+                        log!("Using cached place details for {}", place_id);
+                        Ok(details)
+                    } else {
+                        // Different place, fetch new
+                        api_client.get_place_details_by_id(place_id).await
+                    }
+                } else {
+                    // No details or place mismatch, fetch new
+                    api_client.get_place_details_by_id(place_id).await
+                }
             } else {
                 return;
             };
@@ -124,16 +152,7 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
             };
 
             log!("[hotel_search_resource] hotel_list_url: {}", hotel_list_url);
-            // to track and trigger changes for next resource load
-            PreviousSearchContext::update(search_ctx.clone());
-
-            {
-                let previous_search_ctx = expect_context::<PreviousSearchContext>();
-                log!(
-                    "[hotel_search_resource] previous_search_ctx from search_action: {:?}",
-                    previous_search_ctx
-                );
-            }
+            log!("[hotel_search_resource] hotel_list_url: {}", hotel_list_url);
 
             // Navigate to hotel list page
             // The hotel list page will handle loading data based on query parameters
