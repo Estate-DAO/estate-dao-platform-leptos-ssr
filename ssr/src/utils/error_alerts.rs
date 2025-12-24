@@ -320,17 +320,15 @@ impl ErrorAlertService {
         text_body: &str,
         html_body: &str,
     ) -> Result<(), String> {
-        use axum::http::{HeaderMap, HeaderValue};
         use base64::engine::general_purpose;
         use base64::Engine;
 
-        // Get access token from email client
-        // Note: The email client handles token refresh internally
-        let config = crate::api::consts::EnvVarConfig::try_from_env();
-        let access_token = config
-            .email_client_config
-            .access_token
-            .ok_or("No email access token configured")?;
+        // Get access token from email client (with token refresh)
+        let access_token = self
+            .email_client
+            .get_valid_access_token()
+            .await
+            .map_err(|e| format!("Failed to get access token: {}", e))?;
 
         let boundary = "nofeebooking-alert-boundary";
         let email_raw = format!(
