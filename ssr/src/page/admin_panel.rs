@@ -68,7 +68,7 @@ pub fn AdminPanelPage() -> impl IntoView {
                     })}
                 </div>
             </div>
-            
+
             // Existing DataTable
             <DataTableV3 />
         </div>
