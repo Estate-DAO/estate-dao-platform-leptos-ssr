@@ -54,7 +54,7 @@ cfg_if! {
         use futures::StreamExt;
         use tokio::task;
         use crate::{
-            utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent},
+            utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent, error_alerts::ErrorAlertService},
         };
         use tracing::instrument;
         use axum_extra::extract::cookie::Key;
@@ -76,6 +76,7 @@ cfg_if! {
             pub liteapi_client: &'static LiteApiHTTPClient,
             pub notifier_for_pipeline: &'static Notifier,
             pub cookie_key: Key,
+            pub error_alert_service: &'static ErrorAlertService,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,
             // #[cfg(feature = "ga4")]
