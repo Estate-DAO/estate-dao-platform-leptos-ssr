@@ -9,28 +9,81 @@ pub async fn send_test_error_alert() -> Result<String, ServerFnError> {
 
     let service = get_error_alert_service();
 
-    // Create a test error
-    let test_error = CriticalError::new(
-        ErrorType::BookingProviderFailure {
-            provider: "test".to_string(),
-            hotel_id: Some("TEST-HOTEL-123".to_string()),
-            operation: "admin_test".to_string(),
+    // Create test errors of ALL types to demonstrate the email format
+
+    // 1. JSON Parse Error
+    let json_error = CriticalError::new(
+        ErrorType::JsonParseFailed {
+            json_path: Some("response.data.promotions".to_string()),
+            expected_type: Some("array".to_string()),
+            actual_type: Some("string".to_string()),
         },
-        "This is a TEST error triggered from the admin panel to verify the error alert system is working correctly.",
+        "Failed to parse LiteAPI response: expected array but got string for promotions field",
     )
-    .with_request("POST", "/api/send_test_error_alert")
+    .with_request("GET", "/api/hotels/liteapi/rates?hotel_id=12345")
     .with_source(
-        "ssr/src/page/admin_panel.rs",
-        6,
-        "send_test_error_alert",
+        "ssr/src/api/liteapi/l01_get_hotel_info_rates.rs",
+        107,
+        "deserialize_promotions",
     );
 
-    // Report the error
-    service.report(test_error).await;
+    // 2. HTTP 500 Error
+    let http_error = CriticalError::new(
+        ErrorType::Http500 {
+            status_code: 502,
+            response_body: Some(
+                "{\"error\": \"Bad Gateway\", \"message\": \"Upstream service unavailable\"}"
+                    .to_string(),
+            ),
+        },
+        "External API returned 502 Bad Gateway",
+    )
+    .with_request("POST", "/api/hotels/search")
+    .with_source(
+        "ssr/src/adapters/liteapi_adapter/mod.rs",
+        156,
+        "search_hotels",
+    );
+
+    // 3. Payment Failure
+    let payment_error = CriticalError::new(
+        ErrorType::PaymentFailure {
+            payment_id: Some("PAY-TEST-789".to_string()),
+            provider: "NowPayments".to_string(),
+            failure_reason: Some("Insufficient funds in wallet".to_string()),
+        },
+        "Payment processing failed for booking NFB-2024-12345",
+    )
+    .with_request("POST", "/webhook/nowpayments")
+    .with_user("user@example.com")
+    .with_source("ssr/src/main.rs", 312, "handle_payment_webhook");
+
+    // 4. Booking Provider Failure
+    let booking_error = CriticalError::new(
+        ErrorType::BookingProviderFailure {
+            provider: "liteapi".to_string(),
+            hotel_id: Some("HTL-DEMO-456".to_string()),
+            operation: "block_room".to_string(),
+        },
+        "Room blocking failed: Rate no longer available",
+    )
+    .with_request("POST", "/api/book_room")
+    .with_user("customer@test.com")
+    .with_source(
+        "ssr/src/application_services/booking_service.rs",
+        89,
+        "block_room",
+    );
+
+    // Report all errors
+    service.report(json_error).await;
+    service.report(http_error).await;
+    service.report(payment_error).await;
+    service.report(booking_error).await;
 
     // Flush immediately so the test email goes out now
     match service.flush().await {
-        Ok(_) => Ok("Test error email sent!".to_string()),
+        Ok(_) => Ok("Test email sent with 4 error types!".to_string()),
         Err(e) => Err(ServerFnError::ServerError(format!("Flush failed: {}", e))),
     }
 }
