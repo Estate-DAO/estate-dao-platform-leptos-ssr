@@ -279,7 +279,7 @@ impl ErrorAlertService {
 
         let html = build_alert_email_html(&errors);
         let subject = format!(
-            "🚨 {} Critical Error{} - Nofeebooking",
+            "[ALERT] {} Critical Error{} - Nofeebooking",
             count,
             if count == 1 { "" } else { "s" }
         );
