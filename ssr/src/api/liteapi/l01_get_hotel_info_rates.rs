@@ -8,6 +8,109 @@ use crate::api::liteapi::traits::LiteApiReq;
 use crate::{api::consts::EnvVarConfig, log};
 use reqwest::header::HeaderMap;
 
+/// Custom deserializer for `promotions` that handles both string and array formats.
+/// The LiteAPI sometimes returns promotions as a single string, and sometimes as an array
+/// of objects or strings.
+fn deserialize_promotions<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    use std::fmt;
+
+    struct PromotionsVisitor;
+
+    impl<'de> Visitor<'de> for PromotionsVisitor {
+        type Value = Option<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a string, an array of strings/objects, or null")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if value.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(value.to_string()))
+            }
+        }
+
+        fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if value.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(value))
+            }
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::SeqAccess<'de>,
+        {
+            // Use serde_json::Value to handle any type (string, object, etc.)
+            let mut items: Vec<String> = Vec::new();
+            while let Some(item) = seq.next_element::<serde_json::Value>()? {
+                match item {
+                    serde_json::Value::String(s) if !s.is_empty() => {
+                        items.push(s);
+                    }
+                    serde_json::Value::Object(obj) => {
+                        // Convert object to JSON string for storage
+                        if let Ok(json_str) = serde_json::to_string(&obj) {
+                            items.push(json_str);
+                        }
+                    }
+                    _ => {
+                        // Skip null, empty strings, numbers, booleans, etc.
+                    }
+                }
+            }
+            if items.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(items.join(", ")))
+            }
+        }
+
+        fn visit_map<M>(self, map: M) -> Result<Self::Value, M::Error>
+        where
+            M: de::MapAccess<'de>,
+        {
+            // If promotions is a single object, convert it to JSON string
+            use serde::de::value::MapAccessDeserializer;
+            let obj: serde_json::Value =
+                serde::Deserialize::deserialize(MapAccessDeserializer::new(map))?;
+            if let Ok(json_str) = serde_json::to_string(&obj) {
+                Ok(Some(json_str))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    deserializer.deserialize_any(PromotionsVisitor)
+}
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "mock-provab")] {
         use fake::{Dummy, Fake, Faker};
@@ -103,7 +206,7 @@ pub struct LiteApiRate {
     pub cancellation_policies: super::l03_book::LiteApiCancellationPolicies,
     // #[serde(default)]
     // pub perks: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_promotions")]
     pub promotions: Option<String>,
     // #[serde(rename = "priceType")]
     // pub price_type: String,
