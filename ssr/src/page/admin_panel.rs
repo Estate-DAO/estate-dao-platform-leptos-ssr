@@ -75,4 +75,3 @@ pub fn AdminPanelPage() -> impl IntoView {
     }
     .into_view()
 }
-
