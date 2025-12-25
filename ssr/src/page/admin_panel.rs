@@ -75,15 +75,26 @@ pub async fn send_test_error_alert() -> Result<String, ServerFnError> {
         "block_room",
     );
 
+    // 5. Other / Generic Error
+    let other_error = CriticalError::new(
+        ErrorType::Other {
+            category: "Database".to_string(),
+            details: Some("Connection pool exhausted".to_string()),
+        },
+        "Failed to acquire database connection from pool",
+    )
+    .with_source("ssr/src/db.rs", 42, "get_connection");
+
     // Report all errors
     service.report(json_error).await;
     service.report(http_error).await;
     service.report(payment_error).await;
     service.report(booking_error).await;
+    service.report(other_error).await;
 
     // Flush immediately so the test email goes out now
     match service.flush().await {
-        Ok(_) => Ok("Test email sent with 4 error types!".to_string()),
+        Ok(_) => Ok("Test email sent with 5 error types!".to_string()),
         Err(e) => Err(ServerFnError::ServerError(format!("Flush failed: {}", e))),
     }
 }

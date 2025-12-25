@@ -46,6 +46,10 @@ pub enum ErrorType {
         hotel_id: Option<String>,
         operation: String,
     },
+    Other {
+        category: String,
+        details: Option<String>,
+    },
 }
 
 impl ErrorType {
@@ -55,6 +59,7 @@ impl ErrorType {
             ErrorType::Http500 { .. } => "HTTP 500 Error",
             ErrorType::PaymentFailure { .. } => "Payment Failure",
             ErrorType::BookingProviderFailure { .. } => "Booking Provider Failure",
+            ErrorType::Other { .. } => "Critical Error",
         }
     }
 
@@ -64,6 +69,7 @@ impl ErrorType {
             ErrorType::Http500 { .. } => "🟠",
             ErrorType::PaymentFailure { .. } => "💳",
             ErrorType::BookingProviderFailure { .. } => "🏨",
+            ErrorType::Other { .. } => "⚠️",
         }
     }
 
@@ -139,6 +145,16 @@ impl ErrorType {
                 ];
                 if let Some(hid) = hotel_id {
                     parts.push(format!("<strong>Hotel:</strong> {}", html_escape(hid)));
+                }
+                parts.join(" | ")
+            }
+            ErrorType::Other { category, details } => {
+                let mut parts = vec![format!(
+                    "<strong>Category:</strong> {}",
+                    html_escape(category)
+                )];
+                if let Some(d) = details {
+                    parts.push(format!("<strong>Details:</strong> {}", html_escape(d)));
                 }
                 parts.join(" | ")
             }
