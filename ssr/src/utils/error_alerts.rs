@@ -178,6 +178,7 @@ pub struct CriticalError {
     // Request context
     pub request_url: Option<String>,
     pub request_method: Option<String>,
+    pub request_body: Option<String>,
     pub user_context: Option<String>,
 
     // Source location
@@ -199,6 +200,7 @@ impl CriticalError {
             app_url: APP_URL.clone(),
             request_url: None,
             request_method: None,
+            request_body: None,
             user_context: None,
             file_path: None,
             line_number: None,
@@ -233,6 +235,11 @@ impl CriticalError {
 
     pub fn with_stack_trace(mut self, trace: impl Into<String>) -> Self {
         self.stack_trace = Some(trace.into());
+        self
+    }
+
+    pub fn with_request_body(mut self, body: impl Into<String>) -> Self {
+        self.request_body = Some(body.into());
         self
     }
 }
@@ -407,7 +414,11 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
     sorted_groups.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
 
     let total_count = errors.len();
-    let timestamp = Utc::now().format("%b %d, %Y at %I:%M %p UTC").to_string();
+    let ist_offset = chrono::FixedOffset::east_opt(5 * 3600 + 30 * 60).unwrap(); // IST = UTC+5:30
+    let timestamp = Utc::now()
+        .with_timezone(&ist_offset)
+        .format("%b %d, %Y at %I:%M %p IST")
+        .to_string();
 
     // Get app URL from first error (they should all be the same)
     let app_url = errors
@@ -425,7 +436,12 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
 
         let mut errors_html = String::new();
         for (i, error) in type_errors.iter().enumerate() {
-            let time = error.timestamp.format("%I:%M:%S %p").to_string();
+            let ist_offset = chrono::FixedOffset::east_opt(5 * 3600 + 30 * 60).unwrap();
+            let time = error
+                .timestamp
+                .with_timezone(&ist_offset)
+                .format("%I:%M:%S %p")
+                .to_string();
             let url = error.request_url.as_deref().unwrap_or("-");
             let method = error.request_method.as_deref().unwrap_or("");
             let user = error.user_context.as_deref().unwrap_or("anonymous");
@@ -463,6 +479,22 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
                 String::new()
             };
 
+            let request_body_html = if let Some(body) = &error.request_body {
+                if !body.is_empty() {
+                    format!(
+                        "<details style=\"margin-top:8px;\">\
+                         <summary style=\"cursor:pointer;color:#6366f1;font-size:12px;\">Request Body</summary>\
+                         <pre style=\"font-size:11px;background:#f3f4f6;padding:8px;border-radius:4px;overflow-x:auto;margin-top:4px;\">{}</pre>\
+                         </details>",
+                        html_escape(body)
+                    )
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+
             let type_details = error.error_type.details_html();
 
             errors_html.push_str(&format!(
@@ -481,6 +513,7 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
                         {message}
                     </div>
                     {source_info}
+                    {request_body_html}
                     {stack_trace_html}
                 </div>"#,
                 method = html_escape(method),
@@ -490,6 +523,7 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
                 type_details = type_details,
                 message = html_escape(&error.message),
                 source_info = source_info,
+                request_body_html = request_body_html,
                 stack_trace_html = stack_trace_html,
             ));
         }
