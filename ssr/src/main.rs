@@ -438,6 +438,10 @@ cfg_if! {
                 .layer(
                     middleware::from_fn_with_state(res.clone(),selective_auth_middleware)
                 )
+                // Global error alert middleware - captures 5xx errors
+                .layer(
+                    middleware::from_fn_with_state(res.clone(), estate_fe::utils::error_middleware::error_alert_middleware)
+                )
                 .with_state(res);
 
 
