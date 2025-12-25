@@ -93,6 +93,13 @@ impl AppStateBuilder {
             tracing::info!("ErrorAlertService background flush started (5-minute interval)");
         }
 
+        // Initialize place search cache (max 200 entries, 5-minute TTL)
+        let place_search_cache = moka::future::Cache::builder()
+            .max_capacity(200)
+            .time_to_live(std::time::Duration::from_secs(300)) // 5 minutes
+            .build();
+        tracing::info!("PlaceSearchCache initialized (200 entries max, 5-minute TTL)");
+
         let app_state = AppState {
             leptos_options: self.leptos_options,
             routes: self.routes,
@@ -102,6 +109,7 @@ impl AppStateBuilder {
             notifier_for_pipeline: self.notifier_for_pipeline,
             cookie_key: cookie_key.clone(),
             error_alert_service,
+            place_search_cache,
             // private_cookie_jar: Arc::new(Mutex::new(PrivateCookieJar::new(cookie_key)))
         };
 
