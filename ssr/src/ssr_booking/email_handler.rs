@@ -404,6 +404,19 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
         Ok(current_time >= config.token_expiry)
     }
 
+    /// Get a valid access token, refreshing if expired
+    pub async fn get_valid_access_token(&self) -> anyhow::Result<String> {
+        // Check if the access token is expired
+        if self.is_token_expired()? {
+            self.refresh_token().await?;
+        }
+
+        let config = self.get_config()?;
+        config
+            .access_token
+            .ok_or_else(|| anyhow!("No access token available"))
+    }
+
     /// Send OTP verification email
     pub async fn send_otp_email(
         &self,

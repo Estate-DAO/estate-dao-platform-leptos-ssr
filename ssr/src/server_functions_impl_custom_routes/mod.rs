@@ -40,6 +40,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 
 // Import all route modules
+mod admin_error_alerts;
 mod admin_payment;
 mod block_room;
 mod book_room;
@@ -258,6 +259,14 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/admin/update_payment",
             post(admin_payment::update_payment_details).options(handle_options),
+        )
+        .route(
+            "/admin/test_error_alert",
+            post(admin_error_alerts::send_test_error_alert).options(handle_options),
+        )
+        .route(
+            "/admin/flush_error_alerts",
+            post(admin_error_alerts::flush_pending_errors).options(handle_options),
         )
         .route(
             "/send_otp_email_api",

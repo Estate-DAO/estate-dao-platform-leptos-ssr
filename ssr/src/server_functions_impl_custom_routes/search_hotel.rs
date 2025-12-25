@@ -5,7 +5,11 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    adapters::LiteApiAdapter, application_services::HotelService, domain::DomainHotelSearchCriteria,
+    adapters::LiteApiAdapter,
+    application_services::HotelService,
+    domain::DomainHotelSearchCriteria,
+    ports::hotel_provider_port::ProviderError,
+    utils::error_alerts::{CriticalError, ErrorType},
 };
 use serde_json::json;
 
@@ -24,17 +28,68 @@ pub async fn search_hotel_api_server_fn_route(
     let hotel_service = HotelService::new(liteapi_adapter);
 
     // <!-- Perform the hotel search -->
-    let result = hotel_service.search_hotels(request).await.map_err(|e| {
-        tracing::error!("Hotel search failed: {:?}", e);
-        let error_response = json!({
-            "error": format!("Hotel search failed: {}", e)
-        });
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            error_response.to_string(),
-        )
-            .into_response()
-    })?;
+    let result = hotel_service
+        .search_hotels(request.clone())
+        .await
+        .map_err(|e| {
+            tracing::error!("Hotel search failed: {:?}", e);
+
+            // Report critical error to alert service
+            let error_alert_service = state.error_alert_service;
+            let error_message = format!("{}", e);
+            let error_type = match &e {
+                ProviderError(details)
+                    if matches!(
+                        details.api_error,
+                        estate_fe::api::ApiError::JsonParseFailed(_)
+                    ) =>
+                {
+                    let json_path = if let estate_fe::api::ApiError::JsonParseFailed(ref msg) =
+                        details.api_error
+                    {
+                        // Try to extract path from error message (format: "path: xxx - inner: ...")
+                        msg.split(" - inner:")
+                            .next()
+                            .map(|s| s.replace("path: ", ""))
+                            .map(String::from)
+                    } else {
+                        None
+                    };
+                    ErrorType::JsonParseFailed {
+                        json_path,
+                        expected_type: None,
+                        actual_type: None,
+                    }
+                }
+                _ => ErrorType::BookingProviderFailure {
+                    provider: "liteapi".to_string(),
+                    hotel_id: None,
+                    operation: "search".to_string(),
+                },
+            };
+
+            let critical_error = CriticalError::new(error_type, error_message.clone())
+                .with_request("POST", "/server_fn_api/search_hotel_api")
+                .with_source(
+                    "ssr/src/server_functions_impl_custom_routes/search_hotel.rs",
+                    28,
+                    "search_hotel_api_server_fn_route",
+                );
+
+            // Spawn a task to report the error (non-blocking)
+            tokio::spawn(async move {
+                error_alert_service.report(critical_error).await;
+            });
+
+            let error_response = json!({
+                "error": format!("Hotel search failed: {}", e)
+            });
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                error_response.to_string(),
+            )
+                .into_response()
+        })?;
 
     // <!-- Filter out hotels with zero pricing -->
     let filtered_result = filter_hotels_with_valid_pricing(result);

@@ -54,11 +54,15 @@ cfg_if! {
         use futures::StreamExt;
         use tokio::task;
         use crate::{
-            utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent},
+            utils::{notifier_event::NotifierEvent, tokio_event_bus::Event as BusEvent, error_alerts::ErrorAlertService},
         };
         use tracing::instrument;
         use axum_extra::extract::cookie::Key;
         use axum_extra::extract::cookie::PrivateCookieJar;
+        use crate::domain::DomainPlacesResponse;
+
+        /// Cache for place search results - max 200 entries, 5 minute TTL
+        pub type PlaceSearchCache = moka::future::Cache<String, DomainPlacesResponse>;
 
         #[derive(FromRef, Clone, Debug)]
         pub struct AppState {
@@ -76,6 +80,8 @@ cfg_if! {
             pub liteapi_client: &'static LiteApiHTTPClient,
             pub notifier_for_pipeline: &'static Notifier,
             pub cookie_key: Key,
+            pub error_alert_service: &'static ErrorAlertService,
+            pub place_search_cache: PlaceSearchCache,
             // #[cfg(feature = "oauth-ssr")]
             // pub google_oauth_clients: crate::auth::core_clients::CoreClients,
             // #[cfg(feature = "ga4")]

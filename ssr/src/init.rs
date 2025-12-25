@@ -7,8 +7,9 @@ use leptos::LeptosOptions;
 use leptos_router::RouteListing;
 
 use crate::{
-    api::consts::EnvVarConfig, ssr_booking::PipelineLockManager, utils::notifier::Notifier,
-    view_state_layer::AppState,
+    api::consts::EnvVarConfig, ssr_booking::email_handler::EmailClient,
+    ssr_booking::PipelineLockManager, utils::error_alerts::ErrorAlertService,
+    utils::notifier::Notifier, view_state_layer::AppState,
 };
 
 use crate::api::liteapi::LiteApiHTTPClient;
@@ -16,6 +17,7 @@ use once_cell::sync::OnceCell;
 
 static LITEAPI_CLIENT: OnceCell<LiteApiHTTPClient> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
+static ERROR_ALERT_SERVICE: OnceCell<ErrorAlertService> = OnceCell::new();
 
 pub fn initialize_liteapi_client() {
     LITEAPI_CLIENT
@@ -35,6 +37,20 @@ pub fn initialize_notifier() {
 
 pub fn get_notifier() -> &'static Notifier {
     NOTIFIER.get().expect("Failed to get Notifier")
+}
+
+pub fn initialize_error_alert_service(env_config: &EnvVarConfig) {
+    let email_client = EmailClient::new(env_config.email_client_config.clone());
+    let service = ErrorAlertService::new(email_client);
+    ERROR_ALERT_SERVICE
+        .set(service)
+        .expect("Failed to initialize ErrorAlertService");
+}
+
+pub fn get_error_alert_service() -> &'static ErrorAlertService {
+    ERROR_ALERT_SERVICE
+        .get()
+        .expect("Failed to get ErrorAlertService")
 }
 
 pub struct AppStateBuilder {
@@ -66,6 +82,24 @@ impl AppStateBuilder {
             .expect("COOKIE_KEY must be valid base64");
         let cookie_key = Key::from(&cookie_key_bytes);
 
+        // Initialize error alert service
+        initialize_error_alert_service(&env_var_config);
+        let error_alert_service = get_error_alert_service();
+
+        // Start background flush task for error alerts
+        {
+            let service_arc = Arc::new(error_alert_service.clone());
+            service_arc.start_background_flush();
+            tracing::info!("ErrorAlertService background flush started (5-minute interval)");
+        }
+
+        // Initialize place search cache (max 200 entries, 5-minute TTL)
+        let place_search_cache = moka::future::Cache::builder()
+            .max_capacity(200)
+            .time_to_live(std::time::Duration::from_secs(300)) // 5 minutes
+            .build();
+        tracing::info!("PlaceSearchCache initialized (200 entries max, 5-minute TTL)");
+
         let app_state = AppState {
             leptos_options: self.leptos_options,
             routes: self.routes,
@@ -74,6 +108,8 @@ impl AppStateBuilder {
             liteapi_client: self.liteapi_client,
             notifier_for_pipeline: self.notifier_for_pipeline,
             cookie_key: cookie_key.clone(),
+            error_alert_service,
+            place_search_cache,
             // private_cookie_jar: Arc::new(Mutex::new(PrivateCookieJar::new(cookie_key)))
         };
 

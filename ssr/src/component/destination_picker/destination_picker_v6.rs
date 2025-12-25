@@ -114,37 +114,82 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
         }
     });
 
-    // Debounced search function
+    // Debounced search function - returns Option to distinguish success/failure
     let perform_search = create_action(move |prefix: &String| {
         let prefix = prefix.clone();
         let api_client = api_client.clone();
         async move {
             if prefix.trim().is_empty() {
-                return Vec::new();
+                return Some(Vec::new());
             }
 
             match api_client.search_places(prefix).await {
-                Ok(cities) => cities,
+                Ok(cities) => Some(cities),
                 Err(e) => {
-                    log!("City search error: {}", e);
-                    Vec::new()
+                    log!("City search error (will keep existing results): {}", e);
+                    None // Return None on failure to indicate "keep existing"
                 }
             }
         }
     });
 
-    // Watch for search action completion
-    create_effect(move |_| {
-        if let Some(results) = perform_search.value().get() {
-            set_search_results.set(results);
+    // Watch for search action completion - only update if API succeeded
+    create_effect(move |prev_results: Option<Vec<Place>>| {
+        let current_results = search_results.get_untracked();
+        let prev = prev_results.unwrap_or_else(|| current_results.clone());
+
+        if let Some(api_response) = perform_search.value().get() {
             set_is_loading.set(false);
+
+            match api_response {
+                Some(new_results) => {
+                    // API succeeded - use new results
+                    set_search_results.set(new_results.clone());
+                    return new_results;
+                }
+                None => {
+                    // API failed - keep existing results, optionally filter them
+                    let query = search_text.get_untracked().to_lowercase();
+                    if !prev.is_empty() && !query.is_empty() {
+                        // Filter existing results to match new query
+                        let filtered: Vec<_> = prev
+                            .iter()
+                            .filter(|p| {
+                                p.display_name.to_lowercase().contains(&query)
+                                    || p.formatted_address.to_lowercase().contains(&query)
+                            })
+                            .cloned()
+                            .collect();
+
+                        if !filtered.is_empty() {
+                            log!(
+                                "API failed, showing {} filtered results from cache",
+                                filtered.len()
+                            );
+                            set_search_results.set(filtered.clone());
+                            return filtered;
+                        }
+                    }
+                    // Keep existing results as-is
+                    log!("API failed, keeping {} existing results", prev.len());
+                    return prev;
+                }
+            }
         }
+
+        current_results
     });
 
     // Watch for search action pending state
     create_effect(move |_| {
         set_is_loading.set(perform_search.pending().get());
     });
+
+    // Debounce timeout handle
+    let debounce_handle = create_rw_signal::<Option<i32>>(None);
+
+    // Minimum characters before searching
+    const MIN_SEARCH_CHARS: usize = 3;
 
     // Event handlers
     let handle_input = move |ev: leptos::ev::Event| {
@@ -153,14 +198,44 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
         set_is_open.set(true);
         set_active_index.set(0);
 
-        // Trigger search with debouncing
-        if !value.trim().is_empty() {
-            set_is_loading.set(true);
-            perform_search.dispatch(value);
-        } else {
+        // Clear any existing debounce timeout
+        if let Some(handle) = debounce_handle.get_untracked() {
+            web_sys::window().unwrap().clear_timeout_with_handle(handle);
+        }
+
+        let trimmed = value.trim();
+
+        // Check minimum characters
+        if trimmed.len() < MIN_SEARCH_CHARS {
             set_search_results.set(Vec::new());
             set_is_loading.set(false);
+            debounce_handle.set(None);
+            return;
         }
+
+        // Skip if already pending (prevent concurrent requests)
+        if perform_search.pending().get_untracked() {
+            // Still set up debounce for after the current request completes
+            set_is_loading.set(true);
+        }
+
+        // Set up debounced search (300ms)
+        let search_value = value.clone();
+        let callback = wasm_bindgen::prelude::Closure::once(Box::new(move || {
+            perform_search.dispatch(search_value);
+        }) as Box<dyn FnOnce()>);
+
+        let handle = web_sys::window()
+            .unwrap()
+            .set_timeout_with_callback_and_timeout_and_arguments_0(
+                callback.as_ref().unchecked_ref(),
+                600, // 600ms debounce (increased from 300ms)
+            )
+            .unwrap();
+
+        callback.forget(); // Prevent cleanup until timeout fires
+        debounce_handle.set(Some(handle));
+        set_is_loading.set(true);
     };
 
     let handle_focus = move |_: leptos::ev::FocusEvent| {

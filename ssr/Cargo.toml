@@ -158,6 +158,7 @@ send_wrapper = { version = "0.6.0", features = ["futures"] }
 
 ## workspace crates 
 telemetry_axum = { workspace = true, optional = true }
+moka = { version = "0.12.12", features = ["future"] }
 
 
 # bg-ractor as optional dependency (only for SSR builds)
