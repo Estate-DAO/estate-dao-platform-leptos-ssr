@@ -287,6 +287,11 @@ impl ErrorAlertService {
         });
     }
 
+    /// Get the count of pending errors waiting to be flushed
+    pub async fn pending_count(&self) -> usize {
+        self.errors.lock().await.len()
+    }
+
     /// Flush all batched errors and send email
     pub async fn flush(&self) -> Result<(), String> {
         let errors = {
