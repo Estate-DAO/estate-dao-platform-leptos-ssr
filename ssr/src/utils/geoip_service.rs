@@ -116,6 +116,16 @@ pub fn extract_client_ip(headers: &axum::http::HeaderMap) -> Option<String> {
         }
     }
 
+    // Try Fly-Client-IP (Fly.io)
+    if let Some(fly_ip) = headers.get("fly-client-ip") {
+        if let Ok(ip) = fly_ip.to_str() {
+            let ip = ip.trim();
+            if !ip.is_empty() {
+                return Some(ip.to_string());
+            }
+        }
+    }
+
     None
 }
 
