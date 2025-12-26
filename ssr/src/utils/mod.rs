@@ -30,6 +30,7 @@ cfg_if::cfg_if! {
         pub mod otp_storage;
         pub mod error_alerts;
         pub mod error_middleware;
+        pub mod geoip_service;
     }
 }
 

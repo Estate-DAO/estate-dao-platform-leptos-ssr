@@ -1,21 +1,36 @@
+use crate::utils::geoip_service::{extract_client_ip, extract_user_agent, lookup_ip};
 use crate::view_state_layer::AppState;
 use axum::{
     body::{to_bytes, Body, Bytes},
-    extract::State,
+    extract::{ConnectInfo, State},
     http::Request,
     middleware::Next,
     response::Response,
 };
+use std::net::SocketAddr;
 
 /// Middleware to intercept responses and report 5xx/429 errors with request/response data
 pub async fn error_alert_middleware(
     State(state): State<AppState>,
+    connect_info: Option<ConnectInfo<SocketAddr>>,
     request: Request<Body>,
     next: Next,
 ) -> Response {
     let method = request.method().clone();
     let uri = request.uri().clone();
     let headers = request.headers().clone();
+
+    // Extract client info from headers first (proxy headers take precedence)
+    // Fall back to direct connection IP if no proxy headers
+    let client_ip =
+        extract_client_ip(&headers).or_else(|| connect_info.map(|ci| ci.0.ip().to_string()));
+    let user_agent = extract_user_agent(&headers);
+
+    // Look up location from IP (won't work for localhost/private IPs)
+    let location = client_ip
+        .as_ref()
+        .and_then(|ip| lookup_ip(ip))
+        .map(|loc| loc.to_string());
 
     // Capture request body (limited to 10KB to avoid memory issues)
     let (parts, body) = request.into_parts();
@@ -92,7 +107,8 @@ pub async fn error_alert_middleware(
                 &error_msg,
             )
             .with_request(&method.to_string(), &uri.to_string())
-            .with_request_body(&req_body_display);
+            .with_request_body(&req_body_display)
+            .with_client_info(client_ip, user_agent, location);
 
             // Add stack trace if available (requires RUST_BACKTRACE=1)
             if !stack_trace.is_empty() && !stack_trace.contains("disabled backtrace") {

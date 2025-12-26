@@ -18,6 +18,8 @@ COPY target/release/hash.txt .
 COPY target/site ./site
 COPY city.json ./city.json
 COPY city.parquet ./city.parquet
+COPY ip_db.mmdb.gz ./ip_db.mmdb.gz
+RUN gzip -df ./ip_db.mmdb.gz
 
 ENV LEPTOS_ENV="production"
 ENV RUST_LOG="debug,hyper=info,tower=info"

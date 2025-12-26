@@ -93,6 +93,9 @@ impl AppStateBuilder {
             tracing::info!("ErrorAlertService background flush started (5-minute interval)");
         }
 
+        // Initialize GeoIP database for IP location lookups
+        crate::utils::geoip_service::init_geoip("ip_db.mmdb");
+
         // Initialize place search cache (max 200 entries, 5-minute TTL)
         let place_search_cache = moka::future::Cache::builder()
             .max_capacity(200)
