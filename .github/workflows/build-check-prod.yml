@@ -95,3 +95,4 @@ jobs:
             target/release/hash.txt
             city.json
             city.parquet
+            ip_db.mmdb.gz
