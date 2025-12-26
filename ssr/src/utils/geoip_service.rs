@@ -10,17 +10,27 @@ static GEOIP_READER: OnceCell<Reader<Vec<u8>>> = OnceCell::new();
 #[derive(Debug, Clone, Default)]
 pub struct GeoLocation {
     pub city: Option<String>,
+    pub state: Option<String>,
     pub country: Option<String>,
     pub country_code: Option<String>,
 }
 
 impl std::fmt::Display for GeoLocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match (&self.city, &self.country) {
-            (Some(city), Some(country)) => write!(f, "{}, {}", city, country),
-            (None, Some(country)) => write!(f, "{}", country),
-            (Some(city), None) => write!(f, "{}", city),
-            (None, None) => write!(f, "Unknown"),
+        // Build location string: City, State, Country (omit any that are None)
+        let parts: Vec<&str> = [
+            self.city.as_deref(),
+            self.state.as_deref(),
+            self.country.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        if parts.is_empty() {
+            write!(f, "Unknown")
+        } else {
+            write!(f, "{}", parts.join(", "))
         }
     }
 }
@@ -53,12 +63,20 @@ pub fn lookup_ip(ip_str: &str) -> Option<GeoLocation> {
     // Parse IP address
     let ip: IpAddr = ip_str.parse().ok()?;
 
-    // Look up in database - use turbofish to specify the deserialization type
+    // Look up in database
     let city: geoip2::City = reader.lookup(ip).ok()??;
 
     let city_name = city
         .city
         .and_then(|c| c.names)
+        .and_then(|names| names.get("en").cloned())
+        .map(|s| s.to_string());
+
+    // Get state/subdivision (first one, usually the most specific)
+    let state_name = city
+        .subdivisions
+        .and_then(|subs| subs.into_iter().next())
+        .and_then(|sub| sub.names)
         .and_then(|names| names.get("en").cloned())
         .map(|s| s.to_string());
 
@@ -76,6 +94,7 @@ pub fn lookup_ip(ip_str: &str) -> Option<GeoLocation> {
 
     Some(GeoLocation {
         city: city_name,
+        state: state_name,
         country: country_name,
         country_code,
     })

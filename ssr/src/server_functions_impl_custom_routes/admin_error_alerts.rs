@@ -6,32 +6,46 @@
 
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 use estate_fe::utils::error_alerts::{CriticalError, ErrorType};
+use estate_fe::utils::geoip_service::{extract_client_ip, extract_user_agent, lookup_ip};
 use estate_fe::view_state_layer::AppState;
 use serde_json::json;
 
 /// Send a test error email to verify the alert system is working
 #[axum::debug_handler]
-pub async fn send_test_error_alert(State(state): State<AppState>) -> Result<Response, Response> {
+pub async fn send_test_error_alert(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Response, Response> {
     tracing::info!("Admin triggered test error alert");
 
-    // Create a test error
+    // Extract client info from headers
+    let client_ip = extract_client_ip(&headers);
+    let user_agent = extract_user_agent(&headers);
+    let location = client_ip
+        .as_ref()
+        .and_then(|ip| lookup_ip(ip))
+        .map(|loc| loc.to_string());
+
+    // Create a test error with client info
     let test_error = CriticalError::new(
         ErrorType::BookingProviderFailure {
-            provider: "test".to_string(),
-            hotel_id: Some("TEST-HOTEL-123".to_string()),
-            operation: "admin_test".to_string(),
+            provider: "liteapi".to_string(),
+            hotel_id: Some("HTL-DEMO-456".to_string()),
+            operation: "block_room".to_string(),
         },
-        "This is a TEST error triggered from the admin panel to verify the error alert system is working correctly.",
+        "Room blocking failed: Rate no longer available",
     )
-    .with_request("POST", "/server_fn_api/admin/test_error_alert")
+    .with_request("POST", "/api/book_room")
+    .with_user("customer@test.com")
+    .with_client_info(client_ip, user_agent, location)
     .with_source(
-        "ssr/src/server_functions_impl_custom_routes/admin_error_alerts.rs",
-        24,
-        "send_test_error_alert",
+        "ssr/src/application_services/booking_service.rs",
+        89,
+        "block_room",
     );
 
     // Report the error
