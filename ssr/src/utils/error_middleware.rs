@@ -8,41 +8,39 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use axum_extra::extract::cookie::Key;
+use axum_extra::extract::cookie::SignedCookieJar;
 use std::net::SocketAddr;
-use tower_cookies::cookie::{Cookie as RawCookie, CookieJar};
 
 const SESSION_COOKIE: &str = "session";
 
-/// Extract user email from session cookie
-fn extract_user_email_from_request(headers: &http::HeaderMap, key: &Key) -> Option<String> {
-    // Get the Cookie header
-    let cookie_header = headers.get(http::header::COOKIE)?;
-    let cookie_str = cookie_header.to_str().ok()?;
-
-    // Parse cookies and reconstruct the jar
-    let mut jar = CookieJar::new();
-    for cookie_str in cookie_str.split(';') {
-        if let Ok(cookie) = RawCookie::parse(cookie_str.trim().to_string()) {
-            jar.add_original(cookie);
+/// Extract user email from SignedCookieJar (same approach as oauth.rs get_current_user)
+fn extract_user_email_from_jar(jar: &SignedCookieJar) -> Option<String> {
+    jar.get(SESSION_COOKIE).and_then(|cookie| {
+        match serde_json::from_str::<OidcUser>(cookie.value()) {
+            Ok(user) => {
+                tracing::debug!(
+                    user_email = ?user.email,
+                    user_sub = %user.sub,
+                    "Successfully extracted user from session cookie"
+                );
+                user.email
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    cookie_value_len = cookie.value().len(),
+                    "Failed to parse OidcUser from session cookie"
+                );
+                None
+            }
         }
-    }
-
-    // Get the signed session cookie (key is compatible with cookie crate's Key)
-    // Note: axum_extra::extract::cookie::Key re-exports cookie::Key
-    if let Some(signed_cookie) = jar.signed(key).get(SESSION_COOKIE) {
-        // Parse the JSON value to get user info
-        if let Ok(user) = serde_json::from_str::<OidcUser>(signed_cookie.value()) {
-            return user.email;
-        }
-    }
-
-    None
+    })
 }
 
 /// Middleware to intercept responses and report 5xx/429 errors with request/response data
 pub async fn error_alert_middleware(
     State(state): State<AppState>,
+    jar: SignedCookieJar,
     connect_info: Option<ConnectInfo<SocketAddr>>,
     request: Request<Body>,
     next: Next,
@@ -51,8 +49,14 @@ pub async fn error_alert_middleware(
     let uri = request.uri().clone();
     let headers = request.headers().clone();
 
-    // Extract user email from session cookie
-    let user_email = extract_user_email_from_request(&headers, &state.cookie_key);
+    // Extract user email from signed session cookie (same as oauth.rs get_current_user)
+    let user_email = extract_user_email_from_jar(&jar);
+
+    if user_email.is_some() {
+        tracing::debug!(user_email = ?user_email, "User email extracted for error context");
+    } else {
+        tracing::debug!("No user session found - will report as anonymous if error occurs");
+    }
 
     // Extract client info from headers first (proxy headers take precedence)
     // Fall back to direct connection IP if no proxy headers
