@@ -9,7 +9,10 @@ use crate::liteapi::models::places::{
     LiteApiGetPlaceRequest, LiteApiGetPlaceResponse, LiteApiGetPlacesRequest,
     LiteApiGetPlacesResponse,
 };
-use crate::liteapi::models::search::{LiteApiHotelRatesRequest, LiteApiHotelRatesResponse};
+use crate::liteapi::models::search::{
+    LiteApiHotelRatesRequest, LiteApiHotelRatesResponse, LiteApiMinRatesRequest,
+    LiteApiMinRatesResponse,
+};
 use crate::ports::{ProviderError, ProviderErrorKind, ProviderSteps};
 use reqwest::{Client, StatusCode};
 use serde::de::DeserializeOwned;
@@ -247,8 +250,67 @@ impl LiteApiClient {
         crate::liteapi::models::hotel_details::LiteApiSingleHotelDetailResponse,
         ProviderError,
     > {
-        let path = format!("/data/hotel/{}", hotel_id);
-        self.get(&path, ProviderSteps::HotelDetails).await
+        // LiteAPI expects hotelId as a query parameter, not path parameter
+        let url = self.build_url("/data/hotel");
+
+        let api_key_prefix = if self.api_key.len() > 8 {
+            &self.api_key[..8]
+        } else {
+            &self.api_key
+        };
+
+        tracing::debug!(
+            target: "hotel_providers::liteapi",
+            url = %url,
+            hotel_id = %hotel_id,
+            api_key_prefix = %api_key_prefix,
+            "GET request for hotel static details"
+        );
+
+        let resp = self
+            .client
+            .get(&url)
+            .header("X-API-Key", &self.api_key)
+            .query(&[("hotelId", hotel_id)])
+            .send()
+            .await
+            .map_err(|e| {
+                ProviderError::network("LiteAPI", ProviderSteps::HotelDetails, e.to_string())
+            })?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            tracing::error!(
+                target: "hotel_providers::liteapi",
+                status = %status,
+                response_body = %text,
+                "LiteAPI error response"
+            );
+            return Err(self.map_api_error(status, text, ProviderSteps::HotelDetails));
+        }
+
+        // Get response text first for debugging
+        let response_text = resp.text().await.map_err(|e| {
+            ProviderError::parse_error(
+                "LiteAPI",
+                ProviderSteps::HotelDetails,
+                format!("Failed to read response: {}", e),
+            )
+        })?;
+
+        // Try to parse the response
+        serde_json::from_str(&response_text).map_err(|e| {
+            let preview: String = response_text.chars().take(500).collect();
+            tracing::error!(
+                target: "hotel_providers::liteapi",
+                path = "/data/hotel",
+                error = %e,
+                response_preview = %preview,
+                "Failed to parse LiteAPI response"
+            );
+            ProviderError::parse_error("LiteAPI", ProviderSteps::HotelDetails, e.to_string())
+        })
     }
 
     pub async fn get_booking_details(
