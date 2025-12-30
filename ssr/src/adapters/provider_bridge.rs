@@ -2,27 +2,32 @@
 //!
 //! This module provides adapters that wrap the existing SSR `LiteApiAdapter`
 //! to implement the traits from the `hotel-providers` crate.
+//!
+//! With the shared `hotel-types` crate, both SSR and hotel-providers use the
+//! same domain types - no conversion needed!
 
-use std::sync::Arc;
-
-use hotel_providers::domain as new_domain;
 use hotel_providers::ports::{
-    HotelProviderPort as NewHotelProviderPort, PlaceProviderPort as NewPlaceProviderPort,
-    ProviderError as NewProviderError, ProviderErrorKind, ProviderSteps,
-    UISearchFilters as NewUISearchFilters,
+    HotelProviderPort as ProviderHotelPort, PlaceProviderPort as ProviderPlacePort, ProviderError,
+    ProviderErrorKind, ProviderSteps, UISearchFilters as ProviderUISearchFilters,
+};
+
+// Both crates use the same types from hotel-types
+use hotel_types::{
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
+    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelInfoCriteria,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainHotelStaticDetails,
+    DomainPlaceDetails, DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload,
+    DomainPrice, DomainRoomOption,
 };
 
 use crate::adapters::LiteApiAdapter;
 use crate::api::liteapi::LiteApiHTTPClient;
-use crate::application_services::filter_types::UISearchFilters as OldUISearchFilters;
-use crate::domain as old_domain;
-use crate::ports::hotel_provider_port::ProviderError as OldProviderError;
-use crate::ports::traits::{
-    HotelProviderPort as OldHotelProviderPort, PlaceProviderPort as OldPlaceProviderPort,
-};
+use crate::application_services::filter_types::UISearchFilters as SsrUISearchFilters;
+use crate::ports::hotel_provider_port::ProviderError as SsrProviderError;
+use crate::ports::traits::{HotelProviderPort as SsrHotelPort, PlaceProviderPort as SsrPlacePort};
 
 /// Bridge adapter that wraps the existing LiteApiAdapter and implements
-/// the new hotel-providers HotelProviderPort trait
+/// the hotel-providers traits for registry integration.
 #[derive(Clone)]
 pub struct LiteApiProviderBridge {
     inner: LiteApiAdapter,
@@ -45,39 +50,41 @@ impl LiteApiProviderBridge {
     }
 }
 
-// Type conversions between old SSR domain types and new hotel-providers domain types
-// For now, we keep both type systems in sync and do simple conversions
+// =============================================================================
+// Type Conversions
+// =============================================================================
+// With hotel-types, domain types are shared - only filter/error types need conversion
 
-impl From<OldUISearchFilters> for NewUISearchFilters {
-    fn from(old: OldUISearchFilters) -> Self {
-        NewUISearchFilters {
-            min_star_rating: old.min_star_rating,
-            max_price_per_night: old.max_price_per_night,
-            min_price_per_night: old.min_price_per_night,
-            amenities: old.amenities,
-            property_types: old.property_types,
-            popular_filters: old.popular_filters,
-            hotel_name_search: old.hotel_name_search,
+impl From<SsrUISearchFilters> for ProviderUISearchFilters {
+    fn from(ssr: SsrUISearchFilters) -> Self {
+        ProviderUISearchFilters {
+            min_star_rating: ssr.min_star_rating,
+            max_price_per_night: ssr.max_price_per_night,
+            min_price_per_night: ssr.min_price_per_night,
+            amenities: ssr.amenities,
+            property_types: ssr.property_types,
+            popular_filters: ssr.popular_filters,
+            hotel_name_search: ssr.hotel_name_search,
         }
     }
 }
 
-impl From<NewUISearchFilters> for OldUISearchFilters {
-    fn from(new: NewUISearchFilters) -> Self {
-        OldUISearchFilters {
-            min_star_rating: new.min_star_rating,
-            max_price_per_night: new.max_price_per_night,
-            min_price_per_night: new.min_price_per_night,
-            amenities: new.amenities,
-            property_types: new.property_types,
-            popular_filters: new.popular_filters,
-            hotel_name_search: new.hotel_name_search,
+impl From<ProviderUISearchFilters> for SsrUISearchFilters {
+    fn from(provider: ProviderUISearchFilters) -> Self {
+        SsrUISearchFilters {
+            min_star_rating: provider.min_star_rating,
+            max_price_per_night: provider.max_price_per_night,
+            min_price_per_night: provider.min_price_per_night,
+            amenities: provider.amenities,
+            property_types: provider.property_types,
+            popular_filters: provider.popular_filters,
+            hotel_name_search: provider.hotel_name_search,
         }
     }
 }
 
-fn convert_old_provider_error_to_new(old: OldProviderError) -> NewProviderError {
-    let step = match old.0.error_step {
+fn convert_ssr_error_to_provider(ssr_err: SsrProviderError) -> ProviderError {
+    let step = match ssr_err.0.error_step {
         crate::ports::hotel_provider_port::ProviderSteps::PlaceSearch => ProviderSteps::PlaceSearch,
         crate::ports::hotel_provider_port::ProviderSteps::PlaceDetails => {
             ProviderSteps::PlaceDetails
@@ -98,108 +105,20 @@ fn convert_old_provider_error_to_new(old: OldProviderError) -> NewProviderError 
         }
     };
 
-    NewProviderError::other(format!("{:?}", old.0.provider_name), step, old.to_string())
+    ProviderError::other(
+        format!("{:?}", ssr_err.0.provider_name),
+        step,
+        ssr_err.to_string(),
+    )
 }
 
-// Note: These conversion functions would need to be implemented fully in a production system.
-// For now, we rely on serde_json roundtrip for type-compatible structures.
-
-fn convert_search_criteria_new_to_old(
-    new: new_domain::DomainHotelSearchCriteria,
-) -> old_domain::DomainHotelSearchCriteria {
-    // Serde roundtrip for compatible structures
-    let json = serde_json::to_string(&new).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_search_result_old_to_new(
-    old: old_domain::DomainHotelListAfterSearch,
-) -> new_domain::DomainHotelListAfterSearch {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_static_details_old_to_new(
-    old: old_domain::DomainHotelStaticDetails,
-) -> new_domain::DomainHotelStaticDetails {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_info_criteria_new_to_old(
-    new: new_domain::DomainHotelInfoCriteria,
-) -> old_domain::DomainHotelInfoCriteria {
-    let json = serde_json::to_string(&new).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_room_options_old_to_new(
-    old: Vec<old_domain::DomainRoomOption>,
-) -> Vec<new_domain::DomainRoomOption> {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_block_request_new_to_old(
-    new: new_domain::DomainBlockRoomRequest,
-) -> old_domain::DomainBlockRoomRequest {
-    let json = serde_json::to_string(&new).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_block_response_old_to_new(
-    old: old_domain::DomainBlockRoomResponse,
-) -> new_domain::DomainBlockRoomResponse {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_book_request_new_to_old(
-    new: new_domain::DomainBookRoomRequest,
-) -> old_domain::DomainBookRoomRequest {
-    let json = serde_json::to_string(&new).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_book_response_old_to_new(
-    old: old_domain::DomainBookRoomResponse,
-) -> new_domain::DomainBookRoomResponse {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_get_booking_request_new_to_old(
-    new: new_domain::DomainGetBookingRequest,
-) -> old_domain::DomainGetBookingRequest {
-    let json = serde_json::to_string(&new).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_get_booking_response_old_to_new(
-    old: old_domain::DomainGetBookingResponse,
-) -> new_domain::DomainGetBookingResponse {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
-
-fn convert_price_map(
-    old: std::collections::HashMap<String, old_domain::DomainPrice>,
-) -> std::collections::HashMap<String, new_domain::DomainPrice> {
-    old.into_iter()
-        .map(|(k, v)| {
-            (
-                k,
-                new_domain::DomainPrice {
-                    room_price: v.room_price,
-                    currency_code: v.currency_code,
-                },
-            )
-        })
-        .collect()
-}
+// =============================================================================
+// HotelProviderPort Implementation
+// =============================================================================
+// All domain types are now from hotel-types - no conversions needed!
 
 #[async_trait::async_trait]
-impl NewHotelProviderPort for LiteApiProviderBridge {
+impl ProviderHotelPort for LiteApiProviderBridge {
     fn name(&self) -> &'static str {
         "LiteAPI"
     }
@@ -210,137 +129,83 @@ impl NewHotelProviderPort for LiteApiProviderBridge {
 
     async fn search_hotels(
         &self,
-        criteria: new_domain::DomainHotelSearchCriteria,
-        ui_filters: NewUISearchFilters,
-    ) -> Result<new_domain::DomainHotelListAfterSearch, NewProviderError> {
-        let old_criteria = convert_search_criteria_new_to_old(criteria);
-        let old_filters: OldUISearchFilters = ui_filters.into();
-
+        criteria: DomainHotelSearchCriteria,
+        ui_filters: ProviderUISearchFilters,
+    ) -> Result<DomainHotelListAfterSearch, ProviderError> {
         self.inner
-            .search_hotels(old_criteria, old_filters)
+            .search_hotels(criteria, ui_filters.into())
             .await
-            .map(convert_search_result_old_to_new)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn get_hotel_static_details(
         &self,
         hotel_id: &str,
-    ) -> Result<new_domain::DomainHotelStaticDetails, NewProviderError> {
+    ) -> Result<DomainHotelStaticDetails, ProviderError> {
         self.inner
             .get_hotel_static_details(hotel_id)
             .await
-            .map(convert_static_details_old_to_new)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn get_hotel_rates(
         &self,
-        criteria: new_domain::DomainHotelInfoCriteria,
-    ) -> Result<Vec<new_domain::DomainRoomOption>, NewProviderError> {
-        let old_criteria = convert_info_criteria_new_to_old(criteria);
-
+        criteria: DomainHotelInfoCriteria,
+    ) -> Result<Vec<DomainRoomOption>, ProviderError> {
         self.inner
-            .get_hotel_rates(old_criteria)
+            .get_hotel_rates(criteria)
             .await
-            .map(convert_room_options_old_to_new)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn get_min_rates(
         &self,
-        criteria: new_domain::DomainHotelSearchCriteria,
+        criteria: DomainHotelSearchCriteria,
         hotel_ids: Vec<String>,
-    ) -> Result<std::collections::HashMap<String, new_domain::DomainPrice>, NewProviderError> {
-        let old_criteria = convert_search_criteria_new_to_old(criteria);
-
+    ) -> Result<std::collections::HashMap<String, DomainPrice>, ProviderError> {
         self.inner
-            .get_min_rates(old_criteria, hotel_ids)
+            .get_min_rates(criteria, hotel_ids)
             .await
-            .map(convert_price_map)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn block_room(
         &self,
-        block_request: new_domain::DomainBlockRoomRequest,
-    ) -> Result<new_domain::DomainBlockRoomResponse, NewProviderError> {
-        let old_request = convert_block_request_new_to_old(block_request);
-
+        request: DomainBlockRoomRequest,
+    ) -> Result<DomainBlockRoomResponse, ProviderError> {
         self.inner
-            .block_room(old_request)
+            .block_room(request)
             .await
-            .map(convert_block_response_old_to_new)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn book_room(
         &self,
-        book_request: new_domain::DomainBookRoomRequest,
-    ) -> Result<new_domain::DomainBookRoomResponse, NewProviderError> {
-        let old_request = convert_book_request_new_to_old(book_request);
-
+        request: DomainBookRoomRequest,
+    ) -> Result<DomainBookRoomResponse, ProviderError> {
         self.inner
-            .book_room(old_request)
+            .book_room(request)
             .await
-            .map(convert_book_response_old_to_new)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn get_booking_details(
         &self,
-        request: new_domain::DomainGetBookingRequest,
-    ) -> Result<new_domain::DomainGetBookingResponse, NewProviderError> {
-        let old_request = convert_get_booking_request_new_to_old(request);
-
+        request: DomainGetBookingRequest,
+    ) -> Result<DomainGetBookingResponse, ProviderError> {
         self.inner
-            .get_booking_details(old_request)
+            .get_booking_details(request)
             .await
-            .map(convert_get_booking_response_old_to_new)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 }
 
-// Place provider bridge
-fn convert_places_search_payload(
-    new: new_domain::DomainPlacesSearchPayload,
-) -> old_domain::DomainPlacesSearchPayload {
-    old_domain::DomainPlacesSearchPayload {
-        text_query: new.text_query,
-    }
-}
-
-fn convert_places_response(
-    old: old_domain::DomainPlacesResponse,
-) -> new_domain::DomainPlacesResponse {
-    new_domain::DomainPlacesResponse {
-        data: old
-            .data
-            .into_iter()
-            .map(|p| new_domain::DomainPlace {
-                place_id: p.place_id,
-                display_name: p.display_name,
-                formatted_address: p.formatted_address,
-            })
-            .collect(),
-    }
-}
-
-fn convert_place_details_payload(
-    new: new_domain::DomainPlaceDetailsPayload,
-) -> old_domain::DomainPlaceDetailsPayload {
-    old_domain::DomainPlaceDetailsPayload {
-        place_id: new.place_id,
-    }
-}
-
-fn convert_place_details(old: old_domain::DomainPlaceDetails) -> new_domain::DomainPlaceDetails {
-    let json = serde_json::to_string(&old).expect("Serialization should work");
-    serde_json::from_str(&json).expect("Deserialization should work for compatible types")
-}
+// =============================================================================
+// PlaceProviderPort Implementation
+// =============================================================================
 
 #[async_trait::async_trait]
-impl NewPlaceProviderPort for LiteApiProviderBridge {
+impl ProviderPlacePort for LiteApiProviderBridge {
     fn name(&self) -> &'static str {
         "LiteAPI"
     }
@@ -351,27 +216,21 @@ impl NewPlaceProviderPort for LiteApiProviderBridge {
 
     async fn search_places(
         &self,
-        criteria: new_domain::DomainPlacesSearchPayload,
-    ) -> Result<new_domain::DomainPlacesResponse, NewProviderError> {
-        let old_criteria = convert_places_search_payload(criteria);
-
+        criteria: DomainPlacesSearchPayload,
+    ) -> Result<DomainPlacesResponse, ProviderError> {
         self.inner
-            .search_places(old_criteria)
+            .search_places(criteria)
             .await
-            .map(convert_places_response)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 
     async fn get_single_place_details(
         &self,
-        payload: new_domain::DomainPlaceDetailsPayload,
-    ) -> Result<new_domain::DomainPlaceDetails, NewProviderError> {
-        let old_payload = convert_place_details_payload(payload);
-
+        payload: DomainPlaceDetailsPayload,
+    ) -> Result<DomainPlaceDetails, ProviderError> {
         self.inner
-            .get_single_place_details(old_payload)
+            .get_single_place_details(payload)
             .await
-            .map(convert_place_details)
-            .map_err(convert_old_provider_error_to_new)
+            .map_err(convert_ssr_error_to_provider)
     }
 }

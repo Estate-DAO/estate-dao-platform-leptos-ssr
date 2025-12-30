@@ -657,25 +657,26 @@ impl BlockRoomUIState {
 
 impl GlobalStateForLeptos for BlockRoomUIState {}
 
-impl From<DomainHotelStaticDetails> for DomainHotelDetails {
-    fn from(static_details: DomainHotelStaticDetails) -> Self {
-        DomainHotelDetails {
-            hotel_name: static_details.hotel_name,
-            hotel_code: static_details.hotel_code,
-            star_rating: static_details.star_rating,
-            rating: static_details.rating,
-            review_count: static_details.review_count,
-            categories: static_details.categories,
-            description: static_details.description,
-            hotel_facilities: static_details.hotel_facilities,
-            address: static_details.address,
-            images: static_details.images,
-            amenities: static_details.amenities,
-            all_rooms: vec![], // No room rates in static details
-            checkin: "".to_string(),
-            checkout: "".to_string(),
-            search_info: None,
-            search_criteria: None,
-        }
+/// Convert DomainHotelStaticDetails to DomainHotelDetails
+pub fn static_details_to_hotel_details(
+    static_details: DomainHotelStaticDetails,
+) -> DomainHotelDetails {
+    DomainHotelDetails {
+        hotel_name: static_details.hotel_name,
+        hotel_code: static_details.hotel_code,
+        star_rating: static_details.star_rating,
+        rating: static_details.rating,
+        review_count: static_details.review_count,
+        categories: static_details.categories,
+        description: static_details.description,
+        hotel_facilities: static_details.hotel_facilities,
+        address: static_details.address,
+        images: static_details.images,
+        amenities: static_details.amenities,
+        all_rooms: vec![], // No room rates in static details
+        checkin: "".to_string(),
+        checkout: "".to_string(),
+        search_info: None,
+        search_criteria: None,
     }
 }

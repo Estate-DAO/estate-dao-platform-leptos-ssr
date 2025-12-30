@@ -163,6 +163,7 @@ maxminddb = "0.26.0"
 
 # Multi-provider support crate
 hotel-providers = { path = "../hotel-providers", features = ["mock"] }
+hotel-types = { path = "../hotel-types" }
 
 # duck-searcher for city search functionality
 # duck-searcher = { workspace = true, optional = true }

@@ -4,10 +4,10 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::domain::{
-    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest,
-    DomainBookRoomResponse, DomainGetBookingRequest, DomainGetBookingResponse,
-    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria,
-    DomainHotelStaticDetails, DomainPrice, DomainRoomOption,
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
+    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelInfoCriteria,
+    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainHotelStaticDetails, DomainPrice,
+    DomainRoomOption,
 };
 use crate::ports::ProviderError;
 

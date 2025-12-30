@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::DomainCancellationPolicies;
+use crate::DomainCancellationPolicies;
 
 // BOOKING DOMAIN TYPES
 // Domain types for hotel booking operations - provider-agnostic

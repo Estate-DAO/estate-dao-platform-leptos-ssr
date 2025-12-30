@@ -1,9 +1,11 @@
-mod hotel_search_types;
-pub use hotel_search_types::*;
+//! Core travel types - Re-exports from hotel-types plus SSR-specific extensions
+//!
+//! Domain types are now defined in the shared `hotel-types` crate.
+//! This module re-exports them and adds SSR-specific error types.
 
-mod booking_types;
-pub use booking_types::*;
+// Re-export all domain types from the shared hotel-types crate
+pub use hotel_types::*;
 
-mod impl_struct;
-
+// SSR-specific error types
 mod errors;
+pub use errors::*;
