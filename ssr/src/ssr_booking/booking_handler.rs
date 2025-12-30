@@ -21,7 +21,7 @@ use crate::utils::backend_default_impl::decode_room_id_with_occupancy;
 use crate::utils::booking_id::PaymentIdentifiers;
 
 // New imports for v1 implementation
-use crate::adapters::liteapi_adapter::LiteApiAdapter;
+use crate::adapters::LiteApiProviderBridge;
 use crate::application_services::hotel_service::HotelService;
 use crate::domain::{
     BookingError, DomainBookRoomRequest, DomainBookRoomResponse, DomainBookingContext,
@@ -547,10 +547,10 @@ async fn store_booking_error_in_backend(
     Ok(())
 }
 
-/// Initialize hotel service with liteapi adapter
+/// Initialize hotel service with liteapi bridge
 #[instrument(name = "create_hotel_service_with_liteapi")]
-fn create_hotel_service_with_liteapi() -> HotelService<LiteApiAdapter> {
-    HotelService::init(crate::init::get_liteapi_adapter())
+fn create_hotel_service_with_liteapi() -> HotelService<LiteApiProviderBridge> {
+    HotelService::init(crate::init::get_liteapi_bridge())
 }
 
 /// New version of book_room_and_update_backend with full hotel service integration

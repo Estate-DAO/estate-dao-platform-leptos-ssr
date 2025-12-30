@@ -10,7 +10,6 @@ use estate_fe::{
     // adapters::ProvabAdapter,
     api::{
         canister::add_booking::call_add_booking_backend,
-        liteapi::LiteApiHTTPClient,
         payments::{
             domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse},
             service::PaymentServiceImpl,

@@ -2,10 +2,10 @@
 
 use async_trait::async_trait;
 
-use crate::domain::{
+use crate::ports::ProviderError;
+use crate::{
     DomainPlaceDetails, DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload,
 };
-use crate::ports::ProviderError;
 
 /// The trait that all place/location providers must implement
 #[async_trait]

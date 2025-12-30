@@ -1,12 +1,6 @@
-//! Provider ports module - defines the interface for hotel providers
+//! Provider ports module - re-exports from hotel-types
 //!
-//! This module contains the traits that providers must implement,
-//! as well as error types for provider operations.
+//! This module re-exports the port traits and types from hotel-types
+//! for backwards compatibility.
 
-mod error;
-mod hotel_port;
-mod place_port;
-
-pub use error::{ProviderError, ProviderErrorKind, ProviderSteps};
-pub use hotel_port::{HotelProviderPort, UISearchFilters};
-pub use place_port::PlaceProviderPort;
+pub use hotel_types::ports::*;

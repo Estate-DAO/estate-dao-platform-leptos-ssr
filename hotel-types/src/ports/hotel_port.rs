@@ -3,13 +3,13 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-use crate::domain::{
+use crate::ports::ProviderError;
+use crate::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
     DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelInfoCriteria,
     DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainHotelStaticDetails, DomainPrice,
     DomainRoomOption,
 };
-use crate::ports::ProviderError;
 
 /// Filter criteria for hotel search - passed alongside search criteria
 #[derive(Debug, Clone, Default)]

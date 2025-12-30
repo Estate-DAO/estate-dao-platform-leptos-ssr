@@ -5,13 +5,14 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    api::{canister::add_booking::call_add_booking_backend, liteapi::LiteApiPrebookResponse},
+    api::canister::add_booking::call_add_booking_backend,
     domain::{
         BookingError, DomainCurrencyAmount, DomainDestination, DomainHotelDetails, DomainRoomData,
         DomainRoomOption, DomainSelectedDateRange,
     },
     utils::{app_reference::BookingId, booking_backend_conversions::BookingBackendConversions},
 };
+use hotel_providers::liteapi::models::booking::LiteApiPrebookResponse;
 use serde_json::json;
 
 use super::{

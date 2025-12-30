@@ -2222,6 +2222,7 @@ dependencies = [
 name = "hotel-types"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "serde",
 ]

@@ -40,15 +40,15 @@ pub async fn search_hotel_api_server_fn_route(
             let error_type = match &e {
                 ProviderError(details)
                     if matches!(
-                        details.api_error,
-                        estate_fe::api::ApiError::JsonParseFailed(_)
+                        details.error_kind,
+                        hotel_types::ports::ProviderErrorKind::ParseError
                     ) =>
                 {
-                    let json_path = if let estate_fe::api::ApiError::JsonParseFailed(ref msg) =
-                        details.api_error
-                    {
-                        // Try to extract path from error message (format: "path: xxx - inner: ...")
-                        msg.split(" - inner:")
+                    // For parse errors, try to extract path from error message
+                    let json_path = if details.message.contains("path:") {
+                        details
+                            .message
+                            .split(" - inner:")
                             .next()
                             .map(|s| s.replace("path: ", ""))
                             .map(String::from)
