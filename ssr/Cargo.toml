@@ -161,9 +161,8 @@ telemetry_axum = { workspace = true, optional = true }
 moka = { version = "0.12.12", features = ["future"] }
 maxminddb = "0.26.0"
 
-
-# bg-ractor as optional dependency (only for SSR builds)
-# bg-ractor = { workspace = true, optional = true }
+# Multi-provider support crate
+hotel-providers = { path = "../hotel-providers", features = ["mock"] }
 
 # duck-searcher for city search functionality
 # duck-searcher = { workspace = true, optional = true }

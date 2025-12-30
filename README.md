@@ -1,88 +1,86 @@
+# Estate DAO - Hotel Booking Platform
 
-## Install pre commit hooks 
-Run `bash scripts/install_pre_commit.sh` from the repo root.
+A Leptos-based hotel booking platform with multi-provider support and fallback capabilities.
 
-# Leptos Axum Starter Template
+## Project Structure
 
-This is a template for use with the [Leptos](https://github.com/leptos-rs/leptos) web framework and the [cargo-leptos](https://github.com/akesson/cargo-leptos) tool using [Axum](https://github.com/tokio-rs/axum).
+```
+estate-dao-platform-leptos-ssr/
+├── ssr/                    # Main Leptos SSR application
+│   ├── src/
+│   │   ├── adapters/       # Provider adapters (LiteAPI, bridge)
+│   │   ├── api/            # API clients and server functions
+│   │   ├── application_services/  # HotelService, PlaceService
+│   │   ├── domain/         # Domain types
+│   │   └── init.rs         # Global initialization
+├── hotel-providers/        # Multi-provider abstraction crate
+│   ├── src/
+│   │   ├── domain/         # Provider-agnostic types
+│   │   ├── ports/          # Provider traits (HotelProviderPort, PlaceProviderPort)
+│   │   ├── adapters/       # Mock provider, LiteAPI placeholder
+│   │   ├── composite.rs    # Fallback logic
+│   │   └── registry.rs     # Provider configuration
+└── telemetry_axum/         # Telemetry utilities
+```
 
-## Creating your template repo
+## Quick Start
 
-If you don't have `cargo-leptos` installed you can install it with
+### Install pre-commit hooks
+```bash
+bash scripts/install_pre_commit.sh
+```
 
+### Install dependencies
 ```bash
 cargo install cargo-leptos --locked
+rustup target add wasm32-unknown-unknown
 ```
 
-Then run
-```bash
-cargo leptos new --git leptos-rs/start-axum
-```
-
-to generate a new project template.
-
-```bash
-cd estate-fe
-```
-
-to go to your newly created project.  
-Feel free to explore the project structure, but the best place to start with your application code is in `src/app.rs`.  
-Addtionally, Cargo.toml may need updating as new versions of the dependencies are released, especially if things are not working after a `cargo update`.
-
-## Running your project
-
+### Run development server
 ```bash
 cargo leptos watch
 ```
 
-## Installing Additional Tools
-
-By default, `cargo-leptos` uses `nightly` Rust, `cargo-generate`, and `sass`. If you run into any trouble, you may need to install one or more of these tools.
-
-1. `rustup toolchain install nightly --allow-downgrade` - make sure you have Rust nightly
-2. `rustup target add wasm32-unknown-unknown` - add the ability to compile Rust to WebAssembly
-3. `cargo install cargo-generate` - install `cargo-generate` binary (should be installed automatically in future)
-4. `npm install -g sass` - install `dart-sass` (should be optional in future
-
-## Compiling for Release
+### Build for production
 ```bash
 cargo leptos build --release
 ```
 
-Will generate your server binary in target/server/release and your site package in target/site
+## Architecture
 
-## Testing Your Project
+See [hotel-providers/DESIGN.md](hotel-providers/DESIGN.md) for the multi-provider architecture documentation.
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| `hotel-providers` | Multi-provider abstraction with fallback support |
+| `LiteApiAdapter` | Primary hotel/place provider (LiteAPI) |
+| `LiteApiProviderBridge` | Bridge between SSR and hotel-providers traits |
+| `ProviderRegistry` | Configures and manages providers |
+
+## Environment Variables
+
 ```bash
-cargo leptos end-to-end
-```
-
-```bash
-cargo leptos end-to-end --release
-```
-
-Cargo-leptos uses Playwright as the end-to-end test tool.  
-Tests are located in end2end/tests directory.
-
-## Executing a Server on a Remote Machine Without the Toolchain
-After running a `cargo leptos build --release` the minimum files needed are:
-
-1. The server binary located in `target/server/release`
-2. The `site` directory and all files within located in `target/site`
-
-Copy these files to your remote server. The directory structure should be:
-```text
-estate-fe
-site/
-```
-Set the following environment variables (updating for your project as needed):
-```text
 LEPTOS_OUTPUT_NAME="estate-fe"
 LEPTOS_SITE_ROOT="site"
 LEPTOS_SITE_PKG_DIR="pkg"
 LEPTOS_SITE_ADDR="127.0.0.1:3000"
 LEPTOS_RELOAD_PORT="3001"
 ```
-Finally, run the server binary.
+
+## Testing
+
+```bash
+cargo leptos end-to-end
+cargo leptos end-to-end --release
+```
+
+## Deployment
+
+After `cargo leptos build --release`, copy:
+1. Server binary: `target/server/release/estate-fe`
+2. Site directory: `target/site/`
 
 
 

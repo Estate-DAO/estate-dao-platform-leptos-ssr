@@ -550,9 +550,7 @@ async fn store_booking_error_in_backend(
 /// Initialize hotel service with liteapi adapter
 #[instrument(name = "create_hotel_service_with_liteapi")]
 fn create_hotel_service_with_liteapi() -> HotelService<LiteApiAdapter> {
-    let liteapi_client = crate::api::liteapi::client::LiteApiHTTPClient::default();
-    let liteapi_adapter = LiteApiAdapter::new(liteapi_client);
-    HotelService::init(liteapi_adapter)
+    HotelService::init(crate::init::get_liteapi_adapter())
 }
 
 /// New version of book_room_and_update_backend with full hotel service integration

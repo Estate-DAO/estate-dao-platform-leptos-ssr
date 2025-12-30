@@ -12,10 +12,13 @@ use crate::{
     utils::notifier::Notifier, view_state_layer::AppState,
 };
 
+use crate::adapters::LiteApiProviderBridge;
 use crate::api::liteapi::LiteApiHTTPClient;
+use hotel_providers::ProviderRegistry;
 use once_cell::sync::OnceCell;
 
 static LITEAPI_CLIENT: OnceCell<LiteApiHTTPClient> = OnceCell::new();
+static PROVIDER_REGISTRY: OnceCell<Arc<ProviderRegistry>> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
 static ERROR_ALERT_SERVICE: OnceCell<ErrorAlertService> = OnceCell::new();
 
@@ -27,6 +30,34 @@ pub fn initialize_liteapi_client() {
 
 pub fn get_liteapi_client() -> &'static LiteApiHTTPClient {
     LITEAPI_CLIENT.get().expect("Failed to get LiteAPI client")
+}
+
+pub fn initialize_provider_registry() {
+    let client = get_liteapi_client().clone();
+    let bridge = LiteApiProviderBridge::from_client(client);
+
+    let registry = ProviderRegistry::builder()
+        .with_hotel_provider(bridge.clone())
+        .with_place_provider(bridge)
+        .build();
+
+    PROVIDER_REGISTRY
+        .set(Arc::new(registry))
+        .expect("Failed to initialize provider registry");
+}
+
+pub fn get_provider_registry() -> Arc<ProviderRegistry> {
+    PROVIDER_REGISTRY
+        .get()
+        .expect("Failed to get provider registry")
+        .clone()
+}
+
+/// Get a LiteApiAdapter from the global client.
+/// This is the primary way to get a hotel/place provider for server functions.
+/// It uses the globally initialized LiteAPI HTTP client.
+pub fn get_liteapi_adapter() -> crate::adapters::LiteApiAdapter {
+    crate::adapters::LiteApiAdapter::new(get_liteapi_client().clone())
 }
 
 pub fn initialize_notifier() {
@@ -64,6 +95,7 @@ impl AppStateBuilder {
     pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
         initialize_liteapi_client();
         initialize_notifier();
+        initialize_provider_registry();
 
         Self {
             leptos_options,

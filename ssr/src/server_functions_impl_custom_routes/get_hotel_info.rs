@@ -5,7 +5,7 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    adapters::LiteApiAdapter, application_services::HotelService, domain::DomainHotelInfoCriteria,
+    application_services::HotelService, domain::DomainHotelInfoCriteria, init::get_liteapi_adapter,
 };
 use serde_json::json;
 
@@ -20,8 +20,8 @@ pub async fn get_hotel_info_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainHotelInfoCriteria = parse_json_request(&body)?;
 
-    // <!-- Create the hotel service with LiteApiAdapter -->
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    // <!-- Create the hotel service with LiteApiAdapter from global client -->
+    let liteapi_adapter = get_liteapi_adapter();
     let hotel_service = HotelService::new(liteapi_adapter);
 
     // <!-- Get hotel information -->

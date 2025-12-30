@@ -1,5 +1,5 @@
 [workspace]
-members = ["ssr", "telemetry_axum"]
+members = ["ssr", "telemetry_axum", "hotel-providers"]
 resolver = "2"
 
 [workspace.package]
