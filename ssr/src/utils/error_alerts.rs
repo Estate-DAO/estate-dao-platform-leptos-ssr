@@ -181,6 +181,11 @@ pub struct CriticalError {
     pub request_body: Option<String>,
     pub user_context: Option<String>,
 
+    // Client info
+    pub client_ip: Option<String>,
+    pub user_agent: Option<String>,
+    pub location: Option<String>,
+
     // Source location
     pub file_path: Option<String>,
     pub line_number: Option<u32>,
@@ -202,6 +207,9 @@ impl CriticalError {
             request_method: None,
             request_body: None,
             user_context: None,
+            client_ip: None,
+            user_agent: None,
+            location: None,
             file_path: None,
             line_number: None,
             function_name: None,
@@ -218,6 +226,18 @@ impl CriticalError {
 
     pub fn with_user(mut self, user: impl Into<String>) -> Self {
         self.user_context = Some(user.into());
+        self
+    }
+
+    pub fn with_client_info(
+        mut self,
+        ip: Option<String>,
+        user_agent: Option<String>,
+        location: Option<String>,
+    ) -> Self {
+        self.client_ip = ip;
+        self.user_agent = user_agent;
+        self.location = location;
         self
     }
 
@@ -502,12 +522,35 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
 
             let type_details = error.error_type.details_html();
 
+            // Build client info HTML
+            let client_info_html = {
+                let ip = error.client_ip.as_deref().unwrap_or("Unknown");
+                let location = error.location.as_deref().unwrap_or("Unknown");
+                let ua = error.user_agent.as_deref().unwrap_or("Unknown");
+                // Truncate user agent if too long
+                let ua_display = if ua.len() > 80 {
+                    format!("{}...", &ua[..80])
+                } else {
+                    ua.to_string()
+                };
+                format!(
+                    r#"<div style="font-size:12px;color:#6b7280;margin-bottom:4px;padding:6px;background:#f3f4f6;border-radius:4px;">
+                        <strong>IP:</strong> {ip} &nbsp;|&nbsp; <strong>Location:</strong> {location}<br/>
+                        <strong>Device:</strong> {ua}
+                    </div>"#,
+                    ip = html_escape(ip),
+                    location = html_escape(location),
+                    ua = html_escape(&ua_display),
+                )
+            };
+
             errors_html.push_str(&format!(
                 r#"<div style="padding:12px;background:#f9fafb;border-radius:8px;margin-bottom:8px;border-left:3px solid #6366f1;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                         <span style="font-weight:600;color:#111827;">{method} {url}</span>
                         <span style="font-size:12px;color:#6b7280;">{time}</span>
                     </div>
+                    {client_info_html}
                     <div style="font-size:13px;color:#374151;margin-bottom:4px;">
                         <strong>User:</strong> {user}
                     </div>
@@ -524,6 +567,7 @@ fn build_alert_email_html(errors: &[CriticalError]) -> String {
                 method = html_escape(method),
                 url = html_escape(url),
                 time = time,
+                client_info_html = client_info_html,
                 user = html_escape(user),
                 type_details = type_details,
                 message = html_escape(&error.message),
