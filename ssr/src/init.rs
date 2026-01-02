@@ -6,6 +6,7 @@ use base64::{engine::general_purpose, Engine as _};
 use leptos::LeptosOptions;
 use leptos_router::RouteListing;
 
+use crate::api::consts::LITEAPI_ROOM_MAPPING;
 use crate::{
     api::consts::EnvVarConfig, ssr_booking::email_handler::EmailClient,
     ssr_booking::PipelineLockManager, utils::error_alerts::ErrorAlertService,
@@ -42,7 +43,7 @@ pub fn initialize_liteapi_driver() {
     }
 
     let client = LiteApiClient::new(api_key, None);
-    let driver = LiteApiDriver::new(client);
+    let driver = LiteApiDriver::new(client, *LITEAPI_ROOM_MAPPING);
 
     LITEAPI_DRIVER
         .set(driver)

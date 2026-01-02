@@ -1,4 +1,27 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Helper to deserialize a field that can be either a string or an integer into Option<String>
+mod string_or_i64 {
+    use serde::{self, Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum StringOrInt {
+            String(String),
+            Int(i64),
+        }
+
+        let opt: Option<StringOrInt> = Option::deserialize(deserializer)?;
+        Ok(opt.map(|v| match v {
+            StringOrInt::String(s) => s,
+            StringOrInt::Int(i) => i.to_string(),
+        }))
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiteApiHotelRatesRequest {
@@ -78,7 +101,11 @@ pub struct LiteApiRate {
     pub adult_count: i32,
     #[serde(rename = "childCount", default)]
     pub child_count: i32,
-    #[serde(rename = "mappedRoomId")]
+    #[serde(
+        rename = "mappedRoomId",
+        default,
+        deserialize_with = "string_or_i64::deserialize"
+    )]
     pub mapped_room_id: Option<String>,
     #[serde(rename = "boardType")]
     pub board_type: Option<String>,

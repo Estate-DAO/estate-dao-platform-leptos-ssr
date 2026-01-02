@@ -16,11 +16,15 @@ use std::collections::HashMap;
 #[derive(Clone, Debug)]
 pub struct LiteApiDriver {
     pub client: LiteApiClient,
+    pub room_mapping: bool,
 }
 
 impl LiteApiDriver {
-    pub fn new(client: LiteApiClient) -> Self {
-        Self { client }
+    pub fn new(client: LiteApiClient, room_mapping: bool) -> Self {
+        Self {
+            client,
+            room_mapping,
+        }
     }
 }
 
@@ -62,6 +66,7 @@ impl HotelProviderPort for LiteApiDriver {
         let rates_req = LiteApiMapper::map_domain_info_to_liteapi_rates(
             &rates_criteria,
             self.client.currency(),
+            self.room_mapping,
         )?;
         // We use client.get_hotel_rates directly to get raw response for pricing merging
         match self.client.get_hotel_rates(&rates_req).await {
@@ -161,24 +166,39 @@ impl HotelProviderPort for LiteApiDriver {
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<Vec<DomainRoomOption>, ProviderError> {
-        let req =
-            LiteApiMapper::map_domain_info_to_liteapi_rates(&criteria, self.client.currency())?;
+        let req = LiteApiMapper::map_domain_info_to_liteapi_rates(
+            &criteria,
+            self.client.currency(),
+            self.room_mapping,
+        )?;
         let resp = self.client.get_hotel_rates(&req).await?;
         Ok(LiteApiMapper::map_liteapi_rates_response_to_domain(resp))
     }
 
     async fn get_min_rates(
         &self,
-        _criteria: DomainHotelSearchCriteria,
+        criteria: DomainHotelSearchCriteria,
         hotel_ids: Vec<String>,
     ) -> Result<HashMap<String, DomainPrice>, ProviderError> {
         if hotel_ids.is_empty() {
             return Ok(HashMap::new());
         }
-        // use LiteApiMapper to map criteria to MinRatesRequest
-        // I haven't implemented mapper for MinRatesRequest yet.
-        // But I added the model.
-        Ok(HashMap::new()) // Stub
+
+        // Map request
+        let req = LiteApiMapper::map_domain_search_to_liteapi_min_rates(
+            &criteria,
+            hotel_ids,
+            self.client.currency(),
+        )?;
+
+        // Call API
+        let resp = self.client.get_min_rates(&req).await?;
+
+        // Map response
+        Ok(LiteApiMapper::map_liteapi_min_rates_response_to_domain(
+            resp,
+            self.client.currency(),
+        ))
     }
 
     async fn block_room(

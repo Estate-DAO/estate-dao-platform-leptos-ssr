@@ -181,6 +181,14 @@ impl LiteApiClient {
         }
     }
 
+    pub async fn get_min_rates(
+        &self,
+        req: &LiteApiMinRatesRequest,
+    ) -> Result<LiteApiMinRatesResponse, ProviderError> {
+        self.post("/hotels/min-rates", req, ProviderSteps::HotelSearch)
+            .await
+    }
+
     pub async fn get_hotel_rates(
         &self,
         req: &LiteApiHotelRatesRequest,
@@ -338,14 +346,6 @@ impl LiteApiClient {
         resp.json::<LiteApiGetBookingResponse>().await.map_err(|e| {
             ProviderError::parse_error("LiteAPI", ProviderSteps::GetBookingDetails, e.to_string())
         })
-    }
-
-    pub async fn get_min_rates(
-        &self,
-        req: &crate::liteapi::models::search::LiteApiMinRatesRequest,
-    ) -> Result<crate::liteapi::models::search::LiteApiMinRatesResponse, ProviderError> {
-        self.post("/hotels/min-rates", req, ProviderSteps::HotelSearch)
-            .await
     }
 
     pub async fn get_places(

@@ -198,6 +198,7 @@ impl LiteApiMapper {
     pub fn map_domain_info_to_liteapi_rates(
         domain_criteria: &DomainHotelInfoCriteria,
         currency: &str,
+        room_mapping: bool,
     ) -> Result<LiteApiHotelRatesRequest, ProviderError> {
         let search_criteria = &domain_criteria.search_criteria;
 
@@ -314,9 +315,145 @@ impl LiteApiMapper {
             board_type: None,
             refundable_rates_only: None,
             sort: None,
-            room_mapping: None,
+            room_mapping: if room_mapping { Some(true) } else { None },
             include_hotel_data: None,
         })
+    }
+
+    pub fn map_domain_search_to_liteapi_min_rates(
+        domain_criteria: &DomainHotelSearchCriteria,
+        hotel_ids: Vec<String>,
+        currency: &str,
+    ) -> Result<LiteApiMinRatesRequest, ProviderError> {
+        let checkin = Self::format_date(domain_criteria.check_in_date);
+        let checkout = Self::format_date(domain_criteria.check_out_date);
+
+        // Reuse occupancy logic
+        let room_count = if domain_criteria.no_of_rooms == 0 {
+            let derived = domain_criteria.room_guests.len() as i32;
+            derived.max(1)
+        } else {
+            domain_criteria.no_of_rooms as i32
+        };
+
+        let map_guest_to_occupancy = |room_guest: &DomainRoomGuest| -> LiteApiOccupancy {
+            let children: Vec<i32> = if room_guest.no_of_children > 0 {
+                room_guest
+                    .children_ages
+                    .as_ref()
+                    .map(|ages| {
+                        ages.iter()
+                            .filter_map(|age_str| age_str.parse::<i32>().ok())
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            } else {
+                Vec::new()
+            };
+            LiteApiOccupancy {
+                adults: room_guest.no_of_adults as i32,
+                children,
+            }
+        };
+
+        let occupancies: Vec<LiteApiOccupancy> =
+            if domain_criteria.room_guests.len() as i32 == room_count {
+                domain_criteria
+                    .room_guests
+                    .iter()
+                    .map(map_guest_to_occupancy)
+                    .collect()
+            } else {
+                let total_adults: i32 = domain_criteria
+                    .room_guests
+                    .iter()
+                    .map(|rg| rg.no_of_adults as i32)
+                    .sum();
+                let total_children: i32 = domain_criteria
+                    .room_guests
+                    .iter()
+                    .map(|rg| rg.no_of_children as i32)
+                    .sum();
+                let children_ages: Vec<i32> = domain_criteria
+                    .room_guests
+                    .iter()
+                    .flat_map(|rg| {
+                        rg.children_ages
+                            .as_ref()
+                            .map(|ages| {
+                                ages.iter()
+                                    .filter_map(|age_str| age_str.parse::<i32>().ok())
+                                    .collect::<Vec<i32>>()
+                            })
+                            .unwrap_or_default()
+                    })
+                    .collect();
+
+                let base_adults = total_adults / room_count;
+                let mut extra_adults = total_adults % room_count;
+                let base_children = total_children / room_count;
+                let mut extra_children = total_children % room_count;
+
+                let mut age_iter = children_ages.into_iter();
+
+                (0..room_count)
+                    .map(|_| {
+                        let adults = base_adults
+                            + if extra_adults > 0 {
+                                extra_adults -= 1;
+                                1
+                            } else {
+                                0
+                            };
+                        let children_cnt = base_children
+                            + if extra_children > 0 {
+                                extra_children -= 1;
+                                1
+                            } else {
+                                0
+                            };
+                        let children: Vec<i32> = if children_cnt > 0 {
+                            age_iter.by_ref().take(children_cnt as usize).collect()
+                        } else {
+                            Vec::new()
+                        };
+
+                        LiteApiOccupancy { adults, children }
+                    })
+                    .collect()
+            };
+
+        Ok(LiteApiMinRatesRequest {
+            hotel_ids,
+            occupancies,
+            currency: currency.to_string(),
+            guest_nationality: domain_criteria.guest_nationality.clone(),
+            checkin,
+            checkout,
+            timeout: Some(4), // 4 seconds timeout for min rates
+        })
+    }
+
+    pub fn map_liteapi_min_rates_response_to_domain(
+        response: LiteApiMinRatesResponse,
+        currency_code: &str,
+    ) -> std::collections::HashMap<String, DomainPrice> {
+        let mut map = std::collections::HashMap::new();
+        if let Some(data) = response.data {
+            for hotel in data {
+                // Use suggested_selling_price as the price
+                // The min-rates endpoint returns net rates (price) and suggested selling price
+                // We should display suggested selling price
+                map.insert(
+                    hotel.hotel_id,
+                    DomainPrice {
+                        room_price: hotel.suggested_selling_price,
+                        currency_code: currency_code.to_string(),
+                    },
+                );
+            }
+        }
+        map
     }
 
     fn format_date(date: (u32, u32, u32)) -> String {
@@ -363,6 +500,8 @@ impl LiteApiMapper {
         room_type_id: String,
         offer_id: String,
     ) -> DomainRoomOption {
+        // Use retail_rate.total as the primary price source (Gross)
+        // suggested_selling_price is mapped to its own field
         let room_price = rate
             .retail_rate
             .total
@@ -423,13 +562,21 @@ impl LiteApiMapper {
             child_count: Some(rate.child_count as u32),
         });
 
+        // Calculate included taxes FIRST (for fallback)
+        let included_tax_total: f64 = tax_lines
+            .iter()
+            .filter(|line| line.included)
+            .map(|line| line.amount)
+            .sum();
+
+        // Use suggested_selling_price if available, otherwise compute Net (room_price - included_taxes)
         let suggested_price_val = rate
             .retail_rate
             .suggested_selling_price
             .as_ref()
             .and_then(|v| v.first())
             .map(|amount| amount.amount)
-            .unwrap_or(room_price);
+            .unwrap_or_else(|| room_price - included_tax_total);
 
         let excluded_tax_total: f64 = tax_lines
             .iter()

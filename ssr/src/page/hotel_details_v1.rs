@@ -51,6 +51,7 @@ struct RoomCard {
     room_names: Vec<String>,
     card_title: String,
     rates: Vec<DomainRoomOption>,
+    debug_log: Option<String>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -410,17 +411,38 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         if let Some(mut current_params) = HotelDetailsParams::from_current_context() {
             // Preserve placeId from URL if not already in context
             // This handles the race condition where async place fetch hasn't completed
+            // Preserve placeId from URL if not already in context
+            // This handles the race condition where async place fetch hasn't completed
+            let url_params = query_map.get();
             if current_params.place_id.is_none() {
-                let url_params = query_map.get();
                 if let Some(place_id) = url_params.0.get("placeId") {
                     current_params.place_id = Some(place_id.clone());
                 }
             }
-            current_params.update_url(); // Now uses individual query params
-            log!(
-                "Updated URL with current hotel details state (individual params): {:?}",
-                current_params
-            );
+
+            // Check if params actually changed to avoid infinite loops
+            let new_params = current_params.to_query_params();
+            let mut changed = false;
+
+            // Simple check: if sizes differ, or any key-value pair differs
+            if url_params.0.len() != new_params.len() {
+                changed = true;
+            } else {
+                for (k, v) in &new_params {
+                    if url_params.0.get(k) != Some(v) {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if changed {
+                current_params.update_url(); // Now uses individual query params
+                log!(
+                    "Updated URL with current hotel details state (individual params): {:?}",
+                    current_params
+                );
+            }
         }
     };
 
@@ -1287,9 +1309,13 @@ fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<OfferGroup> {
         let set = offer_room_signatures
             .entry(offer_key.clone())
             .or_insert_with(HashSet::new);
-        if !set.insert(signature) {
-            continue;
-        }
+
+        // Disable deduplication to ensure all rooms in the offer are counted
+        // This is necessary because identical rooms (same price/signature) must still contribute to the total offer price
+        // if !set.insert(signature) {
+        //     continue;
+        // }
+        set.insert(signature);
         grouped_by_offer
             .entry(offer_key.clone())
             .and_modify(|entry| {
@@ -1453,8 +1479,14 @@ fn dedup_rates_for_type_b(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
     for (_, offer_rates) in rates_by_offer {
         if let Some(first_rate) = offer_rates.first() {
             let mut rep_rate = first_rate.clone();
-            let total_price: f64 = offer_rates.iter().map(|r| r.price.room_price).sum();
+            // Sum NET prices (same as Cart calculation at line 1925)
+            let total_price: f64 = offer_rates
+                .iter()
+                .map(|r| r.price_excluding_included_taxes())
+                .sum();
             rep_rate.price.room_price = total_price;
+            // Clear tax_lines since we already computed Net
+            rep_rate.tax_lines.clear();
             offer_representatives.push(rep_rate);
         }
     }
@@ -1463,12 +1495,29 @@ fn dedup_rates_for_type_b(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
     dedup_rates_by_meal_plan(&offer_representatives)
 }
 
-fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
+fn build_room_cards(mut offers: Vec<OfferGroup>) -> Vec<RoomCard> {
     let mut type_a_map: HashMap<u32, RoomCard> = HashMap::new();
     let mut type_a_order: Vec<u32> = Vec::new();
     // Group TYPE B cards by their card title (room combination)
     let mut type_b_map: HashMap<String, RoomCard> = HashMap::new();
     let mut type_b_order: Vec<String> = Vec::new();
+
+    for offer in &offers {
+        log!(
+            "DEBUG: Offer '{}' has {} rates",
+            offer.room_names.join(" + "),
+            offer.rates.len()
+        );
+        for (i, r) in offer.rates.iter().enumerate() {
+            log!(
+                "  Rate[{}]: room_price={:.2}, tax_lines.len={}, included_taxes={:.2}",
+                i,
+                r.price.room_price,
+                r.tax_lines.len(),
+                r.included_taxes_total()
+            );
+        }
+    }
 
     for offer in offers {
         let offer_rate = offer.rates.first().cloned();
@@ -1476,13 +1525,76 @@ fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
 
         if let Some(mapped_id) = same_mapped_room_id(&offer) {
             // TYPE A: Single room type
-            if let Some(best_rate) = offer_rate {
+            if let Some(first_rate) = offer_rate {
+                // Calculate average price instead of picking the first one
+                // This handles cases where mixed occupancies (adults/children) result in different per-room prices
+                let mut representative_rate = first_rate.clone();
+                let count = offer.rates.len() as f64;
+                let mut logs = None;
+                if count > 0.0 {
+                    // Sum the Net Prices (room_price is now Net from Mapper)
+                    // RoomRateRow will divide this by the number of rooms to show per-room price
+                    let mut log_buf = String::new();
+                    let total_room_price: f64 = offer
+                        .rates
+                        .iter()
+                        .map(|r| {
+                            let net = r.price_excluding_included_taxes();
+                            let log_line = format!(
+                                "Occ: {:?}, Net: {:.2} (G:{:.2}-T:{:.2})\n",
+                                r.room_data.occupancy_number,
+                                net,
+                                r.price.room_price,
+                                r.included_taxes_total()
+                            );
+                            println!("DEBUG: {}", log_line);
+                            log_buf.push_str(&log_line);
+                            net
+                        })
+                        .sum();
+                    logs = Some(log_buf);
+
+                    let total_tax: f64 = offer.rates.iter().map(|r| r.price.tax).sum();
+                    let total_suggested: f64 = offer
+                        .rates
+                        .iter()
+                        .map(|r| r.price.suggested_selling_price)
+                        .sum();
+
+                    representative_rate.price.room_price = total_room_price;
+                    representative_rate.price.tax = total_tax;
+                    representative_rate.price.suggested_selling_price = total_room_price;
+
+                    // Clear tax lines to avoid double subtraction in price_excluding_included_taxes
+                    // Since we already summed the Net Prices, the total is already Net.
+                    representative_rate.tax_lines.clear();
+                    representative_rate.price.published_price = offer
+                        .rates
+                        .iter()
+                        .map(|r| r.price.published_price)
+                        .sum::<f64>()
+                        / count;
+                    representative_rate.price.offered_price = offer
+                        .rates
+                        .iter()
+                        .map(|r| r.price.offered_price)
+                        .sum::<f64>()
+                        / count;
+                }
+
                 let entry = type_a_map.entry(mapped_id).or_insert_with(|| RoomCard {
                     mapped_room_id: Some(mapped_id),
                     room_names: offer.room_names.clone(),
                     card_title: normalized_title.clone(),
                     rates: Vec::new(),
+                    debug_log: logs.clone(),
                 });
+
+                // If entry exists and we have logs, and entry has no logs, adopt them
+                if entry.debug_log.is_none() && logs.is_some() {
+                    entry.debug_log = logs;
+                }
+
                 for name in &offer.room_names {
                     if !entry.room_names.contains(name) {
                         entry.room_names.push(name.clone());
@@ -1491,7 +1603,7 @@ fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
                 if entry.card_title.is_empty() {
                     entry.card_title = entry.room_names.join(" + ");
                 }
-                entry.rates.push(best_rate);
+                entry.rates.push(representative_rate);
                 if !type_a_order.contains(&mapped_id) {
                     type_a_order.push(mapped_id);
                 }
@@ -1512,6 +1624,7 @@ fn build_room_cards(offers: Vec<OfferGroup>) -> Vec<RoomCard> {
                     room_names: offer.room_names.clone(),
                     card_title: card_title.clone(),
                     rates: Vec::new(),
+                    debug_log: None,
                 }
             });
 
@@ -1778,10 +1891,6 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     // Calculate total selected rooms
     let total_selected_rooms = move || HotelDetailsUIState::total_selected_rooms();
 
-    // Calculate subtotal using helper method
-    let subtotal = move || HotelDetailsUIState::calculate_subtotal_for_nights();
-    let total_for_stay = move || subtotal();
-
     // Check if any rooms are selected
     let has_rooms_selected = move || total_selected_rooms() > 0;
 
@@ -1856,6 +1965,26 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 },
             )
             .collect::<Vec<_>>()
+    };
+
+    // Calculate subtotal by summing line totals from resolved_selection_rows
+    // This ensures the Cart total exactly matches the displayed subtotals
+    let total_for_stay = move || {
+        let rows = resolved_selection_rows();
+        let nights_val = {
+            let n = ui_search_ctx.date_range.get().no_of_nights();
+            if n == 0 {
+                1
+            } else {
+                n
+            }
+        };
+        rows.iter()
+            .fold(0.0, |acc, (_, qty, _, _, price_per_night, _, _)| {
+                let rounded_price = (*price_per_night * 100.0).round() / 100.0;
+                let line_total = rounded_price * *qty as f64 * nights_val as f64;
+                acc + line_total
+            })
     };
     let guests = ui_search_ctx.guests;
     let adults_count = move || guests.adults.get();
@@ -2124,7 +2253,18 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     };
 
     let currency_code = rate.price.currency_code.clone();
-    let base_price_per_night = nightly_price_excluding_taxes(&rate, nights());
+
+    // Calculate price per room per night
+    let requested_rooms = ui_search_ctx.guests.rooms.get();
+    let total_price_per_night = nightly_price_excluding_taxes(&rate, nights());
+    // Ensure we handle case where requested_rooms might be 0 (though unlikely in valid state)
+    let valid_rooms = if requested_rooms == 0 {
+        1
+    } else {
+        requested_rooms
+    };
+    let base_price_per_night = total_price_per_night / valid_rooms as f64;
+
     let price_text = format_currency_with_code(base_price_per_night, &currency_code);
     let meal_plan = rate
         .meal_plan
@@ -2307,6 +2447,7 @@ fn RoomTypeCard(
         room_names,
         card_title,
         rates,
+        debug_log,
     } = room_group;
 
     let rates_for_render = rates.clone();
@@ -2592,6 +2733,9 @@ fn RoomTypeCard(
                         />
                     </div>
                 </For>
+            </div>
+            <div class="hidden debug-log-output" style="display:none">
+                {debug_log}
             </div>
         </div>
     }
