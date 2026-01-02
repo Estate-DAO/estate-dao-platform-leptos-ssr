@@ -4,9 +4,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use estate_fe::{
-    adapters::LiteApiAdapter,
     application_services::HotelService,
     domain::{DomainHotelSearchCriteria, DomainPlaceDetailsPayload},
+    init::get_liteapi_adapter,
 };
 use estate_fe::{
     application_services::PlaceService, domain::DomainPlacesSearchPayload,
@@ -27,8 +27,8 @@ pub async fn search_places_api_server_fn_route(
     // Normalize cache key (lowercase, trimmed)
     let cache_key = request.text_query.trim().to_lowercase();
 
-    // <!-- Create the places service with LiteApiAdapter -->
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    // <!-- Create the places service with LiteApiAdapter from global client -->
+    let liteapi_adapter = get_liteapi_adapter();
     let places_service = PlaceService::new(liteapi_adapter);
 
     // <!-- Try API first, fall back to cache on failure -->
@@ -140,8 +140,8 @@ pub async fn search_places_details_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainPlaceDetailsPayload = parse_json_request(&body)?;
 
-    // <!-- Create the places service with LiteApiAdapter -->
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    // <!-- Create the places service with LiteApiAdapter from global client -->
+    let liteapi_adapter = get_liteapi_adapter();
     let places_service = PlaceService::new(liteapi_adapter);
 
     // <!-- Perform the places search -->

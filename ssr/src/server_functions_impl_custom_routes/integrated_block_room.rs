@@ -5,13 +5,14 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    api::{canister::add_booking::call_add_booking_backend, liteapi::LiteApiPrebookResponse},
+    api::canister::add_booking::call_add_booking_backend,
     domain::{
         BookingError, DomainCurrencyAmount, DomainDestination, DomainHotelDetails, DomainRoomData,
         DomainRoomOption, DomainSelectedDateRange,
     },
     utils::{app_reference::BookingId, booking_backend_conversions::BookingBackendConversions},
 };
+use hotel_providers::liteapi::models::booking::LiteApiPrebookResponse;
 use serde_json::json;
 
 use super::{
@@ -382,15 +383,15 @@ fn align_room_details_with_blocked_rooms(
 
 /// Fetch actual hotel details from hotel service
 async fn fetch_actual_hotel_details(
-    state: &estate_fe::view_state_layer::AppState,
+    _state: &estate_fe::view_state_layer::AppState,
     hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
 ) -> Result<DomainHotelDetails, String> {
-    use estate_fe::{adapters::LiteApiAdapter, application_services::HotelService};
+    use estate_fe::{application_services::HotelService, init::get_liteapi_adapter};
 
     tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
 
-    // Create the hotel service with LiteApiAdapter
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
+    // Create the hotel service with LiteApiAdapter from global client
+    let liteapi_adapter = get_liteapi_adapter();
     let hotel_service = HotelService::new(liteapi_adapter);
 
     // Get hotel information

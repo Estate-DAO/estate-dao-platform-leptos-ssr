@@ -252,7 +252,7 @@ impl HotelDetailsUIState {
 
         let selected_rooms_with_data = Self::get_selected_rooms_with_data();
 
-        selected_rooms_with_data
+        let total = selected_rooms_with_data
             .iter()
             .fold(0.0, |acc, (room_option, quantity)| {
                 // Calculate per-night price and round to 2 decimals to match display
@@ -261,7 +261,9 @@ impl HotelDetailsUIState {
                 let rounded_price = (price_per_night * 100.0).round() / 100.0;
                 let line_total = rounded_price * *quantity as f64 * nights;
                 acc + line_total
-            })
+            });
+        // Round final total to 2 decimals to ensure consistency with line items
+        (total * 100.0).round() / 100.0
     }
 
     // <!-- Calculate line total for a specific room -->

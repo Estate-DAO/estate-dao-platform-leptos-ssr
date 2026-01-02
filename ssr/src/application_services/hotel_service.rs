@@ -45,7 +45,7 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         // <!-- The adapter will try to use UI filters if its specific API supports them -->
         let mut domain_result = self
             .provider
-            .search_hotels(core_criteria, ui_filters)
+            .search_hotels(core_criteria, ui_filters.into())
             // .await
             .await?;
 
