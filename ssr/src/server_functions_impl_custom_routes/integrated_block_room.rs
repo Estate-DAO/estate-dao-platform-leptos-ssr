@@ -386,13 +386,13 @@ async fn fetch_actual_hotel_details(
     _state: &estate_fe::view_state_layer::AppState,
     hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
 ) -> Result<DomainHotelDetails, String> {
-    use estate_fe::{application_services::HotelService, init::get_liteapi_adapter};
+    use estate_fe::{application_services::HotelService, init::get_liteapi_driver};
 
     tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
 
-    // Create the hotel service with LiteApiAdapter from global client
-    let liteapi_adapter = get_liteapi_adapter();
-    let hotel_service = HotelService::new(liteapi_adapter);
+    // Create the hotel service with LiteApiDriver from global client
+    let liteapi_driver = get_liteapi_driver();
+    let hotel_service = HotelService::new(liteapi_driver);
 
     // Get hotel information
     hotel_service

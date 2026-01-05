@@ -13,7 +13,6 @@ use crate::{
     utils::notifier::Notifier, view_state_layer::AppState,
 };
 
-use crate::adapters::LiteApiProviderBridge;
 use hotel_providers::ProviderRegistry;
 use once_cell::sync::OnceCell;
 
@@ -58,13 +57,12 @@ pub fn get_liteapi_driver() -> LiteApiDriver {
 }
 
 pub fn initialize_provider_registry() {
-    // Create bridge directly from driver
+    // Use LiteApiDriver directly (it implements HotelProviderPort and PlaceProviderPort)
     let driver = get_liteapi_driver();
-    let bridge = LiteApiProviderBridge::new(driver);
 
     let registry = ProviderRegistry::builder()
-        .with_hotel_provider(bridge.clone())
-        .with_place_provider(bridge)
+        .with_hotel_provider(driver.clone())
+        .with_place_provider(driver)
         .build();
 
     PROVIDER_REGISTRY
@@ -77,18 +75,6 @@ pub fn get_provider_registry() -> Arc<ProviderRegistry> {
         .get()
         .expect("Failed to get provider registry")
         .clone()
-}
-
-/// Get a LiteApiProviderBridge from the global driver.
-/// This is the preferred way to access the LiteAPI provider.
-pub fn get_liteapi_bridge() -> LiteApiProviderBridge {
-    LiteApiProviderBridge::new(get_liteapi_driver())
-}
-
-/// Alias for backward compatibility - returns bridge instead of adapter.
-#[deprecated(note = "Use get_liteapi_bridge() instead")]
-pub fn get_liteapi_adapter() -> LiteApiProviderBridge {
-    get_liteapi_bridge()
 }
 
 pub fn initialize_notifier() {

@@ -51,7 +51,6 @@ struct RoomCard {
     room_names: Vec<String>,
     card_title: String,
     rates: Vec<DomainRoomOption>,
-    debug_log: Option<String>,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq)]
@@ -1526,40 +1525,20 @@ fn build_room_cards(mut offers: Vec<OfferGroup>) -> Vec<RoomCard> {
         if let Some(mapped_id) = same_mapped_room_id(&offer) {
             // TYPE A: Single room type
             if let Some(first_rate) = offer_rate {
-                // Calculate average price instead of picking the first one
+                // Calculate sum of Net Prices for all rooms in the offer
                 // This handles cases where mixed occupancies (adults/children) result in different per-room prices
                 let mut representative_rate = first_rate.clone();
                 let count = offer.rates.len() as f64;
-                let mut logs = None;
                 if count > 0.0 {
-                    // Sum the Net Prices (room_price is now Net from Mapper)
+                    // Sum the Net Prices (using price_excluding_included_taxes for accuracy)
                     // RoomRateRow will divide this by the number of rooms to show per-room price
-                    let mut log_buf = String::new();
                     let total_room_price: f64 = offer
                         .rates
                         .iter()
-                        .map(|r| {
-                            let net = r.price_excluding_included_taxes();
-                            let log_line = format!(
-                                "Occ: {:?}, Net: {:.2} (G:{:.2}-T:{:.2})\n",
-                                r.room_data.occupancy_number,
-                                net,
-                                r.price.room_price,
-                                r.included_taxes_total()
-                            );
-                            println!("DEBUG: {}", log_line);
-                            log_buf.push_str(&log_line);
-                            net
-                        })
+                        .map(|r| r.price_excluding_included_taxes())
                         .sum();
-                    logs = Some(log_buf);
 
                     let total_tax: f64 = offer.rates.iter().map(|r| r.price.tax).sum();
-                    let total_suggested: f64 = offer
-                        .rates
-                        .iter()
-                        .map(|r| r.price.suggested_selling_price)
-                        .sum();
 
                     representative_rate.price.room_price = total_room_price;
                     representative_rate.price.tax = total_tax;
@@ -1587,13 +1566,7 @@ fn build_room_cards(mut offers: Vec<OfferGroup>) -> Vec<RoomCard> {
                     room_names: offer.room_names.clone(),
                     card_title: normalized_title.clone(),
                     rates: Vec::new(),
-                    debug_log: logs.clone(),
                 });
-
-                // If entry exists and we have logs, and entry has no logs, adopt them
-                if entry.debug_log.is_none() && logs.is_some() {
-                    entry.debug_log = logs;
-                }
 
                 for name in &offer.room_names {
                     if !entry.room_names.contains(name) {
@@ -1624,7 +1597,6 @@ fn build_room_cards(mut offers: Vec<OfferGroup>) -> Vec<RoomCard> {
                     room_names: offer.room_names.clone(),
                     card_title: card_title.clone(),
                     rates: Vec::new(),
-                    debug_log: None,
                 }
             });
 
@@ -2447,7 +2419,6 @@ fn RoomTypeCard(
         room_names,
         card_title,
         rates,
-        debug_log,
     } = room_group;
 
     let rates_for_render = rates.clone();
@@ -2733,10 +2704,7 @@ fn RoomTypeCard(
                         />
                     </div>
                 </For>
-            </div>
-            <div class="hidden debug-log-output" style="display:none">
-                {debug_log}
-            </div>
+        </div>
         </div>
     }
 }

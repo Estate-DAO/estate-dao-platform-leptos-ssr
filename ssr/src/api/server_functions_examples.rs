@@ -18,12 +18,11 @@ pub async fn search_hotels_filtered_app_service(
     ui_filters: UISearchFilters,
     sort_options: UISortOptions,
 ) -> Result<crate::domain::DomainHotelSearchResponse, ServerFnError> {
-    // <!-- 1. Create the provider adapter -->
-    // <!-- 1. Create the provider adapter (using shared driver) -->
-    let liteapi_adapter = Arc::new(crate::init::get_liteapi_adapter());
+    // <!-- 1. Create the provider driver (using shared driver) -->
+    let liteapi_driver = Arc::new(crate::init::get_liteapi_driver());
 
     // <!-- 2. Create the hotel service -->
-    let hotel_service = HotelService::new(liteapi_adapter);
+    let hotel_service = HotelService::new(liteapi_driver);
 
     // <!-- 3. Call the service with filters -->
     hotel_service

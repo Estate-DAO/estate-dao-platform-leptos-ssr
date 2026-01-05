@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{
     application_services::HotelService,
     domain::{DomainHotelInfoCriteria, DomainHotelStaticDetails},
-    init::get_liteapi_adapter,
+    init::get_liteapi_driver,
     ports::hotel_provider_port::ProviderError,
 };
 
@@ -12,8 +12,8 @@ use crate::{
 pub async fn get_hotel_static_details_api(
     hotel_id: String,
 ) -> Result<DomainHotelStaticDetails, ServerFnError> {
-    let liteapi_adapter = Arc::new(get_liteapi_adapter());
-    let hotel_service = HotelService::new(liteapi_adapter);
+    let liteapi_driver = Arc::new(get_liteapi_driver());
+    let hotel_service = HotelService::new(liteapi_driver);
 
     hotel_service
         .get_hotel_static_details(&hotel_id)
@@ -25,8 +25,8 @@ pub async fn get_hotel_static_details_api(
 pub async fn get_hotel_rates_api(
     criteria: DomainHotelInfoCriteria,
 ) -> Result<Vec<crate::domain::DomainRoomOption>, ServerFnError> {
-    let liteapi_adapter = Arc::new(get_liteapi_adapter());
-    let hotel_service = HotelService::new(liteapi_adapter);
+    let liteapi_driver = Arc::new(get_liteapi_driver());
+    let hotel_service = HotelService::new(liteapi_driver);
 
     hotel_service
         .get_hotel_rates(criteria)

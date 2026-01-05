@@ -22,7 +22,7 @@ use estate_fe::{
         DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
         DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
-    init::get_liteapi_adapter,
+    init::get_liteapi_driver,
     ports::traits::HotelProviderPort,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -124,9 +124,9 @@ pub async fn call_block_room_api(
     _state: &AppState,
     request: DomainBlockRoomRequest,
 ) -> Result<DomainBlockRoomResponse, String> {
-    // Use LiteAPI adapter from global client
-    let liteapi_adapter = get_liteapi_adapter();
-    let hotel_service = HotelService::new(liteapi_adapter);
+    // Use LiteAPI driver from global client
+    let liteapi_driver = get_liteapi_driver();
+    let hotel_service = HotelService::new(liteapi_driver);
 
     hotel_service
         .block_room(request)

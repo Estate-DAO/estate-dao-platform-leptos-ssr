@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Helper to deserialize a field that can be either a string or an integer into Option<String>
 mod string_or_i64 {
