@@ -1,5 +1,5 @@
 use super::search::{LiteApiErrorDetail, LiteApiRate};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 
 // Re-using LiteApiOccupancy and others from search mod if they match structure,
 // otherwise define new ones. LiteApiOccupancy matches standard {adults, children[]}.
@@ -133,8 +133,30 @@ pub struct LiteApiBookedRoom {
     pub first_name: String,
     #[serde(rename = "lastName")]
     pub last_name: String,
-    #[serde(rename = "mappedRoomId")]
-    pub mapped_room_id: Option<String>, // Keep as String to handle potentially number or string from json
+    #[serde(
+        rename = "mappedRoomId",
+        default,
+        deserialize_with = "deserialize_mapped_room_id"
+    )]
+    pub mapped_room_id: Option<String>,
+}
+
+/// Custom deserializer that handles mappedRoomId as either String or Number
+fn deserialize_mapped_room_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let opt = Option::<serde_json::Value>::deserialize(deserializer)?;
+    match opt {
+        None => Ok(None),
+        Some(serde_json::Value::String(value)) => Ok(Some(value)),
+        Some(serde_json::Value::Number(num)) => Ok(Some(num.to_string())),
+        Some(serde_json::Value::Null) => Ok(None),
+        Some(other) => Err(de::Error::custom(format!(
+            "expected string or number for mappedRoomId, got {}",
+            other
+        ))),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
