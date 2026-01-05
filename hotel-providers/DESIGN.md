@@ -17,23 +17,24 @@ The `hotel-providers` crate provides a multi-provider abstraction layer for hote
 │  HotelService / PlaceService                                    │
 │       │                                                         │
 │       ▼                                                         │
-│  get_liteapi_adapter()  ──────► LiteApiAdapter                  │
-│       │                              │                          │
-│       ▼                              ▼                          │
-│  ProviderRegistry ◄───────── LiteApiProviderBridge              │
+│  init::get_liteapi_driver()  ──────► LiteApiDriver              │
+│       │                                                         │
+│       ▼                                                         │
+│  ProviderRegistry ◄─────────────────────────┘                   │
 └─────────────────────────────────────────────────────────────────┘
                                        │
                                        ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      hotel-providers crate                       │
 ├─────────────────────────────────────────────────────────────────┤
-│  Ports (Traits)                                                 │
+│  LiteAPI Integration                                            │
+│  ├── LiteApiDriver (implements HotelProviderPort, PlacePort)    │
+│  ├── LiteApiClient (HTTP client)                                │
+│  └── LiteApiMapper (domain ↔ API type conversion)               │
+│                                                                 │
+│  Ports (Traits) - from hotel-types                              │
 │  ├── HotelProviderPort                                          │
 │  └── PlaceProviderPort                                          │
-│                                                                 │
-│  Composite Providers (Fallback)                                 │
-│  ├── CompositeHotelProvider                                     │
-│  └── CompositePlaceProvider                                     │
 │                                                                 │
 │  Registry                                                       │
 │  └── ProviderRegistry (builder pattern)                         │
@@ -58,45 +59,36 @@ pub trait HotelProviderPort: Send + Sync {
 }
 ```
 
-### Fallback Strategies
+### LiteApiDriver
 
-| Strategy | Behavior |
-|----------|----------|
-| `Sequential` | Try providers in order until one succeeds |
-| `OnRetryableError` | Only fallback on network/timeout errors |
-| `NeverFallback` | Use only the primary provider |
-
-### Provider Registry
+The `LiteApiDriver` directly implements `HotelProviderPort` and `PlaceProviderPort`:
 
 ```rust
-let registry = ProviderRegistry::builder()
-    .with_hotel_provider(primary_provider)
-    .with_hotel_provider(fallback_provider)
-    .with_fallback_strategy(FallbackStrategy::Sequential)
-    .build();
-
-// Access providers
-let hotel_provider = registry.hotel_provider();
+// hotel-providers/src/liteapi/driver.rs
+impl HotelProviderPort for LiteApiDriver {
+    fn name(&self) -> &'static str { "LiteAPI" }
+    // ... all provider methods
+}
 ```
 
 ## Integration with SSR
 
-### Current Architecture (Bridge Pattern)
+### Direct Driver Usage
 
-The SSR crate uses `LiteApiProviderBridge` to wrap the existing `LiteApiAdapter`:
+SSR uses `LiteApiDriver` directly without any bridge/adapter layer:
 
 ```rust
 // ssr/src/init.rs
-pub fn get_liteapi_adapter() -> LiteApiAdapter {
-    LiteApiAdapter::new(get_liteapi_client().clone())
+pub fn get_liteapi_driver() -> LiteApiDriver {
+    LITEAPI_DRIVER.get().expect("...").clone()
 }
 
 pub fn initialize_provider_registry() {
-    let bridge = LiteApiProviderBridge::from_client(get_liteapi_client().clone());
+    let driver = get_liteapi_driver();
     
     let registry = ProviderRegistry::builder()
-        .with_hotel_provider(bridge.clone())
-        .with_place_provider(bridge)
+        .with_hotel_provider(driver.clone())
+        .with_place_provider(driver)
         .build();
     // ...
 }
@@ -105,25 +97,26 @@ pub fn initialize_provider_registry() {
 ### Usage in Server Functions
 
 ```rust
-use crate::init::get_liteapi_adapter;
+use crate::init::get_liteapi_driver;
 
 pub async fn search_hotel_api(...) {
-    let adapter = get_liteapi_adapter();
-    let hotel_service = HotelService::new(adapter);
+    let driver = get_liteapi_driver();
+    let hotel_service = HotelService::new(driver);
     // ...
 }
 ```
 
 ## Adding a New Provider
 
-1. **Implement the traits** in `hotel-providers/src/adapters/`:
+1. **Create a new driver module** in `hotel-providers/src/`:
 
 ```rust
-pub struct NewProviderAdapter { /* ... */ }
+// hotel-providers/src/booking/driver.rs
+pub struct BookingDriver { /* ... */ }
 
 #[async_trait]
-impl HotelProviderPort for NewProviderAdapter {
-    fn name(&self) -> &'static str { "NewProvider" }
+impl HotelProviderPort for BookingDriver {
+    fn name(&self) -> &'static str { "Booking.com" }
     // ... implement all methods
 }
 ```
@@ -132,8 +125,8 @@ impl HotelProviderPort for NewProviderAdapter {
 
 ```rust
 // ssr/src/init.rs
-let primary = LiteApiProviderBridge::from_client(client);
-let fallback = NewProviderAdapter::new();
+let primary = get_liteapi_driver();
+let fallback = BookingDriver::new(...);
 
 let registry = ProviderRegistry::builder()
     .with_hotel_provider(primary)
@@ -155,20 +148,6 @@ pub enum ProviderErrorKind {
 }
 ```
 
-Error kinds determine whether to trigger fallback:
-
-```rust
-impl ProviderError {
-    pub fn should_fallback(&self) -> bool {
-        matches!(self.kind, 
-            ProviderErrorKind::Network |
-            ProviderErrorKind::Timeout |
-            ProviderErrorKind::Unavailable
-        )
-    }
-}
-```
-
 ## Module Structure
 
 ```
@@ -176,19 +155,21 @@ hotel-providers/
 ├── Cargo.toml
 └── src/
     ├── lib.rs              # Crate entry, re-exports
-    ├── domain/
+    ├── liteapi/            # LiteAPI integration
     │   ├── mod.rs
-    │   ├── hotel_search_types.rs
-    │   └── booking_types.rs
-    ├── ports/
-    │   ├── mod.rs
-    │   ├── hotel_port.rs   # HotelProviderPort trait
-    │   ├── place_port.rs   # PlaceProviderPort trait
-    │   └── error.rs        # ProviderError, ProviderErrorKind
-    ├── adapters/
-    │   ├── mod.rs
-    │   ├── mock/mod.rs     # MockProvider for testing
-    │   └── liteapi/mod.rs  # Placeholder for future migration
-    ├── composite.rs        # CompositeHotelProvider with fallback
+    │   ├── driver.rs       # LiteApiDriver
+    │   ├── client.rs       # HTTP client
+    │   ├── mapper.rs       # Type conversions
+    │   └── models/         # LiteAPI-specific types
+    ├── composite.rs        # Composite providers (fallback)
     └── registry.rs         # ProviderRegistry builder
 ```
+
+## Configuration
+
+The driver reads configuration from environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LITEAPI_KEY` | API key for LiteAPI | Required |
+| `LITEAPI_ROOM_MAPPING` | Enable room type consolidation | `true` |
