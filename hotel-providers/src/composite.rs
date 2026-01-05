@@ -151,7 +151,7 @@ impl HotelProviderPort for CompositeHotelProvider {
     async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<Vec<DomainRoomOption>, ProviderError> {
+    ) -> Result<DomainGroupedRoomRates, ProviderError> {
         let providers = self.healthy_providers();
         let mut last_error: Option<ProviderError> = None;
 

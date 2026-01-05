@@ -6,9 +6,9 @@ use std::collections::HashMap;
 use crate::ports::ProviderError;
 use crate::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
-    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainHotelStaticDetails, DomainPrice,
-    DomainRoomOption,
+    DomainGetBookingRequest, DomainGetBookingResponse, DomainGroupedRoomRates,
+    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria,
+    DomainHotelStaticDetails, DomainPrice,
 };
 
 /// Filter criteria for hotel search - passed alongside search criteria
@@ -51,7 +51,7 @@ pub trait HotelProviderPort: Send + Sync {
     async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<Vec<DomainRoomOption>, ProviderError>;
+    ) -> Result<DomainGroupedRoomRates, ProviderError>;
 
     /// Get minimum rates for multiple hotels (lightweight endpoint for search results)
     async fn get_min_rates(

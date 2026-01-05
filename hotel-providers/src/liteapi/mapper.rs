@@ -605,14 +605,10 @@ impl LiteApiMapper {
             None
         };
 
-        let mapped_room_id_u32 = rate
-            .mapped_room_id
-            .as_ref()
-            .and_then(|s| s.parse::<u32>().ok())
-            .unwrap_or(0);
+        let mapped_room_id_val = rate.mapped_room_id.clone().unwrap_or_default();
 
         DomainRoomOption {
-            mapped_room_id: mapped_room_id_u32,
+            mapped_room_id: mapped_room_id_val.clone(),
             price: DomainDetailedPrice {
                 published_price: room_price,
                 published_price_rounded_off: room_price, // Rounding logic can be added
@@ -629,7 +625,7 @@ impl LiteApiMapper {
             },
             tax_lines,
             room_data: DomainRoomData {
-                mapped_room_id: mapped_room_id_u32, // Use parsed value
+                mapped_room_id: mapped_room_id_val,
                 occupancy_number: Some(rate.occupancy_number as u32),
                 room_name: rate.name,
                 room_unique_id: room_type_id,

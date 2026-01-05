@@ -9,8 +9,8 @@ use crate::app::AppRoutes;
 use crate::component::{loading_button::LoadingButton, FullScreenSpinnerGray};
 use crate::component::{Footer, ImageLightbox};
 use crate::domain::{
-    DomainHotelCodeId, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGuest,
-    DomainRoomOccupancy, DomainRoomOption, DomainStaticRoom,
+    DomainHotelCodeId, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomGroup,
+    DomainRoomGuest, DomainRoomOccupancy, DomainRoomVariant, DomainStaticRoom,
 };
 use crate::log;
 use crate::page::{
@@ -37,61 +37,9 @@ pub struct Amenity {
     text: String,
 }
 
-#[derive(Clone)]
-struct OfferGroup {
-    offer_id: String,
-    mapped_room_id: Option<u32>,
-    rates: Vec<DomainRoomOption>,
-    room_names: Vec<String>,
-}
-
-#[derive(Clone)]
-struct RoomCard {
-    mapped_room_id: Option<u32>,
-    room_names: Vec<String>,
-    card_title: String,
-    rates: Vec<DomainRoomOption>,
-}
-
-#[derive(Clone, Hash, PartialEq, Eq)]
-struct RateRowKey {
-    mapped_room_id: Option<u32>,
-    occupancy_number: Option<u32>,
-    meal_plan: String,
-    price_bits: u64,
-}
-
-impl RateRowKey {
-    fn from_rate(rate: &DomainRoomOption, include_occupancy: bool) -> Self {
-        let mapped_room = (rate.mapped_room_id != 0).then_some(rate.mapped_room_id);
-        let meal_plan = rate
-            .meal_plan
-            .clone()
-            .unwrap_or_else(|| "Room Only".to_string());
-        RateRowKey {
-            mapped_room_id: mapped_room,
-            occupancy_number: if include_occupancy {
-                rate.room_data.occupancy_number
-            } else {
-                None
-            },
-            meal_plan,
-            price_bits: rate.price.room_price.to_bits(),
-        }
-    }
-}
-
-#[derive(Clone, Hash, PartialEq, Eq)]
-struct OfferRoomSignature {
-    mapped_room_id: u32,
-    occupancy_number: Option<u32>,
-    meal_plan: String,
-    price_bits: u64,
-}
-
 #[derive(Default, Clone)]
 struct RoomDetailsLookup {
-    by_id: HashMap<u32, DomainStaticRoom>,
+    by_id: HashMap<String, DomainStaticRoom>,
     by_name: HashMap<String, DomainStaticRoom>,
 }
 
@@ -286,9 +234,7 @@ fn room_details_lookup_for_state(state: &HotelDetailsUIState) -> RoomDetailsLook
         for room in details.rooms.into_iter() {
             let normalized = normalized_room_key(&room.room_name);
             by_name.insert(normalized, room.clone());
-            if let Ok(id) = room.room_id.trim().parse::<u32>() {
-                by_id.insert(id, room);
-            }
+            by_id.insert(room.room_id.clone(), room);
         }
         RoomDetailsLookup { by_id, by_name }
     } else {
@@ -578,10 +524,10 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 }
                 match client.get_hotel_rates(criteria.clone()).await {
                     Ok(rates) => {
-                        HotelDetailsUIState::set_rates(Some(rates.clone()));
+                        HotelDetailsUIState::set_rates(Some(rates.room_groups.clone()));
                         HotelDetailsUIState::set_rates_loading(false);
                         HotelDetailsUIState::set_error(None);
-                        break Some(rates);
+                        break Some(rates.room_groups);
                     }
                     Err(e) => {
                         HotelDetailsUIState::set_error(Some(e));
@@ -1288,401 +1234,8 @@ pub fn OverviewSection(
     }
 }
 
-fn group_room_options_by_type(rates: Vec<DomainRoomOption>) -> Vec<OfferGroup> {
-    let mut grouped_by_offer: BTreeMap<String, OfferGroup> = BTreeMap::new();
-    let mut offer_room_signatures: HashMap<String, HashSet<OfferRoomSignature>> = HashMap::new();
-
-    let mut seen_rate_keys = HashSet::new();
-
-    for rate in rates {
-        if !seen_rate_keys.insert(rate.room_data.rate_key.clone()) {
-            continue;
-        }
-        let offer_key = rate.room_data.offer_id.clone();
-        let signature = OfferRoomSignature {
-            mapped_room_id: rate.mapped_room_id,
-            occupancy_number: rate.room_data.occupancy_number,
-            meal_plan: rate.meal_plan.clone().unwrap_or_else(String::new),
-            price_bits: rate.price.room_price.to_bits(),
-        };
-        let set = offer_room_signatures
-            .entry(offer_key.clone())
-            .or_insert_with(HashSet::new);
-
-        // Disable deduplication to ensure all rooms in the offer are counted
-        // This is necessary because identical rooms (same price/signature) must still contribute to the total offer price
-        // if !set.insert(signature) {
-        //     continue;
-        // }
-        set.insert(signature);
-        grouped_by_offer
-            .entry(offer_key.clone())
-            .and_modify(|entry| {
-                if entry.mapped_room_id.is_none() && rate.mapped_room_id != 0 {
-                    entry.mapped_room_id = Some(rate.mapped_room_id);
-                }
-                entry.rates.push(rate.clone());
-                if !entry
-                    .room_names
-                    .iter()
-                    .any(|name| name == &rate.room_data.room_name)
-                {
-                    entry.room_names.push(rate.room_data.room_name.clone());
-                }
-            })
-            .or_insert_with(|| OfferGroup {
-                offer_id: offer_key.clone(),
-                mapped_room_id: (rate.mapped_room_id != 0).then_some(rate.mapped_room_id),
-                rates: vec![rate.clone()],
-                room_names: vec![rate.room_data.room_name.clone()],
-            });
-    }
-
-    let mut groups: Vec<OfferGroup> = grouped_by_offer.into_values().collect();
-
-    for group in &mut groups {
-        group.rates.sort_by(|a, b| {
-            a.price
-                .room_price
-                .partial_cmp(&b.price.room_price)
-                .unwrap_or(Ordering::Equal)
-        });
-    }
-
-    groups.sort_by(|a, b| {
-        let a_price = a
-            .rates
-            .first()
-            .map(|rate| rate.price.room_price)
-            .unwrap_or(f64::MAX);
-        let b_price = b
-            .rates
-            .first()
-            .map(|rate| rate.price.room_price)
-            .unwrap_or(f64::MAX);
-        a_price.partial_cmp(&b_price).unwrap_or(Ordering::Equal)
-    });
-
-    groups
-}
-
-fn same_mapped_room_id(offer: &OfferGroup) -> Option<u32> {
-    let mut room_id: Option<u32> = None;
-    for rate in &offer.rates {
-        if rate.mapped_room_id == 0 {
-            return None;
-        }
-        match room_id {
-            None => room_id = Some(rate.mapped_room_id),
-            Some(existing) if existing == rate.mapped_room_id => {}
-            _ => return None,
-        }
-    }
-    room_id
-}
-
-fn build_type_b_title(rates: &[DomainRoomOption]) -> Option<String> {
-    if rates.is_empty() {
-        return None;
-    }
-    let mut counts: HashMap<(Option<u32>, String), (String, usize)> = HashMap::new();
-    for rate in rates {
-        let mapped = (rate.mapped_room_id != 0).then_some(rate.mapped_room_id);
-        let normalized_name = normalized_room_key(&rate.room_data.room_name);
-        let key = (mapped, normalized_name);
-        let entry = counts
-            .entry(key)
-            .or_insert((rate.room_data.room_name.clone(), 0));
-        entry.1 += 1;
-    }
-
-    let mut entries: Vec<(Option<u32>, String, usize)> = counts
-        .into_iter()
-        .map(|((mapped, _), (display_name, count))| (mapped, display_name, count))
-        .collect();
-    entries.sort_by(|a, b| b.2.cmp(&a.2).then_with(|| a.1.cmp(&b.1)));
-
-    let title = entries
-        .into_iter()
-        .map(|(_, name, count)| format!("{count} x {name}"))
-        .collect::<Vec<_>>()
-        .join(" + ");
-
-    if title.is_empty() {
-        None
-    } else {
-        Some(title)
-    }
-}
-
-fn dedup_rates(rates: &[DomainRoomOption], include_occupancy: bool) -> Vec<DomainRoomOption> {
-    let mut seen = HashSet::new();
-    let mut deduped = Vec::new();
-    for rate in rates {
-        let key = RateRowKey::from_rate(rate, include_occupancy);
-        if seen.insert(key) {
-            deduped.push(rate.clone());
-        }
-    }
-    deduped.sort_by(|a, b| {
-        a.price
-            .room_price
-            .partial_cmp(&b.price.room_price)
-            .unwrap_or(Ordering::Equal)
-    });
-    deduped
-}
-
-/// Deduplicate TYPE B rates by meal plan only, keeping the lowest price for each meal plan.
-/// This prevents showing multiple rows with the same meal plan but different prices on TYPE B cards.
-fn dedup_rates_by_meal_plan(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
-    let mut best_by_meal_plan: HashMap<String, DomainRoomOption> = HashMap::new();
-
-    for rate in rates {
-        let meal_plan = rate
-            .meal_plan
-            .clone()
-            .unwrap_or_else(|| "Room Only".to_string());
-
-        best_by_meal_plan
-            .entry(meal_plan)
-            .and_modify(|existing| {
-                // Keep the rate with the lower price
-                if rate.price.room_price < existing.price.room_price {
-                    *existing = rate.clone();
-                }
-            })
-            .or_insert_with(|| rate.clone());
-    }
-
-    let mut deduped: Vec<DomainRoomOption> = best_by_meal_plan.into_values().collect();
-    deduped.sort_by(|a, b| {
-        a.price
-            .room_price
-            .partial_cmp(&b.price.room_price)
-            .unwrap_or(Ordering::Equal)
-    });
-    deduped
-}
-
-fn dedup_rates_for_type_b(rates: &[DomainRoomOption]) -> Vec<DomainRoomOption> {
-    let mut rates_by_offer: HashMap<String, Vec<DomainRoomOption>> = HashMap::new();
-    for rate in rates {
-        rates_by_offer
-            .entry(rate.room_data.offer_id.clone())
-            .or_default()
-            .push(rate.clone());
-    }
-
-    let mut offer_representatives: Vec<DomainRoomOption> = Vec::new();
-    for (_, offer_rates) in rates_by_offer {
-        if let Some(first_rate) = offer_rates.first() {
-            let mut rep_rate = first_rate.clone();
-            // Sum NET prices (same as Cart calculation at line 1925)
-            let total_price: f64 = offer_rates
-                .iter()
-                .map(|r| r.price_excluding_included_taxes())
-                .sum();
-            rep_rate.price.room_price = total_price;
-            // Clear tax_lines since we already computed Net
-            rep_rate.tax_lines.clear();
-            offer_representatives.push(rep_rate);
-        }
-    }
-
-    // Now dedup by meal plan using the existing logic (lowest price per meal plan)
-    dedup_rates_by_meal_plan(&offer_representatives)
-}
-
-fn build_room_cards(mut offers: Vec<OfferGroup>) -> Vec<RoomCard> {
-    let mut type_a_map: HashMap<u32, RoomCard> = HashMap::new();
-    let mut type_a_order: Vec<u32> = Vec::new();
-    // Group TYPE B cards by their card title (room combination)
-    let mut type_b_map: HashMap<String, RoomCard> = HashMap::new();
-    let mut type_b_order: Vec<String> = Vec::new();
-
-    for offer in &offers {
-        log!(
-            "DEBUG: Offer '{}' has {} rates",
-            offer.room_names.join(" + "),
-            offer.rates.len()
-        );
-        for (i, r) in offer.rates.iter().enumerate() {
-            log!(
-                "  Rate[{}]: room_price={:.2}, tax_lines.len={}, included_taxes={:.2}",
-                i,
-                r.price.room_price,
-                r.tax_lines.len(),
-                r.included_taxes_total()
-            );
-        }
-    }
-
-    for offer in offers {
-        let offer_rate = offer.rates.first().cloned();
-        let normalized_title = offer.room_names.join(" + ");
-
-        if let Some(mapped_id) = same_mapped_room_id(&offer) {
-            // TYPE A: Single room type
-            if let Some(first_rate) = offer_rate {
-                // Calculate sum of Net Prices for all rooms in the offer
-                // This handles cases where mixed occupancies (adults/children) result in different per-room prices
-                let mut representative_rate = first_rate.clone();
-                let count = offer.rates.len() as f64;
-                if count > 0.0 {
-                    // Sum the Net Prices (using price_excluding_included_taxes for accuracy)
-                    // RoomRateRow will divide this by the number of rooms to show per-room price
-                    let total_room_price: f64 = offer
-                        .rates
-                        .iter()
-                        .map(|r| r.price_excluding_included_taxes())
-                        .sum();
-
-                    let total_tax: f64 = offer.rates.iter().map(|r| r.price.tax).sum();
-
-                    representative_rate.price.room_price = total_room_price;
-                    representative_rate.price.tax = total_tax;
-                    representative_rate.price.suggested_selling_price = total_room_price;
-
-                    // Clear tax lines to avoid double subtraction in price_excluding_included_taxes
-                    // Since we already summed the Net Prices, the total is already Net.
-                    representative_rate.tax_lines.clear();
-                    representative_rate.price.published_price = offer
-                        .rates
-                        .iter()
-                        .map(|r| r.price.published_price)
-                        .sum::<f64>()
-                        / count;
-                    representative_rate.price.offered_price = offer
-                        .rates
-                        .iter()
-                        .map(|r| r.price.offered_price)
-                        .sum::<f64>()
-                        / count;
-                }
-
-                let entry = type_a_map.entry(mapped_id).or_insert_with(|| RoomCard {
-                    mapped_room_id: Some(mapped_id),
-                    room_names: offer.room_names.clone(),
-                    card_title: normalized_title.clone(),
-                    rates: Vec::new(),
-                });
-
-                for name in &offer.room_names {
-                    if !entry.room_names.contains(name) {
-                        entry.room_names.push(name.clone());
-                    }
-                }
-                if entry.card_title.is_empty() {
-                    entry.card_title = entry.room_names.join(" + ");
-                }
-                entry.rates.push(representative_rate);
-                if !type_a_order.contains(&mapped_id) {
-                    type_a_order.push(mapped_id);
-                }
-            }
-        } else {
-            // TYPE B: Multiple room types
-            let card_title =
-                build_type_b_title(&offer.rates).unwrap_or_else(|| normalized_title.clone());
-
-            // Group TYPE B cards by card_title (room combination)
-            let entry = type_b_map.entry(card_title.clone()).or_insert_with(|| {
-                // Track order of TYPE B cards
-                if !type_b_order.contains(&card_title) {
-                    type_b_order.push(card_title.clone());
-                }
-                RoomCard {
-                    mapped_room_id: None,
-                    room_names: offer.room_names.clone(),
-                    card_title: card_title.clone(),
-                    rates: Vec::new(),
-                }
-            });
-
-            // Merge room names from this offer
-            for name in &offer.room_names {
-                if !entry.room_names.contains(name) {
-                    entry.room_names.push(name.clone());
-                }
-            }
-
-            // Add all rates from this offer to the card
-            entry.rates.extend(offer.rates);
-        }
-    }
-
-    // Build final card list
-    let mut cards = Vec::new();
-
-    // Add TYPE A cards in order
-    for mapped_id in type_a_order {
-        if let Some(mut card) = type_a_map.remove(&mapped_id) {
-            if card.card_title.is_empty() {
-                card.card_title = card.room_names.join(" + ");
-            }
-            // Deduplicate rates by meal plan, keeping the lowest price for each
-            card.rates = dedup_rates_by_meal_plan(&card.rates);
-            cards.push(card);
-        }
-    }
-
-    // Add TYPE B cards in order, deduplicating rates by meal plan
-    for card_title in type_b_order {
-        if let Some(mut card) = type_b_map.remove(&card_title) {
-            // Deduplicate rates by meal plan, keeping the lowest price for each
-            // For TYPE B, we first sum the prices of all rooms in the offer
-            card.rates = dedup_rates_for_type_b(&card.rates);
-            cards.push(card);
-        }
-    }
-
-    cards
-}
-
-fn grouped_rooms_for_state(state: &HotelDetailsUIState) -> Vec<RoomCard> {
-    let rates = match state.rates.get() {
-        Some(rates) => rates,
-        None => return vec![],
-    };
-
-    if rates.is_empty() {
-        return vec![];
-    }
-
-    let mut grouped = group_room_options_by_type(rates);
-
-    if let Some(static_details) = state.static_details.get() {
-        if !static_details.rooms.is_empty() {
-            let mut ordered_groups = Vec::new();
-
-            for room in &static_details.rooms {
-                let room_id = room.room_id.trim().parse::<u32>().ok();
-                let position = if let Some(id) = room_id {
-                    grouped
-                        .iter()
-                        .position(|group| group.mapped_room_id == Some(id))
-                } else {
-                    grouped.iter().position(|group| {
-                        group.room_names.iter().any(|name| {
-                            normalized_room_key(name) == normalized_room_key(&room.room_name)
-                        })
-                    })
-                };
-
-                if let Some(pos) = position {
-                    ordered_groups.push(grouped.remove(pos));
-                }
-            }
-
-            if !ordered_groups.is_empty() {
-                ordered_groups.extend(grouped);
-                grouped = ordered_groups;
-            }
-        }
-    }
-
-    build_room_cards(grouped)
+fn grouped_rooms_for_state(state: &HotelDetailsUIState) -> Vec<DomainRoomGroup> {
+    state.rates.get().unwrap_or_default()
 }
 
 fn fallback_image_for_state(state: &HotelDetailsUIState) -> Option<String> {
@@ -1717,15 +1270,6 @@ fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     } else {
         format!("{symbol}{:.2}", amount)
     }
-}
-
-fn included_taxes_for_rate(rate: &DomainRoomOption) -> f64 {
-    rate.included_taxes_total()
-}
-
-fn nightly_price_excluding_taxes(rate: &DomainRoomOption, nights: u32) -> f64 {
-    let valid_nights = if nights == 0 { 1 } else { nights } as f64;
-    rate.price_excluding_included_taxes() / valid_nights
 }
 
 fn format_occupancy_text(info: Option<&DomainRoomOccupancy>) -> String {
@@ -1872,7 +1416,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     let currency_code = create_memo(move |_| {
         HotelDetailsUIState::get_available_room_options()
             .first()
-            .map(|opt| opt.price.currency_code.clone())
+            .map(|opt| opt.currency_code.clone())
             .unwrap_or_else(|| "USD".to_string())
     });
     let resolved_selection_rows = move || {
@@ -1891,14 +1435,19 @@ pub fn PricingBreakdownV1() -> impl IntoView {
         // First pass: collect all individual rows
         let mut raw_rows = Vec::new();
         for (rate_key, quantity) in selected.into_iter().filter(|(_, qty)| *qty > 0) {
-            if let Some(opt) = options
-                .iter()
-                .find(|opt| opt.room_data.rate_key == rate_key)
-            {
-                let room_name = opt.room_data.room_name.clone();
-                let total_price_for_stay = opt.price_excluding_included_taxes(); // Total for ALL nights
+            if let Some(opt) = options.iter().find(|opt| opt.rate_key == *rate_key) {
+                let room_name = opt.room_name.clone();
+                let total_price_for_stay = opt.price_per_room_excluding_taxes; // Total for ALL nights, as it is per-room total
+                                                                               // Wait! opt.price_per_room_excluding_taxes is "price per room excluding taxes".
+                                                                               // In grouping.rs: `avg_price_per_room` (line 119) = total / count.
+                                                                               // It is "total for 1 room for the STAY length"?
+                                                                               // Grouping.rs:
+                                                                               // let total_room_price: f64 = offer.rates.iter().map(|r| r.price_excluding_included_taxes()).sum();
+                                                                               // If LiteApi returns "room_price" as total for stay (usually yes), then
+                                                                               // grouping's price_per_room_excluding_taxes is total for stay per room.
+                                                                               // So dividing by nights is correct to get nightly rate.
                 let price_per_night = total_price_for_stay / nights_val;
-                let code = opt.price.currency_code.clone();
+                let code = opt.currency_code.clone();
                 let meal_plan = opt.meal_plan.clone().unwrap_or_default();
                 raw_rows.push((
                     rate_key,
@@ -1978,36 +1527,41 @@ pub fn PricingBreakdownV1() -> impl IntoView {
             // <!-- Pass room selection data to BlockRoomUIState -->
             // Get selected rooms with quantities
             let selected_rooms = HotelDetailsUIState::get_selected_rooms();
-            let available_rooms = HotelDetailsUIState::get_available_rooms();
-            let room_options = HotelDetailsUIState::get_available_room_options();
+            let available_variants = HotelDetailsUIState::get_available_room_variants();
             let hotel_details = HotelDetailsUIState::get_hotel_details();
 
             // Create room selection summary for block room page
             let mut raw_summaries = Vec::new();
             let mut selected_rooms_with_data = std::collections::HashMap::new();
-            let fallback_price_per_room = {
-                let total_rooms = HotelDetailsUIState::total_selected_rooms();
-                if total_rooms > 0 {
-                    HotelDetailsUIState::total_room_price() / total_rooms as f64
-                } else {
-                    0.0
-                }
-            };
 
             for (rate_key, quantity) in selected_rooms.iter() {
                 if *quantity > 0 {
-                    if let Some(room_option) = room_options
-                        .iter()
-                        .find(|opt| &opt.room_data.rate_key == rate_key)
+                    if let Some(variant) =
+                        available_variants.iter().find(|v| &v.rate_key == rate_key)
                     {
-                        raw_summaries.push((room_option, *quantity));
-                        selected_rooms_with_data
-                            .insert(rate_key.clone(), (*quantity, room_option.room_data.clone()));
-                    } else if let Some(room_data) =
-                        available_rooms.iter().find(|r| &r.rate_key == rate_key)
-                    {
+                        let room_data = crate::domain::DomainRoomData {
+                            mapped_room_id: variant.mapped_room_id.clone(),
+                            occupancy_number: variant.occupancy_number,
+                            room_name: variant.room_name.clone(),
+                            room_unique_id: variant.room_unique_id.clone(),
+                            rate_key: variant.rate_key.clone(),
+                            offer_id: variant.offer_id.clone(),
+                        };
                         selected_rooms_with_data
                             .insert(rate_key.clone(), (*quantity, room_data.clone()));
+
+                        let tax_lines: Vec<crate::domain::DomainTaxLine> = variant
+                            .tax_breakdown
+                            .iter()
+                            .map(|t| crate::domain::DomainTaxLine {
+                                description: t.description.clone(),
+                                amount: t.amount,
+                                currency_code: t.currency_code.clone(),
+                                included: t.included,
+                            })
+                            .collect();
+
+                        raw_summaries.push((variant, *quantity, room_data, tax_lines));
                     }
                 }
             }
@@ -2023,17 +1577,14 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 ),
             > = HashMap::new();
 
-            for (opt, qty) in raw_summaries {
-                let name = opt.room_data.room_name.clone();
-                let meal = opt.meal_plan.clone().unwrap_or_default();
-                let price_per_night = opt.price_excluding_included_taxes() / nights_val;
+            for (variant, qty, room_data, tax_lines) in raw_summaries {
+                let name = variant.room_name.clone();
+                let meal = variant.meal_plan.clone().unwrap_or_default();
+                let price_per_night = variant.price_per_room_excluding_taxes / nights_val;
 
-                let entry = grouped_summaries.entry((name, meal)).or_insert((
-                    0,
-                    0.0,
-                    opt.room_data.clone(),
-                    opt.tax_lines.clone(),
-                ));
+                let entry = grouped_summaries
+                    .entry((name, meal))
+                    .or_insert((0, 0.0, room_data, tax_lines));
                 entry.0 += qty;
                 entry.1 += price_per_night * qty as f64;
             }
@@ -2211,7 +1762,7 @@ pub fn PricingBookNowV1() -> impl IntoView {
 }
 
 #[component]
-fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
+fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
     let hotel_details_state: HotelDetailsUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
 
@@ -2224,18 +1775,11 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
         }
     };
 
-    let currency_code = rate.price.currency_code.clone();
+    let currency_code = rate.currency_code.clone();
 
     // Calculate price per room per night
     let requested_rooms = ui_search_ctx.guests.rooms.get();
-    let total_price_per_night = nightly_price_excluding_taxes(&rate, nights());
-    // Ensure we handle case where requested_rooms might be 0 (though unlikely in valid state)
-    let valid_rooms = if requested_rooms == 0 {
-        1
-    } else {
-        requested_rooms
-    };
-    let base_price_per_night = total_price_per_night / valid_rooms as f64;
+    let base_price_per_night = rate.price_per_room_excluding_taxes / nights() as f64;
 
     let price_text = format_currency_with_code(base_price_per_night, &currency_code);
     let meal_plan = rate
@@ -2246,18 +1790,18 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     let room_key = room_id.clone();
 
     let selection_key = room_key.clone();
-    let selection_offer_id = rate.room_data.offer_id.clone();
+    let selection_offer_id = rate.offer_id.clone();
     let selection_count = create_memo(move |_| {
         let selected_rooms = hotel_details_state.selected_rooms.get();
         if !selection_offer_id.is_empty() {
-            let available_options = HotelDetailsUIState::get_available_room_options();
+            let available_options = HotelDetailsUIState::get_available_room_variants();
             selected_rooms
                 .iter()
                 .filter_map(|(rate_key, qty)| {
                     available_options
                         .iter()
-                        .find(|option| option.room_data.rate_key == *rate_key)
-                        .filter(|option| option.room_data.offer_id == selection_offer_id)
+                        .find(|option| option.rate_key == *rate_key)
+                        .filter(|option| option.offer_id == selection_offer_id)
                         .map(|_| *qty)
                 })
                 .sum::<u32>()
@@ -2270,17 +1814,17 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
     let inc_key = room_key.clone();
     let rooms_requested_signal = ui_search_ctx.guests.rooms;
 
-    let offer_id = rate.room_data.offer_id.clone();
+    let offer_id = rate.offer_id.clone();
     let select_room = Action::new(move |_: &()| {
         if ENFORCE_SINGLE_ROOM_TYPE_BOOKING {
             // Multi-room selection logic: find all rooms in this offer
-            let all_options = HotelDetailsUIState::get_available_room_options();
+            let all_options = HotelDetailsUIState::get_available_room_variants();
             let mut selections: HashMap<String, u32> = HashMap::new();
 
             for option in all_options {
-                if option.room_data.offer_id == offer_id {
-                    let key = option.room_data.rate_key.clone();
-                    *selections.entry(key).or_insert(0) += 1;
+                if option.offer_id == offer_id {
+                    let key = option.rate_key.clone();
+                    *selections.entry(key).or_insert(0) += option.room_count;
                 }
             }
 
@@ -2407,30 +1951,28 @@ fn RoomRateRow(room_id: String, rate: DomainRoomOption) -> impl IntoView {
 
 #[component]
 fn RoomTypeCard(
-    room_group: RoomCard,
+    room_group: DomainRoomGroup,
     fallback_image: Option<String>,
     amenity_preview: Vec<Amenity>,
     room_details: Option<DomainStaticRoom>,
     #[prop(optional)] is_recommended: bool,
 ) -> impl IntoView {
     let open_image_viewer = RwSignal::new(false);
-    let RoomCard {
-        mapped_room_id: _,
-        room_names,
-        card_title,
-        rates,
-    } = room_group;
 
-    let rates_for_render = rates.clone();
+    let rates_for_render = room_group.room_types.clone();
 
-    let room_images = room_details
-        .as_ref()
-        .map(|details| details.photos.clone())
-        .unwrap_or_default();
+    let room_images = if !room_group.images.is_empty() {
+        room_group.images.clone()
+    } else {
+        room_details
+            .as_ref()
+            .map(|details| details.photos.clone())
+            .unwrap_or_default()
+    };
 
-    let hero_image = room_details
-        .as_ref()
-        .and_then(|details| details.photos.first().cloned())
+    let hero_image = room_images
+        .first()
+        .cloned()
         .or_else(|| fallback_image.clone())
         .unwrap_or_else(|| "/img/home.png".to_string());
 
@@ -2456,10 +1998,14 @@ fn RoomTypeCard(
         "Sleeps up to 2 guests".to_string()
     };
 
-    let room_specific_amenities = room_details
-        .as_ref()
-        .map(|details| convert_to_amenities(details.amenities.clone()))
-        .unwrap_or_default();
+    let room_specific_amenities = if !room_group.amenities.is_empty() {
+        convert_to_amenities(room_group.amenities.clone())
+    } else {
+        room_details
+            .as_ref()
+            .map(|details| convert_to_amenities(details.amenities.clone()))
+            .unwrap_or_default()
+    };
 
     // Store all amenities for modal display
     let all_room_amenities = store_value(if room_specific_amenities.is_empty() {
@@ -2477,15 +2023,7 @@ fn RoomTypeCard(
             .collect::<Vec<_>>()
     };
 
-    let room_display_name = if card_title.is_empty() {
-        if room_names.len() == 1 {
-            room_names[0].clone()
-        } else {
-            room_names.join(" + ")
-        }
-    } else {
-        card_title.clone()
-    };
+    let room_display_name = room_group.name.clone();
     let room_display_name_for_modal = room_display_name.clone();
 
     let room_size_text = room_details.as_ref().and_then(|details| {
@@ -2499,9 +2037,13 @@ fn RoomTypeCard(
     });
     let room_size_text_for_modal = store_value(room_size_text.clone());
 
-    let bed_text = room_details
-        .as_ref()
-        .and_then(|details| details.bed_types.first().cloned());
+    let bed_text = if !room_group.bed_types.is_empty() {
+        room_group.bed_types.first().cloned()
+    } else {
+        room_details
+            .as_ref()
+            .and_then(|details| details.bed_types.first().cloned())
+    };
     let bed_text_for_modal = store_value(bed_text.clone());
 
     let occupancy_text_for_modal = store_value(occupancy_text.clone());
@@ -2694,12 +2236,12 @@ fn RoomTypeCard(
             <div class="mt-5 border-t border-gray-200">
                 <For
                     each=move || rates_for_render.clone()
-                    key=|rate| rate.room_data.rate_key.clone()
+                    key=|rate| rate.rate_key.clone()
                     let:rate
                 >
                     <div class="px-5 py-4 border-b border-gray-200 last:border-b-0 bg-white">
                         <RoomRateRow
-                            room_id=rate.room_data.rate_key.clone()
+                            room_id=rate.rate_key.clone()
                             rate=rate
                         />
                     </div>
@@ -2720,7 +2262,7 @@ pub fn SelectRoomSection() -> impl IntoView {
     let total_offers = move || {
         grouped_rooms_for_state(&total_offers_state)
             .iter()
-            .map(|card| card.rates.len())
+            .map(|card| card.room_types.len())
             .sum::<usize>()
     };
 
@@ -2769,17 +2311,13 @@ pub fn SelectRoomSection() -> impl IntoView {
                                             let lookup = room_lookup.clone();
                                             let room_details = group
                                                 .mapped_room_id
-                                                .and_then(|id| lookup.by_id.get(&id).cloned())
+                                                .as_ref()
+                                                .and_then(|id| lookup.by_id.get(id).cloned())
                                                 .or_else(|| {
-                                                    group
-                                                        .room_names
-                                                        .iter()
-                                                        .find_map(|name| {
-                                                            lookup
-                                                                .by_name
-                                                                .get(&normalized_room_key(name))
-                                                                .cloned()
-                                                        })
+                                                    lookup
+                                                        .by_name
+                                                        .get(&normalized_room_key(&group.name))
+                                                        .cloned()
                                                 });
                                             view! {
                                                 <RoomTypeCard
@@ -3187,307 +2725,5 @@ pub fn SiteFooter() -> impl IntoView {
         <div class="mt-16 border-t border-gray-200">
             <Footer />
         </div>
-    }
-}
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::domain::{
-        DomainCurrencyAmount, DomainDetailedPrice, DomainPrice, DomainRoomData, DomainRoomOption,
-    };
-
-    // Helper function to create a test DomainRoomOption
-    fn create_test_room_option(
-        mapped_room_id: u32,
-        room_name: &str,
-        meal_plan: Option<&str>,
-        price: f64,
-        rate_key: &str,
-    ) -> DomainRoomOption {
-        DomainRoomOption {
-            mapped_room_id,
-            price: DomainDetailedPrice {
-                published_price: price,
-                published_price_rounded_off: price,
-                offered_price: price,
-                offered_price_rounded_off: price,
-                suggested_selling_price: price,
-                suggested_selling_price_rounded_off: price,
-                room_price: price,
-                tax: 0.0,
-                extra_guest_charge: 0.0,
-                child_charge: 0.0,
-                other_charges: 0.0,
-                currency_code: "USD".to_string(),
-            },
-            tax_lines: vec![],
-            offer_retail_rate: Some(DomainCurrencyAmount {
-                amount: price,
-                currency_code: "USD".to_string(),
-            }),
-            room_data: DomainRoomData {
-                mapped_room_id,
-                occupancy_number: Some(1),
-                room_name: room_name.to_string(),
-                room_unique_id: "test_unique_id".to_string(),
-                rate_key: rate_key.to_string(),
-                offer_id: "test_offer".to_string(),
-            },
-            meal_plan: meal_plan.map(String::from),
-            occupancy_info: Some(DomainRoomOccupancy {
-                max_occupancy: Some(2),
-                adult_count: Some(1),
-                child_count: Some(0),
-            }),
-            cancellation_policies: None,
-            // perks: vec![],
-            promotions: None,
-            remarks: None,
-        }
-    }
-
-    #[test]
-    fn test_dedup_rates_by_meal_plan_removes_duplicates() {
-        // Create rates with duplicate "Room Only" meal plans but different prices
-        let rates = vec![
-            create_test_room_option(1, "Rover Room", Some("Room Only (RO)"), 79.43, "rate1"),
-            create_test_room_option(1, "Rover Room", Some("Room Only (RO)"), 76.46, "rate2"),
-            create_test_room_option(
-                1,
-                "Rover Room",
-                Some("Breakfast Included (BI)"),
-                99.09,
-                "rate3",
-            ),
-        ];
-
-        let deduped = dedup_rates_by_meal_plan(&rates);
-
-        // Should have only 2 rates: 1 Room Only (lowest price) + 1 Breakfast
-        assert_eq!(
-            deduped.len(),
-            2,
-            "Should deduplicate to 2 unique meal plans"
-        );
-
-        // Find the Room Only rate
-        let room_only = deduped
-            .iter()
-            .find(|r| {
-                r.meal_plan
-                    .as_ref()
-                    .map_or(false, |mp| mp.contains("Room Only"))
-            })
-            .expect("Should have Room Only rate");
-
-        // Should keep the lowest price (76.46)
-        assert_eq!(
-            room_only.price.room_price, 76.46,
-            "Should keep the lowest price for Room Only"
-        );
-
-        // Find the Breakfast rate
-        let breakfast = deduped
-            .iter()
-            .find(|r| {
-                r.meal_plan
-                    .as_ref()
-                    .map_or(false, |mp| mp.contains("Breakfast"))
-            })
-            .expect("Should have Breakfast rate");
-
-        assert_eq!(
-            breakfast.price.room_price, 99.09,
-            "Should keep the Breakfast rate"
-        );
-    }
-
-    #[test]
-    fn test_dedup_rates_by_meal_plan_handles_none_meal_plan() {
-        // Test with None meal plans (should default to "Room Only")
-        let rates = vec![
-            create_test_room_option(1, "Test Room", None, 100.0, "rate1"),
-            create_test_room_option(1, "Test Room", None, 80.0, "rate2"),
-        ];
-
-        let deduped = dedup_rates_by_meal_plan(&rates);
-
-        // Should have only 1 rate with the lowest price
-        assert_eq!(deduped.len(), 1, "Should deduplicate None meal plans");
-        assert_eq!(
-            deduped[0].price.room_price, 80.0,
-            "Should keep the lowest price"
-        );
-    }
-
-    #[test]
-    fn test_dedup_rates_by_meal_plan_sorts_by_price() {
-        let rates = vec![
-            create_test_room_option(1, "Test Room", Some("Full Board (FB)"), 145.05, "rate1"),
-            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 79.43, "rate2"),
-            create_test_room_option(
-                1,
-                "Test Room",
-                Some("Breakfast Included (BI)"),
-                99.09,
-                "rate3",
-            ),
-            create_test_room_option(1, "Test Room", Some("Half Board (HB)"), 122.07, "rate4"),
-        ];
-
-        let deduped = dedup_rates_by_meal_plan(&rates);
-
-        // Should be sorted by price (ascending)
-        assert_eq!(deduped.len(), 4, "Should have 4 unique meal plans");
-        assert_eq!(
-            deduped[0].price.room_price, 79.43,
-            "First should be Room Only (cheapest)"
-        );
-        assert_eq!(
-            deduped[1].price.room_price, 99.09,
-            "Second should be Breakfast"
-        );
-        assert_eq!(
-            deduped[2].price.room_price, 122.07,
-            "Third should be Half Board"
-        );
-        assert_eq!(
-            deduped[3].price.room_price, 145.05,
-            "Fourth should be Full Board"
-        );
-    }
-
-    #[test]
-    fn test_dedup_rates_by_meal_plan_multiple_duplicates_same_meal_plan() {
-        // Test with multiple duplicates of the same meal plan
-        let rates = vec![
-            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 250.14, "rate1"),
-            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 250.8, "rate2"),
-            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 259.79, "rate3"),
-            create_test_room_option(1, "Test Room", Some("Room Only (RO)"), 245.0, "rate4"), // Lowest
-        ];
-
-        let deduped = dedup_rates_by_meal_plan(&rates);
-
-        assert_eq!(deduped.len(), 1, "Should have only 1 rate");
-        assert_eq!(
-            deduped[0].price.room_price, 245.0,
-            "Should keep the absolute lowest price"
-        );
-    }
-
-    #[test]
-    fn test_build_room_cards_deduplicates_type_a_rates() {
-        // Create an OfferGroup representing a TYPE A card (same mapped_room_id)
-        let offer1 = OfferGroup {
-            offer_id: "offer1".to_string(),
-            mapped_room_id: Some(1321373764),
-            rates: vec![create_test_room_option(
-                1321373764,
-                "Rover Room",
-                Some("Room Only (RO)"),
-                79.43,
-                "rate1",
-            )],
-            room_names: vec!["Rover Room".to_string()],
-        };
-
-        let offer2 = OfferGroup {
-            offer_id: "offer2".to_string(),
-            mapped_room_id: Some(1321373764),
-            rates: vec![create_test_room_option(
-                1321373764,
-                "Rover Room",
-                Some("Room Only (RO)"),
-                76.46,
-                "rate2",
-            )],
-            room_names: vec!["Rover Room".to_string()],
-        };
-
-        let offers = vec![offer1, offer2];
-        let cards = build_room_cards(offers);
-
-        // Should have only 1 card for this room type
-        assert_eq!(cards.len(), 1, "Should have 1 TYPE A card");
-
-        let card = &cards[0];
-        assert_eq!(
-            card.mapped_room_id,
-            Some(1321373764),
-            "Should have correct mapped_room_id"
-        );
-
-        // The card should have only 1 rate (deduplicated)
-        assert_eq!(
-            card.rates.len(),
-            1,
-            "Should have only 1 rate after deduplication"
-        );
-
-        // Should keep the lowest price
-        assert_eq!(
-            card.rates[0].price.room_price, 76.46,
-            "Should keep the lowest price"
-        );
-    }
-
-    #[test]
-    fn test_build_room_cards_preserves_different_meal_plans() {
-        // Create offers with same room but different meal plans
-        let offer1 = OfferGroup {
-            offer_id: "offer1".to_string(),
-            mapped_room_id: Some(1321373764),
-            rates: vec![create_test_room_option(
-                1321373764,
-                "Rover Room",
-                Some("Room Only (RO)"),
-                79.43,
-                "rate1",
-            )],
-            room_names: vec!["Rover Room".to_string()],
-        };
-
-        let offer2 = OfferGroup {
-            offer_id: "offer2".to_string(),
-            mapped_room_id: Some(1321373764),
-            rates: vec![create_test_room_option(
-                1321373764,
-                "Rover Room",
-                Some("Breakfast Included (BI)"),
-                99.09,
-                "rate2",
-            )],
-            room_names: vec!["Rover Room".to_string()],
-        };
-
-        let offers = vec![offer1, offer2];
-        let cards = build_room_cards(offers);
-
-        assert_eq!(cards.len(), 1, "Should have 1 TYPE A card");
-
-        let card = &cards[0];
-        // Should have 2 rates (different meal plans)
-        assert_eq!(
-            card.rates.len(),
-            2,
-            "Should have 2 rates with different meal plans"
-        );
-
-        // Verify both meal plans are present
-        let meal_plans: Vec<String> = card
-            .rates
-            .iter()
-            .filter_map(|r| r.meal_plan.clone())
-            .collect();
-
-        assert!(
-            meal_plans.iter().any(|mp| mp.contains("Room Only")),
-            "Should have Room Only"
-        );
-        assert!(
-            meal_plans.iter().any(|mp| mp.contains("Breakfast")),
-            "Should have Breakfast"
-        );
     }
 }

@@ -8,7 +8,7 @@ use estate_fe::{
     api::canister::add_booking::call_add_booking_backend,
     domain::{
         BookingError, DomainCurrencyAmount, DomainDestination, DomainHotelDetails, DomainRoomData,
-        DomainRoomOption, DomainSelectedDateRange,
+        DomainRoomGroup, DomainRoomVariant, DomainSelectedDateRange,
     },
     utils::{app_reference::BookingId, booking_backend_conversions::BookingBackendConversions},
 };
@@ -371,7 +371,7 @@ fn align_room_details_with_blocked_rooms(
                 room_details.push(DomainRoomData {
                     room_name: blocked.room_name.clone(),
                     room_unique_id: blocked.room_code.clone(),
-                    mapped_room_id: 0,
+                    mapped_room_id: String::new(),
                     occupancy_number: Some(1),
                     rate_key: String::new(),
                     offer_id: String::new(),
@@ -415,7 +415,7 @@ async fn build_hotel_details(
         end: date_range.end,
     };
 
-    let all_rooms: Vec<DomainRoomOption> = room_details
+    let all_rooms: Vec<DomainRoomGroup> = room_details
         .iter()
         .map(|room_data| {
             // Find the corresponding blocked room to get cancellation policy and meal plan
@@ -424,24 +424,33 @@ async fn build_hotel_details(
                 .iter()
                 .find(|blocked| blocked.room_code == room_data.room_unique_id);
 
-            DomainRoomOption {
-                price: block_result.total_price.clone(),
-                tax_lines: vec![],
-                offer_retail_rate: Some(DomainCurrencyAmount {
-                    amount: block_result.total_price.room_price,
-                    currency_code: block_result.total_price.currency_code.clone(),
-                }),
-                room_data: room_data.clone(),
+            let variant = DomainRoomVariant {
+                offer_id: room_data.offer_id.clone(),
+                rate_key: room_data.rate_key.clone(),
+                room_name: room_data.room_name.clone(),
+                mapped_room_id: room_data.mapped_room_id.clone(),
+                room_count: 1,
+                room_unique_id: room_data.room_unique_id.clone(),
+                occupancy_number: room_data.occupancy_number,
                 meal_plan: blocked_room.and_then(|br| br.meal_plan.clone()),
+                total_price_for_all_rooms: block_result.total_price.room_price,
+                total_price_for_one_room: block_result.total_price.room_price,
+                price_per_room_excluding_taxes: block_result.total_price.room_price,
+                currency_code: block_result.total_price.currency_code.clone(),
+                tax_breakdown: vec![],
                 occupancy_info: None,
-                mapped_room_id: room_data.mapped_room_id,
-                // Map cancellation policy from blocked room (string) to structured format
-                // Note: blocked_room.cancellation_policy is a String, but we need DomainCancellationPolicies
-                // For now, store it in remarks until we parse it properly
-                cancellation_policies: None, // TODO: Parse cancellation_policy string into structured format
-                // perks: vec![],
-                promotions: None,
-                remarks: blocked_room.and_then(|br| br.cancellation_policy.clone()),
+                cancellation_info: None,
+            };
+
+            DomainRoomGroup {
+                mapped_room_id: Some(room_data.mapped_room_id.clone()),
+                name: room_data.room_name.clone(),
+                min_price: block_result.total_price.room_price,
+                currency_code: block_result.total_price.currency_code.clone(),
+                images: vec![],
+                amenities: vec![],
+                bed_types: vec![],
+                room_types: vec![variant],
             }
         })
         .collect();

@@ -24,7 +24,7 @@ pub async fn get_hotel_static_details_api(
 #[server(GetHotelRatesApi, "/api")]
 pub async fn get_hotel_rates_api(
     criteria: DomainHotelInfoCriteria,
-) -> Result<Vec<crate::domain::DomainRoomOption>, ServerFnError> {
+) -> Result<crate::domain::DomainGroupedRoomRates, ServerFnError> {
     let liteapi_driver = Arc::new(get_liteapi_driver());
     let hotel_service = HotelService::new(liteapi_driver);
 

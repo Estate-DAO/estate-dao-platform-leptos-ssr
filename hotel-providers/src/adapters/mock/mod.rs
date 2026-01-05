@@ -122,7 +122,7 @@ impl HotelProviderPort for MockHotelProvider {
     async fn get_hotel_rates(
         &self,
         _criteria: DomainHotelInfoCriteria,
-    ) -> Result<Vec<DomainRoomOption>, ProviderError> {
+    ) -> Result<DomainGroupedRoomRates, ProviderError> {
         if self.should_fail {
             return Err(ProviderError::service_unavailable(
                 self.name,
@@ -131,7 +131,9 @@ impl HotelProviderPort for MockHotelProvider {
             ));
         }
 
-        Ok(vec![])
+        Ok(DomainGroupedRoomRates {
+            room_groups: vec![],
+        })
     }
 
     async fn get_min_rates(

@@ -2,6 +2,7 @@
 //!
 //! These types are used for hotel search, details, and room operations.
 
+use crate::grouped_rooms::DomainRoomGroup;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -387,7 +388,7 @@ pub struct DomainTaxLine {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainRoomData {
-    pub mapped_room_id: u32,
+    pub mapped_room_id: String,
     pub occupancy_number: Option<u32>,
     pub room_name: String,
     pub room_unique_id: String,
@@ -397,7 +398,7 @@ pub struct DomainRoomData {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainRoomOption {
-    pub mapped_room_id: u32,
+    pub mapped_room_id: String,
     pub price: DomainDetailedPrice,
     pub tax_lines: Vec<DomainTaxLine>,
     pub offer_retail_rate: Option<DomainCurrencyAmount>,
@@ -464,7 +465,7 @@ pub struct DomainHotelDetails {
     pub hotel_facilities: Vec<String>,
     pub address: String,
     pub images: Vec<String>,
-    pub all_rooms: Vec<DomainRoomOption>,
+    pub all_rooms: Vec<DomainRoomGroup>,
     pub amenities: Vec<String>,
     pub search_info: Option<DomainHotelSearchInfo>,
     pub search_criteria: Option<DomainHotelSearchCriteria>,
@@ -494,7 +495,7 @@ impl DomainHotelStaticDetails {
         &self,
         checkin: String,
         checkout: String,
-        all_rooms: Vec<DomainRoomOption>,
+        all_rooms: Vec<DomainRoomGroup>,
         search_info: Option<DomainHotelSearchInfo>,
         search_criteria: Option<DomainHotelSearchCriteria>,
     ) -> DomainHotelDetails {

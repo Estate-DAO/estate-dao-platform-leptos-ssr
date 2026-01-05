@@ -1,9 +1,9 @@
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
-    DomainGetBookingRequest, DomainGetBookingResponse, DomainHotelInfoCriteria,
-    DomainHotelListAfterSearch, DomainHotelSearchCriteria, DomainHotelStaticDetails,
-    DomainPlaceDetails, DomainPlaceDetailsPayload, DomainPlacesResponse, DomainPlacesSearchPayload,
-    DomainPrice, DomainRoomOption,
+    DomainGetBookingRequest, DomainGetBookingResponse, DomainGroupedRoomRates,
+    DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria,
+    DomainHotelStaticDetails, DomainPlaceDetails, DomainPlaceDetailsPayload, DomainPlacesResponse,
+    DomainPlacesSearchPayload, DomainPrice,
 };
 use crate::liteapi::client::LiteApiClient;
 use crate::liteapi::mapper::LiteApiMapper;
@@ -165,14 +165,30 @@ impl HotelProviderPort for LiteApiDriver {
     async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<Vec<DomainRoomOption>, ProviderError> {
+    ) -> Result<DomainGroupedRoomRates, ProviderError> {
         let req = LiteApiMapper::map_domain_info_to_liteapi_rates(
             &criteria,
             self.client.currency(),
             self.room_mapping,
         )?;
         let resp = self.client.get_hotel_rates(&req).await?;
-        Ok(LiteApiMapper::map_liteapi_rates_response_to_domain(resp))
+        let rates = LiteApiMapper::map_liteapi_rates_response_to_domain(resp);
+
+        // Fetch static details for image/amenity enrichment if we are querying a single hotel
+        let static_details_result = if criteria.hotel_ids.len() == 1 {
+            self.get_hotel_static_details(&criteria.hotel_ids[0])
+                .await
+                .ok()
+        } else {
+            None
+        };
+
+        let static_rooms_ref = static_details_result.as_ref().map(|d| d.rooms.as_slice());
+
+        Ok(crate::liteapi::grouping::group_liteapi_rates(
+            rates,
+            static_rooms_ref,
+        ))
     }
 
     async fn get_min_rates(

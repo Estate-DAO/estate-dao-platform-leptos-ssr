@@ -141,7 +141,7 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
             address: static_details.address,
             images: static_details.images,
             amenities: static_details.amenities,
-            all_rooms: rates,
+            all_rooms: rates.room_groups, // Updated to use Room Groups
             checkin: date_tuple_to_yyyy_mm_dd(criteria.search_criteria.check_in_date),
             checkout: date_tuple_to_yyyy_mm_dd(criteria.search_criteria.check_out_date),
             search_info: None,
@@ -159,7 +159,7 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
     pub async fn get_hotel_rates(
         &self,
         criteria: DomainHotelInfoCriteria,
-    ) -> Result<Vec<crate::domain::DomainRoomOption>, ProviderError> {
+    ) -> Result<crate::domain::DomainGroupedRoomRates, ProviderError> {
         self.provider.get_hotel_rates(criteria).await
     }
 
