@@ -192,7 +192,8 @@ pub struct LiteApiGuest {
     pub first_name: String,
     #[serde(rename = "lastName")]
     pub last_name: String,
-    pub email: Option<String>,
+    pub email: String,
+    pub phone: String,
     pub remarks: Option<String>,
 }
 

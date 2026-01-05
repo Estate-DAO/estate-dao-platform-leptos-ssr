@@ -1029,12 +1029,26 @@ impl LiteApiMapper {
         let guests: Vec<LiteApiGuest> = domain_request
             .guests
             .iter()
-            .map(|guest| LiteApiGuest {
-                occupancy_number: guest.occupancy_number as i32,
-                first_name: guest.first_name.clone(),
-                last_name: guest.last_name.clone(),
-                email: Some(guest.email.clone()),
-                remarks: guest.remarks.clone(),
+            .map(|guest| {
+                // Use holder's email/phone as fallback if guest has empty values
+                let email = if guest.email.is_empty() {
+                    domain_request.holder.email.clone()
+                } else {
+                    guest.email.clone()
+                };
+                let phone = if guest.phone.is_empty() {
+                    domain_request.holder.phone.clone()
+                } else {
+                    guest.phone.clone()
+                };
+                LiteApiGuest {
+                    occupancy_number: guest.occupancy_number as i32,
+                    first_name: guest.first_name.clone(),
+                    last_name: guest.last_name.clone(),
+                    email,
+                    phone,
+                    remarks: guest.remarks.clone(),
+                }
             })
             .collect();
 
