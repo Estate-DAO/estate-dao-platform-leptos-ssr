@@ -239,7 +239,7 @@ pub fn MyAccountPage() -> impl IntoView {
                 </section>
             </main>
             <div class="flex-1 justify-between container mx-auto px-4 py-8 flex gap-6">
-                <span class="text-[#45556C] text-sm">"Copyright © 2025 EstateDao. All Rights Reserved."</span>
+                <span class="text-[#45556C] text-sm">"Copyright © 2026 EstateDao. All Rights Reserved."</span>
                 <SocialLinks icon_class="text-white bg-blue-600 rounded-full p-1 h-6 w-6" />
             </div>
         </div>

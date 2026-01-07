@@ -22,7 +22,7 @@ pub fn Footer() -> impl IntoView {
                     <img src="/img/icp.svg" alt="Internet Computer Logo" class="h-6 w-auto" />
 
                     <p class="text-xs text-gray-400">
-                        "Copyright © 2025 EstateDao. All Rights Reserved."
+                        "Copyright © 2026 EstateDao. All Rights Reserved."
                     </p>
                 </div>
 
