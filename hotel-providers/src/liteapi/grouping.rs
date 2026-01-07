@@ -177,7 +177,28 @@ pub fn group_liteapi_rates(
                 if avg_price_per_room < group.min_price {
                     group.min_price = avg_price_per_room;
                 }
-                group.room_types.push(variant.clone());
+                // Deduplicate: skip variants with same meal plan, same price, AND same refundable status
+                let variant_refundable = variant
+                    .cancellation_info
+                    .as_ref()
+                    .map(|c| c.refundable_tag.as_str())
+                    .unwrap_or("NRFN");
+                let is_duplicate = group.room_types.iter().any(|existing| {
+                    let existing_refundable = existing
+                        .cancellation_info
+                        .as_ref()
+                        .map(|c| c.refundable_tag.as_str())
+                        .unwrap_or("NRFN");
+                    existing.meal_plan == variant.meal_plan
+                        && (existing.price_per_room_excluding_taxes
+                            - variant.price_per_room_excluding_taxes)
+                            .abs()
+                            < 0.01
+                        && existing_refundable == variant_refundable
+                });
+                if !is_duplicate {
+                    group.room_types.push(variant.clone());
+                }
             })
             .or_insert_with(|| {
                 // Initialize new group

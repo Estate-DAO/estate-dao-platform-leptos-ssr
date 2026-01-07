@@ -1875,7 +1875,30 @@ fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
         "No meals included"
     };
     rate_details.push(meal_desc.to_string());
-    rate_details.push("Non-Refundable".to_string());
+
+    // Check refundable status from cancellation_info
+    let refundable_text = if let Some(ref cancel_info) = rate.cancellation_info {
+        if cancel_info.refundable_tag == "RFN" {
+            // Check if there's a cancel_time to show
+            if let Some(policy) = cancel_info.cancel_policy_infos.first() {
+                format!(
+                    "Free Cancellation until {}",
+                    policy
+                        .cancel_time
+                        .split(' ')
+                        .next()
+                        .unwrap_or(&policy.cancel_time)
+                )
+            } else {
+                "Free Cancellation".to_string()
+            }
+        } else {
+            "Non-Refundable".to_string()
+        }
+    } else {
+        "Non-Refundable".to_string()
+    };
+    rate_details.push(refundable_text);
 
     view! {
         <div class="flex flex-col md:grid md:grid-cols-[1.5fr_1fr_auto] md:items-stretch gap-4 md:gap-0">
