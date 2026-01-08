@@ -1,4 +1,4 @@
-use crate::hotel_search_types::{DomainCancellationPolicies, DomainRoomOccupancy};
+use crate::hotel_search_types::{DomainCancellationPolicies, DomainPerk, DomainRoomOccupancy};
 use serde::{Deserialize, Serialize};
 
 /// Tax breakdown item for display
@@ -35,6 +35,16 @@ pub struct DomainRoomVariant {
     // Other details
     pub occupancy_info: Option<DomainRoomOccupancy>,
     pub cancellation_info: Option<DomainCancellationPolicies>,
+
+    // NEW: Enhanced rate information
+    /// Perks included with this rate (e.g., "Daily breakfast for 2", "$100 Property credit")
+    pub perks: Vec<DomainPerk>,
+    /// Original price before discounts (for strikethrough display)
+    pub original_price: Option<f64>,
+    /// Board type code (e.g., "RO" for Room Only, "BI" for Breakfast Included)
+    pub board_type_code: Option<String>,
+    /// Special remarks about the rate
+    pub remarks: Option<String>,
 }
 
 /// A logical room type grouping (e.g., "Deluxe Room" or "2 x Standard Room")

@@ -440,6 +440,11 @@ async fn build_hotel_details(
                 tax_breakdown: vec![],
                 occupancy_info: None,
                 cancellation_info: None,
+                // NEW: Enhanced rate information (empty defaults for block room context)
+                perks: vec![],
+                original_price: None,
+                board_type_code: None,
+                remarks: None,
             };
 
             DomainRoomGroup {

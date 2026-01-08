@@ -637,7 +637,27 @@ impl LiteApiMapper {
             offer_retail_rate: None,
             cancellation_policies,
             promotions: None,
-            remarks: None,
+            remarks: rate.remarks.clone(),
+            // NEW: Enhanced rate information
+            perks: rate
+                .perks
+                .iter()
+                .filter_map(|p| {
+                    p.name.clone().map(|name| DomainPerk {
+                        name,
+                        amount: p.amount,
+                        currency: p.currency.clone(),
+                    })
+                })
+                .collect(),
+            original_price: rate
+                .retail_rate
+                .initial_price
+                .as_ref()
+                .and_then(|v| v.first())
+                .map(|a| a.amount),
+            board_type_code: rate.board_type.clone(),
+            payment_types: rate.payment_types.clone(),
         }
     }
 

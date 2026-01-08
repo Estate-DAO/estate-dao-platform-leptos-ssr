@@ -396,6 +396,14 @@ pub struct DomainRoomData {
     pub offer_id: String,
 }
 
+/// Perk/benefit associated with a room rate (e.g., breakfast, property credit, room upgrade)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DomainPerk {
+    pub name: String,
+    pub amount: Option<f64>,
+    pub currency: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainRoomOption {
     pub mapped_room_id: String,
@@ -408,6 +416,14 @@ pub struct DomainRoomOption {
     pub cancellation_policies: Option<DomainCancellationPolicies>,
     pub promotions: Option<String>,
     pub remarks: Option<String>,
+    /// Perks included with this rate (e.g., breakfast, property credit, room upgrade)
+    pub perks: Vec<DomainPerk>,
+    /// Original price before discounts (for strikethrough display)
+    pub original_price: Option<f64>,
+    /// Board type code (e.g., "RO" for Room Only, "BI" for Breakfast Included)
+    pub board_type_code: Option<String>,
+    /// Payment types supported (e.g., "NUITEE_PAY", "PROPERTY_PAY")
+    pub payment_types: Vec<String>,
 }
 
 impl DomainRoomOption {

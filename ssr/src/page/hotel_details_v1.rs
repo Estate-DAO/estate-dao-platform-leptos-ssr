@@ -1876,29 +1876,46 @@ fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
     };
     rate_details.push(meal_desc.to_string());
 
-    // Check refundable status from cancellation_info
-    let refundable_text = if let Some(ref cancel_info) = rate.cancellation_info {
-        if cancel_info.refundable_tag == "RFN" {
-            // Check if there's a cancel_time to show
-            if let Some(policy) = cancel_info.cancel_policy_infos.first() {
-                format!(
-                    "Free Cancellation until {}",
-                    policy
-                        .cancel_time
-                        .split(' ')
-                        .next()
-                        .unwrap_or(&policy.cancel_time)
-                )
-            } else {
-                "Free Cancellation".to_string()
+    // Add perks to rate_details
+    for perk in &rate.perks {
+        rate_details.push(format!("✓ {}", perk.name));
+    }
+
+    // Add remarks if present (strip HTML tags)
+    if let Some(ref remarks) = rate.remarks {
+        if !remarks.is_empty() {
+            // Simple HTML tag stripping - remove anything between < and >
+            let stripped = remarks
+                .replace("<br/>", " ")
+                .replace("<br>", " ")
+                .replace("</li><li>", ", ")
+                .replace("<li>", "")
+                .replace("</li>", "")
+                .replace("<ul>", "")
+                .replace("</ul>", "")
+                .replace("<p>", "")
+                .replace("</p>", "");
+            // Remove any remaining HTML tags
+            let mut result = String::new();
+            let mut in_tag = false;
+            for c in stripped.chars() {
+                if c == '<' {
+                    in_tag = true;
+                } else if c == '>' {
+                    in_tag = false;
+                } else if !in_tag {
+                    result.push(c);
+                }
             }
-        } else {
-            "Non-Refundable".to_string()
+            let cleaned = result.trim().to_string();
+            if !cleaned.is_empty() {
+                rate_details.push(cleaned);
+            }
         }
-    } else {
-        "Non-Refundable".to_string()
-    };
-    rate_details.push(refundable_text);
+    }
+
+    // Note: Removed cancellation policy text (Free Cancellation/Non-Refundable)
+    // Note: Removed strikethrough pricing display
 
     view! {
         <div class="flex flex-col md:grid md:grid-cols-[1.5fr_1fr_auto] md:items-stretch gap-4 md:gap-0">

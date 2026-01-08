@@ -167,6 +167,11 @@ pub fn group_liteapi_rates(
             tax_breakdown,
             occupancy_info: first_rate.occupancy_info.clone(),
             cancellation_info: first_rate.cancellation_policies.clone(),
+            // NEW: Enhanced rate information
+            perks: first_rate.perks.clone(),
+            original_price: first_rate.original_price,
+            board_type_code: first_rate.board_type_code.clone(),
+            remarks: first_rate.remarks.clone(),
         };
 
         // Add to existing group or create new
@@ -177,27 +182,28 @@ pub fn group_liteapi_rates(
                 if avg_price_per_room < group.min_price {
                     group.min_price = avg_price_per_room;
                 }
-                // Deduplicate: skip variants with same meal plan, same price, AND same refundable status
-                let variant_refundable = variant
-                    .cancellation_info
-                    .as_ref()
-                    .map(|c| c.refundable_tag.as_str())
-                    .unwrap_or("NRFN");
-                let is_duplicate = group.room_types.iter().any(|existing| {
-                    let existing_refundable = existing
-                        .cancellation_info
-                        .as_ref()
-                        .map(|c| c.refundable_tag.as_str())
-                        .unwrap_or("NRFN");
-                    existing.meal_plan == variant.meal_plan
-                        && (existing.price_per_room_excluding_taxes
-                            - variant.price_per_room_excluding_taxes)
-                            .abs()
-                            < 0.01
-                        && existing_refundable == variant_refundable
-                });
-                if !is_duplicate {
-                    group.room_types.push(variant.clone());
+                // Aggressive deduplication: only keep the CHEAPEST variant per meal plan
+                // Find if there's an existing variant with the same meal plan
+                let existing_idx = group
+                    .room_types
+                    .iter()
+                    .position(|existing| existing.meal_plan == variant.meal_plan);
+
+                match existing_idx {
+                    Some(idx) => {
+                        // Same meal plan exists - keep only the cheaper one
+                        if variant.price_per_room_excluding_taxes
+                            < group.room_types[idx].price_per_room_excluding_taxes
+                        {
+                            // New variant is cheaper, replace the existing one
+                            group.room_types[idx] = variant.clone();
+                        }
+                        // Otherwise, keep the existing cheaper one (do nothing)
+                    }
+                    None => {
+                        // New meal plan, add the variant
+                        group.room_types.push(variant.clone());
+                    }
                 }
             })
             .or_insert_with(|| {

@@ -115,8 +115,13 @@ pub struct LiteApiRate {
     pub retail_rate: LiteApiRetailRate,
     #[serde(rename = "cancellationPolicies")]
     pub cancellation_policies: Option<LiteApiCancellationPolicies>,
-    #[serde(rename = "paymentTypes")]
+    #[serde(rename = "paymentTypes", default)]
     pub payment_types: Vec<String>,
+    /// Perks/benefits included with this rate (e.g., breakfast, property credit)
+    #[serde(default)]
+    pub perks: Vec<LiteApiPerk>,
+    /// Special remarks about the rate
+    pub remarks: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +129,9 @@ pub struct LiteApiRetailRate {
     pub total: Vec<LiteApiAmount>,
     #[serde(rename = "suggestedSellingPrice")]
     pub suggested_selling_price: Option<Vec<LiteApiAmount>>,
+    /// Original/initial price before discounts (for strikethrough display)
+    #[serde(rename = "initialPrice")]
+    pub initial_price: Option<Vec<LiteApiAmount>>,
     #[serde(rename = "taxesAndFees")]
     pub taxes_and_fees: Option<Vec<LiteApiTaxFee>>,
 }
@@ -157,6 +165,18 @@ pub struct LiteApiCancelPolicyInfo {
     pub amount: f64,
     pub currency: String,
     pub r#type: Option<String>,
+}
+
+/// Perk/benefit associated with a rate (e.g., breakfast, property credit, room upgrade)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LiteApiPerk {
+    #[serde(rename = "perkId")]
+    pub perk_id: Option<i32>,
+    pub name: Option<String>,
+    pub amount: Option<f64>,
+    pub currency: Option<String>,
+    /// Level of the perk: HOTEL, RATE, or ROOM
+    pub level: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
