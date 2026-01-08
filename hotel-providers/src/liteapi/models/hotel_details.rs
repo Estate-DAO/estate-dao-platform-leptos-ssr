@@ -169,7 +169,7 @@ pub struct LiteApiRoomView {}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LiteApiPolicy {
-    pub id: i32,
+    pub id: Option<i32>,
     #[serde(rename = "policy_type", default)]
     pub policy_type: String,
     #[serde(default)]
@@ -200,12 +200,13 @@ pub struct LiteApiSentimentAnalysis {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LiteApiBedType {
+    #[serde(default)]
     pub quantity: i32,
-    #[serde(rename = "bedType")]
+    #[serde(rename = "bedType", default)]
     pub bed_type: String,
-    #[serde(rename = "bedSize")]
+    #[serde(rename = "bedSize", default)]
     pub bed_size: String,
-    pub id: i32,
+    pub id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
