@@ -42,7 +42,8 @@ use leptos::{provide_context, use_context};
 cfg_if! {
     if #[cfg(feature = "ssr")] {
         use axum::extract::FromRef;
-        use crate::api::liteapi::LiteApiHTTPClient;
+        // use crate::api::liteapi::LiteApiHTTPClient; // Legacy client removed
+        use hotel_providers::liteapi::LiteApiDriver;
         use leptos::LeptosOptions;
         use leptos_router::RouteListing;
         use crate::ssr_booking::PipelineLockManager;
@@ -77,7 +78,7 @@ cfg_if! {
             pub env_var_config: EnvVarConfig,
             // pub count_tx: broadcast::Sender<i32>,
             pub pipeline_lock_manager: PipelineLockManager,
-            pub liteapi_client: &'static LiteApiHTTPClient,
+            pub liteapi_driver: LiteApiDriver,
             pub notifier_for_pipeline: &'static Notifier,
             pub cookie_key: Key,
             pub error_alert_service: &'static ErrorAlertService,

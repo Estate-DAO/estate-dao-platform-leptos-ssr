@@ -538,10 +538,9 @@ impl From<DomainRoomData> for backend::RoomDetails {
     }
 }
 
-impl From<DomainDetailedPrice> for f32 {
-    fn from(domain: DomainDetailedPrice) -> Self {
-        domain.room_price as f32
-    }
+/// Convert DomainDetailedPrice to f32 room price
+pub fn domain_detailed_price_to_f32(domain: &DomainDetailedPrice) -> f32 {
+    domain.room_price as f32
 }
 
 // HotelRoomDetails construction helper

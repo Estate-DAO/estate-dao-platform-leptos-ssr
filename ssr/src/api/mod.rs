@@ -83,7 +83,6 @@ pub use payments::ports::{FailureGetPaymentStatusResponse, SuccessGetPaymentStat
 pub mod canister;
 
 pub mod auth;
-pub mod liteapi;
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {

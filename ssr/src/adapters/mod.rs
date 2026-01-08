@@ -1,6 +1,3 @@
-cfg_if::cfg_if! {
-    if #[cfg(feature = "ssr")] {
-        pub mod liteapi_adapter;
-        pub use liteapi_adapter::LiteApiAdapter;
-    }
-}
+// SSR Adapters module
+// This module is intentionally empty after cleanup.
+// The LiteApiDriver from hotel-providers is now used directly via init::get_liteapi_driver()

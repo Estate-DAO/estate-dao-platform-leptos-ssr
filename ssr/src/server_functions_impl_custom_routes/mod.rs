@@ -7,11 +7,9 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    adapters::LiteApiAdapter,
     // adapters::ProvabAdapter,
     api::{
         canister::add_booking::call_add_booking_backend,
-        liteapi::LiteApiHTTPClient,
         payments::{
             domain::{DomainCreateInvoiceRequest, DomainCreateInvoiceResponse},
             service::PaymentServiceImpl,
@@ -24,6 +22,7 @@ use estate_fe::{
         DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
         DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
+    init::get_liteapi_driver,
     ports::traits::HotelProviderPort,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -122,12 +121,12 @@ pub fn parse_json_request<T: DeserializeOwned>(body: &str) -> Result<T, Response
 // Helper function to call block room API using HotelService
 // This properly delegates provider selection to the service layer
 pub async fn call_block_room_api(
-    state: &AppState,
+    _state: &AppState,
     request: DomainBlockRoomRequest,
 ) -> Result<DomainBlockRoomResponse, String> {
-    // For now, use LiteAPI as the default provider
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-    let hotel_service = HotelService::new(liteapi_adapter);
+    // Use LiteAPI driver from global client
+    let liteapi_driver = get_liteapi_driver();
+    let hotel_service = HotelService::new(liteapi_driver);
 
     hotel_service
         .block_room(request)

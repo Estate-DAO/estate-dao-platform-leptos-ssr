@@ -4,9 +4,9 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use estate_fe::{
-    adapters::LiteApiAdapter,
     application_services::HotelService,
     domain::{DomainHotelSearchCriteria, DomainPlaceDetailsPayload},
+    init::get_liteapi_driver,
 };
 use estate_fe::{
     application_services::PlaceService, domain::DomainPlacesSearchPayload,
@@ -27,9 +27,9 @@ pub async fn search_places_api_server_fn_route(
     // Normalize cache key (lowercase, trimmed)
     let cache_key = request.text_query.trim().to_lowercase();
 
-    // <!-- Create the places service with LiteApiAdapter -->
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-    let places_service = PlaceService::new(liteapi_adapter);
+    // <!-- Create the places service with LiteApiDriver from global client -->
+    let liteapi_driver = get_liteapi_driver();
+    let places_service = PlaceService::new(liteapi_driver);
 
     // <!-- Try API first, fall back to cache on failure -->
     let api_result = places_service.search_places_with_filters(request).await;
@@ -140,9 +140,9 @@ pub async fn search_places_details_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainPlaceDetailsPayload = parse_json_request(&body)?;
 
-    // <!-- Create the places service with LiteApiAdapter -->
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-    let places_service = PlaceService::new(liteapi_adapter);
+    // <!-- Create the places service with LiteApiDriver from global client -->
+    let liteapi_driver = get_liteapi_driver();
+    let places_service = PlaceService::new(liteapi_driver);
 
     // <!-- Perform the places search -->
     let result = places_service

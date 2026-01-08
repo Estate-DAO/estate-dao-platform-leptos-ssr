@@ -7,6 +7,16 @@ pub const USER_IDENTITY: &str = "estatedao_user_identity";
 pub const USER_EMAIL_MAPPING_SYNCED: &str = "estatedao_user_email_mapping_synced";
 pub const PAGINATION_LIMIT: i32 = 100;
 pub const ENFORCE_SINGLE_ROOM_TYPE_BOOKING: bool = true;
+
+/// Enable room mapping in LiteAPI rates request to get mapped_room_id values.
+/// When true, API returns consolidated rates per room type (fewer rates, better grouping).
+/// When false, API returns individual rate entries (more rates, no grouping).
+/// Default: true (enabled for proper TYPE A room grouping)
+pub static LITEAPI_ROOM_MAPPING: Lazy<bool> = Lazy::new(|| {
+    std::env::var("LITEAPI_ROOM_MAPPING")
+        .map(|v| v.to_lowercase() == "true" || v == "1")
+        .unwrap_or(true)
+});
 // PROVAB_BASE_URL options
 pub const PROVAB_PROD_OLD_PROXY: &str =
     "http://5.75.246.9:8001/prod/webservices/index.php/hotel_v3/service";

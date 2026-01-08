@@ -1,8 +1,7 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    adapters::LiteApiAdapter, api::liteapi::LiteApiHTTPClient, application_services::HotelService,
-    domain::DomainBookRoomRequest,
+    application_services::HotelService, domain::DomainBookRoomRequest, init::get_liteapi_driver,
 };
 use serde_json::json;
 
@@ -31,10 +30,8 @@ pub async fn book_room_api_server_fn_route(
         }
     };
 
-    // Create hotel service with provider
-    // For now, use LiteAPI. In the future, this could be configurable
-    let liteapi_client = LiteApiHTTPClient::default();
-    let provider = LiteApiAdapter::new(liteapi_client);
+    // Create hotel service with provider from global client
+    let provider = get_liteapi_driver();
     let hotel_service = HotelService::new(provider);
 
     estate_fe::log!(

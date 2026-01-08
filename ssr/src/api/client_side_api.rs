@@ -499,7 +499,7 @@ impl ClientSideApiClient {
     pub async fn get_hotel_rates(
         &self,
         request: DomainHotelInfoCriteria,
-    ) -> Result<Vec<crate::domain::DomainRoomOption>, String> {
+    ) -> Result<crate::domain::DomainGroupedRoomRates, String> {
         Self::api_call_with_error(
             request,
             "server_fn_api/get_hotel_rates_api",
