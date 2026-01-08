@@ -89,6 +89,7 @@ pub struct LiteApiRoomView {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiPolicy {
+    #[serde(default)]
     pub id: i32,
     #[serde(rename = "policy_type", default)]
     pub policy_type: String,
@@ -124,11 +125,13 @@ pub struct LiteApiSentimentAnalysis {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "mock-provab", derive(Dummy))]
 pub struct LiteApiBedType {
+    #[serde(default)]
     pub quantity: i32,
-    #[serde(rename = "bedType")]
+    #[serde(rename = "bedType", default)]
     pub bed_type: String,
-    #[serde(rename = "bedSize")]
+    #[serde(rename = "bedSize", default)]
     pub bed_size: String,
+    #[serde(default)]
     pub id: i32,
 }
 
