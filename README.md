@@ -1,148 +1,81 @@
+# Estate DAO - Hotel Booking Platform
 
-## Install pre commit hooks 
-Run `bash scripts/install_pre_commit.sh` from the repo root.
+A Leptos-based hotel booking platform with multi-provider support and fallback capabilities.
 
-# Leptos Axum Starter Template
+## Project Structure
 
-This is a template for use with the [Leptos](https://github.com/leptos-rs/leptos) web framework and the [cargo-leptos](https://github.com/akesson/cargo-leptos) tool using [Axum](https://github.com/tokio-rs/axum).
+```
+estate-dao-platform-leptos-ssr/
+├── ssr/                    # Main Leptos SSR application
+│   ├── src/
+│   │   ├── api/            # API clients and server functions
+│   │   ├── application_services/  # HotelService, PlaceService
+│   │   ├── domain/         # Domain types (re-exports from hotel-types)
+│   │   └── init.rs         # Global initialization
+├── hotel-providers/        # Multi-provider abstraction crate
+│   ├── src/
+│   │   ├── liteapi/        # LiteAPI driver, client, mapper
+│   │   ├── composite.rs    # Fallback logic
+│   │   └── registry.rs     # Provider configuration
+├── hotel-types/            # Shared domain types and port traits
+└── telemetry_axum/         # Telemetry utilities
+```
 
-## Creating your template repo
+## Quick Start
 
-If you don't have `cargo-leptos` installed you can install it with
+### Install pre-commit hooks
+```bash
+bash scripts/install_pre_commit.sh
+```
 
+### Install dependencies
 ```bash
 cargo install cargo-leptos --locked
+rustup target add wasm32-unknown-unknown
 ```
 
-Then run
-```bash
-cargo leptos new --git leptos-rs/start-axum
-```
-
-to generate a new project template.
-
-```bash
-cd estate-fe
-```
-
-to go to your newly created project.  
-Feel free to explore the project structure, but the best place to start with your application code is in `src/app.rs`.  
-Addtionally, Cargo.toml may need updating as new versions of the dependencies are released, especially if things are not working after a `cargo update`.
-
-## Running your project
-
+### Run development server
 ```bash
 cargo leptos watch
 ```
 
-## Installing Additional Tools
-
-By default, `cargo-leptos` uses `nightly` Rust, `cargo-generate`, and `sass`. If you run into any trouble, you may need to install one or more of these tools.
-
-1. `rustup toolchain install nightly --allow-downgrade` - make sure you have Rust nightly
-2. `rustup target add wasm32-unknown-unknown` - add the ability to compile Rust to WebAssembly
-3. `cargo install cargo-generate` - install `cargo-generate` binary (should be installed automatically in future)
-4. `npm install -g sass` - install `dart-sass` (should be optional in future
-
-## Compiling for Release
+### Build for production
 ```bash
 cargo leptos build --release
 ```
 
-Will generate your server binary in target/server/release and your site package in target/site
+## Architecture
 
-## Testing Your Project
+See [hotel-providers/DESIGN.md](hotel-providers/DESIGN.md) for the multi-provider architecture documentation.
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| `hotel-providers` | Multi-provider abstraction with LiteAPI integration |
+| `hotel-types` | Shared domain types and provider port traits |
+| `LiteApiDriver` | Primary hotel/place provider (implements HotelProviderPort) |
+| `ProviderRegistry` | Configures and manages providers |
+
+## Environment Variables
+
 ```bash
-cargo leptos end-to-end
-```
-
-```bash
-cargo leptos end-to-end --release
-```
-
-Cargo-leptos uses Playwright as the end-to-end test tool.  
-Tests are located in end2end/tests directory.
-
-## Executing a Server on a Remote Machine Without the Toolchain
-After running a `cargo leptos build --release` the minimum files needed are:
-
-1. The server binary located in `target/server/release`
-2. The `site` directory and all files within located in `target/site`
-
-Copy these files to your remote server. The directory structure should be:
-```text
-estate-fe
-site/
-```
-Set the following environment variables (updating for your project as needed):
-```text
 LEPTOS_OUTPUT_NAME="estate-fe"
 LEPTOS_SITE_ROOT="site"
 LEPTOS_SITE_PKG_DIR="pkg"
 LEPTOS_SITE_ADDR="127.0.0.1:3000"
 LEPTOS_RELOAD_PORT="3001"
 ```
-Finally, run the server binary.
 
+## Testing
 
+```bash
+cargo leptos end-to-end
+cargo leptos end-to-end --release
+```
 
---------------------------------------------
+## Deployment
 
-
-
-[ ] payment page design
-[ ] booking confirmation page design
-[ ] Destination - City, Country - on_select - CityId
-[ ] 'See all photos' in center
-_______________________________________________________________________
-
-[x] room api call - de-duplication + take top 5
-
-[x] hotel list - "no hotel found in center"
-  git Branch - "block_room"
-
-[] use_query in the room + hotel_details 
-  https://github.com/Estate-DAO/estatedao_fe/blob/6175c04c0e7088d5414a8f2d9b69d07b1b216db2/ssr/src/component/destination_picker.rs#L80-L91
-
-[] Destination - In a separate Branch - destination_dynamic
-
-[] sort_by -- component -- in separate branch -- filters_sort_dynamic
-
-
-
-
-Toggle dialog - Current: None, Requested: CityListComponent
- Dialog matches current - closing
- Setting dialog to: None
- is_open called
- Checking if destination is open: false
- is_open called
- Checking if destination is open: false
-
-
-
-
-
-
-#[derive(Clone, Copy, Debug, Default)]
-pub enum OpenDialogComponent{
-    CityListComponent,   
-    DateComponent, 
-    GuestComponent,
-    #[default] 
-    None, 
-}
-
-impl OpenDialogComponent{
-    pub fn matches(&self, other: OpenDialogComponent) -> bool {
-    }
-
-    pub fn is_destination_open(&self) -> bool {
-    }
-
-    pub fn is_date_open(&self) -> bool {
-    }
-
-    pub fn is_guest_open(&self) -> bool {
-    }
-}
+After `cargo leptos build --release`, copy:
+1. Server binary: `target/server/release/estate-fe`
+2. Site directory: `target/site/`

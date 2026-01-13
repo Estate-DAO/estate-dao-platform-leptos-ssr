@@ -5,9 +5,9 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    adapters::LiteApiAdapter,
     application_services::HotelService,
     domain::DomainHotelSearchCriteria,
+    init::get_liteapi_driver,
     ports::hotel_provider_port::ProviderError,
     utils::error_alerts::{CriticalError, ErrorType},
 };
@@ -23,9 +23,9 @@ pub async fn search_hotel_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainHotelSearchCriteria = parse_json_request(&body)?;
     tracing::error!("Hotel search request: {:?}", request);
-    // <!-- Create the hotel service with LiteApiAdapter -->
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-    let hotel_service = HotelService::new(liteapi_adapter);
+    // <!-- Create the hotel service with LiteApiDriver from global client -->
+    let liteapi_driver = get_liteapi_driver();
+    let hotel_service = HotelService::new(liteapi_driver);
 
     // <!-- Perform the hotel search -->
     let result = hotel_service
@@ -40,15 +40,15 @@ pub async fn search_hotel_api_server_fn_route(
             let error_type = match &e {
                 ProviderError(details)
                     if matches!(
-                        details.api_error,
-                        estate_fe::api::ApiError::JsonParseFailed(_)
+                        details.error_kind,
+                        hotel_types::ports::ProviderErrorKind::ParseError
                     ) =>
                 {
-                    let json_path = if let estate_fe::api::ApiError::JsonParseFailed(ref msg) =
-                        details.api_error
-                    {
-                        // Try to extract path from error message (format: "path: xxx - inner: ...")
-                        msg.split(" - inner:")
+                    // For parse errors, try to extract path from error message
+                    let json_path = if details.message.contains("path:") {
+                        details
+                            .message
+                            .split(" - inner:")
                             .next()
                             .map(|s| s.replace("path: ", ""))
                             .map(String::from)

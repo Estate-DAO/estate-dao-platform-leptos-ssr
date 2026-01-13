@@ -22,6 +22,21 @@ pub struct UISearchFilters {
     pub hotel_name_search: Option<String>, // For searching by hotel name
 }
 
+// Conversion to hotel_types::ports::UISearchFilters for trait compatibility
+impl From<UISearchFilters> for hotel_types::ports::UISearchFilters {
+    fn from(ssr: UISearchFilters) -> Self {
+        hotel_types::ports::UISearchFilters {
+            min_star_rating: ssr.min_star_rating,
+            max_price_per_night: ssr.max_price_per_night,
+            min_price_per_night: ssr.min_price_per_night,
+            amenities: ssr.amenities,
+            property_types: ssr.property_types,
+            popular_filters: ssr.popular_filters,
+            hotel_name_search: ssr.hotel_name_search,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct UISortOptions {
     pub sort_by: Option<DomainSortField>,

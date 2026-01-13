@@ -3,18 +3,13 @@
 use leptos::*;
 use std::sync::Arc;
 
-use crate::domain::DomainHotelSearchCriteria;
-use crate::application_services::{
-    HotelService, 
-    UISearchFilters, 
-    UISortOptions, 
-    DomainSortField, 
-    DomainSortDirection
-};
+use crate::adapters::LiteApiAdapter;
 use crate::adapters::ProvabAdapter;
 use crate::api::provab::Provab;
-use crate::adapters::LiteApiAdapter;
-use crate::api::liteapi::LiteApiHTTPClient;
+use crate::application_services::{
+    DomainSortDirection, DomainSortField, HotelService, UISearchFilters, UISortOptions,
+};
+use crate::domain::DomainHotelSearchCriteria;
 
 // <!-- Example server function using the new architecture with filters -->
 #[server(SearchHotelsFilteredAppService)]
@@ -23,15 +18,16 @@ pub async fn search_hotels_filtered_app_service(
     ui_filters: UISearchFilters,
     sort_options: UISortOptions,
 ) -> Result<crate::domain::DomainHotelSearchResponse, ServerFnError> {
-    // <!-- 1. Create the provider adapter -->
-    let liteapi_http_client = LiteApiHTTPClient::default();
-    let liteapi_adapter = Arc::new(LiteApiAdapter::new(liteapi_http_client));
-    
+    // <!-- 1. Create the provider driver (using shared driver) -->
+    let liteapi_driver = Arc::new(crate::init::get_liteapi_driver());
+
     // <!-- 2. Create the hotel service -->
-    let hotel_service = HotelService::new(liteapi_adapter);
+    let hotel_service = HotelService::new(liteapi_driver);
 
     // <!-- 3. Call the service with filters -->
-    hotel_service.search_hotels_with_filters(core_criteria, ui_filters, sort_options).await
+    hotel_service
+        .search_hotels_with_filters(core_criteria, ui_filters, sort_options)
+        .await
         .map_err(|e| ServerFnError::ServerError(format!("Service error: {:?}", e)))
 }
 
@@ -42,11 +38,11 @@ pub async fn search_hotels_luxury(
 ) -> Result<crate::domain::DomainHotelSearchResponse, ServerFnError> {
     // <!-- Preset filters for luxury hotels -->
     let luxury_filters = UISearchFilters {
-        min_star_rating: Some(4), // <!-- 4+ star hotels -->
+        min_star_rating: Some(4),         // <!-- 4+ star hotels -->
         min_price_per_night: Some(200.0), // <!-- Minimum luxury price point -->
         ..Default::default()
     };
-    
+
     let sort_options = UISortOptions {
         sort_by: Some(DomainSortField::Rating),
         sort_direction: Some(DomainSortDirection::Descending), // <!-- Best rating first -->
@@ -65,7 +61,7 @@ pub async fn search_hotels_budget(
         max_price_per_night: Some(100.0), // <!-- Budget price point -->
         ..Default::default()
     };
-    
+
     let sort_options = UISortOptions {
         sort_by: Some(DomainSortField::Price),
         sort_direction: Some(DomainSortDirection::Ascending), // <!-- Cheapest first -->
@@ -78,11 +74,11 @@ pub async fn search_hotels_budget(
 /*
 pub fn SearchComponent() -> impl IntoView {
     let search_action = create_server_action::<SearchHotelsFilteredAppService>();
-    
+
     view! {
         <form on:submit=move |ev| {
             ev.prevent_default();
-            
+
             let core_criteria = DomainHotelSearchCriteria {
                 destination_city_id: 1254, // Mumbai
                 destination_country_code: "IN".into(),
@@ -92,16 +88,16 @@ pub fn SearchComponent() -> impl IntoView {
                 room_guests: vec![/* ... */],
                 guest_nationality: "IN".into(),
             };
-            
+
             let filters = UISearchFilters {
                 min_star_rating: Some(3),
                 max_price_per_night: Some(500.0),
                 hotel_name_search: Some("Taj".into()),
                 ..Default::default()
             };
-            
+
             let sort_options = UISortOptions::price_low_to_high();
-            
+
             search_action.dispatch(SearchHotelsFilteredAppServiceArgs {
                 core_criteria,
                 ui_filters: filters,
@@ -110,15 +106,15 @@ pub fn SearchComponent() -> impl IntoView {
         }>
             <input type="submit" value="Search Hotels"/>
         </form>
-        
+
         <Suspense fallback=|| view! { <p>"Loading..."</p> }>
             {move || {
                 search_action.value().get().map(|result| {
                     match result {
-                        Ok(response) => view! { 
+                        Ok(response) => view! {
                             <div>"Found hotels: " {response.hotel_results().len()}</div>
                         }.into_view(),
-                        Err(e) => view! { 
+                        Err(e) => view! {
                             <div>"Error: " {e.to_string()}</div>
                         }.into_view(),
                     }

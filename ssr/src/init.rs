@@ -6,27 +6,75 @@ use base64::{engine::general_purpose, Engine as _};
 use leptos::LeptosOptions;
 use leptos_router::RouteListing;
 
+use crate::api::consts::LITEAPI_ROOM_MAPPING;
 use crate::{
     api::consts::EnvVarConfig, ssr_booking::email_handler::EmailClient,
     ssr_booking::PipelineLockManager, utils::error_alerts::ErrorAlertService,
     utils::notifier::Notifier, view_state_layer::AppState,
 };
 
-use crate::api::liteapi::LiteApiHTTPClient;
+use hotel_providers::ProviderRegistry;
 use once_cell::sync::OnceCell;
 
-static LITEAPI_CLIENT: OnceCell<LiteApiHTTPClient> = OnceCell::new();
+use hotel_providers::liteapi::{LiteApiClient, LiteApiDriver};
+
+static LITEAPI_DRIVER: OnceCell<LiteApiDriver> = OnceCell::new();
+static PROVIDER_REGISTRY: OnceCell<Arc<ProviderRegistry>> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
 static ERROR_ALERT_SERVICE: OnceCell<ErrorAlertService> = OnceCell::new();
 
-pub fn initialize_liteapi_client() {
-    LITEAPI_CLIENT
-        .set(LiteApiHTTPClient::default())
-        .expect("Failed to initialize LiteAPI client");
+pub fn initialize_liteapi_driver() {
+    // Load config from environment directly for driver initialization
+    let api_key = std::env::var("LITEAPI_KEY").unwrap_or_else(|_| "".to_string());
+
+    if api_key.is_empty() {
+        tracing::warn!("LITEAPI_KEY environment variable is empty or not set!");
+    } else {
+        let key_prefix = if api_key.len() > 8 {
+            &api_key[..8]
+        } else {
+            &api_key
+        };
+        tracing::info!(
+            "LiteAPI driver initialized with API key prefix: {}...",
+            key_prefix
+        );
+    }
+
+    let client = LiteApiClient::new(api_key, None);
+    let driver = LiteApiDriver::new(client, *LITEAPI_ROOM_MAPPING);
+
+    LITEAPI_DRIVER
+        .set(driver)
+        .expect("Failed to initialize LiteAPI driver");
 }
 
-pub fn get_liteapi_client() -> &'static LiteApiHTTPClient {
-    LITEAPI_CLIENT.get().expect("Failed to get LiteAPI client")
+pub fn get_liteapi_driver() -> LiteApiDriver {
+    LITEAPI_DRIVER
+        .get()
+        .expect("Failed to get LiteAPI driver")
+        .clone()
+}
+
+pub fn initialize_provider_registry() {
+    // Use LiteApiDriver directly (it implements HotelProviderPort and PlaceProviderPort)
+    let driver = get_liteapi_driver();
+
+    let registry = ProviderRegistry::builder()
+        .with_hotel_provider(driver.clone())
+        .with_place_provider(driver)
+        .build();
+
+    PROVIDER_REGISTRY
+        .set(Arc::new(registry))
+        .expect("Failed to initialize provider registry");
+}
+
+pub fn get_provider_registry() -> Arc<ProviderRegistry> {
+    PROVIDER_REGISTRY
+        .get()
+        .expect("Failed to get provider registry")
+        .clone()
 }
 
 pub fn initialize_notifier() {
@@ -53,22 +101,24 @@ pub fn get_error_alert_service() -> &'static ErrorAlertService {
         .expect("Failed to get ErrorAlertService")
 }
 
+// ...
 pub struct AppStateBuilder {
     leptos_options: LeptosOptions,
     routes: Vec<RouteListing>,
-    liteapi_client: &'static LiteApiHTTPClient,
+    liteapi_driver: LiteApiDriver, // Replaced client with driver
     notifier_for_pipeline: &'static Notifier,
 }
 
 impl AppStateBuilder {
     pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
-        initialize_liteapi_client();
+        initialize_liteapi_driver(); // Initialize the new driver
         initialize_notifier();
+        initialize_provider_registry(); // Registry now uses the driver via adapter
 
         Self {
             leptos_options,
             routes,
-            liteapi_client: get_liteapi_client(),
+            liteapi_driver: get_liteapi_driver(), // Get driver
             notifier_for_pipeline: get_notifier(),
         }
     }
@@ -108,7 +158,7 @@ impl AppStateBuilder {
             routes: self.routes,
             env_var_config,
             pipeline_lock_manager: PipelineLockManager::new(),
-            liteapi_client: self.liteapi_client,
+            liteapi_driver: self.liteapi_driver, // Pass driver
             notifier_for_pipeline: self.notifier_for_pipeline,
             cookie_key: cookie_key.clone(),
             error_alert_service,
