@@ -235,7 +235,7 @@ impl BookingBackendConversions {
             room_unique_id: "standard_room_1".to_string(),
             rate_key: "standard_rate".to_string(),
             offer_id: "offer_1".to_string(),
-            mapped_room_id: 1,
+            mapped_room_id: "1".to_string(),
         }];
         let hotel_details = DomainHotelDetails {
             checkin: "2024-01-01".to_string(),

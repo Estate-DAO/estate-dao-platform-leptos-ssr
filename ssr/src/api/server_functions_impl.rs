@@ -2,10 +2,9 @@ use leptos::*;
 use std::sync::Arc;
 
 use crate::{
-    adapters::LiteApiAdapter,
-    api::liteapi::LiteApiHTTPClient,
     application_services::HotelService,
     domain::{DomainHotelInfoCriteria, DomainHotelStaticDetails},
+    init::get_liteapi_driver,
     ports::hotel_provider_port::ProviderError,
 };
 
@@ -13,9 +12,8 @@ use crate::{
 pub async fn get_hotel_static_details_api(
     hotel_id: String,
 ) -> Result<DomainHotelStaticDetails, ServerFnError> {
-    let liteapi_http_client = LiteApiHTTPClient::default();
-    let liteapi_adapter = Arc::new(LiteApiAdapter::new(liteapi_http_client));
-    let hotel_service = HotelService::new(liteapi_adapter);
+    let liteapi_driver = Arc::new(get_liteapi_driver());
+    let hotel_service = HotelService::new(liteapi_driver);
 
     hotel_service
         .get_hotel_static_details(&hotel_id)
@@ -26,10 +24,9 @@ pub async fn get_hotel_static_details_api(
 #[server(GetHotelRatesApi, "/api")]
 pub async fn get_hotel_rates_api(
     criteria: DomainHotelInfoCriteria,
-) -> Result<Vec<crate::domain::DomainRoomOption>, ServerFnError> {
-    let liteapi_http_client = LiteApiHTTPClient::default();
-    let liteapi_adapter = Arc::new(LiteApiAdapter::new(liteapi_http_client));
-    let hotel_service = HotelService::new(liteapi_adapter);
+) -> Result<crate::domain::DomainGroupedRoomRates, ServerFnError> {
+    let liteapi_driver = Arc::new(get_liteapi_driver());
+    let hotel_service = HotelService::new(liteapi_driver);
 
     hotel_service
         .get_hotel_rates(criteria)

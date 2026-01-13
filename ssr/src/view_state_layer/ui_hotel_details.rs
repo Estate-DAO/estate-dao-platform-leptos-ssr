@@ -1,5 +1,8 @@
 use crate::{
-    domain::{DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData, DomainRoomOption},
+    domain::{
+        DomainHotelDetails, DomainHotelStaticDetails, DomainRoomData, DomainRoomGroup,
+        DomainRoomVariant,
+    },
     error, log, warn,
 };
 use leptos::*;
@@ -11,7 +14,7 @@ use super::GlobalStateForLeptos;
 pub struct HotelDetailsUIState {
     pub hotel_details: RwSignal<Option<DomainHotelDetails>>,
     pub static_details: RwSignal<Option<DomainHotelStaticDetails>>,
-    pub rates: RwSignal<Option<Vec<DomainRoomOption>>>,
+    pub rates: RwSignal<Option<Vec<DomainRoomGroup>>>,
     pub loading: RwSignal<bool>,
     pub rates_loading: RwSignal<bool>,
     pub error: RwSignal<Option<String>>,
@@ -35,16 +38,13 @@ impl HotelDetailsUIState {
         this.static_details.set(details);
     }
 
-    pub fn set_rates(rates: Option<Vec<DomainRoomOption>>) {
+    pub fn set_rates(rates: Option<Vec<DomainRoomGroup>>) {
         let this: Self = expect_context();
         let previous = this.rates.get_untracked();
         let cloned = rates.clone();
         this.rates.set(rates);
         this.selected_rooms.set(HashMap::new());
-        Self::sync_selected_rooms_with_rates(
-            cloned.as_ref().map(|r| r.as_slice()),
-            previous.as_ref().map(|r| r.as_slice()),
-        );
+        Self::sync_selected_rooms_with_rates(cloned, previous);
     }
 
     pub fn set_loading(loading: bool) {
@@ -90,22 +90,26 @@ impl HotelDetailsUIState {
     }
 
     // <!-- Room selection methods using consolidated DomainHotelDetails.all_rooms -->
-    pub fn get_available_room_options() -> Vec<DomainRoomOption> {
+    pub fn get_available_room_variants() -> Vec<DomainRoomVariant> {
         let this: Self = expect_context();
-        if let Some(rates) = this.rates.get() {
-            rates
+        if let Some(groups) = this.rates.get() {
+            groups
+                .into_iter()
+                .flat_map(|group| group.room_types)
+                .collect()
         } else {
             vec![]
         }
     }
 
-    pub fn get_available_rooms() -> Vec<DomainRoomData> {
-        // Legacy method for compatibility - extracts room_data from all_rooms
-        Self::get_available_room_options()
-            .into_iter()
-            .map(|room_option| room_option.room_data)
-            .collect()
+    // Deprecated or adapted?
+    pub fn get_available_room_options() -> Vec<DomainRoomVariant> {
+        Self::get_available_room_variants()
     }
+
+    // Adapted to use simplified data (partially, since DomainRoomData no longer matches exactly)
+    // We retain this if used elsewhere, but maybe we don't need it.
+    // pub fn get_available_rooms() -> Vec<DomainRoomData> { ... }
 
     pub fn increment_room_counter(room_type: String) {
         let this: Self = expect_context();
@@ -221,18 +225,18 @@ impl HotelDetailsUIState {
     }
 
     // <!-- Helper method to get selected rooms with their data and pricing -->
-    pub fn get_selected_rooms_with_data() -> Vec<(DomainRoomOption, u32)> {
+    pub fn get_selected_rooms_with_data() -> Vec<(DomainRoomVariant, u32)> {
         let selected_rooms = Self::get_selected_rooms();
-        let available_room_options = Self::get_available_room_options();
+        let available_variants = Self::get_available_room_variants();
 
         selected_rooms
             .into_iter()
             .filter(|(_, quantity)| *quantity > 0)
-            .filter_map(|(room_id, quantity)| {
-                available_room_options
+            .filter_map(|(rate_key, quantity)| {
+                available_variants
                     .iter()
-                    .find(|option| option.room_data.rate_key == room_id)
-                    .map(|room_option| (room_option.clone(), quantity))
+                    .find(|option| option.rate_key == rate_key)
+                    .map(|variant| (variant.clone(), quantity))
             })
             .collect()
     }
@@ -252,25 +256,27 @@ impl HotelDetailsUIState {
 
         let selected_rooms_with_data = Self::get_selected_rooms_with_data();
 
-        selected_rooms_with_data
+        let total = selected_rooms_with_data
             .iter()
-            .fold(0.0, |acc, (room_option, quantity)| {
+            .fold(0.0, |acc, (variant, quantity)| {
                 // Calculate per-night price and round to 2 decimals to match display
-                let total_price = room_option.price_excluding_included_taxes();
+                let total_price = variant.price_per_room_excluding_taxes;
                 let price_per_night = total_price / nights;
                 let rounded_price = (price_per_night * 100.0).round() / 100.0;
                 let line_total = rounded_price * *quantity as f64 * nights;
                 acc + line_total
-            })
+            });
+        // Round final total to 2 decimals to ensure consistency with line items
+        (total * 100.0).round() / 100.0
     }
 
     // <!-- Calculate line total for a specific room -->
     pub fn calculate_room_line_total(
-        room_option: &DomainRoomOption,
+        variant: &DomainRoomVariant,
         quantity: u32,
-        nights: u32,
+        _nights: u32, // Unused param but kept for signature if needed
     ) -> f64 {
-        room_option.price_excluding_included_taxes() * quantity as f64
+        variant.price_per_room_excluding_taxes * quantity as f64
     }
 
     // <!-- Format room breakdown text -->
@@ -292,52 +298,37 @@ impl HotelDetailsUIState {
         let selected_rooms_with_data = Self::get_selected_rooms_with_data();
         let total = selected_rooms_with_data
             .iter()
-            .fold(0.0, |acc, (room_option, quantity)| {
-                acc + (room_option.price_excluding_included_taxes() * *quantity as f64)
+            .fold(0.0, |acc, (variant, quantity)| {
+                acc + (variant.price_per_room_excluding_taxes * *quantity as f64)
             });
 
         this.total_price.set(total);
     }
 
     fn sync_selected_rooms_with_rates(
-        rates: Option<&[DomainRoomOption]>,
-        previous_rates: Option<&[DomainRoomOption]>,
+        rates: Option<Vec<DomainRoomGroup>>,
+        previous_rates: Option<Vec<DomainRoomGroup>>,
     ) {
         let this: Self = expect_context();
         match rates {
-            Some(rate_list) if !rate_list.is_empty() => {
-                let valid_ids: HashSet<_> = rate_list
+            Some(groups) if !groups.is_empty() => {
+                let valid_ids: HashSet<_> = groups
                     .iter()
-                    .map(|option| option.room_data.rate_key.clone())
+                    .flat_map(|g| g.room_types.iter())
+                    .map(|v| v.rate_key.clone())
                     .collect();
+
                 let mut changed = false;
                 this.selected_rooms.update(|rooms| {
                     let mut to_remove = Vec::new();
-                    let mut to_rekey = Vec::new();
+                    // We don't implement complicated rekeying for now unless essential
+                    // (previous code rekeyed if mapped_room_id matched but rate_key changed)
+                    // We can attempt rekeying if we have mapped_room_id.
 
                     for room_id in rooms.keys().cloned().collect::<Vec<_>>() {
                         if valid_ids.contains(&room_id) {
                             continue;
                         }
-
-                        if let Some(prev_rates) = previous_rates {
-                            if let Some(prev_option) = prev_rates
-                                .iter()
-                                .find(|opt| opt.room_data.rate_key == room_id)
-                            {
-                                let mapped_id = prev_option.room_data.mapped_room_id;
-                                if mapped_id != 0 {
-                                    if let Some(new_option) =
-                                        rate_list.iter().find(|opt| opt.mapped_room_id == mapped_id)
-                                    {
-                                        let new_id = new_option.room_data.rate_key.clone();
-                                        to_rekey.push((room_id.clone(), new_id));
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-
                         to_remove.push(room_id);
                     }
 
@@ -345,20 +336,13 @@ impl HotelDetailsUIState {
                         rooms.remove(&room_id);
                         changed = true;
                     }
-
-                    for (old_id, new_id) in to_rekey {
-                        if let Some(qty) = rooms.remove(&old_id) {
-                            let entry = rooms.entry(new_id).or_insert(0);
-                            *entry += qty;
-                            changed = true;
-                        }
-                    }
                 });
                 if changed {
                     Self::update_total_price();
                 }
             }
             _ => {
+                // Clear selections
                 if !this.selected_rooms.get_untracked().is_empty() {
                     this.selected_rooms.set(HashMap::new());
                     this.total_price.set(0.0);

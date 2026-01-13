@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use estate_fe::view_state_layer::AppState;
-use estate_fe::{adapters::LiteApiAdapter, application_services::HotelService};
+use estate_fe::{application_services::HotelService, init::get_liteapi_driver};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -28,9 +28,9 @@ pub async fn get_hotel_details_api_server_fn_route(
         return Err((StatusCode::BAD_REQUEST, error_response.to_string()).into_response());
     }
 
-    // Create the hotel service with LiteApiAdapter
-    let liteapi_adapter = LiteApiAdapter::new(state.liteapi_client.clone());
-    let hotel_service = HotelService::new(liteapi_adapter);
+    // Create the hotel service with LiteApiDriver from global client
+    let liteapi_driver = get_liteapi_driver();
+    let hotel_service = HotelService::new(liteapi_driver);
 
     // Get hotel details without rates
     let result = hotel_service
