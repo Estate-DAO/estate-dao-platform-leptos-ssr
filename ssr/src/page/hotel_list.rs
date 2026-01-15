@@ -28,7 +28,7 @@ use crate::{
     // api::hotel_info,
     app::AppRoutes,
     component::SelectedDateRange,
-    component::{FilterAndSortBy, PriceDisplay, StarRating},
+    component::{FilterAndSortBy, HotelMap, PriceDisplay, StarRating},
     page::InputGroup,
     // state::{search_state::SearchListResults, view_state::HotelInfoCtx},
 };
@@ -109,6 +109,8 @@ pub fn HotelListPage() -> impl IntoView {
     let search_ctx: UISearchCtx = expect_context();
     let navigate = use_navigate();
     let query_map = leptos_router::use_query_map();
+    let (show_map, set_show_map) = create_signal(false);
+    let highlighted_hotel: RwSignal<Option<String>> = create_rw_signal(None);
 
     let search_ctx2: UISearchCtx = expect_context();
 
@@ -779,9 +781,21 @@ pub fn HotelListPage() -> impl IntoView {
         <section class="my-4 bg-slate-50 px-4 pb-2">
             // Desktop layout (lg screens and up) - centered with 85% width
             <div class="hidden lg:flex justify-center">
-                <div class=" w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]">
+                <div class=move || {
+                    if show_map.get() {
+                        "w-[95%] max-w-[1920px] flex h-[calc(100vh-7rem)]"
+                    } else {
+                        "w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]"
+                    }
+                }>
                     // Fixed aside on left (desktop only)
-                    <aside class="w-80 shrink-0 bg-slate-50 border-r border-slate-200">
+                    <aside class=move || {
+                        if show_map.get() {
+                            "hidden"
+                        } else {
+                            "w-80 shrink-0 bg-slate-50 border-r border-slate-200"
+                        }
+                    }>
                     <div class="h-full overflow-y-auto p-4">
                         <div class="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div class="flex items-center gap-2">
@@ -915,7 +929,13 @@ pub fn HotelListPage() -> impl IntoView {
                                     }
                                 }}
                             </div>
-                            <div class="flex justify-end lg:justify-start">
+                            <div class="flex justify-end lg:justify-start items-center gap-2">
+                                <button
+                                    class="px-3 py-1.5 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                                    on:click=move |_| set_show_map.update(|v| *v = !*v)
+                                >
+                                    {move || if show_map.get() { "Show List" } else { "Show Map" }}
+                                </button>
                                 <SortBy />
                             </div>
                         </div>
@@ -1060,9 +1080,66 @@ pub fn HotelListPage() -> impl IntoView {
                                             view! { <></> }.into_view()
                                         }
                                     } else {
-                                        filtered_hotels
-                                            .iter()
-                                            .map(|hotel_result| {
+                                        if show_map.get() {
+                                            view! {
+                                                <div class="flex flex-row h-full gap-4 overflow-hidden h-[calc(100vh-140px)]">
+                                                    // Left side: Scrollable Hotel List
+                                                    <div class="w-2/5 h-full overflow-y-auto pr-2 custom-scrollbar space-y-4 pb-20">
+                                                        {
+                                                            filtered_hotels.iter().map(|hotel_result| {
+                                                                let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                                                let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                                                if is_disabled { price = None; }
+                                                                let img = if hotel_result.hotel_picture.is_empty() {
+                                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
+                                                                } else {
+                                                                    hotel_result.hotel_picture.clone()
+                                                                };
+                                                                let res = hotel_result.clone();
+                                                                let hotel_address = hotel_result.hotel_address.clone();
+                                                                let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+
+                                                                view! {
+                                                                    <div id=format!("hotel-card-{}", hotel_result.hotel_code) class="transition-all duration-300">
+                                                                        <HotelCardTile
+                                                                            img
+                                                                            guest_score=None
+                                                                            rating=hotel_result.star_rating
+                                                                            hotel_name=hotel_result.hotel_name.clone()
+                                                                            hotel_code=hotel_result.hotel_code.clone()
+                                                                            price=price
+                                                                            discount_percent=None
+                                                                            amenities=amenities.get()
+                                                                            property_type=hotel_result.property_type.clone()
+                                                                            class=format!(
+                                                                                    "w-full {} {}",
+                                                                                    if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
+                                                                                    if let Some(h) = highlighted_hotel.get() {
+                                                                                        if h == hotel_result.hotel_code { "ring-2 ring-blue-500 shadow-lg transform scale-[1.02]" } else { "" }
+                                                                                    } else { "" }
+                                                                                )
+                                                                            hotel_address
+                                                                            distance_from_center_km=hotel_result.distance_from_center_km
+                                                                            disabled=is_disabled
+                                                                        />
+                                                                    </div>
+                                                                }
+                                                            }).collect_view()
+                                                        }
+                                                    </div>
+                                                    // Right side: Map
+                                                    <div class="flex-1 h-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
+                                                        <HotelMap
+                                                            hotels=create_rw_signal(filtered_hotels.clone())
+                                                            highlighted_hotel=highlighted_hotel
+                                                        />
+                                                    </div>
+                                                </div>
+                                            }.into_view()
+                                        } else {
+                                             filtered_hotels
+                                                .iter()
+                                                .map(|hotel_result| {
                                                 let mut price = hotel_result
                                                     .price
                                                     .clone()
@@ -1114,6 +1191,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                 }
                                             })
                                             .collect_view()
+                                        }
                                     }
                                 }}
                             </Show>
@@ -1851,6 +1929,7 @@ mod tests {
             property_type: None,
             result_token: hotel_code.to_string(),
             distance_from_center_km: None,
+            location: None,
         }
     }
 

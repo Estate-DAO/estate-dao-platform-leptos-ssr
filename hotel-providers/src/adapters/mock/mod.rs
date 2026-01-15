@@ -83,6 +83,7 @@ impl HotelProviderPort for MockHotelProvider {
                 result_token: "mock_token".to_string(),
                 hotel_address: Some("123 Mock Street".to_string()),
                 distance_from_center_km: Some(1.5),
+                location: None,
             }],
             pagination: None,
         })

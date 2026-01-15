@@ -68,6 +68,10 @@ impl LiteApiMapper {
             result_token: hotel.id,
             hotel_address: Some(hotel.address),
             distance_from_center_km: None,
+            location: Some(DomainLocation {
+                latitude: hotel.latitude,
+                longitude: hotel.longitude,
+            }),
         }
     }
 
