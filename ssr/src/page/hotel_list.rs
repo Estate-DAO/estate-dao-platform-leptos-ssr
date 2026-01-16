@@ -1452,6 +1452,16 @@ pub fn HotelListPage() -> impl IntoView {
 
                                                             view! {
                                                                 <div class="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-[1000]">
+                                                                    // Close button
+                                                                    <button
+                                                                        class="absolute top-2 right-2 z-10 p-1.5 bg-white/90 hover:bg-gray-100 rounded-full shadow-md border border-gray-200 transition-colors"
+                                                                        on:click=move |e| {
+                                                                            e.stop_propagation();
+                                                                            highlighted_hotel.set(None);
+                                                                        }
+                                                                    >
+                                                                        <Icon icon=icondata::BsX class="w-5 h-5 text-gray-600" />
+                                                                    </button>
                                                                     <HotelCardTile
                                                                         img
                                                                         guest_score=None

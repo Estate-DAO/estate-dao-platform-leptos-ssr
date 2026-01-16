@@ -185,37 +185,8 @@ pub fn HotelMap(
                         let marker = L.marker([hotel.location.latitude, hotel.location.longitude], {icon: customIcon})
                             .addTo(mapInstance);
 
-                        // Build hotel details URL from current page URL params
-                        let currentUrl = new URL(window.location.href);
-                        let params = currentUrl.searchParams;
-                        let hotelDetailsUrl = '/hotel-details?' +
-                            'hotelCode=' + encodeURIComponent(hotel.hotel_code) +
-                            '&checkin=' + (params.get('checkin') || '') +
-                            '&checkout=' + (params.get('checkout') || '') +
-                            '&adults=' + (params.get('adults') || '2') +
-                            '&children=' + (params.get('children') || '0') +
-                            '&rooms=' + (params.get('rooms') || '1');
-
-                        // Popup content with CLICKABLE image that navigates to hotel details
-                        let imageHtml = hotel.hotel_picture ? 
-                            '<a href=\"' + hotelDetailsUrl + '\" target=\"_blank\" style=\"display:block; cursor:pointer;\">' +
-                                '<div style=\"width: 100%; height: 120px; background-image: url(\'' + hotel.hotel_picture + '\'); background-size: cover; background-position: center; border-radius: 8px 8px 0 0; margin-bottom: 8px;\"></div>' +
-                            '</a>' : 
-                            '';
-                        
-                        let popupContent = 
-                            '<div style=\"min-width: 200px; font-family: ui-sans-serif, system-ui, sans-serif;\">' +
-                                imageHtml +
-                                '<div style=\"padding: 0 4px;\">' +
-                                    '<a href=\"' + hotelDetailsUrl + '\" target=\"_blank\" style=\"text-decoration: none; color: inherit;\">' +
-                                        '<h3 style=\"margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #0f172a; cursor: pointer;\">' + hotel.hotel_name + '</h3>' +
-                                    '</a>' +
-                                    '<p style=\"margin: 0; font-size: 14px; color: #64748b;\">' + priceText + '</p>' +
-                                '</div>' +
-                            '</div>';
-
-                        // Bind popup with autoPan disabled to prevent zoom changes
-                        marker.bindPopup(popupContent, { autoPan: false });
+                        // Note: We don't use marker.bindPopup() here because we have
+                        // a custom floating card component that displays the selected hotel
                         
                         // On marker click: highlight + scroll to card WITHIN the scrollable container
                         marker.on('click', () => {
