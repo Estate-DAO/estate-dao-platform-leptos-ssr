@@ -5,15 +5,25 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_name = updateHotelMap)]
-    fn update_hotel_map(hotels: JsValue, on_marker_click: &Closure<dyn FnMut(String)>);
+    fn update_hotel_map(
+        map_id: &str,
+        hotels: JsValue,
+        on_marker_click: &Closure<dyn FnMut(String)>,
+    );
 }
 
 #[component]
 pub fn HotelMap(
+    /// Unique ID for this map instance (e.g., "hotel-map-desktop", "hotel-map-mobile")
+    #[prop(default = "hotel-map".to_string())]
+    map_id: String,
     hotels: RwSignal<Vec<DomainHotelAfterSearch>>,
     highlighted_hotel: RwSignal<Option<String>>,
 ) -> impl IntoView {
     let map_div_ref = create_node_ref::<html::Div>();
+    let map_id_effect = map_id.clone();
+    let map_id_cleanup = map_id.clone();
+    let map_id_view = map_id.clone();
 
     // Callback for marker clicks
     // We use a stored closure to keep it alive
@@ -36,22 +46,24 @@ pub fn HotelMap(
                 if !has_fn {
                     // Inject script manually to avoid hydration issues
                     let script_content = r#"
-            window.hotelMapInstance = null;
-            window.hotelMarkers = [];
+            // Store map instances by ID
+            window.hotelMapInstances = window.hotelMapInstances || {};
+            window.hotelMarkersMap = window.hotelMarkersMap || {};
 
-            window.cleanupHotelMap = function() {
-                if (window.hotelMapInstance) {
-                    window.hotelMapInstance.remove();
-                    window.hotelMapInstance = null;
+            window.cleanupHotelMap = function(mapId) {
+                mapId = mapId || 'hotel-map';
+                if (window.hotelMapInstances[mapId]) {
+                    window.hotelMapInstances[mapId].remove();
+                    delete window.hotelMapInstances[mapId];
                 }
-                window.hotelMarkers = [];
+                delete window.hotelMarkersMap[mapId];
             };
 
-            window.updateHotelMap = function(hotels, onMarkerClick) {
-                console.log('UpdateHotelMap called with ' + (hotels ? hotels.length : 0) + ' hotels');
-                let container = document.getElementById('hotel-map');
+            window.updateHotelMap = function(mapId, hotels, onMarkerClick) {
+                console.log('UpdateHotelMap called for ' + mapId + ' with ' + (hotels ? hotels.length : 0) + ' hotels');
+                let container = document.getElementById(mapId);
                 if (!container) {
-                    console.log('Hotel map container not found');
+                    console.log('Hotel map container not found: ' + mapId);
                     return;
                 }
 
@@ -66,31 +78,49 @@ pub fn HotelMap(
                         container.style.position = 'absolute';
                         container.style.top = '0';
                         container.style.left = '0';
-                        console.log('Set container height to: ' + parentHeight + 'px');
+                        console.log('[' + mapId + '] Set container height to: ' + parentHeight + 'px');
                     } else {
-                        // Fallback: use calc style
-                        container.style.height = 'calc(100vh - 180px)';
-                        container.style.width = '100%';
-                        console.log('Using fallback height: calc(100vh - 180px)');
+                        // Fallback: Try to find any parent with height
+                        let searchParent = parent.parentElement;
+                        let foundHeight = 0;
+                        while (searchParent && foundHeight === 0) {
+                            foundHeight = searchParent.clientHeight;
+                            searchParent = searchParent.parentElement;
+                        }
+                        if (foundHeight > 0) {
+                            container.style.height = (foundHeight - 100) + 'px';
+                            container.style.width = '100%';
+                            console.log('[' + mapId + '] Using parent ancestor height: ' + (foundHeight - 100) + 'px');
+                        } else {
+                            // Ultimate fallback: use viewport calculation
+                            container.style.height = 'calc(100vh - 220px)';
+                            container.style.width = '100%';
+                            console.log('[' + mapId + '] Using viewport fallback height: calc(100vh - 220px)');
+                        }
                     }
                 }
+
+                // Get or create map instance for this ID
+                let mapInstance = window.hotelMapInstances[mapId];
+                let markers = window.hotelMarkersMap[mapId] || [];
 
                 // Check for detached map instance
-                if (window.hotelMapInstance) {
-                    let mapContainer = window.hotelMapInstance.getContainer();
+                if (mapInstance) {
+                    let mapContainer = mapInstance.getContainer();
                     if (mapContainer !== container) {
-                        console.log('Map container mismatch (detached), recreating');
-                        window.hotelMapInstance.remove();
-                        window.hotelMapInstance = null;
+                        console.log('[' + mapId + '] Map container mismatch (detached), recreating');
+                        mapInstance.remove();
+                        mapInstance = null;
+                        delete window.hotelMapInstances[mapId];
                     }
                 }
 
-                if (!window.hotelMapInstance) {
+                if (!mapInstance) {
                     if (typeof L === 'undefined') {
                         console.error('Leaflet not loaded');
                         return;
                     }
-                    console.log('Initializing Hotel Map');
+                    console.log('[' + mapId + '] Initializing Hotel Map');
                     
                     // Default center (Singapore)
                     let center = [1.3521, 103.8198];
@@ -101,24 +131,26 @@ pub fn HotelMap(
                         for (let i = 0; i < hotels.length; i++) {
                             if (hotels[i].location && hotels[i].location.latitude && hotels[i].location.longitude) {
                                 center = [hotels[i].location.latitude, hotels[i].location.longitude];
-                                console.log('Setting initial center to first hotel:', center);
+                                console.log('[' + mapId + '] Setting initial center to first hotel:', center);
                                 break;
                             }
                         }
                     }
 
-                    window.hotelMapInstance = L.map('hotel-map').setView(center, zoom);
+                    mapInstance = L.map(mapId).setView(center, zoom);
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         maxZoom: 19,
                         attribution: '© OpenStreetMap'
-                    }).addTo(window.hotelMapInstance);
+                    }).addTo(mapInstance);
+                    window.hotelMapInstances[mapId] = mapInstance;
                 }
                 
                 // Clear existing markers
-                if (window.hotelMapInstance && window.hotelMarkers) {
-                    window.hotelMarkers.forEach(m => window.hotelMapInstance.removeLayer(m));
+                if (mapInstance && markers) {
+                    markers.forEach(m => mapInstance.removeLayer(m));
                 }
-                window.hotelMarkers = [];
+                markers = [];
+                window.hotelMarkersMap[mapId] = markers;
 
                 if (!hotels) return;
 
@@ -151,7 +183,7 @@ pub fn HotelMap(
                         });
 
                         let marker = L.marker([hotel.location.latitude, hotel.location.longitude], {icon: customIcon})
-                            .addTo(window.hotelMapInstance);
+                            .addTo(mapInstance);
 
                         // Build hotel details URL from current page URL params
                         let currentUrl = new URL(window.location.href);
@@ -214,27 +246,30 @@ pub fn HotelMap(
                             }
                         });
                         
-                        window.hotelMarkers.push(marker);
+                        markers.push(marker);
                         bounds.extend([hotel.location.latitude, hotel.location.longitude]);
                         hasBounds = true;
                     }
                 });
                 
+                window.hotelMarkersMap[mapId] = markers;
+                
                 // Force layout recalculation AND then fit bounds
                 // Use longer delay to ensure container is laid out
                 setTimeout(() => {
-                    if (window.hotelMapInstance) {
-                        let container = document.getElementById('hotel-map');
-                        console.log('Container dimensions:', container ? container.offsetWidth + 'x' + container.offsetHeight : 'N/A');
+                    let instance = window.hotelMapInstances[mapId];
+                    if (instance) {
+                        let container = document.getElementById(mapId);
+                        console.log('[' + mapId + '] Container dimensions:', container ? container.offsetWidth + 'x' + container.offsetHeight : 'N/A');
                         
-                        window.hotelMapInstance.invalidateSize();
+                        instance.invalidateSize();
                         
                         if (hasBounds && bounds.isValid()) {
-                            console.log('Fitting bounds:', bounds.toBBoxString());
+                            console.log('[' + mapId + '] Fitting bounds:', bounds.toBBoxString());
                             // Add maxZoom to prevent zooming in too far
-                            window.hotelMapInstance.fitBounds(bounds, {padding: [50, 50], maxZoom: 15});
+                            instance.fitBounds(bounds, {padding: [50, 50], maxZoom: 15});
                         } else {
-                            console.log('No valid bounds to fit');
+                            console.log('[' + mapId + '] No valid bounds to fit');
                         }
                     }
                 }, 500);
@@ -247,7 +282,7 @@ pub fn HotelMap(
 
                 // Call the function
                 on_marker_click.with_value(|cb| {
-                    update_hotel_map(hotels_js, cb);
+                    update_hotel_map(&map_id_effect, hotels_js, cb);
                 });
             }
         }
@@ -260,16 +295,22 @@ pub fn HotelMap(
             let has_fn = js_sys::Reflect::has(&window, &JsValue::from_str("cleanupHotelMap"))
                 .unwrap_or(false);
             if has_fn {
+                // Pass map_id to cleanup
+                let args = js_sys::Array::new();
+                args.push(&JsValue::from_str(&map_id_cleanup));
                 let _ = js_sys::Reflect::get(&window, &JsValue::from_str("cleanupHotelMap"))
                     .and_then(|f| f.dyn_into::<js_sys::Function>())
-                    .and_then(|f| f.call0(&JsValue::NULL));
+                    .and_then(|f| f.apply(&JsValue::NULL, &args));
             }
         }
     });
 
     view! {
-        <div class="relative w-full h-[calc(100vh-180px)] min-h-[500px] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-            <div id="hotel-map" class="absolute inset-0" node_ref=map_div_ref></div>
+        <div
+            class="relative w-full h-full min-h-[400px] rounded-lg overflow-hidden border border-gray-200 shadow-sm"
+            style="min-height: max(400px, calc(100vh - 300px));"
+        >
+            <div id=map_id_view class="absolute inset-0" node_ref=map_div_ref></div>
         </div>
     }
 }
