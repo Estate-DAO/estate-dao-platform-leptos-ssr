@@ -188,33 +188,9 @@ pub fn HotelMap(
                         // Note: We don't use marker.bindPopup() here because we have
                         // a custom floating card component that displays the selected hotel
                         
-                        // On marker click: highlight + scroll to card WITHIN the scrollable container
+                        // On marker click: trigger the callback to show the floating card
                         marker.on('click', () => {
                             if (onMarkerClick) onMarkerClick(hotel.hotel_code);
-                            
-                            // Scroll the corresponding hotel card into view within its scrollable container
-                            let cardElement = document.getElementById('hotel-card-' + hotel.hotel_code);
-                            if (cardElement) {
-                                // Find the scrollable parent container (the one with overflow-y-auto)
-                                let scrollableParent = cardElement.closest('.overflow-y-auto');
-                                if (scrollableParent) {
-                                    // Calculate scroll position to center the card
-                                    let cardTop = cardElement.offsetTop;
-                                    let containerHeight = scrollableParent.clientHeight;
-                                    let cardHeight = cardElement.offsetHeight;
-                                    let scrollTo = cardTop - (containerHeight / 2) + (cardHeight / 2);
-                                    scrollableParent.scrollTo({ top: scrollTo, behavior: 'smooth' });
-                                }
-                                
-                                // Add a brief highlight effect
-                                cardElement.style.transition = 'box-shadow 0.3s, transform 0.3s';
-                                cardElement.style.boxShadow = '0 0 0 3px #3b82f6';
-                                cardElement.style.transform = 'scale(1.02)';
-                                setTimeout(() => {
-                                    cardElement.style.boxShadow = '';
-                                    cardElement.style.transform = '';
-                                }, 2000);
-                            }
                         });
                         
                         markers.push(marker);
