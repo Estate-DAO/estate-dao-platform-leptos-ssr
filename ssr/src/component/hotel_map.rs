@@ -128,8 +128,8 @@ pub fn HotelMap(
                 hotels.forEach(hotel => {
                     if (hotel.location && hotel.location.latitude && hotel.location.longitude) {
                         
-                        // Create custom price pill icon
-                        let priceText = hotel.price ? (hotel.price.currency_code + ' ' + hotel.price.room_price) : 'View';
+                        // Create custom price pill icon - FORMAT PRICE AS INTEGER
+                        let priceText = hotel.price ? (hotel.price.currency_code + ' ' + Math.round(hotel.price.room_price)) : 'View';
                         let customIcon = L.divIcon({
                             className: 'custom-map-marker',
                             html: '<div style=\"' +
@@ -153,24 +153,65 @@ pub fn HotelMap(
                         let marker = L.marker([hotel.location.latitude, hotel.location.longitude], {icon: customIcon})
                             .addTo(window.hotelMapInstance);
 
-                        // Popup content with image
+                        // Build hotel details URL from current page URL params
+                        let currentUrl = new URL(window.location.href);
+                        let params = currentUrl.searchParams;
+                        let hotelDetailsUrl = '/hotel-details?' +
+                            'hotelCode=' + encodeURIComponent(hotel.hotel_code) +
+                            '&checkin=' + (params.get('checkin') || '') +
+                            '&checkout=' + (params.get('checkout') || '') +
+                            '&adults=' + (params.get('adults') || '2') +
+                            '&children=' + (params.get('children') || '0') +
+                            '&rooms=' + (params.get('rooms') || '1');
+
+                        // Popup content with CLICKABLE image that navigates to hotel details
                         let imageHtml = hotel.hotel_picture ? 
-                            '<div style=\"width: 100%; height: 120px; background-image: url(\'' + hotel.hotel_picture + '\'); background-size: cover; background-position: center; border-radius: 8px 8px 0 0; margin-bottom: 8px;\"></div>' : 
+                            '<a href=\"' + hotelDetailsUrl + '\" target=\"_blank\" style=\"display:block; cursor:pointer;\">' +
+                                '<div style=\"width: 100%; height: 120px; background-image: url(\'' + hotel.hotel_picture + '\'); background-size: cover; background-position: center; border-radius: 8px 8px 0 0; margin-bottom: 8px;\"></div>' +
+                            '</a>' : 
                             '';
                         
                         let popupContent = 
                             '<div style=\"min-width: 200px; font-family: ui-sans-serif, system-ui, sans-serif;\">' +
                                 imageHtml +
                                 '<div style=\"padding: 0 4px;\">' +
-                                    '<h3 style=\"margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #0f172a;\">' + hotel.hotel_name + '</h3>' +
+                                    '<a href=\"' + hotelDetailsUrl + '\" target=\"_blank\" style=\"text-decoration: none; color: inherit;\">' +
+                                        '<h3 style=\"margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #0f172a; cursor: pointer;\">' + hotel.hotel_name + '</h3>' +
+                                    '</a>' +
                                     '<p style=\"margin: 0; font-size: 14px; color: #64748b;\">' + priceText + '</p>' +
                                 '</div>' +
                             '</div>';
 
-                        marker.bindPopup(popupContent);
+                        // Bind popup with autoPan disabled to prevent zoom changes
+                        marker.bindPopup(popupContent, { autoPan: false });
                         
+                        // On marker click: highlight + scroll to card WITHIN the scrollable container
                         marker.on('click', () => {
                             if (onMarkerClick) onMarkerClick(hotel.hotel_code);
+                            
+                            // Scroll the corresponding hotel card into view within its scrollable container
+                            let cardElement = document.getElementById('hotel-card-' + hotel.hotel_code);
+                            if (cardElement) {
+                                // Find the scrollable parent container (the one with overflow-y-auto)
+                                let scrollableParent = cardElement.closest('.overflow-y-auto');
+                                if (scrollableParent) {
+                                    // Calculate scroll position to center the card
+                                    let cardTop = cardElement.offsetTop;
+                                    let containerHeight = scrollableParent.clientHeight;
+                                    let cardHeight = cardElement.offsetHeight;
+                                    let scrollTo = cardTop - (containerHeight / 2) + (cardHeight / 2);
+                                    scrollableParent.scrollTo({ top: scrollTo, behavior: 'smooth' });
+                                }
+                                
+                                // Add a brief highlight effect
+                                cardElement.style.transition = 'box-shadow 0.3s, transform 0.3s';
+                                cardElement.style.boxShadow = '0 0 0 3px #3b82f6';
+                                cardElement.style.transform = 'scale(1.02)';
+                                setTimeout(() => {
+                                    cardElement.style.boxShadow = '';
+                                    cardElement.style.transform = '';
+                                }, 2000);
+                            }
                         });
                         
                         window.hotelMarkers.push(marker);
