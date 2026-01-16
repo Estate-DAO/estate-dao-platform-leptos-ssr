@@ -1140,13 +1140,76 @@ pub fn HotelListPage() -> impl IntoView {
                                                             }).collect_view()
                                                         }
                                                     </div>
-                                                    // Right side: Map
-                                                    <div class="flex-1 h-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
+                                                    // Right side: Map with floating card
+                                                    <div class="flex-1 h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 relative">
                                                         <HotelMap
                                                             map_id="hotel-map-desktop".to_string()
                                                             hotels=create_rw_signal(filtered_hotels.clone())
                                                             highlighted_hotel=highlighted_hotel
                                                         />
+
+                                                        // Floating selected hotel card on desktop map
+                                                        <Show
+                                                            when=move || highlighted_hotel.get().is_some()
+                                                            fallback=move || view! { <></> }
+                                                        >
+                                                            {
+                                                                let stored_hotels_desktop = store_value(filtered_hotels.clone());
+                                                                move || {
+                                                                    let hotels = stored_hotels_desktop.get_value();
+                                                                    if let Some(hotel_code) = highlighted_hotel.get() {
+                                                                        if let Some(hotel_result) = hotels.iter().find(|h| h.hotel_code == hotel_code) {
+                                                                            let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                                                            let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                                                            if is_disabled { price = None; }
+                                                                            let img = if hotel_result.hotel_picture.is_empty() {
+                                                                                "https://via.placeholder.com/300x200?text=No+Image".into()
+                                                                            } else {
+                                                                                hotel_result.hotel_picture.clone()
+                                                                            };
+                                                                            let res = hotel_result.clone();
+                                                                            let hotel_address = hotel_result.hotel_address.clone();
+                                                                            let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+
+                                                                            view! {
+                                                                                <div class="absolute bottom-4 left-4 right-4 max-w-md bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[1000]">
+                                                                                    // Close button
+                                                                                    <button
+                                                                                        class="absolute top-2 right-2 z-10 p-1.5 bg-white/90 hover:bg-gray-100 rounded-full shadow-md border border-gray-200 transition-colors"
+                                                                                        on:click=move |e| {
+                                                                                            e.stop_propagation();
+                                                                                            highlighted_hotel.set(None);
+                                                                                        }
+                                                                                    >
+                                                                                        <Icon icon=icondata::BsX class="w-5 h-5 text-gray-600" />
+                                                                                    </button>
+                                                                                    <HotelCardTile
+                                                                                        img
+                                                                                        guest_score=None
+                                                                                        rating=hotel_result.star_rating
+                                                                                        hotel_name=hotel_result.hotel_name.clone()
+                                                                                        hotel_code=hotel_result.hotel_code.clone()
+                                                                                        price=price
+                                                                                        discount_percent=None
+                                                                                        amenities=amenities.get()
+                                                                                        property_type=hotel_result.property_type.clone()
+                                                                                        class="w-full".to_string()
+                                                                                        hotel_address
+                                                                                        distance_from_center_km=hotel_result.distance_from_center_km
+                                                                                        disabled=is_disabled
+                                                                                        compact=true
+                                                                                    />
+                                                                                </div>
+                                                                            }.into_view()
+                                                                        } else {
+                                                                            view! { <></> }.into_view()
+                                                                        }
+                                                                    } else {
+                                                                        view! { <></> }.into_view()
+                                                                    }
+                                                                }
+                                                            }
+                                                        </Show>
                                                     </div>
                                                 </div>
                                             }.into_view()
