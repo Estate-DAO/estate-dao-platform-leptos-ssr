@@ -1,7 +1,7 @@
 use crate::{
     api::{
         self,
-        client_side_api::{ClientSideApiClient, Place, PlaceData},
+        client_side_api::{ClientSideApiClient, Location, Place, PlaceData, Viewport},
         consts::PAGINATION_LIMIT,
     },
     application_services::filter_types::{UISearchFilters, UISortOptions},
@@ -679,22 +679,64 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
             if should_fetch {
                 let place_id = place.place_id.clone();
                 let place_for_update = place.clone();
-                spawn_local(async move {
-                    if let Ok(place_details) = lookup_place_by_id(place_id).await {
-                        // Update the Place with proper display_name and formatted_address from place_details
-                        let updated_place = Place {
-                            place_id: place_for_update.place_id.clone(),
-                            display_name: get_display_name_from_place_data(&place_details),
-                            formatted_address: get_formatted_address_from_place_data(
-                                &place_details,
-                            ),
-                        };
 
-                        // Set both place (for DestinationPicker display) and place_details
-                        UISearchCtx::set_place(updated_place);
-                        UISearchCtx::set_place_details(Some(place_details));
+                // Handle custom place_ids (from "Search this area" feature)
+                // Format: custom_<lat>_<lng>
+                if place_id.starts_with("custom_") {
+                    // Parse coordinates from custom place_id
+                    let parts: Vec<&str> = place_id
+                        .strip_prefix("custom_")
+                        .unwrap()
+                        .split('_')
+                        .collect();
+                    if parts.len() >= 2 {
+                        if let (Ok(lat), Ok(lng)) =
+                            (parts[0].parse::<f64>(), parts[1].parse::<f64>())
+                        {
+                            log!("[sync_to_app_state] Custom place_id detected, using coordinates: lat={}, lng={}", lat, lng);
+
+                            // Create synthetic place_details with the parsed coordinates
+                            let place_details = PlaceData {
+                                address_components: vec![],
+                                location: Location {
+                                    latitude: lat,
+                                    longitude: lng,
+                                },
+                                viewport: Viewport::default(),
+                            };
+
+                            // Create a descriptive place name
+                            let updated_place = Place {
+                                place_id: place_for_update.place_id.clone(),
+                                display_name: format!("Map Area ({:.4}, {:.4})", lat, lng),
+                                formatted_address: format!("Lat: {:.4}, Lng: {:.4}", lat, lng),
+                            };
+
+                            UISearchCtx::set_place(updated_place);
+                            UISearchCtx::set_place_details(Some(place_details));
+                        } else {
+                            log!("[sync_to_app_state] Failed to parse coordinates from custom place_id: {}", place_id);
+                        }
                     }
-                });
+                } else {
+                    // Normal place_id - fetch details from API
+                    spawn_local(async move {
+                        if let Ok(place_details) = lookup_place_by_id(place_id).await {
+                            // Update the Place with proper display_name and formatted_address from place_details
+                            let updated_place = Place {
+                                place_id: place_for_update.place_id.clone(),
+                                display_name: get_display_name_from_place_data(&place_details),
+                                formatted_address: get_formatted_address_from_place_data(
+                                    &place_details,
+                                ),
+                            };
+
+                            // Set both place (for DestinationPicker display) and place_details
+                            UISearchCtx::set_place(updated_place);
+                            UISearchCtx::set_place_details(Some(place_details));
+                        }
+                    });
+                }
             } else {
                 // If we already have place_details and placeId matches, update the place with proper names
                 if let Some(ref details) = self.place_details {

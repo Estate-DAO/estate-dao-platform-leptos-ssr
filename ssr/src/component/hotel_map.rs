@@ -9,6 +9,7 @@ extern "C" {
         map_id: &str,
         hotels: JsValue,
         on_marker_click: &Closure<dyn FnMut(String)>,
+        on_map_move: &Closure<dyn FnMut(f64, f64)>,
     );
 }
 
@@ -19,6 +20,9 @@ pub fn HotelMap(
     map_id: String,
     hotels: RwSignal<Vec<DomainHotelAfterSearch>>,
     highlighted_hotel: RwSignal<Option<String>>,
+    /// Callback when map is moved/panned, provides (lat, lng) of new center
+    #[prop(optional)]
+    on_map_move: Option<Callback<(f64, f64)>>,
 ) -> impl IntoView {
     let map_div_ref = create_node_ref::<html::Div>();
     let map_id_effect = map_id.clone();
@@ -27,9 +31,16 @@ pub fn HotelMap(
 
     // Callback for marker clicks
     // We use a stored closure to keep it alive
-    let on_marker_click = store_value(Closure::wrap(Box::new(move |hotel_code: String| {
+    let on_marker_click_closure = store_value(Closure::wrap(Box::new(move |hotel_code: String| {
         highlighted_hotel.set(Some(hotel_code));
     }) as Box<dyn FnMut(String)>));
+
+    // Callback for map move events
+    let on_map_move_closure = store_value(Closure::wrap(Box::new(move |lat: f64, lng: f64| {
+        if let Some(callback) = on_map_move {
+            leptos::Callable::call(&callback, (lat, lng));
+        }
+    }) as Box<dyn FnMut(f64, f64)>));
 
     create_effect(move |_| {
         let current_hotels = hotels.get();
@@ -49,6 +60,7 @@ pub fn HotelMap(
             // Store map instances by ID
             window.hotelMapInstances = window.hotelMapInstances || {};
             window.hotelMarkersMap = window.hotelMarkersMap || {};
+            window.hotelMapMoveCallbacks = window.hotelMapMoveCallbacks || {};
 
             window.cleanupHotelMap = function(mapId) {
                 mapId = mapId || 'hotel-map';
@@ -57,9 +69,10 @@ pub fn HotelMap(
                     delete window.hotelMapInstances[mapId];
                 }
                 delete window.hotelMarkersMap[mapId];
+                delete window.hotelMapMoveCallbacks[mapId];
             };
 
-            window.updateHotelMap = function(mapId, hotels, onMarkerClick) {
+            window.updateHotelMap = function(mapId, hotels, onMarkerClick, onMapMove) {
                 console.log('UpdateHotelMap called for ' + mapId + ' with ' + (hotels ? hotels.length : 0) + ' hotels');
                 let container = document.getElementById(mapId);
                 if (!container) {
@@ -143,6 +156,18 @@ pub fn HotelMap(
                         attribution: '© OpenStreetMap'
                     }).addTo(mapInstance);
                     window.hotelMapInstances[mapId] = mapInstance;
+
+                    // Add moveend event listener for map panning
+                    if (onMapMove) {
+                        window.hotelMapMoveCallbacks[mapId] = onMapMove;
+                        mapInstance.on('moveend', function() {
+                            let center = mapInstance.getCenter();
+                            console.log('[' + mapId + '] Map moved to:', center.lat, center.lng);
+                            if (window.hotelMapMoveCallbacks[mapId]) {
+                                window.hotelMapMoveCallbacks[mapId](center.lat, center.lng);
+                            }
+                        });
+                    }
                 }
                 
                 // Clear existing markers
@@ -228,8 +253,10 @@ pub fn HotelMap(
                 }
 
                 // Call the function
-                on_marker_click.with_value(|cb| {
-                    update_hotel_map(&map_id_effect, hotels_js, cb);
+                on_marker_click_closure.with_value(|marker_cb| {
+                    on_map_move_closure.with_value(|move_cb| {
+                        update_hotel_map(&map_id_effect, hotels_js, marker_cb, move_cb);
+                    });
                 });
             }
         }

@@ -234,6 +234,12 @@ pub struct DomainHotelSearchCriteria {
     pub room_guests: Vec<DomainRoomGuest>,
     pub guest_nationality: String,
     pub pagination: Option<DomainPaginationParams>,
+    /// Optional latitude for coordinate-based searches (e.g., "Search this area" on map)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub latitude: Option<f64>,
+    /// Optional longitude for coordinate-based searches (e.g., "Search this area" on map)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub longitude: Option<f64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -586,6 +592,8 @@ impl Default for DomainHotelSearchCriteria {
             }],
             place_id: "ChIJOwg_06VPwokRYv534QaPC8g".into(),
             pagination: None,
+            latitude: None,
+            longitude: None,
         }
     }
 }
