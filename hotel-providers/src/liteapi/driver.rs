@@ -43,7 +43,8 @@ impl HotelProviderPort for LiteApiDriver {
         let resp = self.client.get_hotels(&req).await?;
 
         // First map basic search results
-        let mut domain_list = LiteApiMapper::map_liteapi_search_response_to_domain(resp);
+        let mut domain_list =
+            LiteApiMapper::map_liteapi_search_response_to_domain(resp, &criteria.pagination);
 
         if domain_list.hotel_results.is_empty() {
             return Ok(domain_list);
