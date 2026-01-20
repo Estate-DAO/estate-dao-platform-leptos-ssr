@@ -327,6 +327,10 @@ pub fn HotelListPage() -> impl IntoView {
                         loaded_pages,
                         target_page
                     );
+                    // Restore pagination metadata from existing results so "Load More" button works correctly
+                    if let Some(ref existing) = existing_results {
+                        UIPaginationState::set_pagination_meta(existing.pagination.clone());
+                    }
                     PreviousSearchContext::update(search_ctx_clone2.clone());
                     PreviousSearchContext::reset_first_time_filled();
                     return Some(existing_results);
@@ -368,9 +372,9 @@ pub fn HotelListPage() -> impl IntoView {
                                 response.hotel_results.len()
                             );
 
-                            if page == target_page {
-                                UIPaginationState::set_pagination_meta(response.pagination.clone());
-                            }
+                            // Always update pagination_meta with the latest response
+                            // This ensures "Load More" button has accurate has_next_page info
+                            UIPaginationState::set_pagination_meta(response.pagination.clone());
 
                             // Dedup is now handled automatically in set_search_results
                             SearchListResults::set_search_results(Some(response.clone()));
