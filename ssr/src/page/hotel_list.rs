@@ -782,12 +782,18 @@ pub fn HotelListPage() -> impl IntoView {
         ></div>
 
         // Main scrollable section
-        <section class="my-4 bg-slate-50 px-4 pb-2">
+        <section class=move || {
+            if show_map.get() {
+                "my-1 bg-slate-50 px-2 pb-1 relative z-10"
+            } else {
+                "my-4 bg-slate-50 px-4 pb-2"
+            }
+        }>
             // Desktop layout (lg screens and up) - centered with 85% width
             <div class="hidden lg:flex justify-center">
                 <div class=move || {
                     if show_map.get() {
-                        "w-[95%] max-w-[1920px] flex h-[calc(100vh-7rem)]"
+                        "w-[98%] max-w-[1920px] flex h-[calc(100vh-2rem)]"
                     } else {
                         "w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]"
                     }
@@ -895,13 +901,19 @@ pub fn HotelListPage() -> impl IntoView {
                 }>
                     <div class=move || {
                         if show_map.get() {
-                            "p-4 h-full flex flex-col"
+                            "p-2 h-full flex flex-col"
                         } else {
                             "p-4"
                         }
                     }>
                         // Results count and sort by component for desktop
-                        <div class="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-2 lg:gap-0">
+                        <div class=move || {
+                            if show_map.get() {
+                                "mb-2 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-1 lg:gap-0"
+                            } else {
+                                "mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-2 lg:gap-0"
+                            }
+                        }>
                             <div class="text-gray-700">
                                 {move || {
                                     let search_ctx = search_ctx3.clone();
@@ -1100,7 +1112,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             view! {
                                                 <div class="flex flex-row flex-1 min-h-0 gap-4 overflow-hidden">
                                                     // Left side: Scrollable Hotel List
-                                                    <div class="w-2/5 h-full overflow-y-auto pr-2 custom-scrollbar space-y-4 pb-20">
+                                                    <div class="w-2/5 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
                                                         {
                                                             filtered_hotels.iter().map(|hotel_result| {
                                                                 let mut price = hotel_result.price.clone().map(|p| p.room_price);
@@ -1143,6 +1155,10 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 }
                                                             }).collect_view()
                                                         }
+                                                        // Load More button inside the scrollable list
+                                                        <div class="pt-2 pb-2">
+                                                            <PaginationControls />
+                                                        </div>
                                                     </div>
                                                     // Right side: Map with floating card
                                                     <div class="flex-1 h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 relative">
