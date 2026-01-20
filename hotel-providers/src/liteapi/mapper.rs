@@ -32,7 +32,7 @@ impl LiteApiMapper {
 
     pub fn map_liteapi_search_response_to_domain(
         response: LiteApiHotelSearchResponse,
-        // center_coords: Option<(f64, f64)>, // Needed for distance calc
+        pagination_params: &Option<DomainPaginationParams>,
     ) -> DomainHotelListAfterSearch {
         let hotel_results: Vec<DomainHotelAfterSearch> = response
             .data
@@ -40,10 +40,51 @@ impl LiteApiMapper {
             .map(|h| Self::map_liteapi_hotel_to_domain(h))
             .collect();
 
+        // Compute pagination metadata from response total and request params
+        let pagination =
+            Self::compute_pagination_meta(response.total, pagination_params, hotel_results.len());
+
         DomainHotelListAfterSearch {
             hotel_results,
-            pagination: None, // Will be populated with meta if needed
+            pagination,
         }
+    }
+
+    /// Compute pagination metadata from API response
+    fn compute_pagination_meta(
+        total: Option<i32>,
+        pagination_params: &Option<DomainPaginationParams>,
+        result_count: usize,
+    ) -> Option<DomainPaginationMeta> {
+        let (page, page_size) = match pagination_params {
+            Some(params) => {
+                let page = params.page.unwrap_or(1).max(1);
+                let page_size = params
+                    .page_size
+                    .unwrap_or(PAGINATION_LIMIT as u32)
+                    .clamp(1, PAGINATION_LIMIT as u32);
+                (page, page_size)
+            }
+            None => (1, PAGINATION_LIMIT as u32),
+        };
+
+        // Calculate has_next_page based on total or result_count
+        let has_next_page = if let Some(total_results) = total {
+            let total_results = total_results.max(0) as u32;
+            let offset = (page - 1) * page_size;
+            offset + (result_count as u32) < total_results
+        } else {
+            // Fallback: if we got a full page of results, assume there might be more
+            result_count >= page_size as usize
+        };
+
+        Some(DomainPaginationMeta {
+            page,
+            page_size,
+            total_results: total,
+            has_next_page,
+            has_previous_page: page > 1,
+        })
     }
 
     pub fn map_liteapi_hotel_to_domain(hotel: LiteApiHotelResult) -> DomainHotelAfterSearch {
@@ -68,6 +109,10 @@ impl LiteApiMapper {
             result_token: hotel.id,
             hotel_address: Some(hotel.address),
             distance_from_center_km: None,
+            location: Some(DomainLocation {
+                latitude: hotel.latitude,
+                longitude: hotel.longitude,
+            }),
         }
     }
 

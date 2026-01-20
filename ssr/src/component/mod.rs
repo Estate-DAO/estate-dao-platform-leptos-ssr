@@ -128,3 +128,6 @@ pub mod user_profile_icon;
 pub mod yral_auth_provider;
 // mod live_select_example;
 // pub use live_select_example::*;
+
+pub mod hotel_map;
+pub use hotel_map::*;

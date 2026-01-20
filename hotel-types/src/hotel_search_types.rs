@@ -316,6 +316,7 @@ pub struct DomainHotelAfterSearch {
     pub result_token: String,
     pub hotel_address: Option<String>,
     pub distance_from_center_km: Option<f64>,
+    pub location: Option<DomainLocation>,
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
