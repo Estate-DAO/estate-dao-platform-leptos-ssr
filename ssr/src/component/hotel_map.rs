@@ -137,7 +137,7 @@ pub fn HotelMap(
                     
                     // Default center (Singapore)
                     let center = [1.3521, 103.8198];
-                    let zoom = 11;
+                    let zoom = 13;
 
                     // Try to center on first hotel if available
                     if (hotels && hotels.length > 0) {
@@ -239,7 +239,7 @@ pub fn HotelMap(
                         if (hasBounds && bounds.isValid()) {
                             console.log('[' + mapId + '] Fitting bounds:', bounds.toBBoxString());
                             // Add maxZoom to prevent zooming in too far
-                            instance.fitBounds(bounds, {padding: [50, 50], maxZoom: 15});
+                            instance.fitBounds(bounds, {padding: [50, 50], maxZoom: 15, minZoom: 12});
                         } else {
                             console.log('[' + mapId + '] No valid bounds to fit');
                         }

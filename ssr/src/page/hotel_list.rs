@@ -1134,7 +1134,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             view! {
                                                 <div class="flex flex-row flex-1 min-h-0 gap-4 overflow-hidden">
                                                     // Left side: Scrollable Hotel List
-                                                    <div class="w-2/5 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
+                                                    <div class="w-1/2 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
                                                         {
                                                             filtered_hotels.iter().map(|hotel_result| {
                                                                 let mut price = hotel_result.price.clone().map(|p| p.room_price);
@@ -1171,7 +1171,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                             hotel_address
                                                                             distance_from_center_km=hotel_result.distance_from_center_km
                                                                             disabled=is_disabled
-                                                                            compact=true
+                                                                            compact=false
                                                                         />
                                                                     </div>
                                                                 }
