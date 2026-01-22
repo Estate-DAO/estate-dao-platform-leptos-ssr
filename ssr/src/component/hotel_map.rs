@@ -238,8 +238,18 @@ pub fn HotelMap(
                         
                         if (hasBounds && bounds.isValid()) {
                             console.log('[' + mapId + '] Fitting bounds:', bounds.toBBoxString());
-                            // Add maxZoom to prevent zooming in too far
-                            instance.fitBounds(bounds, {padding: [50, 50], maxZoom: 15, minZoom: 12});
+                            // Fit bounds with maxZoom to prevent zooming in too far
+                            instance.fitBounds(bounds, {padding: [50, 50], maxZoom: 15});
+                            
+                            // Enforce minimum zoom - if fitBounds zoomed out too much, zoom back in
+                            setTimeout(() => {
+                                let currentZoom = instance.getZoom();
+                                console.log('[' + mapId + '] Current zoom after fitBounds:', currentZoom);
+                                if (currentZoom < 13) {
+                                    console.log('[' + mapId + '] Zoom too low, setting to 13');
+                                    instance.setZoom(13);
+                                }
+                            }, 100);
                         } else {
                             console.log('[' + mapId + '] No valid bounds to fit');
                         }

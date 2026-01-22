@@ -202,6 +202,17 @@ impl LiteApiClient {
         req: &LiteApiHotelSearchRequest,
     ) -> Result<LiteApiHotelSearchResponse, ProviderError> {
         let url = format!("{}{}", self.base_url, "/data/hotels");
+
+        tracing::debug!(
+            target: "hotel_providers::liteapi",
+            url = %url,
+            place_id = ?req.place_id,
+            latitude = ?req.latitude,
+            longitude = ?req.longitude,
+            distance = ?req.distance,
+            "LiteAPI get_hotels request"
+        );
+
         let resp = self
             .client
             .get(&url)

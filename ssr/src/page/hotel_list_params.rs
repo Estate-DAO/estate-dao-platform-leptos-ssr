@@ -708,8 +708,8 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                             // Create a descriptive place name
                             let updated_place = Place {
                                 place_id: place_for_update.place_id.clone(),
-                                display_name: format!("Map Area ({:.4}, {:.4})", lat, lng),
-                                formatted_address: format!("Lat: {:.4}, Lng: {:.4}", lat, lng),
+                                display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
                             };
 
                             UISearchCtx::set_place(updated_place);

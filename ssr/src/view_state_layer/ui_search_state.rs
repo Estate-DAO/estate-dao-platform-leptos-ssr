@@ -167,12 +167,27 @@ impl SearchListResults {
         let search_result_signal = Self::from_leptos_context().search_result;
 
         if let Some(new_response) = hotel_search_response {
+            log!(
+                "[SET_RESULTS] Received {} hotels from API",
+                new_response.hotel_results.len()
+            );
+
             // Apply deduplication at the lowest level - this ensures dedup happens
             // regardless of where state is updated from
             let deduplicated_response = Self::dedup_hotels_by_name(new_response);
 
+            log!(
+                "[SET_RESULTS] After dedup: {} hotels",
+                deduplicated_response.hotel_results.len()
+            );
+
             search_result_signal.update(|current_result| {
                 if let Some(current) = current_result {
+                    log!(
+                        "[SET_RESULTS] Extending existing {} hotels with {} new hotels",
+                        current.hotel_results.len(),
+                        deduplicated_response.hotel_results.len()
+                    );
                     current
                         .hotel_results
                         .extend(deduplicated_response.hotel_results);
@@ -180,17 +195,26 @@ impl SearchListResults {
                     let combined = std::mem::take(current);
                     *current = Self::dedup_hotels_by_name(combined);
                     current.pagination = deduplicated_response.pagination;
+                    log!(
+                        "[SET_RESULTS] After extend + re-dedup: {} hotels",
+                        current.hotel_results.len()
+                    );
                 } else {
+                    log!(
+                        "[SET_RESULTS] Setting fresh results: {} hotels",
+                        deduplicated_response.hotel_results.len()
+                    );
                     *current_result = Some(deduplicated_response);
                 }
             });
         } else {
+            log!("[SET_RESULTS] Received None, clearing results");
             search_result_signal.set(None);
         }
     }
 
-    /// Deduplicate hotels by name, keeping the one with the lowest price.
-    /// This prevents confusion from duplicate hotel entries in search results.
+    /// Deduplicate hotels by hotel_code (unique identifier), keeping the one with the lowest price.
+    /// This prevents duplicate API responses from showing the same hotel multiple times.
     fn dedup_hotels_by_name(mut results: DomainHotelListAfterSearch) -> DomainHotelListAfterSearch {
         use std::collections::HashMap;
 
@@ -198,9 +222,10 @@ impl SearchListResults {
         let mut hotels_to_keep: Vec<bool> = vec![true; results.hotel_results.len()];
 
         for (idx, hotel) in results.hotel_results.iter().enumerate() {
-            let hotel_name = hotel.hotel_name.trim().to_lowercase();
+            // Use hotel_code (unique identifier) instead of name for deduplication
+            let hotel_key = hotel.hotel_code.clone();
 
-            if let Some(&existing_idx) = seen_hotels.get(&hotel_name) {
+            if let Some(&existing_idx) = seen_hotels.get(&hotel_key) {
                 // Found a duplicate - keep the one with lower price
                 let existing_price = results.hotel_results[existing_idx]
                     .price
@@ -217,14 +242,14 @@ impl SearchListResults {
                 if current_price < existing_price {
                     // Current hotel has lower price, keep it and remove the previous one
                     hotels_to_keep[existing_idx] = false;
-                    seen_hotels.insert(hotel_name, idx);
+                    seen_hotels.insert(hotel_key, idx);
                 } else {
                     // Existing hotel has lower or equal price, remove current one
                     hotels_to_keep[idx] = false;
                 }
             } else {
-                // First occurrence of this hotel name
-                seen_hotels.insert(hotel_name, idx);
+                // First occurrence of this hotel code
+                seen_hotels.insert(hotel_key, idx);
             }
         }
 

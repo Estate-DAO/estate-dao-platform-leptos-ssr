@@ -1225,8 +1225,8 @@ pub fn HotelListPage() -> impl IntoView {
                                                                             // Update the place with a descriptive name
                                                                             let new_place = crate::api::client_side_api::Place {
                                                                                 place_id: format!("custom_{}_{}", lat, lng),
-                                                                                display_name: format!("Map Area ({:.4}, {:.4})", lat, lng),
-                                                                                formatted_address: format!("Lat: {:.4}, Lng: {:.4}", lat, lng),
+                                                                                display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                                                                formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
                                                                             };
 
                                                                             // Clear existing results and reset pagination
@@ -1234,8 +1234,11 @@ pub fn HotelListPage() -> impl IntoView {
                                                                             UIPaginationState::reset_to_first_page();
 
                                                                             // Update search context with new location
-                                                                            search_ctx.place.set(Some(new_place));
-                                                                            search_ctx.place_details.set(Some(new_place_data));
+                                                                            // Use batch() to prevent double API trigger
+                                                                            batch(move || {
+                                                                                search_ctx.place.set(Some(new_place));
+                                                                                search_ctx.place_details.set(Some(new_place_data));
+                                                                            });
 
                                                                             // Reset searching state after a short delay
                                                                             set_timeout(move || {
@@ -1644,15 +1647,18 @@ pub fn HotelListPage() -> impl IntoView {
 
                                                                 let new_place = crate::api::client_side_api::Place {
                                                                     place_id: format!("custom_{}_{}", lat, lng),
-                                                                    display_name: format!("Map Area ({:.4}, {:.4})", lat, lng),
-                                                                    formatted_address: format!("Lat: {:.4}, Lng: {:.4}", lat, lng),
+                                                                    display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                                                    formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
                                                                 };
 
                                                                 SearchListResults::reset();
                                                                 UIPaginationState::reset_to_first_page();
 
-                                                                search_ctx.place.set(Some(new_place));
-                                                                search_ctx.place_details.set(Some(new_place_data));
+                                                                // Use batch() to prevent double API trigger
+                                                                batch(move || {
+                                                                    search_ctx.place.set(Some(new_place));
+                                                                    search_ctx.place_details.set(Some(new_place_data));
+                                                                });
 
                                                                 set_timeout(move || {
                                                                     is_searching_area.set(false);

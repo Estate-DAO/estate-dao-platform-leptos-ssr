@@ -52,18 +52,23 @@ pub struct LiteApiPlace {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiteApiHotelSearchRequest {
-    #[serde(rename = "placeId")]
+    #[serde(rename = "placeId", skip_serializing_if = "Option::is_none")]
     pub place_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub latitude: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub longitude: Option<f64>,
-    pub radius: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distance: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<i32>,
-    #[serde(rename = "countryCode")]
+    #[serde(rename = "countryCode", skip_serializing_if = "Option::is_none")]
     pub country_code: Option<String>,
-    #[serde(rename = "cityName")]
+    #[serde(rename = "cityName", skip_serializing_if = "Option::is_none")]
     pub city_name: Option<String>,
-    #[serde(rename = "hotelName")]
+    #[serde(rename = "hotelName", skip_serializing_if = "Option::is_none")]
     pub hotel_name: Option<String>,
 }
 

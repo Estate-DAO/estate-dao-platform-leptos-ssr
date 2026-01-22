@@ -6,7 +6,7 @@ use crate::liteapi::models::search::*;
 use crate::ports::ProviderError;
 use crate::ports::UISearchFilters;
 
-const PAGINATION_LIMIT: i32 = 50; // Default limit
+const PAGINATION_LIMIT: i32 = 100; // Default limit (LiteAPI may have its own max)
 
 pub struct LiteApiMapper;
 
@@ -26,8 +26,7 @@ impl LiteApiMapper {
 
         if is_coordinate_search {
             // Use latitude/longitude for coordinate-based searches
-            // Reduce radius to 50km for better accuracy when searching from map
-            tracing::info!(
+            tracing::debug!(
                 target: "hotel_providers::liteapi",
                 latitude = ?domain_criteria.latitude,
                 longitude = ?domain_criteria.longitude,
@@ -37,7 +36,7 @@ impl LiteApiMapper {
                 place_id: None,
                 latitude: domain_criteria.latitude,
                 longitude: domain_criteria.longitude,
-                radius: Some(100000), // 100km radius for coordinate searches
+                distance: Some(100000), // 100km distance for coordinate searches
                 limit: Some(limit),
                 offset: Some(offset),
                 country_code: None,
@@ -50,7 +49,7 @@ impl LiteApiMapper {
                 place_id: Some(domain_criteria.place_id.clone()),
                 latitude: None,
                 longitude: None,
-                radius: Some(100000), // Default radius from legacy code
+                distance: Some(100000), // Default distance from legacy code
                 limit: Some(limit),
                 offset: Some(offset),
                 country_code: None,
