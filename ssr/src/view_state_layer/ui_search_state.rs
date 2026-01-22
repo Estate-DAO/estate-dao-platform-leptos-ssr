@@ -213,8 +213,8 @@ impl SearchListResults {
         }
     }
 
-    /// Deduplicate hotels by hotel_code (unique identifier), keeping the one with the lowest price.
-    /// This prevents duplicate API responses from showing the same hotel multiple times.
+    /// Deduplicate hotels by name, keeping the one with the lowest price.
+    /// This prevents confusion from duplicate hotel entries in search results.
     fn dedup_hotels_by_name(mut results: DomainHotelListAfterSearch) -> DomainHotelListAfterSearch {
         use std::collections::HashMap;
 
@@ -222,10 +222,9 @@ impl SearchListResults {
         let mut hotels_to_keep: Vec<bool> = vec![true; results.hotel_results.len()];
 
         for (idx, hotel) in results.hotel_results.iter().enumerate() {
-            // Use hotel_code (unique identifier) instead of name for deduplication
-            let hotel_key = hotel.hotel_code.clone();
+            let hotel_name = hotel.hotel_name.trim().to_lowercase();
 
-            if let Some(&existing_idx) = seen_hotels.get(&hotel_key) {
+            if let Some(&existing_idx) = seen_hotels.get(&hotel_name) {
                 // Found a duplicate - keep the one with lower price
                 let existing_price = results.hotel_results[existing_idx]
                     .price
@@ -242,14 +241,14 @@ impl SearchListResults {
                 if current_price < existing_price {
                     // Current hotel has lower price, keep it and remove the previous one
                     hotels_to_keep[existing_idx] = false;
-                    seen_hotels.insert(hotel_key, idx);
+                    seen_hotels.insert(hotel_name, idx);
                 } else {
                     // Existing hotel has lower or equal price, remove current one
                     hotels_to_keep[idx] = false;
                 }
             } else {
-                // First occurrence of this hotel code
-                seen_hotels.insert(hotel_key, idx);
+                // First occurrence of this hotel name
+                seen_hotels.insert(hotel_name, idx);
             }
         }
 
