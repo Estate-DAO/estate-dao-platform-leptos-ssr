@@ -112,6 +112,11 @@ pub fn HotelListPage() -> impl IntoView {
     let (show_map, set_show_map) = create_signal(false);
     let highlighted_hotel: RwSignal<Option<String>> = create_rw_signal(None);
 
+    // State for "Search this area" feature
+    let map_moved: RwSignal<bool> = create_rw_signal(false);
+    let map_center: RwSignal<Option<(f64, f64)>> = create_rw_signal(None);
+    let is_searching_area: RwSignal<bool> = create_rw_signal(false);
+
     let search_ctx2: UISearchCtx = expect_context();
 
     let search_ctx3: UISearchCtx = expect_context();
@@ -228,6 +233,7 @@ pub fn HotelListPage() -> impl IntoView {
 
             // Track search context changes reactively (but NOT filters/sorting)
             let place = search_ctx_for_resource.place.get();
+            let place_details = search_ctx_for_resource.place_details.get(); // Added for "Search this area"
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
             let rooms = search_ctx_for_resource.guests.rooms.get();
@@ -245,13 +251,29 @@ pub fn HotelListPage() -> impl IntoView {
             // Return a tuple that changes when core search criteria or pagination changes
             // NOTE: Removed sort_options from here to avoid unnecessary API calls
             if is_ready {
-                (place, date_range, adults, rooms, current_page, page_size)
+                (
+                    place,
+                    place_details,
+                    date_range,
+                    adults,
+                    rooms,
+                    current_page,
+                    page_size,
+                )
             } else {
                 // Return a default/non-ready state
-                (None, Default::default(), 0, 0, 0, 0)
+                (None, None, Default::default(), 0, 0, 0, 0)
             }
         },
-        move |(is_ready_place, date_range, adults, rooms, current_page, page_size)| {
+        move |(
+            is_ready_place,
+            _place_details,
+            date_range,
+            adults,
+            rooms,
+            current_page,
+            page_size,
+        )| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             let search_results_clone = search_list_results.clone();
@@ -1112,7 +1134,7 @@ pub fn HotelListPage() -> impl IntoView {
                                             view! {
                                                 <div class="flex flex-row flex-1 min-h-0 gap-4 overflow-hidden">
                                                     // Left side: Scrollable Hotel List
-                                                    <div class="w-2/5 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
+                                                    <div class="w-1/2 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
                                                         {
                                                             filtered_hotels.iter().map(|hotel_result| {
                                                                 let mut price = hotel_result.price.clone().map(|p| p.room_price);
@@ -1149,7 +1171,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                             hotel_address
                                                                             distance_from_center_km=hotel_result.distance_from_center_km
                                                                             disabled=is_disabled
-                                                                            compact=true
+                                                                            compact=false
                                                                         />
                                                                     </div>
                                                                 }
@@ -1166,7 +1188,88 @@ pub fn HotelListPage() -> impl IntoView {
                                                             map_id="hotel-map-desktop".to_string()
                                                             hotels=create_rw_signal(filtered_hotels.clone())
                                                             highlighted_hotel=highlighted_hotel
+                                                            on_map_move=Callback::new(move |(lat, lng): (f64, f64)| {
+                                                                log!("[SEARCH_AREA] Map moved to: {}, {}", lat, lng);
+                                                                map_center.set(Some((lat, lng)));
+                                                                map_moved.set(true);
+                                                            })
                                                         />
+
+                                                        // "Search this area" button - appears when map is panned
+                                                        <Show
+                                                            when=move || map_moved.get() && !is_searching_area.get()
+                                                            fallback=move || view! { <></> }
+                                                        >
+                                                            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                                                <button
+                                                                    class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 font-medium text-sm text-gray-700"
+                                                                    on:click=move |_| {
+                                                                        if let Some((lat, lng)) = map_center.get() {
+                                                                            log!("[SEARCH_AREA] Searching at: {}, {}", lat, lng);
+                                                                            is_searching_area.set(true);
+                                                                            map_moved.set(false);
+
+                                                                            // Create a synthetic PlaceData with the new coordinates
+                                                                            let search_ctx: UISearchCtx = expect_context();
+
+                                                                            // Update place_details with new coordinates
+                                                                            let new_place_data = crate::api::client_side_api::PlaceData {
+                                                                                address_components: vec![],
+                                                                                location: crate::api::client_side_api::Location {
+                                                                                    latitude: lat,
+                                                                                    longitude: lng,
+                                                                                },
+                                                                                viewport: crate::api::client_side_api::Viewport::default(),
+                                                                            };
+
+                                                                            // Update the place with a descriptive name
+                                                                            let new_place = crate::api::client_side_api::Place {
+                                                                                place_id: format!("custom_{}_{}", lat, lng),
+                                                                                display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                                                                formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
+                                                                            };
+
+                                                                            // Clear existing results and reset pagination
+                                                                            SearchListResults::reset();
+                                                                            UIPaginationState::reset_to_first_page();
+
+                                                                            // Update search context with new location
+                                                                            // Use batch() to prevent double API trigger
+                                                                            batch(move || {
+                                                                                search_ctx.place.set(Some(new_place));
+                                                                                search_ctx.place_details.set(Some(new_place_data));
+                                                                            });
+
+                                                                            // Reset searching state after a short delay
+                                                                            set_timeout(move || {
+                                                                                is_searching_area.set(false);
+                                                                            }, std::time::Duration::from_millis(500));
+                                                                        }
+                                                                    }
+                                                                >
+                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                                    </svg>
+                                                                    "Search this area"
+                                                                </button>
+                                                            </div>
+                                                        </Show>
+
+                                                        // Loading indicator when searching
+                                                        <Show
+                                                            when=move || is_searching_area.get()
+                                                            fallback=move || view! { <></> }
+                                                        >
+                                                            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                                                <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200">
+                                                                    <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                    </svg>
+                                                                    <span class="text-sm text-gray-600">"Searching..."</span>
+                                                                </div>
+                                                            </div>
+                                                        </Show>
 
                                                         // Floating selected hotel card on desktop map
                                                         <Show
@@ -1510,7 +1613,82 @@ pub fn HotelListPage() -> impl IntoView {
                                                 map_id="hotel-map-mobile".to_string()
                                                 hotels=create_rw_signal(filtered_hotels_map.clone())
                                                 highlighted_hotel=highlighted_hotel
+                                                on_map_move=Callback::new(move |(lat, lng): (f64, f64)| {
+                                                    log!("[SEARCH_AREA_MOBILE] Map moved to: {}, {}", lat, lng);
+                                                    map_center.set(Some((lat, lng)));
+                                                    map_moved.set(true);
+                                                })
                                             />
+
+                                            // "Search this area" button for mobile - appears when map is panned
+                                            <Show
+                                                when=move || map_moved.get() && !is_searching_area.get()
+                                                fallback=move || view! { <></> }
+                                            >
+                                                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                                    <button
+                                                        class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 font-medium text-sm text-gray-700"
+                                                        on:click=move |_| {
+                                                            if let Some((lat, lng)) = map_center.get() {
+                                                                log!("[SEARCH_AREA_MOBILE] Searching at: {}, {}", lat, lng);
+                                                                is_searching_area.set(true);
+                                                                map_moved.set(false);
+
+                                                                let search_ctx: UISearchCtx = expect_context();
+
+                                                                let new_place_data = crate::api::client_side_api::PlaceData {
+                                                                    address_components: vec![],
+                                                                    location: crate::api::client_side_api::Location {
+                                                                        latitude: lat,
+                                                                        longitude: lng,
+                                                                    },
+                                                                    viewport: crate::api::client_side_api::Viewport::default(),
+                                                                };
+
+                                                                let new_place = crate::api::client_side_api::Place {
+                                                                    place_id: format!("custom_{}_{}", lat, lng),
+                                                                    display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                                                    formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
+                                                                };
+
+                                                                SearchListResults::reset();
+                                                                UIPaginationState::reset_to_first_page();
+
+                                                                // Use batch() to prevent double API trigger
+                                                                batch(move || {
+                                                                    search_ctx.place.set(Some(new_place));
+                                                                    search_ctx.place_details.set(Some(new_place_data));
+                                                                });
+
+                                                                set_timeout(move || {
+                                                                    is_searching_area.set(false);
+                                                                }, std::time::Duration::from_millis(500));
+                                                            }
+                                                        }
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                        </svg>
+                                                        "Search this area"
+                                                    </button>
+                                                </div>
+                                            </Show>
+
+                                            // Loading indicator when searching (mobile)
+                                            <Show
+                                                when=move || is_searching_area.get()
+                                                fallback=move || view! { <></> }
+                                            >
+                                                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                                    <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200">
+                                                        <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <span class="text-sm text-gray-600">"Searching..."</span>
+                                                    </div>
+                                                </div>
+                                            </Show>
 
                                             // Floating selected hotel card
                                             <Show

@@ -118,7 +118,8 @@ impl BookingConversions {
             room_guests,
             guest_nationality: "US".to_string(),
             pagination: None, // No pagination for booking conversions
-                              // ..Default::default()
+            latitude: None,
+            longitude: None,
         };
 
         let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
