@@ -167,12 +167,27 @@ impl SearchListResults {
         let search_result_signal = Self::from_leptos_context().search_result;
 
         if let Some(new_response) = hotel_search_response {
+            log!(
+                "[SET_RESULTS] Received {} hotels from API",
+                new_response.hotel_results.len()
+            );
+
             // Apply deduplication at the lowest level - this ensures dedup happens
             // regardless of where state is updated from
             let deduplicated_response = Self::dedup_hotels_by_name(new_response);
 
+            log!(
+                "[SET_RESULTS] After dedup: {} hotels",
+                deduplicated_response.hotel_results.len()
+            );
+
             search_result_signal.update(|current_result| {
                 if let Some(current) = current_result {
+                    log!(
+                        "[SET_RESULTS] Extending existing {} hotels with {} new hotels",
+                        current.hotel_results.len(),
+                        deduplicated_response.hotel_results.len()
+                    );
                     current
                         .hotel_results
                         .extend(deduplicated_response.hotel_results);
@@ -180,11 +195,20 @@ impl SearchListResults {
                     let combined = std::mem::take(current);
                     *current = Self::dedup_hotels_by_name(combined);
                     current.pagination = deduplicated_response.pagination;
+                    log!(
+                        "[SET_RESULTS] After extend + re-dedup: {} hotels",
+                        current.hotel_results.len()
+                    );
                 } else {
+                    log!(
+                        "[SET_RESULTS] Setting fresh results: {} hotels",
+                        deduplicated_response.hotel_results.len()
+                    );
                     *current_result = Some(deduplicated_response);
                 }
             });
         } else {
+            log!("[SET_RESULTS] Received None, clearing results");
             search_result_signal.set(None);
         }
     }

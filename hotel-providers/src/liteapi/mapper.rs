@@ -6,7 +6,7 @@ use crate::liteapi::models::search::*;
 use crate::ports::ProviderError;
 use crate::ports::UISearchFilters;
 
-const PAGINATION_LIMIT: i32 = 50; // Default limit
+const PAGINATION_LIMIT: i32 = 100; // Default limit (LiteAPI may have its own max)
 
 pub struct LiteApiMapper;
 
@@ -17,16 +17,45 @@ impl LiteApiMapper {
     ) -> LiteApiHotelSearchRequest {
         let (offset, limit) = Self::calculate_offset_limit(&domain_criteria.pagination);
 
-        LiteApiHotelSearchRequest {
-            place_id: Some(domain_criteria.place_id.clone()),
-            latitude: None, // Could be extracted if domain_criteria had coords
-            longitude: None,
-            radius: Some(100000), // Default radius from legacy code
-            limit: Some(limit),
-            offset: Some(offset),
-            country_code: None,
-            city_name: None,
-            hotel_name: None,
+        // Check if this is a coordinate-based search (from "Search this area" feature)
+        // or if we should use the place_id
+        let is_coordinate_search = domain_criteria.place_id.starts_with("custom_")
+            || (domain_criteria.latitude.is_some()
+                && domain_criteria.longitude.is_some()
+                && domain_criteria.place_id.is_empty());
+
+        if is_coordinate_search {
+            // Use latitude/longitude for coordinate-based searches
+            tracing::debug!(
+                target: "hotel_providers::liteapi",
+                latitude = ?domain_criteria.latitude,
+                longitude = ?domain_criteria.longitude,
+                "Coordinate-based search (Search this area)"
+            );
+            LiteApiHotelSearchRequest {
+                place_id: None,
+                latitude: domain_criteria.latitude,
+                longitude: domain_criteria.longitude,
+                distance: Some(100000), // 100km distance for coordinate searches
+                limit: Some(limit),
+                offset: Some(offset),
+                country_code: None,
+                city_name: None,
+                hotel_name: None,
+            }
+        } else {
+            // Use place_id for normal searches
+            LiteApiHotelSearchRequest {
+                place_id: Some(domain_criteria.place_id.clone()),
+                latitude: None,
+                longitude: None,
+                distance: Some(100000), // Default distance from legacy code
+                limit: Some(limit),
+                offset: Some(offset),
+                country_code: None,
+                city_name: None,
+                hotel_name: None,
+            }
         }
     }
 

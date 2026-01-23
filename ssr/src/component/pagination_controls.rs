@@ -23,7 +23,7 @@ pub fn PaginationControls() -> impl IntoView {
     };
 
     view! {
-        <div class="flex items-center justify-center space-x-4 py-6">
+        <div class="flex items-center justify-center space-x-4 py-3">
             // <button
             //     on:click=handle_previous_page
             //     disabled=move || UIPaginationState::is_previous_button_disabled()
