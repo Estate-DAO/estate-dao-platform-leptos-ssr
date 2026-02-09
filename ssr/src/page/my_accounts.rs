@@ -66,11 +66,12 @@ impl AccountTabs {
         )
     }
 
-    pub fn disabled(&self) -> bool {
-        matches!(
-            self,
-            AccountTabs::PersonalInfo | AccountTabs::Wallet | AccountTabs::Support
-        )
+    pub fn disabled(&self, is_authenticated: bool) -> bool {
+        match self {
+            AccountTabs::PersonalInfo | AccountTabs::Wallet => true,
+            AccountTabs::Support => !is_authenticated,
+            _ => false,
+        }
     }
 
     pub fn label(&self) -> &'static str {
@@ -173,38 +174,50 @@ pub fn MyAccountPage() -> impl IntoView {
                                 .into_iter()
                                 .map(|tab| {
                                     let is_active = move || active_tab() == tab;
-                                    let class = if is_active() {
+                                    let is_disabled = move || {
+                                        tab.disabled(AuthStateSignal::auth_state().get().is_authenticated())
+                                    };
+                                    let icon_class = move || {
+                                        if is_active() {
                                             "w-5 h-5 fill-current"
-                                            } else {
-                                                "w-5 h-5"
-                                            };
-                                    if tab.disabled() {
-                                        view! {
-                                            <span class="flex items-center gap-2 px-2 py-1 rounded-md cursor-not-allowed opacity-50">
-                                                <img src={tab.icon_src()} class={class} />
-                                                {tab.label()}
-                                            </span>
-                                        }.into_view()
-                                    } else {
-                                        view! {
-                                            <A
-                                                clone:tab
-                                                href=tab.as_route()
-                                                class=move || {
-                                                    format!(
-                                                        "flex items-center gap-2 px-2 py-1 rounded-md transition-colors {}",
-                                                        if is_active() {
-                                                            "text-blue-600 font-medium bg-blue-50"
-                                                        } else {
-                                                            "hover:text-blue-600"
-                                                        }
-                                                    )
+                                        } else {
+                                            "w-5 h-5"
+                                        }
+                                    };
+
+                                    view! {
+                                        {move || {
+                                            if is_disabled() {
+                                                view! {
+                                                    <span class="flex items-center gap-2 px-2 py-1 rounded-md cursor-not-allowed opacity-50">
+                                                        <img src={tab.icon_src()} class=icon_class />
+                                                        {tab.label()}
+                                                    </span>
                                                 }
-                                            >
-                                                <img src={tab.icon_src()} class={class} />
-                                                {tab.label()}
-                                            </A>
-                                        }.into_view()
+                                                .into_view()
+                                            } else {
+                                                view! {
+                                                    <A
+                                                        clone:tab
+                                                        href=tab.as_route()
+                                                        class=move || {
+                                                            format!(
+                                                                "flex items-center gap-2 px-2 py-1 rounded-md transition-colors {}",
+                                                                if is_active() {
+                                                                    "text-blue-600 font-medium bg-blue-50"
+                                                                } else {
+                                                                    "hover:text-blue-600"
+                                                                }
+                                                            )
+                                                        }
+                                                    >
+                                                        <img src={tab.icon_src()} class=icon_class />
+                                                        {tab.label()}
+                                                    </A>
+                                                }
+                                                .into_view()
+                                            }
+                                        }}
                                     }
                                 })
                                 .collect_view()}

@@ -98,6 +98,20 @@ pub struct VerifyOtpResponse {
     pub message: String,
 }
 
+// Support API Types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportRequest {
+    pub subject: String,
+    pub query: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportResponse {
+    pub success: bool,
+    pub message: String,
+    pub ticket_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCitiesRequest {
     pub prefix: String,
@@ -616,6 +630,20 @@ impl ClientSideApiClient {
     ) -> Result<VerifyOtpResponse, String> {
         let request = VerifyOtpRequest { booking_id, otp };
         Self::api_call_with_error(request, "server_fn_api/verify_otp_api", "verify OTP").await
+    }
+
+    pub async fn send_support_request(
+        &self,
+        subject: String,
+        query: String,
+    ) -> Result<SupportResponse, String> {
+        let request = SupportRequest { subject, query };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/support_request_api",
+            "support request",
+        )
+        .await
     }
 
     pub async fn update_user_principal_email_mapping_in_canister_client_side_fn(

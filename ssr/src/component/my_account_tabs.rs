@@ -1,6 +1,16 @@
 use leptos::*;
 
-use crate::{api::auth::auth_state::AuthStateSignal, component::*, page::WishlistComponent};
+use crate::{
+    api::{auth::auth_state::AuthStateSignal, client_side_api::ClientSideApiClient},
+    component::{yral_auth_provider::YralAuthProvider, *},
+    page::WishlistComponent,
+};
+
+#[derive(Clone)]
+enum SupportStatus {
+    Success(String),
+    Error(String),
+}
 
 // ---------------- Tabs ----------------
 
@@ -42,10 +52,213 @@ pub fn WishlistView() -> impl IntoView {
 
 #[component]
 pub fn SupportView() -> impl IntoView {
+    let subject = create_rw_signal(String::new());
+    let query = create_rw_signal(String::new());
+    let (show_validation, set_show_validation) = create_signal(false);
+    let (status, set_status) = create_signal::<Option<SupportStatus>>(None);
+
+    let is_authenticated =
+        Signal::derive(move || AuthStateSignal::auth_state().get().is_authenticated());
+    let user_email =
+        Signal::derive(move || AuthStateSignal::auth_state().get().email.unwrap_or_default());
+
+    let subject_error =
+        Signal::derive(move || show_validation.get() && subject.get().trim().is_empty());
+    let query_error = Signal::derive(move || show_validation.get() && query.get().trim().is_empty());
+    let is_valid = Signal::derive(move || {
+        !subject.get().trim().is_empty() && !query.get().trim().is_empty()
+    });
+    let query_char_count = Signal::derive(move || query.get().chars().count());
+
+    let send_action = create_action(move |_: &()| {
+        let subject_value = subject.get_untracked();
+        let query_value = query.get_untracked();
+        async move {
+            set_show_validation.set(true);
+            let subject_trimmed = subject_value.trim().to_string();
+            let query_trimmed = query_value.trim().to_string();
+
+            if subject_trimmed.is_empty() || query_trimmed.is_empty() {
+                set_status.set(Some(SupportStatus::Error(
+                    "Please fill in the required fields.".to_string(),
+                )));
+                return;
+            }
+
+            set_status.set(None);
+            let client = ClientSideApiClient::new();
+            match client
+                .send_support_request(subject_trimmed, query_trimmed)
+                .await
+            {
+                Ok(response) => {
+                    set_status.set(Some(SupportStatus::Success(response.message)));
+                    subject.set(String::new());
+                    query.set(String::new());
+                    set_show_validation.set(false);
+                }
+                Err(e) => {
+                    set_status.set(Some(SupportStatus::Error(e)));
+                }
+            }
+        }
+    });
+
+    let submit_support_request = move |_| {
+        send_action.dispatch(());
+    };
+
+    let button_class = move || {
+        let base =
+            "w-full rounded-xl px-6 py-3 text-white text-sm font-semibold transition-colors";
+        if send_action.pending().get() || !is_valid.get() {
+            format!("{base} bg-blue-300 cursor-not-allowed")
+        } else {
+            format!("{base} bg-blue-600 hover:bg-blue-700")
+        }
+    };
+
     view! {
-        <div>
-            <h1 class="text-xl font-semibold mb-4">"Support"</h1>
-            <p class="text-gray-600">"Support tickets, FAQs, and help resources."</p>
+        <div class="space-y-6">
+            <Show
+                when=move || is_authenticated.get()
+                fallback=move || view! {
+                    <div class="flex flex-col items-center justify-center py-12">
+                        <div class="text-center max-w-md space-y-4">
+                            <h2 class="text-xl font-semibold text-gray-900">
+                                "Sign in to contact support"
+                            </h2>
+                            <p class="text-gray-600">
+                                "Please sign in to create a support ticket and track updates."
+                            </p>
+                            // <a
+                            //     href="/auth/google"
+                            //     class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                            // >
+                            //     "Sign In"
+                            // </a>
+                            <div class="flex justify-center">
+                                <YralAuthProvider />
+                            </div>
+                        </div>
+                    </div>
+                }
+            >
+                <div class="space-y-2">
+                    <h1 class="text-2xl font-semibold text-gray-900">
+                        "Need Help? We're Here for You!"
+                    </h1>
+                    <p class="text-gray-600">
+                        "Have a question or need support? Send your query using the form below, and our team will get back to you shortly via email."
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 sm:p-8 space-y-6">
+                    <div class="text-sm text-gray-500">
+                        "Signed in as "
+                        <span class="font-medium text-gray-700">{move || user_email.get()}</span>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-gray-800">
+                                "Subject"
+                                <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Mention the subject"
+                                maxlength="120"
+                                class=move || {
+                                    let base = "w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors";
+                                    if subject_error.get() {
+                                        format!("{base} border-red-300 focus:border-red-400 focus:ring-red-100")
+                                    } else {
+                                        base.to_string()
+                                    }
+                                }
+                                value=move || subject.get()
+                                on:input=move |ev| {
+                                    subject.set(event_target_value(&ev));
+                                    set_status.set(None);
+                                }
+                            />
+                            <Show when=move || subject_error.get()>
+                                <p class="text-xs text-red-600">"Subject is required."</p>
+                            </Show>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm font-medium text-gray-800">
+                                    "Query"
+                                    <span class="text-red-500">*</span>
+                                </label>
+                                <span class="text-xs text-gray-400">
+                                    {move || format!("{}/500 characters", query_char_count.get())}
+                                </span>
+                            </div>
+                            <textarea
+                                rows="6"
+                                maxlength="500"
+                                placeholder="Enter your message"
+                                class=move || {
+                                    let base = "w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors";
+                                    if query_error.get() {
+                                        format!("{base} border-red-300 focus:border-red-400 focus:ring-red-100")
+                                    } else {
+                                        base.to_string()
+                                    }
+                                }
+                                prop:value=move || query.get()
+                                on:input=move |ev| {
+                                    query.set(event_target_value(&ev));
+                                    set_status.set(None);
+                                }
+                            />
+                            <Show when=move || query_error.get()>
+                                <p class="text-xs text-red-600">"Query is required."</p>
+                            </Show>
+                        </div>
+                    </div>
+
+                    <Show
+                        when=move || status.get().is_some()
+                        fallback=|| view! { <></> }
+                    >
+                        {move || {
+                            status.get().map(|message| match message {
+                                SupportStatus::Success(text) => view! {
+                                    <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                                        {text}
+                                    </div>
+                                }.into_view(),
+                                SupportStatus::Error(text) => view! {
+                                    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                        {text}
+                                    </div>
+                                }.into_view(),
+                            })
+                        }}
+                    </Show>
+
+                    <button
+                        type="button"
+                        class=button_class
+                        disabled=move || send_action.pending().get() || !is_valid.get()
+                        aria-busy=move || send_action.pending().get().to_string()
+                        on:click=submit_support_request
+                    >
+                        {move || {
+                            if send_action.pending().get() {
+                                "Sending..."
+                            } else {
+                                "Send Query"
+                            }
+                        }}
+                    </button>
+                </div>
+            </Show>
         </div>
     }
 }
