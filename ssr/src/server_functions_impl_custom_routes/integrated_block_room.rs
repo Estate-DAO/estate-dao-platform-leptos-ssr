@@ -91,7 +91,11 @@ async fn execute_block_room_operation(
     call_block_room_api(state, request.block_room_request.clone())
         .await
         .map_err(|e| {
-            tracing::error!("Block room API call failed: {} (details: {})", e, e.message());
+            tracing::error!(
+                "Block room API call failed: {} (details: {})",
+                e,
+                e.message()
+            );
             let error_response = IntegratedBlockRoomResponse {
                 success: false,
                 message: format!("Block room failed: {}", e),
