@@ -100,9 +100,40 @@ pub struct VerifyOtpResponse {
 
 // Support API Types
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SupportProvider {
+    #[serde(rename = "LiteAPI")]
+    LiteApi,
+}
+
+impl SupportProvider {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SupportProvider::LiteApi => "LiteAPI",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportBookingContext {
+    pub booking_id: Option<String>,
+    pub hotel_name: Option<String>,
+    pub hotel_location: Option<String>,
+    pub hotel_code: Option<String>,
+    pub hotel_image_url: Option<String>,
+    pub check_in_date: Option<String>,
+    pub check_out_date: Option<String>,
+    pub adults: Option<u32>,
+    pub rooms: Option<u32>,
+    pub total_amount: Option<f64>,
+    pub currency: Option<String>,
+    pub provider: Option<SupportProvider>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SupportRequest {
     pub subject: String,
     pub query: String,
+    pub booking_context: Option<SupportBookingContext>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -636,8 +667,13 @@ impl ClientSideApiClient {
         &self,
         subject: String,
         query: String,
+        booking_context: Option<SupportBookingContext>,
     ) -> Result<SupportResponse, String> {
-        let request = SupportRequest { subject, query };
+        let request = SupportRequest {
+            subject,
+            query,
+            booking_context,
+        };
         Self::api_call_with_error(
             request,
             "server_fn_api/support_request_api",

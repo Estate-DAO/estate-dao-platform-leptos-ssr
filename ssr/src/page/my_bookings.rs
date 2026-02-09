@@ -1,5 +1,7 @@
 use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
 use crate::api::canister::user_my_bookings::user_get_my_bookings;
+use crate::api::client_side_api::SupportProvider;
+use crate::app::AppRoutes;
 use crate::component::{yral_auth_provider::YralAuthProvider, Navbar};
 use crate::log;
 use crate::page::Wishlist;
@@ -8,6 +10,7 @@ use chrono::{DateTime, Utc};
 use leptos::*;
 use leptos_icons::Icon;
 use std::rc::Rc;
+use url::form_urlencoded;
 async fn load_my_bookings() -> Result<Vec<MyBookingItem>, ServerFnError> {
     log!("[MyBookings] Loading bookings from API");
 
@@ -280,6 +283,48 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
     };
 
     let hotel_code = booking.hotel_code.clone();
+    let support_url = {
+        let mut serializer = form_urlencoded::Serializer::new(String::new());
+        serializer.append_pair("page", "support");
+        serializer.append_pair("support_booking", "1");
+        serializer.append_pair("booking_id", &booking.booking_id);
+        serializer.append_pair("provider", SupportProvider::LiteApi.as_str());
+        if !booking.hotel_name.trim().is_empty() {
+            serializer.append_pair("hotel_name", &booking.hotel_name);
+        }
+        if !booking.hotel_location.trim().is_empty() {
+            serializer.append_pair("hotel_location", &booking.hotel_location);
+        }
+        if !booking.hotel_code.trim().is_empty() {
+            serializer.append_pair("hotel_code", &booking.hotel_code);
+        }
+        if !booking.hotel_image_url.trim().is_empty() {
+            serializer.append_pair("hotel_image_url", &booking.hotel_image_url);
+        }
+        serializer.append_pair(
+            "check_in",
+            &booking.check_in_date.format("%Y-%m-%d").to_string(),
+        );
+        serializer.append_pair(
+            "check_out",
+            &booking.check_out_date.format("%Y-%m-%d").to_string(),
+        );
+        serializer.append_pair("adults", &booking.adults.to_string());
+        serializer.append_pair("rooms", &booking.rooms.to_string());
+        if let Some(amount) = booking.total_amount {
+            serializer.append_pair("total_amount", &format!("{amount:.2}"));
+        }
+        if let Some(currency) = booking.currency.as_ref() {
+            if !currency.trim().is_empty() {
+                serializer.append_pair("currency", currency);
+            }
+        }
+        format!(
+            "{}?{}",
+            AppRoutes::MyAccount.to_string(),
+            serializer.finish()
+        )
+    };
 
     view! {
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
@@ -341,6 +386,15 @@ fn BookingCard(booking: MyBookingItem) -> impl IntoView {
                                 <span>{format!("{} room", booking.rooms)}</span>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <a
+                            href=support_url.clone()
+                            class="inline-flex items-center justify-center rounded-lg border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                            "Get Support"
+                        </a>
                     </div>
 
                     // <div class="mt-3">

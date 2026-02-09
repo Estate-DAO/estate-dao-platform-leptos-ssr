@@ -1,7 +1,11 @@
 use leptos::*;
+use leptos_router::use_query_map;
 
 use crate::{
-    api::{auth::auth_state::AuthStateSignal, client_side_api::ClientSideApiClient},
+    api::{
+        auth::auth_state::AuthStateSignal,
+        client_side_api::{ClientSideApiClient, SupportBookingContext, SupportProvider},
+    },
     component::{yral_auth_provider::YralAuthProvider, *},
     page::WishlistComponent,
 };
@@ -56,6 +60,82 @@ pub fn SupportView() -> impl IntoView {
     let query = create_rw_signal(String::new());
     let (show_validation, set_show_validation) = create_signal(false);
     let (status, set_status) = create_signal::<Option<SupportStatus>>(None);
+    let booking_context = create_rw_signal::<Option<SupportBookingContext>>(None);
+    let query_map = use_query_map();
+
+    create_effect(move |_| {
+        let params = query_map.get();
+        let get_value = |key: &str| params.get(key).cloned();
+        let parse_provider = |value: &str| match value.to_lowercase().as_str() {
+            "liteapi" | "lite_api" | "lite-api" => Some(SupportProvider::LiteApi),
+            _ => None,
+        };
+        let booking_context_candidate = SupportBookingContext {
+            booking_id: get_value("booking_id"),
+            hotel_name: get_value("hotel_name"),
+            hotel_location: get_value("hotel_location"),
+            hotel_code: get_value("hotel_code"),
+            hotel_image_url: get_value("hotel_image_url"),
+            check_in_date: get_value("check_in"),
+            check_out_date: get_value("check_out"),
+            adults: params.get("adults").and_then(|v| v.parse::<u32>().ok()),
+            rooms: params.get("rooms").and_then(|v| v.parse::<u32>().ok()),
+            total_amount: params
+                .get("total_amount")
+                .and_then(|v| v.parse::<f64>().ok()),
+            currency: get_value("currency"),
+            provider: params.get("provider").and_then(|v| parse_provider(v)),
+        };
+
+        let has_context = booking_context_candidate
+            .booking_id
+            .as_ref()
+            .map(|v| !v.trim().is_empty())
+            .unwrap_or(false)
+            || booking_context_candidate
+                .hotel_name
+                .as_ref()
+                .map(|v| !v.trim().is_empty())
+                .unwrap_or(false)
+            || booking_context_candidate
+                .hotel_location
+                .as_ref()
+                .map(|v| !v.trim().is_empty())
+                .unwrap_or(false)
+            || booking_context_candidate
+                .hotel_code
+                .as_ref()
+                .map(|v| !v.trim().is_empty())
+                .unwrap_or(false);
+
+        if has_context {
+            booking_context.set(Some(booking_context_candidate.clone()));
+            if subject.get_untracked().trim().is_empty() {
+                let mut fallback = "Support request".to_string();
+                if let Some(name) = booking_context_candidate
+                    .hotel_name
+                    .as_ref()
+                    .filter(|v| !v.trim().is_empty())
+                {
+                    fallback = format!("Support request: {name}");
+                }
+                if let Some(booking_id) = booking_context_candidate
+                    .booking_id
+                    .as_ref()
+                    .filter(|v| !v.trim().is_empty())
+                {
+                    if fallback == "Support request" {
+                        fallback = format!("Support request for booking {booking_id}");
+                    } else {
+                        fallback = format!("{fallback} ({booking_id})");
+                    }
+                }
+                subject.set(fallback);
+            }
+        } else {
+            booking_context.set(None);
+        }
+    });
 
     let is_authenticated =
         Signal::derive(move || AuthStateSignal::auth_state().get().is_authenticated());
@@ -91,8 +171,9 @@ pub fn SupportView() -> impl IntoView {
 
             set_status.set(None);
             let client = ClientSideApiClient::new();
+            let booking_context_value = booking_context.get_untracked();
             match client
-                .send_support_request(subject_trimmed, query_trimmed)
+                .send_support_request(subject_trimmed, query_trimmed, booking_context_value)
                 .await
             {
                 Ok(response) => {
@@ -161,6 +242,179 @@ pub fn SupportView() -> impl IntoView {
                         "Signed in as "
                         <span class="font-medium text-gray-700">{move || user_email.get()}</span>
                     </div>
+
+                    <Show when=move || booking_context.get().is_some()>
+                        {move || {
+                            booking_context.get().map(|ctx| {
+                                let image_src = ctx
+                                    .hotel_image_url
+                                    .clone()
+                                    .filter(|value| {
+                                        value.starts_with("http://")
+                                            || value.starts_with("https://")
+                                    })
+                                    .unwrap_or_else(|| "/img/home.png".to_string());
+                                let hotel_name = ctx
+                                    .hotel_name
+                                    .clone()
+                                    .filter(|value| !value.trim().is_empty())
+                                    .unwrap_or_else(|| "Booking details".to_string());
+                                let hotel_name_heading = hotel_name.clone();
+                                let hotel_name_image = hotel_name.clone();
+                                let hotel_location = ctx
+                                    .hotel_location
+                                    .clone()
+                                    .unwrap_or_default();
+                                let show_location = !hotel_location.trim().is_empty();
+                                let hotel_location_text = hotel_location.clone();
+                                let booking_id = ctx
+                                    .booking_id
+                                    .clone()
+                                    .unwrap_or_else(|| "-".to_string());
+                                let stay_text = match (
+                                    ctx.check_in_date.clone(),
+                                    ctx.check_out_date.clone(),
+                                ) {
+                                    (Some(check_in), Some(check_out))
+                                        if !check_in.trim().is_empty()
+                                            && !check_out.trim().is_empty() =>
+                                    {
+                                        format!("{check_in} to {check_out}")
+                                    }
+                                    (Some(check_in), _) if !check_in.trim().is_empty() => {
+                                        format!("Check-in {check_in}")
+                                    }
+                                    (_, Some(check_out)) if !check_out.trim().is_empty() => {
+                                        format!("Check-out {check_out}")
+                                    }
+                                    _ => String::new(),
+                                };
+                                let guests_text = match (ctx.adults, ctx.rooms) {
+                                    (Some(adults), Some(rooms)) => {
+                                        format!("{adults} adults · {rooms} rooms")
+                                    }
+                                    (Some(adults), None) => format!("{adults} adults"),
+                                    (None, Some(rooms)) => format!("{rooms} rooms"),
+                                    _ => String::new(),
+                                };
+                                let amount_text = ctx.total_amount.map(|amount| {
+                                    let currency = ctx.currency.clone().unwrap_or_default();
+                                    if currency.trim().is_empty() {
+                                        format!("{amount:.2}")
+                                    } else {
+                                        format!("{currency} {amount:.2}")
+                                    }
+                                });
+                                let provider_text = ctx
+                                    .provider
+                                    .as_ref()
+                                    .map(|provider| provider.as_str().to_string());
+                                let hotel_details_url = ctx.hotel_code.clone().filter(|value| {
+                                    !value.trim().is_empty()
+                                }).map(|code| format!("/hotel-details?hotelCode={code}"));
+                                let view_bookings_url = "/account?page=bookings";
+                                let image_src_value = image_src.clone();
+
+                                view! {
+                                    <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-5 space-y-4">
+                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                            <div>
+                                                <p class="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                                                    "Booking preview"
+                                                </p>
+                                                <h3 class="text-lg font-semibold text-gray-900">{hotel_name_heading}</h3>
+                                                <Show when=move || show_location>
+                                                    <p class="text-sm text-gray-600">{hotel_location_text.clone()}</p>
+                                                </Show>
+                                            </div>
+                                            <a
+                                                href=view_bookings_url
+                                                class="text-sm font-medium text-blue-600 hover:text-blue-700"
+                                            >
+                                                "View bookings"
+                                            </a>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-4 items-start">
+                                            {move || {
+                                                if let Some(url) = hotel_details_url.clone() {
+                                                    view! {
+                                                        <a href=url class="block">
+                                                            <img
+                                                                src=image_src_value.clone()
+                                                                alt=hotel_name_image.clone()
+                                                                class="w-full h-32 sm:h-28 object-cover rounded-xl border border-gray-200"
+                                                            />
+                                                        </a>
+                                                    }
+                                                    .into_view()
+                                                } else {
+                                                    view! {
+                                                        <img
+                                                            src=image_src_value.clone()
+                                                            alt=hotel_name_image.clone()
+                                                            class="w-full h-32 sm:h-28 object-cover rounded-xl border border-gray-200"
+                                                        />
+                                                    }
+                                                    .into_view()
+                                                }
+                                            }}
+                                            <div class="space-y-2 text-sm text-gray-700">
+                                                <div>
+                                                    <span class="font-medium text-gray-900">"Booking ID:"</span>
+                                                    " "
+                                                    {booking_id}
+                                                </div>
+                                                {if stay_text.is_empty() {
+                                                    view! { <></> }.into_view()
+                                                } else {
+                                                    view! {
+                                                        <div>
+                                                            <span class="font-medium text-gray-900">"Stay:"</span>
+                                                            " "
+                                                            {stay_text}
+                                                        </div>
+                                                    }.into_view()
+                                                }}
+                                                {if guests_text.is_empty() {
+                                                    view! { <></> }.into_view()
+                                                } else {
+                                                    view! {
+                                                        <div>
+                                                            <span class="font-medium text-gray-900">"Guests:"</span>
+                                                            " "
+                                                            {guests_text}
+                                                        </div>
+                                                    }.into_view()
+                                                }}
+                                                {if let Some(text) = amount_text {
+                                                    view! {
+                                                        <div>
+                                                            <span class="font-medium text-gray-900">"Amount paid:"</span>
+                                                            " "
+                                                            {text}
+                                                        </div>
+                                                    }.into_view()
+                                                } else {
+                                                    view! { <></> }.into_view()
+                                                }}
+                                                {if let Some(text) = provider_text {
+                                                    view! {
+                                                        <div>
+                                                            <span class="font-medium text-gray-900">"Provider:"</span>
+                                                            " "
+                                                            {text}
+                                                        </div>
+                                                    }.into_view()
+                                                } else {
+                                                    view! { <></> }.into_view()
+                                                }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            })
+                        }}
+                    </Show>
 
                     <div class="space-y-5">
                         <div class="space-y-2">
