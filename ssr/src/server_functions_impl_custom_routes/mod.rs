@@ -68,8 +68,8 @@ pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
 pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
-pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 pub use support_request::support_request_api_server_fn_route;
+pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
 use crate::server_functions_impl_custom_routes::{
     search_cities::search_city_by_name_api_server_fn_route,

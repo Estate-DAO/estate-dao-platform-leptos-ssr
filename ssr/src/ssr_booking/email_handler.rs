@@ -432,9 +432,7 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
         let reply_to_header = reply_to
             .map(|addr| format!("Reply-To: {addr}\r\n"))
             .unwrap_or_default();
-        let email_raw = format!(
-            "To: {to}\r\n{reply_to_header}Subject: {subject}\r\n\r\n{body}"
-        );
+        let email_raw = format!("To: {to}\r\n{reply_to_header}Subject: {subject}\r\n\r\n{body}");
         let encoded_message = general_purpose::STANDARD.encode(email_raw);
         let payload = serde_json::json!({
             "raw": encoded_message

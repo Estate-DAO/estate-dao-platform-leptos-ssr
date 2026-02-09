@@ -59,15 +59,19 @@ pub fn SupportView() -> impl IntoView {
 
     let is_authenticated =
         Signal::derive(move || AuthStateSignal::auth_state().get().is_authenticated());
-    let user_email =
-        Signal::derive(move || AuthStateSignal::auth_state().get().email.unwrap_or_default());
+    let user_email = Signal::derive(move || {
+        AuthStateSignal::auth_state()
+            .get()
+            .email
+            .unwrap_or_default()
+    });
 
     let subject_error =
         Signal::derive(move || show_validation.get() && subject.get().trim().is_empty());
-    let query_error = Signal::derive(move || show_validation.get() && query.get().trim().is_empty());
-    let is_valid = Signal::derive(move || {
-        !subject.get().trim().is_empty() && !query.get().trim().is_empty()
-    });
+    let query_error =
+        Signal::derive(move || show_validation.get() && query.get().trim().is_empty());
+    let is_valid =
+        Signal::derive(move || !subject.get().trim().is_empty() && !query.get().trim().is_empty());
     let query_char_count = Signal::derive(move || query.get().chars().count());
 
     let send_action = create_action(move |_: &()| {
@@ -109,8 +113,7 @@ pub fn SupportView() -> impl IntoView {
     };
 
     let button_class = move || {
-        let base =
-            "w-full rounded-xl px-6 py-3 text-white text-sm font-semibold transition-colors";
+        let base = "w-full rounded-xl px-6 py-3 text-white text-sm font-semibold transition-colors";
         if send_action.pending().get() || !is_valid.get() {
             format!("{base} bg-blue-300 cursor-not-allowed")
         } else {

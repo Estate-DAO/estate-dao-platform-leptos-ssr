@@ -45,10 +45,7 @@ pub async fn support_request_api_server_fn_route(
     jar: SignedCookieJar,
     body: String,
 ) -> Result<Response, Response> {
-    info!(
-        "Starting support request API (payload_len={})",
-        body.len()
-    );
+    info!("Starting support request API (payload_len={})", body.len());
 
     let request: SupportRequest = parse_json_request(&body)?;
     let subject = request.subject.trim();
@@ -90,10 +87,7 @@ pub async fn support_request_api_server_fn_route(
         }
     };
 
-    let user_name = user
-        .name
-        .clone()
-        .unwrap_or_else(|| user_email.clone());
+    let user_name = user.name.clone().unwrap_or_else(|| user_email.clone());
     let ticket_id = uuidv7::create();
     let submitted_at = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
 
@@ -123,7 +117,12 @@ Team Nofeebooking"
 
     for recipient in SUPPORT_RECIPIENTS {
         if let Err(e) = email_client
-            .send_plain_text_email(recipient, &support_subject, &support_body, Some(&user_email))
+            .send_plain_text_email(
+                recipient,
+                &support_subject,
+                &support_body,
+                Some(&user_email),
+            )
             .await
         {
             error!("Failed to send support email to {}: {}", recipient, e);
@@ -160,9 +159,5 @@ Team Nofeebooking"
         ticket_id: Some(ticket_id),
     };
 
-    Ok((
-        StatusCode::OK,
-        serde_json::to_string(&response).unwrap(),
-    )
-        .into_response())
+    Ok((StatusCode::OK, serde_json::to_string(&response).unwrap()).into_response())
 }
