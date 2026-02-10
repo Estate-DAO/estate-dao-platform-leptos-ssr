@@ -417,6 +417,121 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
             .ok_or_else(|| anyhow!("No access token available"))
     }
 
+    pub async fn send_plain_text_email(
+        &self,
+        to: &str,
+        subject: &str,
+        body: &str,
+        reply_to: Option<&str>,
+    ) -> Result<(), String> {
+        let access_token = self
+            .get_valid_access_token()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let reply_to_header = reply_to
+            .map(|addr| format!("Reply-To: {addr}\r\n"))
+            .unwrap_or_default();
+        let email_raw = format!("To: {to}\r\n{reply_to_header}Subject: {subject}\r\n\r\n{body}");
+        let encoded_message = general_purpose::STANDARD.encode(email_raw);
+        let payload = serde_json::json!({
+            "raw": encoded_message
+        });
+
+        let client = Client::new();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            HeaderValue::from_str(&format!("Bearer {}", access_token)).unwrap(),
+        );
+        headers.insert(
+            "Content-Type",
+            HeaderValue::from_str("application/json").unwrap(),
+        );
+
+        let response = client
+            .post("https://www.googleapis.com/gmail/v1/users/me/messages/send")
+            .body(serde_json::to_vec(&payload).unwrap())
+            .headers(headers)
+            .send()
+            .await;
+
+        if response.as_ref().is_ok() && response.as_ref().unwrap().status().is_success() {
+            Ok(())
+        } else {
+            let error_text = response.unwrap().text().await.map_err(|f| f.to_string())?;
+            error!("Failed to send email: {:?}", error_text);
+            Err(format!("Failed to send email: {:?}", error_text))
+        }
+    }
+
+    pub async fn send_multipart_email(
+        &self,
+        to: &str,
+        cc: Option<&str>,
+        subject: &str,
+        text_body: &str,
+        html_body: &str,
+        reply_to: Option<&str>,
+    ) -> Result<(), String> {
+        let access_token = self
+            .get_valid_access_token()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let cc_header = cc.map(|addr| format!("Cc: {addr}\r\n")).unwrap_or_default();
+        let reply_to_header = reply_to
+            .map(|addr| format!("Reply-To: {addr}\r\n"))
+            .unwrap_or_default();
+        let boundary = "nofeebooking-support-boundary";
+        let email_raw = format!(
+            "To: {to}\r\n\
+{cc_header}{reply_to_header}Subject: {subject}\r\n\
+MIME-Version: 1.0\r\n\
+Content-Type: multipart/alternative; boundary=\"{boundary}\"\r\n\
+\r\n\
+--{boundary}\r\n\
+Content-Type: text/plain; charset=\"UTF-8\"\r\n\r\n\
+{text_body}\r\n\
+\r\n\
+--{boundary}\r\n\
+Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
+{html_body}\r\n\
+\r\n\
+--{boundary}--",
+        );
+        let encoded_message = general_purpose::STANDARD.encode(email_raw);
+        let payload = serde_json::json!({
+            "raw": encoded_message
+        });
+
+        let client = Client::new();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            HeaderValue::from_str(&format!("Bearer {}", access_token)).unwrap(),
+        );
+        headers.insert(
+            "Content-Type",
+            HeaderValue::from_str("application/json").unwrap(),
+        );
+
+        let response = client
+            .post("https://www.googleapis.com/gmail/v1/users/me/messages/send")
+            .body(serde_json::to_vec(&payload).unwrap())
+            .headers(headers)
+            .send()
+            .await;
+
+        if response.as_ref().is_ok() && response.as_ref().unwrap().status().is_success() {
+            Ok(())
+        } else {
+            let error_text = response.unwrap().text().await.map_err(|f| f.to_string())?;
+            error!("Failed to send email: {:?}", error_text);
+            Err(format!("Failed to send email: {:?}", error_text))
+        }
+    }
+
     /// Send OTP verification email
     pub async fn send_otp_email(
         &self,

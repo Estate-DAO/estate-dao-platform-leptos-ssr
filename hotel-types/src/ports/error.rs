@@ -157,6 +157,11 @@ impl ProviderError {
         &self.0.provider_name
     }
 
+    /// Get the provider error message
+    pub fn message(&self) -> &str {
+        &self.0.message
+    }
+
     /// Get the error step
     pub fn step(&self) -> &ProviderSteps {
         &self.0.error_step

@@ -24,6 +24,8 @@ pub struct IntegratedBlockRoomResponse {
     pub message: String,
     pub block_room_response: Option<DomainBlockRoomResponse>,
     pub booking_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug_error: Option<String>,
 }
 
 /// BookingService provides a clean interface for booking operations

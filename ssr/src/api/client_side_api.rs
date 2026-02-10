@@ -98,6 +98,51 @@ pub struct VerifyOtpResponse {
     pub message: String,
 }
 
+// Support API Types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SupportProvider {
+    #[serde(rename = "LiteAPI")]
+    LiteApi,
+}
+
+impl SupportProvider {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SupportProvider::LiteApi => "LiteAPI",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportBookingContext {
+    pub booking_id: Option<String>,
+    pub hotel_name: Option<String>,
+    pub hotel_location: Option<String>,
+    pub hotel_code: Option<String>,
+    pub hotel_image_url: Option<String>,
+    pub check_in_date: Option<String>,
+    pub check_out_date: Option<String>,
+    pub adults: Option<u32>,
+    pub rooms: Option<u32>,
+    pub total_amount: Option<f64>,
+    pub currency: Option<String>,
+    pub provider: Option<SupportProvider>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportRequest {
+    pub subject: String,
+    pub query: String,
+    pub booking_context: Option<SupportBookingContext>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SupportResponse {
+    pub success: bool,
+    pub message: String,
+    pub ticket_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCitiesRequest {
     pub prefix: String,
@@ -616,6 +661,25 @@ impl ClientSideApiClient {
     ) -> Result<VerifyOtpResponse, String> {
         let request = VerifyOtpRequest { booking_id, otp };
         Self::api_call_with_error(request, "server_fn_api/verify_otp_api", "verify OTP").await
+    }
+
+    pub async fn send_support_request(
+        &self,
+        subject: String,
+        query: String,
+        booking_context: Option<SupportBookingContext>,
+    ) -> Result<SupportResponse, String> {
+        let request = SupportRequest {
+            subject,
+            query,
+            booking_context,
+        };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/support_request_api",
+            "support request",
+        )
+        .await
     }
 
     pub async fn update_user_principal_email_mapping_in_canister_client_side_fn(

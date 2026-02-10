@@ -72,6 +72,7 @@ fn parse_request(body: &str) -> Result<IntegratedBlockRoomRequest, Response> {
             message: "Invalid JSON request format".to_string(),
             block_room_response: None,
             booking_id: String::new(),
+            debug_error: None,
         };
         create_error_response(StatusCode::BAD_REQUEST, error_response)
     })
@@ -90,12 +91,17 @@ async fn execute_block_room_operation(
     call_block_room_api(state, request.block_room_request.clone())
         .await
         .map_err(|e| {
-            tracing::error!("Block room API call failed: {}", e);
+            tracing::error!(
+                "Block room API call failed: {} (details: {})",
+                e,
+                e.message()
+            );
             let error_response = IntegratedBlockRoomResponse {
                 success: false,
                 message: format!("Block room failed: {}", e),
                 block_room_response: None,
                 booking_id: request.booking_id.clone(),
+                debug_error: Some(e.message().to_string()),
             };
             create_error_response(StatusCode::INTERNAL_SERVER_ERROR, error_response)
         })
@@ -147,6 +153,7 @@ async fn create_backend_booking(
             message: format!("Failed to create backend booking: {}", e),
             block_room_response: Some(block_result.clone()),
             booking_id: request.booking_id.clone(),
+            debug_error: None,
         };
         create_error_response(StatusCode::INTERNAL_SERVER_ERROR, error_response)
     })?;
@@ -159,6 +166,7 @@ async fn create_backend_booking(
             message: format!("Booking validation failed: {}", e),
             block_room_response: Some(block_result.clone()),
             booking_id: request.booking_id.clone(),
+            debug_error: None,
         };
         create_error_response(StatusCode::INTERNAL_SERVER_ERROR, error_response)
     })?;
@@ -182,6 +190,7 @@ async fn save_booking_to_backend(
                 message: "Room blocked and booking saved successfully".to_string(),
                 block_room_response: Some(block_result.clone()),
                 booking_id: request.booking_id.clone(),
+                debug_error: None,
             };
             Ok(create_success_response(success_response))
         }
@@ -195,6 +204,7 @@ async fn save_booking_to_backend(
                 ),
                 block_room_response: Some(block_result.clone()),
                 booking_id: request.booking_id.clone(),
+                debug_error: None,
             };
             Err(create_error_response(
                 PARTIAL_SUCCESS_STATUS,
@@ -214,6 +224,7 @@ fn parse_booking_id(booking_id: &str) -> Result<BookingId, Response> {
             message: format!("Invalid booking ID format: {}", error),
             block_room_response: None,
             booking_id: booking_id.to_string(),
+            debug_error: None,
         };
         create_error_response(StatusCode::BAD_REQUEST, error_response)
     })

@@ -23,6 +23,7 @@ use estate_fe::{
         DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
     init::get_liteapi_driver,
+    ports::hotel_provider_port::ProviderError,
     ports::traits::HotelProviderPort,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -53,6 +54,7 @@ mod process_confirmation;
 pub mod search_cities;
 mod search_hotel;
 mod search_places;
+mod support_request;
 mod update_email_principal_mapping;
 
 pub use block_room::block_room_api_server_fn_route;
@@ -66,6 +68,7 @@ pub use integrated_block_room::integrated_block_room_api_server_fn_route;
 pub use process_confirmation::process_confirmation_api_server_fn_route;
 pub use search_cities::search_cities_api_server_fn_route;
 pub use search_hotel::search_hotel_api_server_fn_route;
+pub use support_request::support_request_api_server_fn_route;
 pub use update_email_principal_mapping::update_user_principal_email_mapping_in_canister_fn_route;
 
 use crate::server_functions_impl_custom_routes::{
@@ -105,6 +108,8 @@ pub struct IntegratedBlockRoomResponse {
     pub message: String,
     pub block_room_response: Option<DomainBlockRoomResponse>,
     pub booking_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug_error: Option<String>,
 }
 
 // Helper function to parse JSON requests with consistent error handling
@@ -123,15 +128,12 @@ pub fn parse_json_request<T: DeserializeOwned>(body: &str) -> Result<T, Response
 pub async fn call_block_room_api(
     _state: &AppState,
     request: DomainBlockRoomRequest,
-) -> Result<DomainBlockRoomResponse, String> {
+) -> Result<DomainBlockRoomResponse, ProviderError> {
     // Use LiteAPI driver from global client
     let liteapi_driver = get_liteapi_driver();
     let hotel_service = HotelService::new(liteapi_driver);
 
-    hotel_service
-        .block_room(request)
-        .await
-        .map_err(|e| e.to_string())
+    hotel_service.block_room(request).await
 }
 
 // Helper function to filter hotels with valid pricing
@@ -246,6 +248,10 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/create_payment_invoice_api",
             post(create_payment_invoice_api_server_fn_route).options(handle_options),
+        )
+        .route(
+            "/support_request_api",
+            post(support_request_api_server_fn_route).options(handle_options),
         )
         .route(
             "/admin/check_payment_status",
