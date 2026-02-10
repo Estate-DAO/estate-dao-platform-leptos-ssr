@@ -17,7 +17,12 @@ use super::parse_json_request;
 
 const SESSION_COOKIE: &str = "session";
 const SUPPORT_RECIPIENTS: &[&str] = &["support@nofeebooking.com"];
-const SUPPORT_CC: &str = "support@estatedao.org";
+const SUPPORT_CC_RECIPIENTS: &[&str] = &[
+    "support@estatedao.org",
+    "ayushi@estatedao.org",
+    "prakash@estatedao.org",
+];
+const PROD_SUPPORT_CC: &str = "utkarsh@gobazzinga.io";
 const MAX_SUBJECT_LEN: usize = 120;
 const MAX_QUERY_LEN: usize = 500;
 const BOOKING_FALLBACK_IMAGE: &str = "https://nofeebooking.com/img/home.png";
@@ -77,6 +82,10 @@ fn html_escape(s: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
+}
+
+fn is_production_env() -> bool {
+    cfg!(feature = "prod-consts")
 }
 
 fn is_web_url(value: &str) -> bool {
@@ -484,11 +493,21 @@ Team Nofeebooking"
     let config = EnvVarConfig::try_from_env();
     let email_client = EmailClient::new(config.email_client_config);
 
+    let mut cc_list: Vec<&str> = SUPPORT_CC_RECIPIENTS.to_vec();
+    if is_production_env() {
+        cc_list.push(PROD_SUPPORT_CC);
+    }
+    let support_cc = if cc_list.is_empty() {
+        None
+    } else {
+        Some(cc_list.join(", "))
+    };
+
     for recipient in SUPPORT_RECIPIENTS {
         if let Err(e) = email_client
             .send_multipart_email(
                 recipient,
-                Some(SUPPORT_CC),
+                support_cc.as_deref(),
                 &support_subject,
                 &support_text_body,
                 &support_html_body,
