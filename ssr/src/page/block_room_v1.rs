@@ -1468,9 +1468,22 @@ pub fn ConfirmButton(
                     "Integrated prebook action failed: {}",
                     e.technical_details()
                 );
+                let (error_type, user_message) = match e.category() {
+                    "Provider" => (
+                        "room_unavailable".to_string(),
+                        "Room not available. Please change the dates or try another hotel."
+                            .to_string(),
+                    ),
+                    "Network" => ("network".to_string(), e.user_message()),
+                    "Validation" => ("validation".to_string(), e.user_message()),
+                    "Backend" | "Internal" | "Serialization" => {
+                        ("server".to_string(), e.user_message())
+                    }
+                    other => (other.to_string(), e.user_message()),
+                };
                 BlockRoomUIState::batch_update_on_error(
-                    Some(e.category().to_string()),
-                    Some(e.user_message()),
+                    Some(error_type),
+                    Some(user_message),
                     Some(e.technical_details()),
                 );
                 None

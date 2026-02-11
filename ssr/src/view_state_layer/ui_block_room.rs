@@ -623,11 +623,12 @@ impl BlockRoomUIState {
 
         // Use untracked updates to avoid borrow conflicts
         this.loading.set(false);
+        this.block_room_called.set(true);
         this.api_error_type.set(error_type);
         this.error.set(user_message);
         this.error_details.set(details);
-        // Close payment modal when error occurs so error is properly visible
-        this.show_payment_modal.set(false);
+        // Keep modal open so error is visible to the user
+        this.show_payment_modal.set(true);
     }
 
     // Reset method
