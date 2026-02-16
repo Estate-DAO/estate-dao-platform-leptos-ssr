@@ -5,7 +5,9 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    application_services::HotelService, domain::DomainHotelInfoCriteria, init::get_liteapi_driver,
+    application_services::HotelService,
+    domain::DomainHotelInfoCriteria,
+    init::get_provider_registry,
 };
 use serde_json::json;
 
@@ -19,9 +21,9 @@ pub async fn get_hotel_rates_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainHotelInfoCriteria = parse_json_request(&body)?;
 
-    // <!-- Create the hotel service with LiteApiDriver from global client -->
-    let liteapi_driver = get_liteapi_driver();
-    let hotel_service = HotelService::new(liteapi_driver);
+    // <!-- Create the hotel service with provider registry (fallback enabled) -->
+    let provider = get_provider_registry().hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     // <!-- Get hotel rates -->
     let result = hotel_service.get_hotel_rates(request).await.map_err(|e| {

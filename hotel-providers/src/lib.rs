@@ -17,6 +17,8 @@ pub mod adapters;
 
 #[cfg(feature = "liteapi")]
 pub mod liteapi;
+#[cfg(feature = "booking")]
+pub mod booking;
 
 mod composite;
 mod registry;

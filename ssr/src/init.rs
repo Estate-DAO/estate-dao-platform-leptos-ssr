@@ -16,9 +16,11 @@ use crate::{
 use hotel_providers::ProviderRegistry;
 use once_cell::sync::OnceCell;
 
+use hotel_providers::booking::BookingDriver;
 use hotel_providers::liteapi::{LiteApiClient, LiteApiDriver};
 
 static LITEAPI_DRIVER: OnceCell<LiteApiDriver> = OnceCell::new();
+static BOOKING_DRIVER: OnceCell<BookingDriver> = OnceCell::new();
 static PROVIDER_REGISTRY: OnceCell<Arc<ProviderRegistry>> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
 static ERROR_ALERT_SERVICE: OnceCell<ErrorAlertService> = OnceCell::new();
@@ -56,14 +58,63 @@ pub fn get_liteapi_driver() -> LiteApiDriver {
         .clone()
 }
 
+pub fn initialize_booking_driver() {
+    let api_token = std::env::var("BOOKING_API_TOKEN").unwrap_or_default();
+    let affiliate_id = std::env::var("BOOKING_AFFILIATE_ID")
+        .ok()
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    let base_url = std::env::var("BOOKING_BASE_URL")
+        .unwrap_or_else(|_| "https://demandapi.booking.com/3.1".to_string());
+    let currency = std::env::var("BOOKING_CURRENCY").unwrap_or_else(|_| "USD".to_string());
+    let use_mock = std::env::var("BOOKING_USE_MOCK")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(api_token.is_empty());
+
+    if api_token.is_empty() {
+        tracing::warn!("BOOKING_API_TOKEN environment variable is empty or not set!");
+    }
+
+    let driver = if use_mock {
+        BookingDriver::new_mock(currency)
+    } else {
+        BookingDriver::new_real(api_token, affiliate_id, base_url, currency)
+    };
+
+    BOOKING_DRIVER
+        .set(driver)
+        .expect("Failed to initialize Booking.com driver");
+}
+
+pub fn get_booking_driver() -> BookingDriver {
+    BOOKING_DRIVER
+        .get()
+        .expect("Failed to get Booking.com driver")
+        .clone()
+}
+
 pub fn initialize_provider_registry() {
     // Use LiteApiDriver directly (it implements HotelProviderPort and PlaceProviderPort)
-    let driver = get_liteapi_driver();
+    let liteapi_driver = get_liteapi_driver();
+    let booking_driver = get_booking_driver();
 
-    let registry = ProviderRegistry::builder()
-        .with_hotel_provider(driver.clone())
-        .with_place_provider(driver)
-        .build();
+    let primary = std::env::var("HOTEL_PRIMARY")
+        .unwrap_or_else(|_| "liteapi".to_string())
+        .to_lowercase();
+
+    let registry = if primary == "booking" {
+        ProviderRegistry::builder()
+            .with_hotel_provider(booking_driver.clone())
+            .with_hotel_provider(liteapi_driver.clone())
+            .with_place_provider(liteapi_driver)
+            .build()
+    } else {
+        ProviderRegistry::builder()
+            .with_hotel_provider(liteapi_driver.clone())
+            .with_hotel_provider(booking_driver.clone())
+            .with_place_provider(liteapi_driver)
+            .build()
+    };
 
     PROVIDER_REGISTRY
         .set(Arc::new(registry))
@@ -112,6 +163,7 @@ pub struct AppStateBuilder {
 impl AppStateBuilder {
     pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
         initialize_liteapi_driver(); // Initialize the new driver
+        initialize_booking_driver();
         initialize_notifier();
         initialize_provider_registry(); // Registry now uses the driver via adapter
 

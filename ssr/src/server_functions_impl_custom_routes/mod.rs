@@ -22,9 +22,8 @@ use estate_fe::{
         DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
         DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
-    init::get_liteapi_driver,
+    init::get_provider_registry,
     ports::hotel_provider_port::ProviderError,
-    ports::traits::HotelProviderPort,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
         email_handler::SendEmailAfterSuccessfullBooking,
@@ -129,9 +128,9 @@ pub async fn call_block_room_api(
     _state: &AppState,
     request: DomainBlockRoomRequest,
 ) -> Result<DomainBlockRoomResponse, ProviderError> {
-    // Use LiteAPI driver from global client
-    let liteapi_driver = get_liteapi_driver();
-    let hotel_service = HotelService::new(liteapi_driver);
+    // Use provider registry (fallback enabled)
+    let provider = get_provider_registry().hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     hotel_service.block_room(request).await
 }

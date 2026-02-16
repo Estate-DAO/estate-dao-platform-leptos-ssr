@@ -679,5 +679,6 @@ pub fn static_details_to_hotel_details(
         checkout: "".to_string(),
         search_info: None,
         search_criteria: None,
+        provider: static_details.provider,
     }
 }

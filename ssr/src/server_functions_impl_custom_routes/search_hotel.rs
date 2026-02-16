@@ -7,7 +7,7 @@ use estate_fe::view_state_layer::AppState;
 use estate_fe::{
     application_services::HotelService,
     domain::DomainHotelSearchCriteria,
-    init::get_liteapi_driver,
+    init::get_provider_registry,
     ports::hotel_provider_port::ProviderError,
     utils::error_alerts::{CriticalError, ErrorType},
 };
@@ -24,8 +24,8 @@ pub async fn search_hotel_api_server_fn_route(
     let request: DomainHotelSearchCriteria = parse_json_request(&body)?;
     // tracing::error!("Hotel search request: {:?}", request);
     // <!-- Create the hotel service with LiteApiDriver from global client -->
-    let liteapi_driver = get_liteapi_driver();
-    let hotel_service = HotelService::new(liteapi_driver);
+    let provider = get_provider_registry().hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     // <!-- Perform the hotel search -->
     let result = hotel_service
@@ -62,7 +62,7 @@ pub async fn search_hotel_api_server_fn_route(
                     }
                 }
                 _ => ErrorType::BookingProviderFailure {
-                    provider: "liteapi".to_string(),
+                    provider: "multi".to_string(),
                     hotel_id: None,
                     operation: "search".to_string(),
                 },

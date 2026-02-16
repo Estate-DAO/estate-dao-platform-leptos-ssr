@@ -52,9 +52,10 @@ See [hotel-providers/DESIGN.md](hotel-providers/DESIGN.md) for the multi-provide
 
 | Component | Description |
 |-----------|-------------|
-| `hotel-providers` | Multi-provider abstraction with LiteAPI integration |
+| `hotel-providers` | Multi-provider abstraction with LiteAPI + Booking.com integration |
 | `hotel-types` | Shared domain types and provider port traits |
 | `LiteApiDriver` | Primary hotel/place provider (implements HotelProviderPort) |
+| `BookingDriver` | Booking.com Demand API provider (implements HotelProviderPort) |
 | `ProviderRegistry` | Configures and manages providers |
 
 ## Environment Variables
@@ -65,7 +66,19 @@ LEPTOS_SITE_ROOT="site"
 LEPTOS_SITE_PKG_DIR="pkg"
 LEPTOS_SITE_ADDR="127.0.0.1:3000"
 LEPTOS_RELOAD_PORT="3001"
+LITEAPI_KEY="..."
+LITEAPI_ROOM_MAPPING="true"
+BOOKING_API_TOKEN="..."
+BOOKING_AFFILIATE_ID="..."
+BOOKING_BASE_URL="https://demandapi.booking.com/3.1"
+BOOKING_CURRENCY="USD"
+BOOKING_USE_MOCK="true"
+HOTEL_PRIMARY="liteapi" # or booking
 ```
+
+Provider identification:
+- Hotel and place API responses include an optional `provider` field (e.g., `LiteAPI`, `Booking.com`).
+- Booking requests may include `provider` to route to a specific upstream when multiple providers are configured.
 
 ## Testing
 

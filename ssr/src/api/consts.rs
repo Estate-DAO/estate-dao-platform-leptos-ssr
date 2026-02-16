@@ -270,6 +270,12 @@ pub struct EnvVarConfig {
     provab_headers: HashMap<String, String>,
     pub liteapi_key: String,
     pub liteapi_prebook_base_url: String,
+    pub booking_api_token: String,
+    pub booking_affiliate_id: String,
+    pub booking_base_url: String,
+    pub booking_currency: String,
+    pub booking_use_mock: bool,
+    pub hotel_primary: String,
     pub nowpayments_api_key: String,
     pub admin_private_key: String,
     pub email_client_config: EmailConfig,
@@ -323,11 +329,25 @@ impl EnvVarConfig {
             }
         };
 
+        let booking_use_mock = env_w_default("BOOKING_USE_MOCK", "true").unwrap();
+        let booking_use_mock =
+            booking_use_mock == "1" || booking_use_mock.eq_ignore_ascii_case("true");
+
         let value = Self {
             provab_headers: pv_hashmap,
             provab_base_url,
             liteapi_key: env_or_panic("LITEAPI_KEY"),
             liteapi_prebook_base_url: env_or_panic("LITEAPI_PREBOOK_BASE_URL"),
+            booking_api_token: env_w_default("BOOKING_API_TOKEN", "").unwrap(),
+            booking_affiliate_id: env_w_default("BOOKING_AFFILIATE_ID", "").unwrap(),
+            booking_base_url: env_w_default(
+                "BOOKING_BASE_URL",
+                "https://demandapi.booking.com/3.1",
+            )
+            .unwrap(),
+            booking_currency: env_w_default("BOOKING_CURRENCY", "USD").unwrap(),
+            booking_use_mock,
+            hotel_primary: env_w_default("HOTEL_PRIMARY", "liteapi").unwrap(),
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
@@ -377,6 +397,12 @@ impl EnvVarConfig {
             provab_headers,
             liteapi_key: "test-liteapi-key".to_string(),
             liteapi_prebook_base_url: "https://test-liteapi.example.com".to_string(),
+            booking_api_token: "test-booking-token".to_string(),
+            booking_affiliate_id: "123456".to_string(),
+            booking_base_url: "https://demandapi-sandbox.booking.com/3.1".to_string(),
+            booking_currency: "USD".to_string(),
+            booking_use_mock: true,
+            hotel_primary: "liteapi".to_string(),
             nowpayments_api_key: "test-nowpayments-key".to_string(),
             admin_private_key: "test-admin-key".to_string(),
             email_client_config: EmailConfig {
