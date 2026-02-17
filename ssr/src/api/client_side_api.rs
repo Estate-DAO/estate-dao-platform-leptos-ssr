@@ -650,9 +650,7 @@ impl ClientSideApiClient {
         .await
     }
 
-    pub async fn get_hotel_provider_config(
-        &self,
-    ) -> Result<HotelProviderConfigResponse, String> {
+    pub async fn get_hotel_provider_config(&self) -> Result<HotelProviderConfigResponse, String> {
         Self::api_call_with_error(
             serde_json::json!({}),
             "server_fn_api/admin/get_hotel_provider_config",

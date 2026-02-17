@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use hotel_types::ports::ProviderNames;
 use hotel_types::{
     DomainGroupedRoomRates, DomainRoomGroup, DomainRoomOption, DomainRoomVariant, DomainStaticRoom,
     GroupedTaxItem,
 };
-use hotel_types::ports::ProviderNames;
 
 fn format_room_names(names: &[String]) -> String {
     let mut counts = BTreeMap::new();

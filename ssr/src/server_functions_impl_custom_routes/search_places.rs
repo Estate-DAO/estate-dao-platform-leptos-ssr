@@ -3,11 +3,11 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use estate_fe::{domain::DomainPlaceDetailsPayload, init::get_provider_registry};
 use estate_fe::{
     application_services::PlaceService, domain::DomainPlacesSearchPayload,
     view_state_layer::AppState,
 };
+use estate_fe::{domain::DomainPlaceDetailsPayload, init::get_provider_registry};
 use serde_json::json;
 
 use super::parse_json_request;

@@ -41,7 +41,11 @@ impl HotelProviderPort for BookingDriver {
         criteria: DomainHotelSearchCriteria,
         ui_filters: UISearchFilters,
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
-        let req = BookingMapper::map_domain_search_to_booking(&criteria, &ui_filters, self.client.currency());
+        let req = BookingMapper::map_domain_search_to_booking(
+            &criteria,
+            &ui_filters,
+            self.client.currency(),
+        );
         let resp = self.client.search_accommodations(&req).await?;
 
         if resp.data.is_empty() {
@@ -70,7 +74,10 @@ impl HotelProviderPort for BookingDriver {
                 .collect::<HashMap<_, _>>()
         });
 
-        Ok(BookingMapper::map_booking_search_to_domain(resp, details_map))
+        Ok(BookingMapper::map_booking_search_to_domain(
+            resp,
+            details_map,
+        ))
     }
 
     async fn get_hotel_static_details(
@@ -88,11 +95,13 @@ impl HotelProviderPort for BookingDriver {
             languages: Some(vec!["en-gb".to_string()]),
         };
         let resp = self.client.get_accommodation_details(&req).await?;
-        let detail = resp
-            .data
-            .into_iter()
-            .next()
-            .ok_or_else(|| ProviderError::not_found("Booking.com", crate::ports::ProviderSteps::HotelDetails, "Accommodation not found"))?;
+        let detail = resp.data.into_iter().next().ok_or_else(|| {
+            ProviderError::not_found(
+                "Booking.com",
+                crate::ports::ProviderSteps::HotelDetails,
+                "Accommodation not found",
+            )
+        })?;
 
         Ok(BookingMapper::map_booking_details_to_domain_static(detail))
     }
@@ -101,9 +110,14 @@ impl HotelProviderPort for BookingDriver {
         &self,
         criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainGroupedRoomRates, ProviderError> {
-        let req = BookingMapper::map_domain_info_to_booking_availability(&criteria, self.client.currency())?;
+        let req = BookingMapper::map_domain_info_to_booking_availability(
+            &criteria,
+            self.client.currency(),
+        )?;
         let resp = self.client.get_availability(&req).await?;
-        Ok(BookingMapper::map_booking_availability_to_grouped_rates(resp))
+        Ok(BookingMapper::map_booking_availability_to_grouped_rates(
+            resp,
+        ))
     }
 
     async fn get_min_rates(
@@ -130,7 +144,8 @@ impl HotelProviderPort for BookingDriver {
         &self,
         request: DomainBlockRoomRequest,
     ) -> Result<DomainBlockRoomResponse, ProviderError> {
-        let req = BookingMapper::map_domain_block_to_booking_preview(&request, self.client.currency())?;
+        let req =
+            BookingMapper::map_domain_block_to_booking_preview(&request, self.client.currency())?;
         let resp = self.client.orders_preview(&req).await?;
         BookingMapper::map_booking_preview_to_domain_block(resp)
     }

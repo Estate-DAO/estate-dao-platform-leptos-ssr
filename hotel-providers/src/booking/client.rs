@@ -1,14 +1,14 @@
 use crate::booking::models::{
-    AccommodationsAvailabilityInput, AccommodationsAvailabilityOutput,
+    AccommodationDetails, AccommodationsAvailabilityInput, AccommodationsAvailabilityOutput,
     AccommodationsBulkAvailabilityInput, AccommodationsBulkAvailabilityOutput,
     AccommodationsDetailsInput, AccommodationsDetailsOutput, AccommodationsSearchInput,
-    AccommodationsSearchOutput, AccommodationDetails, AvailabilityData, AvailabilityProduct,
-    CancellationPolicy, CancellationSchedule, LocationCoordinates, LocationInfo, MealPlanPolicy,
-    OrdersDetailsAccommodationsInput, OrdersDetailsAccommodationsOutput,
-    OrdersDetailsAccommodationOutput, OrdersPreviewAccommodationOutput, OrdersPreviewData,
-    OrdersPreviewInput, OrdersPreviewOutput, OrdersPreviewProductOutput, OrderCreateInput,
-    OrderCreateOutput, OrderCreateDataOutput, OrderCreateAccommodationOutput, PriceCurrency,
-    PreviewProductPrice, ProductPolicies, ReviewInfo, RoomInfo, SearchPrice, SearchProduct,
+    AccommodationsSearchOutput, AvailabilityData, AvailabilityProduct, CancellationPolicy,
+    CancellationSchedule, LocationCoordinates, LocationInfo, MealPlanPolicy,
+    OrderCreateAccommodationOutput, OrderCreateDataOutput, OrderCreateInput, OrderCreateOutput,
+    OrdersDetailsAccommodationOutput, OrdersDetailsAccommodationsInput,
+    OrdersDetailsAccommodationsOutput, OrdersPreviewAccommodationOutput, OrdersPreviewData,
+    OrdersPreviewInput, OrdersPreviewOutput, OrdersPreviewProductOutput, PreviewProductPrice,
+    PriceCurrency, ProductPolicies, ReviewInfo, RoomInfo, SearchPrice, SearchProduct,
     TranslatedString,
 };
 use crate::ports::{ProviderError, ProviderErrorKind, ProviderSteps};
@@ -41,7 +41,12 @@ impl BookingClient {
         &self.currency
     }
 
-    async fn post<T, R>(&self, path: &str, body: &T, step: ProviderSteps) -> Result<R, ProviderError>
+    async fn post<T, R>(
+        &self,
+        path: &str,
+        body: &T,
+        step: ProviderSteps,
+    ) -> Result<R, ProviderError>
     where
         T: Serialize,
         R: DeserializeOwned,
@@ -63,9 +68,9 @@ impl BookingClient {
             return Err(self.map_api_error(status, text, step));
         }
 
-        resp.json::<R>().await.map_err(|e| {
-            ProviderError::parse_error("Booking.com", step, e.to_string())
-        })
+        resp.json::<R>()
+            .await
+            .map_err(|e| ProviderError::parse_error("Booking.com", step, e.to_string()))
     }
 
     fn build_url(&self, path: &str) -> String {
@@ -116,8 +121,12 @@ impl BookingClient {
         &self,
         req: &AccommodationsAvailabilityInput,
     ) -> Result<AccommodationsAvailabilityOutput, ProviderError> {
-        self.post("/accommodations/availability", req, ProviderSteps::HotelRate)
-            .await
+        self.post(
+            "/accommodations/availability",
+            req,
+            ProviderSteps::HotelRate,
+        )
+        .await
     }
 
     pub async fn get_bulk_availability(
@@ -322,9 +331,11 @@ impl BookingMockClient {
                 data.push(OrdersDetailsAccommodationOutput {
                     id: order.clone(),
                     accommodation: Some(10101),
-                    accommodation_details: Some(crate::booking::models::OrderAccommodationDetailsOutput {
-                        name: Some(format!("Mock Hotel for {}", order)),
-                    }),
+                    accommodation_details: Some(
+                        crate::booking::models::OrderAccommodationDetailsOutput {
+                            name: Some(format!("Mock Hotel for {}", order)),
+                        },
+                    ),
                 });
             }
         }

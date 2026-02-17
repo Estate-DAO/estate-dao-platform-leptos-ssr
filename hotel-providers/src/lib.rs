@@ -15,10 +15,10 @@ pub mod ports;
 #[cfg(any(feature = "liteapi", feature = "mock"))]
 pub mod adapters;
 
-#[cfg(feature = "liteapi")]
-pub mod liteapi;
 #[cfg(feature = "booking")]
 pub mod booking;
+#[cfg(feature = "liteapi")]
+pub mod liteapi;
 
 mod composite;
 mod registry;

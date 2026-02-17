@@ -288,9 +288,7 @@ mod tests {
             .subscribe("step:*:step_type:*:booking:*:email:user@example.com".to_string())
             .await;
         let (_, mut specific_receiver) = bus
-            .subscribe(
-                "step:payment:step_type:on_step_start:booking:ABC123:email:*".to_string(),
-            )
+            .subscribe("step:payment:step_type:on_step_start:booking:ABC123:email:*".to_string())
             .await;
         let (_, mut non_matching_receiver) = bus
             .subscribe("step:refund:step_type:*:booking:XYZ:email:*".to_string())

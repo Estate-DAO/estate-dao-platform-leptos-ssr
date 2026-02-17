@@ -1,6 +1,8 @@
 use crate::booking::models::*;
 use crate::domain::*;
-use crate::ports::{ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps, UISearchFilters};
+use crate::ports::{
+    ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps, UISearchFilters,
+};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -183,7 +185,12 @@ impl BookingMapper {
                                 .or_else(|| photos.first())
                         })
                         .and_then(|photo| photo.url.as_ref())
-                        .and_then(|url| url.large.clone().or(url.standard.clone()).or(url.thumbnail.clone()))
+                        .and_then(|url| {
+                            url.large
+                                .clone()
+                                .or(url.standard.clone())
+                                .or(url.thumbnail.clone())
+                        })
                         .unwrap_or_default();
 
                     let amenities = detail
@@ -238,7 +245,11 @@ impl BookingMapper {
                 amenities,
                 property_type: None,
                 result_token: item.id.to_string(),
-                hotel_address: if address.is_empty() { None } else { Some(address) },
+                hotel_address: if address.is_empty() {
+                    None
+                } else {
+                    Some(address)
+                },
                 distance_from_center_km: None,
                 location,
             });
@@ -259,10 +270,7 @@ impl BookingMapper {
             .as_ref()
             .and_then(|r| r.review_score)
             .map(|v| v as f64);
-        let review_count = detail
-            .review
-            .as_ref()
-            .and_then(|r| r.number_of_reviews);
+        let review_count = detail.review.as_ref().and_then(|r| r.number_of_reviews);
         let star_rating = detail
             .review
             .as_ref()
@@ -277,9 +285,12 @@ impl BookingMapper {
                 photos
                     .iter()
                     .filter_map(|p| {
-                        p.url
-                            .as_ref()
-                            .and_then(|u| u.large.clone().or(u.standard.clone()).or(u.thumbnail.clone()))
+                        p.url.as_ref().and_then(|u| {
+                            u.large
+                                .clone()
+                                .or(u.standard.clone())
+                                .or(u.thumbnail.clone())
+                        })
                     })
                     .collect()
             })
@@ -322,7 +333,10 @@ impl BookingMapper {
                                     .iter()
                                     .filter_map(|p| {
                                         p.url.as_ref().and_then(|u| {
-                                            u.large.clone().or(u.standard.clone()).or(u.thumbnail.clone())
+                                            u.large
+                                                .clone()
+                                                .or(u.standard.clone())
+                                                .or(u.thumbnail.clone())
                                         })
                                     })
                                     .collect()
@@ -375,10 +389,13 @@ impl BookingMapper {
         criteria: &DomainHotelInfoCriteria,
         currency: &str,
     ) -> Result<AccommodationsAvailabilityInput, ProviderError> {
-        let accommodation = criteria
-            .hotel_ids
-            .first()
-            .ok_or_else(|| ProviderError::other("Booking.com", crate::ports::ProviderSteps::HotelRate, "Missing hotel id"))?;
+        let accommodation = criteria.hotel_ids.first().ok_or_else(|| {
+            ProviderError::other(
+                "Booking.com",
+                crate::ports::ProviderSteps::HotelRate,
+                "Missing hotel id",
+            )
+        })?;
 
         let guests = Self::build_guests(&criteria.search_criteria);
         Ok(AccommodationsAvailabilityInput {
@@ -733,10 +750,7 @@ impl BookingMapper {
 
         let mut products = Vec::with_capacity(product_ids.len());
         for (idx, product_id) in product_ids.iter().enumerate() {
-            let guest = request
-                .guests
-                .get(idx)
-                .or_else(|| request.guests.first());
+            let guest = request.guests.get(idx).or_else(|| request.guests.first());
 
             let guests = guest.map(|g| {
                 vec![OrderCreateGuestInput {

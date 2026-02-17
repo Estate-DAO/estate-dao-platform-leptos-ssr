@@ -5,8 +5,7 @@ use axum::{
 };
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    application_services::HotelService,
-    domain::DomainHotelInfoCriteria,
+    application_services::HotelService, domain::DomainHotelInfoCriteria,
     init::get_provider_registry,
 };
 use serde_json::json;
