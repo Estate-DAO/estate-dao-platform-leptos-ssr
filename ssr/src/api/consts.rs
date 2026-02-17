@@ -275,7 +275,6 @@ pub struct EnvVarConfig {
     pub booking_base_url: String,
     pub booking_currency: String,
     pub booking_use_mock: bool,
-    pub hotel_primary: String,
     pub nowpayments_api_key: String,
     pub admin_private_key: String,
     pub email_client_config: EmailConfig,
@@ -347,7 +346,6 @@ impl EnvVarConfig {
             .unwrap(),
             booking_currency: env_w_default("BOOKING_CURRENCY", "USD").unwrap(),
             booking_use_mock,
-            hotel_primary: env_w_default("HOTEL_PRIMARY", "liteapi").unwrap(),
             nowpayments_api_key: env_or_panic("NOW_PAYMENTS_USDC_ETHEREUM_API_KEY"),
             admin_private_key: env_or_panic(
                 "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY",
@@ -402,7 +400,6 @@ impl EnvVarConfig {
             booking_base_url: "https://demandapi-sandbox.booking.com/3.1".to_string(),
             booking_currency: "USD".to_string(),
             booking_use_mock: true,
-            hotel_primary: "liteapi".to_string(),
             nowpayments_api_key: "test-nowpayments-key".to_string(),
             admin_private_key: "test-admin-key".to_string(),
             email_client_config: EmailConfig {

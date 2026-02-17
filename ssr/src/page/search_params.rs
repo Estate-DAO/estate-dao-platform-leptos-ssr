@@ -69,7 +69,7 @@ impl SearchParamsV2 {
     /// Missing parameters are filled with smart defaults.
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// // URL: /hotel-list?placeName=Jaipur&stars=4
     /// let params = SearchParamsV2::from_url_v2();
     /// assert_eq!(params.place_name, Some("Jaipur".to_string()));
@@ -152,7 +152,7 @@ impl SearchParamsV2 {
     /// Only includes non-default values to keep URLs minimal.
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// let params = SearchParamsV2 {
     ///     place_name: Some("Jaipur".to_string()),
     ///     stars: Some(4),

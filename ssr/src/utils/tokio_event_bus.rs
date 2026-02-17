@@ -163,18 +163,18 @@ mod tests {
 
         // Subscribe using different patterns
         let (_, mut booking_receiver) = bus
-            .subscribe("step:*:*:booking:ABC123:email:*".to_string())
+            .subscribe("step:*:step_type:*:booking:ABC123:email:*".to_string())
             .await;
         let (_, mut email_receiver) = bus
-            .subscribe("step:*:*:booking:*:email:user@example.com".to_string())
+            .subscribe("step:*:step_type:*:booking:*:email:user@example.com".to_string())
             .await;
         let (_, mut both_receiver) = bus
-            .subscribe("step:*:*:booking:ABC123:email:user@example.com".to_string())
+            .subscribe("step:*:step_type:*:booking:ABC123:email:user@example.com".to_string())
             .await;
 
         // Create an event that should match all subscription patterns
         let event = Event {
-            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            topic: "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
                 .to_string(),
             payload: "Payment initiated".to_string(),
         };
@@ -189,7 +189,7 @@ mod tests {
         let received = received.unwrap().unwrap();
         assert_eq!(
             received.topic,
-            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
         );
         assert_eq!(received.payload, "Payment initiated");
 
@@ -199,7 +199,7 @@ mod tests {
         let received = received.unwrap().unwrap();
         assert_eq!(
             received.topic,
-            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
         );
         assert_eq!(received.payload, "Payment initiated");
 
@@ -209,7 +209,7 @@ mod tests {
         let received = received.unwrap().unwrap();
         assert_eq!(
             received.topic,
-            "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
         );
         assert_eq!(received.payload, "Payment initiated");
     }
@@ -282,21 +282,23 @@ mod tests {
 
         // Create multiple subscribers with different patterns
         let (_, mut booking_receiver) = bus
-            .subscribe("step:*:*:booking:ABC123:email:*".to_string())
+            .subscribe("step:*:step_type:*:booking:ABC123:email:*".to_string())
             .await;
         let (_, mut email_receiver) = bus
-            .subscribe("step:*:*:booking:*:email:user@example.com".to_string())
+            .subscribe("step:*:step_type:*:booking:*:email:user@example.com".to_string())
             .await;
         let (_, mut specific_receiver) = bus
-            .subscribe("step:payment:on_payment_start:booking:ABC123:email:*".to_string())
+            .subscribe(
+                "step:payment:step_type:on_step_start:booking:ABC123:email:*".to_string(),
+            )
             .await;
         let (_, mut non_matching_receiver) = bus
-            .subscribe("step:refund:*:booking:XYZ:email:*".to_string())
+            .subscribe("step:refund:step_type:*:booking:XYZ:email:*".to_string())
             .await;
 
         // Create and publish an event
         let event = Event {
-            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            topic: "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
                 .to_string(),
             payload: "test_payload".to_string(),
         };
@@ -337,13 +339,13 @@ mod tests {
 
         // Create a subscriber with a small channel capacity
         let (_, mut receiver) = bus
-            .subscribe("step:*:*:booking:ABC123:email:*".to_string())
+            .subscribe("step:*:step_type:*:booking:ABC123:email:*".to_string())
             .await;
 
         // Fill up the channel
         for i in 0..1000 {
             let event = Event {
-                topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+                topic: "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
                     .to_string(),
                 payload: format!("test_payload_{}", i),
             };
@@ -352,7 +354,7 @@ mod tests {
 
         // Try to publish one more event - this should be dropped and logged
         let overflow_event = Event {
-            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            topic: "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
                 .to_string(),
             payload: "overflow".to_string(),
         };
@@ -362,7 +364,7 @@ mod tests {
         while let Ok(_) = receiver.try_recv() {}
 
         let new_event = Event {
-            topic: "step:payment:on_payment_start:booking:ABC123:email:user@example.com"
+            topic: "step:payment:step_type:on_step_start:booking:ABC123:email:user@example.com"
                 .to_string(),
             payload: "after_overflow".to_string(),
         };

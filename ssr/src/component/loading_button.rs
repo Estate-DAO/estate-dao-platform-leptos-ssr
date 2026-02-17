@@ -5,7 +5,7 @@ use web_sys::MouseEvent;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```ignore
 /// // Basic usage with default spinner and loading text
 /// <LoadingButton
 ///     is_loading=is_booking

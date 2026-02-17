@@ -41,6 +41,7 @@ use serde_json::json;
 // Import all route modules
 mod admin_error_alerts;
 mod admin_payment;
+mod admin_provider;
 mod block_room;
 mod book_room;
 mod create_payment_invoice;
@@ -271,6 +272,14 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/admin/flush_error_alerts",
             post(admin_error_alerts::flush_pending_errors).options(handle_options),
+        )
+        .route(
+            "/admin/get_hotel_provider_config",
+            post(admin_provider::get_hotel_provider_config).options(handle_options),
+        )
+        .route(
+            "/admin/update_hotel_provider_config",
+            post(admin_provider::update_hotel_provider_config).options(handle_options),
         )
         .route(
             "/send_otp_email_api",

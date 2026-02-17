@@ -67,6 +67,17 @@ pub struct UpdatePaymentRequest {
     pub payment_details: PaymentDetails,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HotelProviderConfigResponse {
+    pub primary_hotel_provider: String,
+    pub available_providers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateHotelProviderConfigRequest {
+    pub primary_hotel_provider: String,
+}
+
 // Email Verification API Types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SendOtpRequest {
@@ -635,6 +646,32 @@ impl ClientSideApiClient {
             request,
             "server_fn_api/admin/update_payment",
             "update payment details",
+        )
+        .await
+    }
+
+    pub async fn get_hotel_provider_config(
+        &self,
+    ) -> Result<HotelProviderConfigResponse, String> {
+        Self::api_call_with_error(
+            serde_json::json!({}),
+            "server_fn_api/admin/get_hotel_provider_config",
+            "get hotel provider config",
+        )
+        .await
+    }
+
+    pub async fn update_hotel_provider_config(
+        &self,
+        primary_hotel_provider: String,
+    ) -> Result<HotelProviderConfigResponse, String> {
+        let request = UpdateHotelProviderConfigRequest {
+            primary_hotel_provider,
+        };
+        Self::api_call_with_error(
+            request,
+            "server_fn_api/admin/update_hotel_provider_config",
+            "update hotel provider config",
         )
         .await
     }

@@ -54,7 +54,7 @@ See [hotel-providers/DESIGN.md](hotel-providers/DESIGN.md) for the multi-provide
 |-----------|-------------|
 | `hotel-providers` | Multi-provider abstraction with LiteAPI + Booking.com integration |
 | `hotel-types` | Shared domain types and provider port traits |
-| `LiteApiDriver` | Primary hotel/place provider (implements HotelProviderPort) |
+| `LiteApiDriver` | LiteAPI provider (implements `HotelProviderPort` + `PlaceProviderPort`) |
 | `BookingDriver` | Booking.com Demand API provider (implements HotelProviderPort) |
 | `ProviderRegistry` | Configures and manages providers |
 
@@ -73,12 +73,14 @@ BOOKING_AFFILIATE_ID="..."
 BOOKING_BASE_URL="https://demandapi.booking.com/3.1"
 BOOKING_CURRENCY="USD"
 BOOKING_USE_MOCK="true"
-HOTEL_PRIMARY="liteapi" # or booking
 ```
 
 Provider identification:
 - Hotel and place API responses include an optional `provider` field (e.g., `LiteAPI`, `Booking.com`).
 - Booking requests may include `provider` to route to a specific upstream when multiple providers are configured.
+- Primary hotel provider default is compile-time in `ssr/src/init.rs` via `PRIMARY_HOTEL_PROVIDER`.
+- Admin can update primary hotel provider at runtime via `POST /server_fn_api/admin/update_hotel_provider_config`.
+- Primary place provider is compile-time and configured in `ssr/src/init.rs` via `PRIMARY_PLACE_PROVIDER` (currently `LiteApi`).
 
 ## Testing
 

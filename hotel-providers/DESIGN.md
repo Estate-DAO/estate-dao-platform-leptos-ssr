@@ -86,11 +86,15 @@ pub fn initialize_provider_registry() {
     let liteapi = get_liteapi_driver();
     let booking = get_booking_driver();
 
-    let registry = ProviderRegistry::builder()
-        .with_hotel_provider(liteapi.clone())      // primary
-        .with_hotel_provider(booking.clone())      // fallback
-        .with_place_provider(liteapi)              // places still via LiteAPI
-        .build();
+    let registry = configure_place_provider(
+        configure_hotel_providers(
+            ProviderRegistry::builder(),
+            &liteapi,
+            &booking,
+        ),
+        &liteapi,
+    )
+    .build();
     // ...
 }
 ```
@@ -196,4 +200,8 @@ The driver reads configuration from environment variables:
 | `BOOKING_BASE_URL` | Booking.com Demand API base URL | `https://demandapi.booking.com/3.1` |
 | `BOOKING_CURRENCY` | Currency for Booking.com requests | `USD` |
 | `BOOKING_USE_MOCK` | Use mock Booking client (no real HTTP) | `true` when token is missing |
-| `HOTEL_PRIMARY` | Primary hotel provider (`liteapi` or `booking`) | `liteapi` |
+
+Primary provider ordering is configured in `ssr/src/init.rs`:
+- `PRIMARY_HOTEL_PROVIDER` is the startup default for hotel provider priority.
+- Hotel provider priority can be changed at runtime via admin API (`update_hotel_provider_config`).
+- `PRIMARY_PLACE_PROVIDER` controls place provider selection (currently LiteAPI).
