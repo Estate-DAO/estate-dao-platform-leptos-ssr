@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 use estate_fe::view_state_layer::AppState;
@@ -16,8 +16,8 @@ use hotel_providers::liteapi::models::booking::LiteApiPrebookResponse;
 use serde_json::json;
 
 use super::{
-    call_block_room_api, parse_json_request, IntegratedBlockRoomRequest,
-    IntegratedBlockRoomResponse,
+    call_block_room_api, get_currency_aware_liteapi_driver, parse_json_request,
+    IntegratedBlockRoomRequest, IntegratedBlockRoomResponse,
 };
 
 /// HTTP status code for partial success (room blocked but backend save failed)
@@ -34,9 +34,10 @@ const DEFAULT_PAYMENT_CURRENCY: &str = "USD";
 #[tracing::instrument(skip(state), fields(booking_id = %"", email = %""))]
 pub async fn integrated_block_room_api_server_fn_route(
     State(state): State<AppState>,
+    headers: HeaderMap,
     body: String,
 ) -> Response {
-    match process_integrated_block_room_request(state, body).await {
+    match process_integrated_block_room_request(state, headers, body).await {
         Ok(response) => response,
         Err(response) => response,
     }
@@ -45,6 +46,7 @@ pub async fn integrated_block_room_api_server_fn_route(
 /// Process the integrated block room request with proper error handling
 async fn process_integrated_block_room_request(
     state: AppState,
+    headers: HeaderMap,
     body: String,
 ) -> Result<Response, Response> {
     tracing::info!("Processing integrated block room request");
@@ -55,8 +57,8 @@ async fn process_integrated_block_room_request(
     tracing::Span::current().record("booking_id", &request.booking_id);
     tracing::Span::current().record("email", &request.email);
 
-    let block_result = execute_block_room_operation(&state, &request).await?;
-    let backend_booking = create_backend_booking(&state, &request, &block_result).await?;
+    let block_result = execute_block_room_operation(&state, &headers, &request).await?;
+    let backend_booking = create_backend_booking(&state, &headers, &request, &block_result).await?;
     let final_response = save_booking_to_backend(&request, backend_booking, &block_result).await?;
 
     Ok(final_response)
@@ -81,6 +83,7 @@ fn parse_request(body: &str) -> Result<IntegratedBlockRoomRequest, Response> {
 /// Execute the block room operation
 async fn execute_block_room_operation(
     state: &AppState,
+    headers: &HeaderMap,
     request: &IntegratedBlockRoomRequest,
 ) -> Result<estate_fe::domain::DomainBlockRoomResponse, Response> {
     tracing::info!(
@@ -88,7 +91,7 @@ async fn execute_block_room_operation(
         request.booking_id
     );
 
-    call_block_room_api(state, request.block_room_request.clone())
+    call_block_room_api(state, Some(headers), request.block_room_request.clone())
         .await
         .map_err(|e| {
             tracing::error!(
@@ -117,6 +120,7 @@ async fn execute_block_room_operation(
 /// Create backend booking from request and block room response
 async fn create_backend_booking(
     state: &estate_fe::view_state_layer::AppState,
+    headers: &HeaderMap,
     request: &IntegratedBlockRoomRequest,
     block_result: &estate_fe::domain::DomainBlockRoomResponse,
 ) -> Result<estate_fe::canister::backend::Booking, Response> {
@@ -131,8 +135,15 @@ async fn create_backend_booking(
     let mut room_details = extract_room_details_from_request(request);
     enrich_room_details_with_provider_data(&mut room_details, block_result);
     align_room_details_with_blocked_rooms(&mut room_details, block_result);
-    let hotel_details =
-        build_hotel_details(state, request, block_result, &date_range, &room_details).await;
+    let hotel_details = build_hotel_details(
+        state,
+        headers,
+        request,
+        block_result,
+        &date_range,
+        &room_details,
+    )
+    .await;
 
     let backend_booking = BookingBackendConversions::create_backend_booking(
         Some(destination),
@@ -395,14 +406,15 @@ fn align_room_details_with_blocked_rooms(
 /// Fetch actual hotel details from hotel service
 async fn fetch_actual_hotel_details(
     _state: &estate_fe::view_state_layer::AppState,
+    headers: &HeaderMap,
     hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
 ) -> Result<DomainHotelDetails, String> {
-    use estate_fe::{application_services::HotelService, init::get_liteapi_driver};
+    use estate_fe::application_services::HotelService;
 
     tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
 
     // Create the hotel service with LiteApiDriver from global client
-    let liteapi_driver = get_liteapi_driver();
+    let liteapi_driver = get_currency_aware_liteapi_driver(headers);
     let hotel_service = HotelService::new(liteapi_driver);
 
     // Get hotel information
@@ -415,6 +427,7 @@ async fn fetch_actual_hotel_details(
 /// Build hotel details with actual hotel information
 async fn build_hotel_details(
     state: &estate_fe::view_state_layer::AppState,
+    headers: &HeaderMap,
     request: &IntegratedBlockRoomRequest,
     block_result: &estate_fe::domain::DomainBlockRoomResponse,
     date_range: &DomainSelectedDateRange,
@@ -480,8 +493,12 @@ async fn build_hotel_details(
         actual_amenities,
         actual_images,
         actual_star_rating,
-    ) = match fetch_actual_hotel_details(state, &request.block_room_request.hotel_info_criteria)
-        .await
+    ) = match fetch_actual_hotel_details(
+        state,
+        headers,
+        &request.block_room_request.hotel_info_criteria,
+    )
+    .await
     {
         Ok(hotel_details) => {
             tracing::info!(

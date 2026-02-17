@@ -20,6 +20,7 @@ use crate::domain::{
 use crate::log;
 use crate::utils::app_reference::generate_app_reference;
 use crate::utils::cookie_storage::CookieBookingStorage;
+use crate::utils::currency::resolve_currency_code;
 use crate::utils::{app_reference::BookingId, BackendIntegrationHelper};
 use crate::view_state_layer::booking_id_state::BookingIdState;
 use crate::view_state_layer::email_verification_state::EmailVerificationState;
@@ -2200,6 +2201,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
 
             // Get price information
             let price_amount = calculated_total();
+            let selected_currency_code = resolve_currency_code(None);
 
             // Create domain request using proper URL helper functions
             let hotel_name = hotel_info_ctx.selected_hotel_name.get_untracked();
@@ -2208,7 +2210,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             let consts_provider: crate::api::consts::PaymentProvider = provider.clone().into();
             let domain_request = create_domain_request(
                 price_amount,
-                "USD".to_string(),
+                selected_currency_code.clone(),
                 order_id,
                 if hotel_name.is_empty() {
                     "Hotel Room Booking".to_string()

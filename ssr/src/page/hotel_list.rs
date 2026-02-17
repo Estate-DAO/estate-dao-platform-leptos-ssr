@@ -16,6 +16,7 @@ use crate::component::{
 use crate::domain::{DomainHotelListAfterSearch, DomainPaginationParams};
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListNavbar, HotelListParams, InputGroupContainer};
+use crate::utils::currency::{currency_symbol_for_code, resolve_currency_code};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -1983,6 +1984,8 @@ pub fn HotelCardTile(
     // Calculate number of nights for per-night pricing
     let num_nights = search_ctx.date_range.get_untracked().no_of_nights().max(1);
     let price_per_night = price_copy.map(|p| p / num_nights as f64);
+    let selected_currency_symbol =
+        store_value(currency_symbol_for_code(&resolve_currency_code(None)));
 
     let navigate = use_navigate();
 
@@ -2162,10 +2165,11 @@ pub fn HotelCardTile(
                     }>
                         <div class="text-right flex-shrink-0">
                             {move || {
+                                let selected_currency_symbol = selected_currency_symbol.get_value();
                                 if let Some(p) = price_per_night {
                                     view! {
                                         <p class="text-lg font-bold">
-                                            ${format!("{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
+                                            {format!("{selected_currency_symbol}{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
                                         </p>
                                     }
                                 } else {
