@@ -20,7 +20,7 @@ use crate::domain::{
 use crate::log;
 use crate::utils::app_reference::generate_app_reference;
 use crate::utils::cookie_storage::CookieBookingStorage;
-use crate::utils::currency::resolve_currency_code;
+use crate::utils::currency::{currency_symbol_for_code, resolve_currency_code};
 use crate::utils::{app_reference::BookingId, BackendIntegrationHelper};
 use crate::view_state_layer::booking_id_state::BookingIdState;
 use crate::view_state_layer::email_verification_state::EmailVerificationState;
@@ -32,16 +32,6 @@ use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
 use std::collections::HashMap;
-
-fn currency_symbol_for_code(code: &str) -> &str {
-    match code {
-        "INR" => "₹",
-        "EUR" => "€",
-        "GBP" => "£",
-        "USD" => "$",
-        _ => "$",
-    }
-}
 
 fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     let symbol = currency_symbol_for_code(currency_code);
@@ -201,14 +191,15 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
         // Also try to get room selection summary to see if it's populated
         let room_summary = BlockRoomUIState::get_room_selection_summary_untracked();
+        let selected_currency_code = resolve_currency_code(None);
         log!("  room_selection_summary length: {}", room_summary.len());
         for (i, room) in room_summary.iter().enumerate() {
             log!(
-                "    Room {}: {} x{} @ ${:.2}/night",
+                "    Room {}: {} x{} @ {}/night",
                 i + 1,
                 room.display_name(),
                 room.quantity,
-                room.price_per_night
+                format_currency_with_code(room.price_per_night, &selected_currency_code)
             );
         }
 
@@ -622,26 +613,26 @@ pub fn EnhancedPricingDisplay(
             .sum::<f64>()
     };
 
+    let selected_currency_code = store_value(resolve_currency_code(None));
+
     let included_tax_currency = move || {
         included_taxes_summary()
             .first()
             .map(|entry| entry.1.clone())
-            .unwrap_or_else(|| "USD".to_string())
+            .unwrap_or_else(|| selected_currency_code.get_value())
     };
 
-    let platform_markup_currency = move || "USD".to_string();
+    let platform_markup_currency = move || selected_currency_code.get_value();
 
     let excluded_tax_currency = move || {
         excluded_taxes_summary()
             .first()
             .map(|entry| entry.1.clone())
-            .unwrap_or_else(|| "USD".to_string())
+            .unwrap_or_else(|| selected_currency_code.get_value())
     };
 
     let total_with_included = move || base_total() + included_taxes_total();
     let rounded_total_with_included = move || round_to_cents(total_with_included());
-
-    let format_currency = |val: f64| format!("${:.2}", val);
 
     view! {
         <div class=container_class>
@@ -654,6 +645,7 @@ pub fn EnhancedPricingDisplay(
                         let display_name = room.display_name();
                         let price_per_night = room.price_per_night;
                         let quantity = room.quantity;
+                        let selected_currency = selected_currency_code.get_value();
                         // Round price to 2 decimals to match displayed value, then calculate total
                         let rounded_price = (price_per_night * 100.0).round() / 100.0;
                         let line_total = rounded_price * quantity as f64 * num_nights() as f64;
@@ -674,12 +666,12 @@ pub fn EnhancedPricingDisplay(
                                             format!("{quantity} rooms")
                                         };
                                         view! {
-                                            "(" {format_currency(price_per_night)} "/night × " {nights_label} " × " {rooms_label} ")"
+                                            "(" {format_currency_with_code(price_per_night, &selected_currency)} "/night × " {nights_label} " × " {rooms_label} ")"
                                         }}
                                     </div>
                                 </div>
                                 <div class="text-sm font-semibold text-gray-900 ml-3">
-                                    {format_currency(line_total)}
+                                    {format_currency_with_code(line_total, &selected_currency)}
                                 </div>
                             </div>
                         }
@@ -690,10 +682,17 @@ pub fn EnhancedPricingDisplay(
                 <Show when=move || room_summary().is_empty()>
                     <div class="flex justify-between items-center text-base">
                         <span class="text-gray-700">
-                            {move || format!("${:.2} x {} nights", rooms_total_per_night(), num_nights())}
+                            {move || {
+                                let selected_currency = selected_currency_code.get_value();
+                                format!(
+                                    "{} x {} nights",
+                                    format_currency_with_code(rooms_total_per_night(), &selected_currency),
+                                    num_nights()
+                                )
+                            }}
                         </span>
                         <span class="font-semibold">
-                            {move || format_currency(base_total())}
+                            {move || format_currency_with_code(base_total(), &selected_currency_code.get_value())}
                         </span>
                     </div>
                 </Show>
@@ -838,6 +837,12 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
     let display_name = room.display_name();
     let quantity = room.quantity;
     let price_per_night = room.price_per_night;
+    let selected_currency_code = resolve_currency_code(None);
+    let price_per_night_display =
+        format_currency_with_code(price_per_night, &selected_currency_code);
+    let total_per_night_display =
+        format_currency_with_code(price_per_night * quantity as f64, &selected_currency_code);
+    let price_times_quantity_display = format!("{price_per_night_display} × {quantity}");
     view! {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-2xl p-3 sm:p-4 bg-gray-50">
             // <!-- Room details -->
@@ -850,18 +855,18 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
                         {format!("{} room{}", quantity, if quantity == 1 { "" } else { "s" })}
                     </span>
                     <span class="text-gray-500">"•"</span>
-                    <span>${format!("{:.2}", price_per_night)} /night</span>
+                    <span>{price_per_night_display.clone()} " /night"</span>
                 </div>
             </div>
 
             // <!-- Price display -->
             <div class="flex flex-col items-start sm:items-end sm:text-right">
                 <div class="text-lg font-bold">
-                    ${format!("{:.2}", price_per_night * quantity as f64)}
+                    {total_per_night_display}
                     <span class="text-sm font-normal text-gray-600 ml-1">/night</span>
                 </div>
                 <div class="text-xs text-gray-500">
-                    {format!("${:.2} × {}", price_per_night, quantity)}
+                    {price_times_quantity_display}
                 </div>
             </div>
         </div>
@@ -1578,6 +1583,7 @@ pub fn PaymentModal() -> impl IntoView {
     let room_price = move || BlockRoomUIState::get_room_price();
     let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
     let num_nights = move || BlockRoomUIState::get_num_nights();
+    let selected_currency_code = store_value(resolve_currency_code(None));
 
     // Note: Prebook API is now called when user clicks "Confirm & Book" button via action pattern
 
@@ -1642,7 +1648,12 @@ pub fn PaymentModal() -> impl IntoView {
                                 <Divider class="my-2".into() />
                                 <div class="flex justify-between items-center font-bold text-lg mb-2">
                                     <span>Total</span>
-                                    <span class="text-2xl">{move || format!("${:.2}", calculated_total())}</span>
+                                    <span class="text-2xl">
+                                        {move || format_currency_with_code(
+                                            calculated_total(),
+                                            &selected_currency_code.get_value(),
+                                        )}
+                                    </span>
                                 </div>
                             </div>
 

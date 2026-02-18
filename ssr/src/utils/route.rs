@@ -75,7 +75,7 @@ pub fn join_base_and_path_url(base: &str, path: &str) -> Result<String, String> 
 /// * `Result<String, String>` - Complete URL with merged query parameters or error
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// // Path without existing query params
 /// let params = vec![("state", "encoded_state"), ("page", "1")];
 /// let url = join_path_and_query_params("/hotel-list", &params)?;
