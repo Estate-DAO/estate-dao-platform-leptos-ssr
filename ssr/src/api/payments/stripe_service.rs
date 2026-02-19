@@ -289,8 +289,6 @@ fn build_form_fields(
         "required".to_string(),
     );
     fields.insert("customer_creation".to_string(), "always".to_string());
-    fields.insert("customer_update[name]".to_string(), "auto".to_string());
-    fields.insert("customer_update[address]".to_string(), "auto".to_string());
 
     // --- Line Items ---
     // This part remains the same as it correctly processes the Vec<StripeLineItem>
@@ -914,14 +912,6 @@ mod tests {
         // Assert address/name collection settings required for India export compliance
         assert!(form_string.contains("billing_address_collection=required"));
         assert!(form_string.contains("customer_creation=always"));
-        assert!(
-            form_string.contains("customer_update%5Bname%5D=auto")
-                || form_string.contains("customer_update[name]=auto")
-        );
-        assert!(
-            form_string.contains("customer_update%5Baddress%5D=auto")
-                || form_string.contains("customer_update[address]=auto")
-        );
     }
 
     #[test]
@@ -1001,13 +991,5 @@ mod tests {
         // Assert address/name collection settings required for India export compliance
         assert!(form_string.contains("billing_address_collection=required"));
         assert!(form_string.contains("customer_creation=always"));
-        assert!(
-            form_string.contains("customer_update%5Bname%5D=auto")
-                || form_string.contains("customer_update[name]=auto")
-        );
-        assert!(
-            form_string.contains("customer_update%5Baddress%5D=auto")
-                || form_string.contains("customer_update[address]=auto")
-        );
     }
 }
