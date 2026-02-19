@@ -105,12 +105,32 @@ impl StripeEstate {
             let response_status = response.status();
             log!("[Stripe] Response Status = {}", response_status);
             let response_text_value = response.text().await?;
+            let body_string = response_text_value;
 
             if !response_status.is_success() {
-                log!("[Stripe] Error Response = {:#?}", response_text_value);
+                log!("[Stripe] Error Response = {:#?}", body_string);
+                let parsed_error = serde_json::from_str::<StripeErrorResponse>(&body_string).ok();
+                let stripe_message = parsed_error
+                    .as_ref()
+                    .and_then(|e| e.error.message.clone())
+                    .unwrap_or_else(|| body_string.clone());
+                let stripe_code = parsed_error
+                    .as_ref()
+                    .and_then(|e| e.error.code.clone())
+                    .unwrap_or_else(|| "unknown".to_string());
+                let stripe_type = parsed_error
+                    .as_ref()
+                    .and_then(|e| e.error.error_type.clone())
+                    .unwrap_or_else(|| "unknown".to_string());
+                return Err(anyhow::anyhow!(
+                    "Stripe API {} (type: {}, code: {}): {}",
+                    response_status.as_u16(),
+                    stripe_type,
+                    stripe_code,
+                    stripe_message
+                ));
             }
 
-            let body_string = response_text_value;
             log!("[Stripe] stripe response = {:#?}", body_string);
 
             let jd = &mut serde_json::Deserializer::from_str(&body_string);
@@ -129,6 +149,19 @@ impl StripeEstate {
             Ok(response_struct)
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct StripeErrorResponse {
+    error: StripeErrorBody,
+}
+
+#[derive(Debug, Deserialize)]
+struct StripeErrorBody {
+    #[serde(rename = "type")]
+    error_type: Option<String>,
+    code: Option<String>,
+    message: Option<String>,
 }
 
 impl Default for StripeEstate {
