@@ -16,6 +16,9 @@ use crate::component::{
 use crate::domain::{DomainHotelListAfterSearch, DomainPaginationParams};
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListNavbar, HotelListParams, InputGroupContainer};
+use crate::utils::currency::{
+    currency_symbol_for_code, resolve_currency_code, CURRENCY_CHANGE_EVENT,
+};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -42,6 +45,7 @@ pub struct PreviousSearchContext {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
     pub rooms: RwSignal<u32>,
+    pub currency_code: RwSignal<String>,
     /// false by default
     pub first_time_filled: RwSignal<bool>,
 }
@@ -55,6 +59,7 @@ impl Default for PreviousSearchContext {
             adults: create_rw_signal(0),
             children: create_rw_signal(0),
             rooms: create_rw_signal(0),
+            currency_code: create_rw_signal(resolve_currency_code(None)),
             first_time_filled: create_rw_signal(false),
         }
     }
@@ -63,7 +68,7 @@ impl Default for PreviousSearchContext {
 impl GlobalStateForLeptos for PreviousSearchContext {}
 
 impl PreviousSearchContext {
-    pub fn update(new_ctx: UISearchCtx) {
+    pub fn update(new_ctx: UISearchCtx, currency_code: String) {
         let this: Self = expect_context();
         // let mut this = Self::get();
         this.place.set(new_ctx.place.get_untracked());
@@ -74,12 +79,13 @@ impl PreviousSearchContext {
         this.rooms.set(new_ctx.guests.rooms.get_untracked());
         this.children.set(new_ctx.guests.children.get_untracked());
         this.adults.set(new_ctx.guests.adults.get_untracked());
+        this.currency_code.set(currency_code);
         log!("[PreviousSearchContext] updated");
     }
 
     pub fn update_first_time_filled(new_ctx: UISearchCtx) {
         let this: Self = expect_context();
-        Self::update(new_ctx);
+        Self::update(new_ctx, resolve_currency_code(None));
         this.first_time_filled.set(true);
     }
 
@@ -126,6 +132,44 @@ pub fn HotelListPage() -> impl IntoView {
     // Initialize pagination state
     let pagination_state: UIPaginationState = expect_context();
     let search_list_results: SearchListResults = expect_context();
+    let selected_currency_code = create_rw_signal(resolve_currency_code(None));
+    let pagination_state_for_currency = pagination_state.clone();
+
+    #[cfg(not(feature = "ssr"))]
+    {
+        create_effect(move |_| {
+            let selected_currency_code = selected_currency_code;
+            let pagination_state = pagination_state_for_currency.clone();
+            selected_currency_code.set(resolve_currency_code(None));
+
+            use wasm_bindgen::{closure::Closure, JsCast};
+            let Some(window) = web_sys::window() else {
+                return;
+            };
+
+            let handler = Closure::<dyn FnMut(web_sys::Event)>::wrap(Box::new(move |_| {
+                selected_currency_code.set(resolve_currency_code(None));
+                SearchListResults::set_search_results(None);
+                UIPaginationState::set_pagination_meta(None);
+                pagination_state.current_page.set(INITIAL_PAGE);
+            }));
+
+            let _ = window.add_event_listener_with_callback(
+                CURRENCY_CHANGE_EVENT,
+                handler.as_ref().unchecked_ref(),
+            );
+
+            on_cleanup({
+                let window = window.clone();
+                move || {
+                    let _ = window.remove_event_listener_with_callback(
+                        CURRENCY_CHANGE_EVENT,
+                        handler.as_ref().unchecked_ref(),
+                    );
+                }
+            });
+        });
+    }
 
     // Sync query params with state on page load (URL → State)
     // Parse URL params and sync to app state (URL → State)
@@ -237,6 +281,7 @@ pub fn HotelListPage() -> impl IntoView {
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
             let rooms = search_ctx_for_resource.guests.rooms.get();
+            let currency_code = selected_currency_code.get();
 
             // Track pagination changes reactively (this should trigger new API calls)
             let current_page = pagination_state.current_page.get();
@@ -259,10 +304,11 @@ pub fn HotelListPage() -> impl IntoView {
                     rooms,
                     current_page,
                     page_size,
+                    currency_code,
                 )
             } else {
                 // Return a default/non-ready state
-                (None, None, Default::default(), 0, 0, 0, 0)
+                (None, None, Default::default(), 0, 0, 0, 0, String::new())
             }
         },
         move |(
@@ -273,6 +319,7 @@ pub fn HotelListPage() -> impl IntoView {
             rooms,
             current_page,
             page_size,
+            currency_code,
         )| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
@@ -289,7 +336,8 @@ pub fn HotelListPage() -> impl IntoView {
                     || Some(date_range) != prev_ctx.date_range.get()
                     || adults != prev_ctx.adults.get()
                     || rooms != prev_ctx.rooms.get()
-                    || search_ctx_clone.place_details.get() != prev_ctx.place_details.get();
+                    || search_ctx_clone.place_details.get() != prev_ctx.place_details.get()
+                    || currency_code != prev_ctx.currency_code.get();
 
                 if !is_ready {
                     return None;
@@ -353,7 +401,7 @@ pub fn HotelListPage() -> impl IntoView {
                     if let Some(ref existing) = existing_results {
                         UIPaginationState::set_pagination_meta(existing.pagination.clone());
                     }
-                    PreviousSearchContext::update(search_ctx_clone2.clone());
+                    PreviousSearchContext::update(search_ctx_clone2.clone(), currency_code.clone());
                     PreviousSearchContext::reset_first_time_filled();
                     return Some(existing_results);
                 }
@@ -418,7 +466,7 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
 
-                PreviousSearchContext::update(search_ctx_clone2.clone());
+                PreviousSearchContext::update(search_ctx_clone2.clone(), currency_code);
                 PreviousSearchContext::reset_first_time_filled();
 
                 Some(latest_result)
@@ -1170,6 +1218,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                                 )
                                                                             hotel_address
                                                                             distance_from_center_km=hotel_result.distance_from_center_km
+                                                                            selected_currency_code=selected_currency_code
                                                                             disabled=is_disabled
                                                                             compact=false
                                                                         />
@@ -1319,6 +1368,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                                         class="w-full".to_string()
                                                                                         hotel_address
                                                                                         distance_from_center_km=hotel_result.distance_from_center_km
+                                                                                        selected_currency_code=selected_currency_code
                                                                                         disabled=is_disabled
                                                                                         compact=true
                                                                                     />
@@ -1374,6 +1424,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                             )
                                                         hotel_address
                                                         distance_from_center_km=hotel_result.distance_from_center_km
+                                                        selected_currency_code=selected_currency_code
                                                         disabled=is_disabled
                                                     />
                                                     // <HotelCard
@@ -1736,6 +1787,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         class="w-full".to_string()
                                                                         hotel_address
                                                                         distance_from_center_km=hotel_result.distance_from_center_km
+                                                                        selected_currency_code=selected_currency_code
                                                                         disabled=is_disabled
                                                                         compact=true
                                                                     />
@@ -1805,6 +1857,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                      )
                                                                      hotel_address
                                                                      distance_from_center_km=hotel_result.distance_from_center_km
+                                                                     selected_currency_code=selected_currency_code
                                                                      disabled=is_disabled
                                                                      // On mobile list, we can keep standard layout or use compact if desired.
                                                                      // Default is standard horizontal card.
@@ -1965,6 +2018,7 @@ pub fn HotelCardTile(
     hotel_address: Option<String>,
     #[prop(default = None)] distance_from_center_km: Option<f64>,
     #[prop(into)] class: String,
+    selected_currency_code: RwSignal<String>,
     disabled: bool,
     /// When true, forces vertical card layout (like mobile) even on desktop
     #[prop(default = false)]
@@ -2162,10 +2216,12 @@ pub fn HotelCardTile(
                     }>
                         <div class="text-right flex-shrink-0">
                             {move || {
+                                let selected_currency_symbol =
+                                    currency_symbol_for_code(&selected_currency_code.get());
                                 if let Some(p) = price_per_night {
                                     view! {
                                         <p class="text-lg font-bold">
-                                            ${format!("{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
+                                            {format!("{selected_currency_symbol}{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
                                         </p>
                                     }
                                 } else {

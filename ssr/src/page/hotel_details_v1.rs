@@ -16,6 +16,9 @@ use crate::log;
 use crate::page::{
     add_to_wishlist_action, HotelDetailsParams, HotelListNavbar, InputGroupContainer,
 };
+use crate::utils::currency::{
+    currency_symbol_for_code, resolve_currency_code, CURRENCY_CHANGE_EVENT,
+};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
@@ -258,6 +261,39 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     let hotel_info_ctx: HotelInfoCtx = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
     let query_map = use_query_map();
+    let selected_currency_code = create_rw_signal(resolve_currency_code(None));
+
+    #[cfg(not(feature = "ssr"))]
+    {
+        create_effect(move |_| {
+            let selected_currency_code = selected_currency_code;
+            selected_currency_code.set(resolve_currency_code(None));
+
+            use wasm_bindgen::{closure::Closure, JsCast};
+            let Some(window) = web_sys::window() else {
+                return;
+            };
+
+            let handler = Closure::<dyn FnMut(web_sys::Event)>::wrap(Box::new(move |_| {
+                selected_currency_code.set(resolve_currency_code(None));
+            }));
+
+            let _ = window.add_event_listener_with_callback(
+                CURRENCY_CHANGE_EVENT,
+                handler.as_ref().unchecked_ref(),
+            );
+
+            on_cleanup({
+                let window = window.clone();
+                move || {
+                    let _ = window.remove_event_listener_with_callback(
+                        CURRENCY_CHANGE_EVENT,
+                        handler.as_ref().unchecked_ref(),
+                    );
+                }
+            });
+        });
+    }
 
     // <!-- Query params handling for shareable URLs -->
     // Sync query params with state on page load (URL → State)
@@ -475,9 +511,10 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 ui_search_ctx.guests.children.get(),
                 ui_search_ctx.guests.rooms.get(),
                 ui_search_ctx.guests.children_ages.get_signal().get(),
+                selected_currency_code.get(),
             )
         },
-        move |(hotel_code, date_range, adults, children, rooms, children_ages)| async move {
+        move |(hotel_code, date_range, adults, children, rooms, children_ages, _currency_code)| async move {
             if hotel_code.is_empty() || date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0)
             {
                 return None;
@@ -1253,22 +1290,12 @@ fn amenity_preview_for_state(state: &HotelDetailsUIState) -> Vec<Amenity> {
         .unwrap_or_default()
 }
 
-fn currency_symbol_for_code(code: &str) -> &str {
-    match code {
-        "INR" => "₹",
-        "EUR" => "€",
-        "GBP" => "£",
-        "USD" => "$",
-        _ => "$",
-    }
-}
-
 fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     let symbol = currency_symbol_for_code(currency_code);
     if amount.fract() == 0.0 {
-        format!("{symbol}{:.0}", amount)
+        format!("{symbol}{amount:.0}")
     } else {
-        format!("{symbol}{:.2}", amount)
+        format!("{symbol}{amount:.2}")
     }
 }
 
@@ -1347,7 +1374,11 @@ pub fn RoomCounterV1(room_type: String, room_price: f64, room_unique_id: String)
         <div class="flex flex-row items-center justify-between border-b border-gray-300 py-2">
             // <!-- Robust wrap: flex-1 min-w-0 for text, flex-shrink-0 for counter, items-start for top align -->
             <p class="w-0 flex-1 min-w-0 font-medium text-sm md:text-base break-words whitespace-normal">
-                {format!("{} - ${:.2}", room_type, room_price)}
+                {format!(
+                    "{} - {}",
+                    room_type,
+                    format_currency_with_code(room_price, &resolve_currency_code(None)),
+                )}
             </p>
             <div class="flex-shrink-0">
                 // <!-- Original CSS styling with my functional implementation -->

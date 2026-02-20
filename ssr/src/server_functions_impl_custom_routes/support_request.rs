@@ -140,7 +140,7 @@ fn has_booking_context(ctx: &SupportBookingContext) -> bool {
 
 fn booking_amount_text(ctx: &SupportBookingContext) -> Option<String> {
     ctx.total_amount.map(|amount| {
-        let currency = ctx.currency.clone().unwrap_or_default();
+        let currency = ctx.currency.clone().unwrap_or_default().to_uppercase();
         if currency.trim().is_empty() {
             format!("{:.2}", amount)
         } else {

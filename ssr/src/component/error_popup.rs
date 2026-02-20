@@ -5,7 +5,7 @@
 /// 2. `NavigatingErrorPopup` - An error popup that automatically navigates to a specified route
 ///
 /// # Basic Error Popup Usage
-/// ```rust
+/// ```ignore
 /// use crate::component::error_popup::ErrorPopup;
 ///
 /// // In your component:
@@ -19,7 +19,7 @@
 /// ```
 ///
 /// # Navigating Error Popup Usage
-/// ```rust
+/// ```ignore
 /// use crate::component::error_popup::NavigatingErrorPopup;
 ///
 /// // Basic usage with default label ("Dismiss"):

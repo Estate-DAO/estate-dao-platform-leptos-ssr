@@ -5,26 +5,28 @@ use std::fmt::Debug;
 ///
 /// # Examples
 ///
-///     // Debug using a closure that returns a formatted string
-///     <DebugDisplay
-///         label="Destination Context"
-///         value=|| format!("{:#?}", search_ctx.destination.get())
-///     />
-///     
-///     // Debug with a static value
-///     <DebugDisplay
-///         label="Static Data"
-///         value=|| format!("{:#?}", some_static_data)
-///     />
-///     
-///     // Complex formatting
-///     <DebugDisplay
-///         label="Computation Result"
-///         value=|| {
-///             let value = complex_computation();
-///             format!("Computed Value: {:#?}", value)
-///         }
-///     />
+/// ```ignore
+/// // Debug using a closure that returns a formatted string
+/// <DebugDisplay
+///     label="Destination Context"
+///     value=|| format!("{:#?}", search_ctx.destination.get())
+/// />
+///
+/// // Debug with a static value
+/// <DebugDisplay
+///     label="Static Data"
+///     value=|| format!("{:#?}", some_static_data)
+/// />
+///
+/// // Complex formatting
+/// <DebugDisplay
+///     label="Computation Result"
+///     value=|| {
+///         let value = complex_computation();
+///         format!("Computed Value: {:#?}", value)
+///     }
+/// />
+/// ```
 #[component]
 pub fn DebugDisplay(
     /// A function that returns the string to be displayed
