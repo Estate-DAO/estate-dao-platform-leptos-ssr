@@ -1,27 +1,26 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 use estate_fe::view_state_layer::AppState;
-use estate_fe::{
-    application_services::HotelService, domain::DomainHotelInfoCriteria, init::get_liteapi_driver,
-};
+use estate_fe::{application_services::HotelService, domain::DomainHotelInfoCriteria};
 use serde_json::json;
 
-use super::parse_json_request;
+use super::{get_currency_aware_liteapi_driver, parse_json_request};
 
 #[cfg_attr(feature = "debug_log", axum::debug_handler)]
-#[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
+#[cfg_attr(feature = "debug_log", tracing::instrument(skip(_state)))]
 pub async fn get_hotel_info_api_server_fn_route(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
+    headers: HeaderMap,
     body: String,
 ) -> Result<Response, Response> {
     // <!-- Parse input string to struct -->
     let request: DomainHotelInfoCriteria = parse_json_request(&body)?;
 
     // <!-- Create the hotel service with LiteApiDriver from global client -->
-    let liteapi_driver = get_liteapi_driver();
+    let liteapi_driver = get_currency_aware_liteapi_driver(&headers);
     let hotel_service = HotelService::new(liteapi_driver);
 
     // <!-- Get hotel information -->

@@ -1,5 +1,6 @@
 use crate::api::consts::USER_IDENTITY;
 use crate::component::yral_auth_provider::YralAuthProvider;
+use crate::component::CurrencySelectorModal;
 use leptos::*;
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 
@@ -38,10 +39,13 @@ pub fn Navbar(#[prop(optional)] blue_header: bool) -> impl IntoView {
 
                 // <button />
             // </div>
-            // <!-- Conditional rendering based on login state -->
-            {move || {
-                view! { <YralAuthProvider /> }.into_view()
-            }}
+            <div class="flex items-center gap-2 sm:gap-3">
+                <CurrencySelectorModal />
+                // <!-- Conditional rendering based on login state -->
+                {move || {
+                    view! { <YralAuthProvider /> }.into_view()
+                }}
+            </div>
         </nav>
     }
 }

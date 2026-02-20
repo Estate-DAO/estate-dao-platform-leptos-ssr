@@ -8,6 +8,7 @@ use crate::domain::{
     DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria,
 };
 use crate::log;
+use crate::utils::currency::resolve_currency_code;
 use crate::utils::route::join_base_and_path_url;
 use candid::Principal;
 use leptos::*;
@@ -347,10 +348,12 @@ impl ClientSideApiClient {
 
         // Create client - in WASM, cookies are handled automatically by the browser
         let client = reqwest::Client::new();
+        let currency_code = resolve_currency_code(None);
 
         let mut request_builder = client
             .post(Self::build_api_url(endpoint))
             .header("Content-Type", "application/json")
+            .header("X-Currency", currency_code)
             .body(body);
 
         // Add basic auth headers for admin endpoints

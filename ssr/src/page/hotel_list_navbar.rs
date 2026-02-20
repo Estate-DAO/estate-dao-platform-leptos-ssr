@@ -1,7 +1,10 @@
 use leptos::*;
 use leptos_icons::*;
 
-use crate::{component::yral_auth_provider::YralAuthProvider, page::InputGroupContainer};
+use crate::{
+    component::{yral_auth_provider::YralAuthProvider, CurrencySelectorModal},
+    page::InputGroupContainer,
+};
 
 #[component]
 pub fn HotelListNavbar() -> impl IntoView {
@@ -26,8 +29,9 @@ pub fn HotelListNavbar() -> impl IntoView {
                     </div>
                 </div>
 
-                {/* Right: Auth */}
+                {/* Right: Currency + Auth */}
                 <div class="flex items-center space-x-3">
+                    <CurrencySelectorModal />
                     <YralAuthProvider />
                 </div>
             </div>
@@ -56,7 +60,8 @@ pub fn HotelListNavbar() -> impl IntoView {
                 </a>
             </div>
 
-            <div class="flex items-center">
+            <div class="flex items-center gap-2">
+                <CurrencySelectorModal />
                 <YralAuthProvider />
             </div>
         </nav>

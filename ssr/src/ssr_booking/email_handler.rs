@@ -33,6 +33,7 @@ use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::AdminCanisters;
 use crate::utils::app_reference::BookingId;
 use crate::utils::booking_id::PaymentIdentifiers;
+use crate::utils::currency::currency_symbol_for_code;
 use crate::utils::notifier::{self, Notifier};
 use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
 use crate::utils::uuidv7;
@@ -252,6 +253,37 @@ impl EmailClient {
         let number_of_adults = booking.get_number_of_adults();
         let number_of_children = booking.get_number_of_children();
         let amount_paid = booking.get_amount_paid();
+        let amount_currency_code = if !booking
+            .payment_details
+            .payment_api_response
+            .price_currency
+            .trim()
+            .is_empty()
+        {
+            booking
+                .payment_details
+                .payment_api_response
+                .price_currency
+                .clone()
+        } else if !booking
+            .payment_details
+            .payment_api_response
+            .pay_currency
+            .trim()
+            .is_empty()
+        {
+            booking
+                .payment_details
+                .payment_api_response
+                .pay_currency
+                .clone()
+        } else {
+            "USD".to_string()
+        };
+        let amount_paid_text = format!(
+            "{}{amount_paid:.2}",
+            currency_symbol_for_code(&amount_currency_code)
+        );
 
         match mail_state {
             Some(state) => {
@@ -266,7 +298,7 @@ Location: {hotel_location}\n\
 Booking ID / App Reference: {booking_id}\n\
 Stay Dates: {check_in_date} to {check_out_date}\n\
 Guests: {number_of_adults} Adults, {number_of_children} Children\n\
-Amount Paid: {amount_paid}\n\n\
+Amount Paid: {amount_paid_text}\n\n\
 Note: This booking is non-cancellable. If you need anything, reply to this email.\n\n\
 Team Nofeebooking"
                 );
@@ -313,7 +345,7 @@ Team Nofeebooking"
                         <div><strong>Booking ID:</strong> {booking_id}</div>
                         <div><strong>Stay:</strong> {check_in_date} to {check_out_date}</div>
                         <div><strong>Guests:</strong> {number_of_adults} Primary Adults, {number_of_children} Children</div>
-                        <div><strong>Amount Paid:</strong>$ {amount_paid}</div>
+                        <div><strong>Amount Paid:</strong> {amount_paid_text}</div>
                       </div>
                     </td>
                   </tr>

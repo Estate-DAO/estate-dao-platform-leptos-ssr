@@ -7,6 +7,7 @@ pub mod booking_id;
 pub mod browser;
 mod colored_print;
 pub mod cookie_storage;
+pub mod currency;
 pub mod date;
 pub mod domain_normalize;
 pub mod host;
