@@ -698,31 +698,33 @@ pub fn EnhancedPricingDisplay(
                 </Show>
 
                 // <!-- Taxes and fees -->
-                <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-600">"Taxes and fees"</span>
-                        <span class="font-semibold text-gray-900">
-                            {move || format_currency_with_code(included_taxes_total(), &included_tax_currency())}
-                        </span>
-                    </div>
-                    <Show when=move || !included_taxes_summary().is_empty()>
-                        <div class="space-y-1 text-xs text-gray-500">
-                            {move || included_taxes_summary()
-                                .iter()
-                                .map(|(description, currency, amount)| {
-                                    let desc = format_tax_label(description);
-                                    let currency_code = currency.clone();
-                                    view! {
-                                        <div class="flex justify-between">
-                                            <span>{desc}</span>
-                                            <span>{format_currency_with_code(*amount, &currency_code)}</span>
-                                        </div>
-                                    }
-                                })
-                                .collect::<Vec<_>>() }
+                <Show when=move || { included_taxes_total().abs() > 0.0 }>
+                    <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">"Taxes and fees"</span>
+                            <span class="font-semibold text-gray-900">
+                                {move || format_currency_with_code(included_taxes_total(), &included_tax_currency())}
+                            </span>
                         </div>
-                    </Show>
-                </div>
+                        <Show when=move || !included_taxes_summary().is_empty()>
+                            <div class="space-y-1 text-xs text-gray-500">
+                                {move || included_taxes_summary()
+                                    .iter()
+                                    .map(|(description, currency, amount)| {
+                                        let desc = format_tax_label(description);
+                                        let currency_code = currency.clone();
+                                        view! {
+                                            <div class="flex justify-between">
+                                                <span>{desc}</span>
+                                                <span>{format_currency_with_code(*amount, &currency_code)}</span>
+                                            </div>
+                                        }
+                                    })
+                                    .collect::<Vec<_>>() }
+                            </div>
+                        </Show>
+                    </div>
+                </Show>
             </div>
 
             <Divider class="my-2".into() />

@@ -1,9 +1,9 @@
 use leptos::{ev::Event, *};
 
 use crate::utils::currency::{
-    currency_name_for_code, get_currency_from_local_storage, set_currency_in_local_storage,
-    validate_currency_code, SupportedCurrency, DEFAULT_CURRENCY_CODE, SUGGESTED_CURRENCY_CODES,
-    SUPPORTED_LITEAPI_CURRENCIES,
+    currency_name_for_code, get_currency_from_local_storage, notify_currency_change,
+    set_currency_in_local_storage, validate_currency_code, SupportedCurrency,
+    DEFAULT_CURRENCY_CODE, SUGGESTED_CURRENCY_CODES, SUPPORTED_LITEAPI_CURRENCIES,
 };
 
 fn matches_query(currency: &SupportedCurrency, query: &str) -> bool {
@@ -69,6 +69,7 @@ pub fn CurrencySelectorModal() -> impl IntoView {
         if let Some(valid_currency) = validate_currency_code(&code) {
             selected_currency.set(valid_currency.clone());
             set_currency_in_local_storage(&valid_currency);
+            notify_currency_change();
             show_modal.set(false);
         }
     });

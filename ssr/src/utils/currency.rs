@@ -6,6 +6,7 @@ pub struct SupportedCurrency {
 
 pub const DEFAULT_CURRENCY_CODE: &str = "USD";
 pub const CURRENCY_STORAGE_KEY: &str = "estate_selected_currency";
+pub const CURRENCY_CHANGE_EVENT: &str = "estate:currency-changed";
 
 pub const SUPPORTED_LITEAPI_CURRENCIES: [SupportedCurrency; 62] = [
     SupportedCurrency {
@@ -333,3 +334,15 @@ pub fn set_currency_in_local_storage(code: &str) {
 
 #[cfg(feature = "ssr")]
 pub fn set_currency_in_local_storage(_code: &str) {}
+
+#[cfg(not(feature = "ssr"))]
+pub fn notify_currency_change() {
+    if let Some(window) = web_sys::window() {
+        if let Ok(event) = web_sys::Event::new(CURRENCY_CHANGE_EVENT) {
+            let _ = window.dispatch_event(&event);
+        }
+    }
+}
+
+#[cfg(feature = "ssr")]
+pub fn notify_currency_change() {}
