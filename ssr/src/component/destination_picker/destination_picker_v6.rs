@@ -388,19 +388,22 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
     };
 
     view! {
-        <div class=move || format!("relative flex items-center w-full h-[56px] py-2 {}", h_class()) node_ref=container_ref>
-            <div class="absolute inset-y-0 left-2 flex items-center text-xl pointer-events-none">
-                <Icon icon=icondata::BsMap class="text-blue-500 font-bold"/>
+        <div class=move || format!("relative flex items-center w-full h-full {}", h_class()) node_ref=container_ref>
+            <div class="absolute inset-y-0 left-0 md:left-2 flex items-center text-[22px] pointer-events-none">
+                <Icon icon=icondata::BsMap class="text-gray-800 md:text-blue-500"/>
             </div>
 
-            <div class="relative w-full">
+            <div class="relative w-full h-full">
+                <span class="pointer-events-none absolute left-10 md:left-14 top-2.5 md:hidden text-[13px] leading-4 text-slate-500">
+                    "Destination"
+                </span>
                 <input
                     type="text"
                     node_ref=input_ref
                     id="destination-live-select"
                     class=move || {
                         format!(
-                            "w-full h-full {} pl-14 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent rounded-md transition-colors focus:outline-none md:text-ellipsis",
+                            "w-full h-full {} pl-10 md:pl-14 pr-2 md:pr-3 pt-5 md:pt-0 pb-0 text-[15px] leading-6 md:leading-[20px] text-gray-900 font-medium bg-transparent rounded-md transition-colors placeholder:text-gray-400 focus:outline-none md:text-ellipsis",
                             h_class(),
                         )
                     }
@@ -426,7 +429,7 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
                         Some(view! {
                             <div
                                 id="destination-dropdown"
-                                class="absolute z-[9999] w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto mt-2"
+                                class="absolute left-[-4px] top-full z-[9999] mt-2 w-[calc(100%+8px)] md:left-0 md:w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
                                 role="listbox"
                             >
                                 {move || {
