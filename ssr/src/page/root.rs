@@ -201,7 +201,7 @@ pub fn InputGroup(
             class=move || format!(
                 "relative flex flex-col gap-1 md:gap-0 md:flex-row items-stretch md:items-center max-w-4xl w-full md:z-[70] \
                  {bg} rounded-[10px] md:rounded-md border border-[#DFDFE9] md:border-gray-200 \
-                 shadow-[0_4px_20px_rgba(0,0,0,0.10)] md:shadow-md p-5 md:p-0 overflow-hidden md:overflow-visible",
+                 shadow-[0_4px_20px_rgba(0,0,0,0.10)] md:shadow-md p-1 py-2 md:p-0 overflow-hidden md:overflow-visible",
                 bg = bg_class()
             )
         >
