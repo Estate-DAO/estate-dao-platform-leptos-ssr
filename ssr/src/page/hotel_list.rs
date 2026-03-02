@@ -1859,6 +1859,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                      distance_from_center_km=hotel_result.distance_from_center_km
                                                                      selected_currency_code=selected_currency_code
                                                                      disabled=is_disabled
+                                                                     msite=true
                                                                      // On mobile list, we can keep standard layout or use compact if desired.
                                                                      // Default is standard horizontal card.
                                                                  />
@@ -2020,6 +2021,9 @@ pub fn HotelCardTile(
     #[prop(into)] class: String,
     selected_currency_code: RwSignal<String>,
     disabled: bool,
+    /// When true, use the simplified msite tile layout.
+    #[prop(default = false)]
+    msite: bool,
     /// When true, forces vertical card layout (like mobile) even on desktop
     #[prop(default = false)]
     compact: bool,
@@ -2130,118 +2134,224 @@ pub fn HotelCardTile(
         "w-full h-full object-cover md:rounded-l-lg rounded-t-lg md:rounded-t-none"
     };
 
-    view! {
-        // Smaller, more compact card design
-        <div on:click=move |ev| {
-                ev.prevent_default();
-                ev.stop_propagation();
-                on_navigate();
+    let format_price_with_commas = |amount: f64| {
+        let rounded = amount.round() as i64;
+        let digits = rounded.abs().to_string();
+        let mut with_commas_reversed = String::with_capacity(digits.len() + digits.len() / 3);
+        for (index, ch) in digits.chars().rev().enumerate() {
+            if index != 0 && index % 3 == 0 {
+                with_commas_reversed.push(',');
             }
-            class=format!("{} {}", card_layout_class, class)>
-            // IMAGE: smaller dimensions for more compact design
-            <div clone:hotel_code class=image_layout_class>
-                <img class=image_class src=img alt=hotel_name.clone() />
-                <Wishlist hotel_code />
-            </div>
+            with_commas_reversed.push(ch);
+        }
+        let mut formatted: String = with_commas_reversed.chars().rev().collect();
+        if rounded < 0 {
+            formatted.insert(0, '-');
+        }
+        formatted
+    };
 
-            // RIGHT CONTENT
-            // Smaller padding and content area for more compact design
-            <div class="flex-1 min-w-0 flex flex-col justify-between p-3 md:p-4 min-h-[140px] md:min-h-0">
-                // title + reviews row
-                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        // Smaller text and tighter spacing
-                        <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
-                        <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
+    if msite {
+        view! {
+            <div
+                on:click=move |ev| {
+                    ev.prevent_default();
+                    ev.stop_propagation();
+                    on_navigate();
+                }
+                class=format!(
+                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm",
+                    class
+                )
+            >
+                <img class="w-full h-44 object-cover" src=img alt=hotel_name.clone() />
 
-                        // Distance from center if available
-                        {distance_from_center_km.map(|distance| {
-                            let formatted_distance = if distance < 1.0 {
-                                format!("{:.0} m from centre", distance * 1000.0)
-                            } else {
-                                format!("{:.1} km from centre", distance)
-                            };
+                <div class="p-3.5 space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <h3
+                            class="min-w-0 flex-1 text-sm font-medium text-slate-800 leading-tight overflow-hidden whitespace-nowrap text-ellipsis"
+                        >
+                            {hotel_name.clone()}
+                        </h3>
+
+                        {if rating > 0 {
                             view! {
-                                <p class="text-xs text-blue-600 mt-1 leading-snug">
-                                    {formatted_distance}
-                                </p>
+                                <div class="flex items-center gap-0.5 shrink-0">
+                                    {(0..5).map(|index| {
+                                        let star_class = if index < rating.min(5) {
+                                            "w-3.5 h-3.5 text-blue-600"
+                                        } else {
+                                            "w-3.5 h-3.5 text-blue-200"
+                                        };
+                                        view! {
+                                            <Icon icon=icondata::BsStarFill class=star_class />
+                                        }
+                                    }).collect_view()}
+                                    <span class="ml-1 text-[15px] font-medium text-blue-600 leading-none">
+                                        {format!("{:.1}", rating as f32)}
+                                    </span>
+                                </div>
                             }
-                        })}
-
-                        // Fewer amenities with smaller spacing
-                        <div class="flex flex-wrap gap-1 mt-2">{amenities.iter().take(4).map(|a| view! {
-                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded whitespace-nowrap">{a}</span>
-                            }).collect_view()}
-                        </div>
+                                .into_view()
+                        } else {
+                            view! { <></> }.into_view()
+                        }}
                     </div>
 
-                    // review block
-                    // on small screens it becomes full width (so it won't force overflow); on md it becomes a small right column
-                    // <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
-                    //     <div class="flex-1 space-x-1 flex items-center">
-                    //         <p class="text-sm font-medium text-gray-700">{review_text}</p>
-                    //         <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
-                    //             {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
-                    //         </div>
-                    //         // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
-                    //     </div>
-                    // </div>
+                    <div class="flex items-end justify-between gap-3">
+                        <Show when=move || !disabled fallback=|| view! {
+                            <p class="text-xs text-red-600">"This property is not available."</p>
+                        }>
+                            <>
+                                <div class="flex items-end gap-1 text-slate-900">
+                                    {move || {
+                                        let selected_currency_symbol =
+                                            currency_symbol_for_code(&selected_currency_code.get());
+                                        if let Some(p) = price_per_night {
+                                            let formatted_amount = format_price_with_commas(p);
+                                            view! {
+                                                <>
+                                                    <span class="[font-family:Figtree] text-[20px] font-semibold leading-[100%]">
+                                                        {format!("{selected_currency_symbol}{formatted_amount}")}
+                                                    </span>
+                                                    <span class="[font-family:Figtree] text-[12px] font-normal leading-[20px] text-slate-700">"/night"</span>
+                                                </>
+                                            }
+                                                .into_view()
+                                        } else {
+                                            view! {
+                                                <span class="text-base font-semibold leading-none">"-"</span>
+                                            }
+                                                .into_view()
+                                        }
+                                    }}
+                                </div>
+
+                                <button class="text-[16px] font-semibold leading-none text-slate-800 underline decoration-2 underline-offset-2">
+                                    "View details"
+                                </button>
+                            </>
+                        </Show>
+                    </div>
+                </div>
+            </div>
+        }
+            .into_view()
+    } else {
+        view! {
+            // Smaller, more compact card design
+            <div on:click=move |ev| {
+                    ev.prevent_default();
+                    ev.stop_propagation();
+                    on_navigate();
+                }
+                class=format!("{} {}", card_layout_class, class)>
+                // IMAGE: smaller dimensions for more compact design
+                <div clone:hotel_code class=image_layout_class>
+                    <img class=image_class src=img alt=hotel_name.clone() />
+                    <Wishlist hotel_code />
                 </div>
 
-                // price + CTA
-                // Compact spacing and smaller button
-                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mt-auto pt-2">
-                    <div class="flex-1">
-                        // {property_type.clone().map(|pt| view! {
-                        //     <p class="text-sm text-gray-500">{pt}</p>
-                        // })}
-                    </div>
-                    <Show when=move || !disabled fallback=|| view!{
-                        <div class="flex items-center justify-end text-red-600 gap-2">
-                            // Info Icon
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4 flex-shrink-0"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                // RIGHT CONTENT
+                // Smaller padding and content area for more compact design
+                <div class="flex-1 min-w-0 flex flex-col justify-between p-3 md:p-4 min-h-[140px] md:min-h-0">
+                    // title + reviews row
+                    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            // Smaller text and tighter spacing
+                            <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
+                            <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
 
-                            <p class="text-xs">
-                                This property is not available.
-                            </p>
-                        </div>
-                    }>
-                        <div class="text-right flex-shrink-0">
-                            {move || {
-                                let selected_currency_symbol =
-                                    currency_symbol_for_code(&selected_currency_code.get());
-                                if let Some(p) = price_per_night {
-                                    view! {
-                                        <p class="text-lg font-bold">
-                                            {format!("{selected_currency_symbol}{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
-                                        </p>
-                                    }
+                            // Distance from center if available
+                            {distance_from_center_km.map(|distance| {
+                                let formatted_distance = if distance < 1.0 {
+                                    format!("{:.0} m from centre", distance * 1000.0)
                                 } else {
-                                    view! { <p class="text-sm font-bold"></p> }
+                                    format!("{:.1} km from centre", distance)
+                                };
+                                view! {
+                                    <p class="text-xs text-blue-600 mt-1 leading-snug">
+                                        {formatted_distance}
+                                    </p>
                                 }
-                            }}
-                            // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
-
-                            {discount_percent.map(|d| view! {
-                                <p class="text-xs font-semibold text-green-600 mt-0.5">{format!("{d}% OFF")}</p>
                             })}
 
-                            <button class="mt-1.5 inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
-                                "See Availability"
-                            </button>
+                            // Fewer amenities with smaller spacing
+                            <div class="flex flex-wrap gap-1 mt-2">{amenities.iter().take(4).map(|a| view! {
+                                    <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded whitespace-nowrap">{a}</span>
+                                }).collect_view()}
+                            </div>
                         </div>
-                    </Show>
+
+                        // review block
+                        // on small screens it becomes full width (so it won't force overflow); on md it becomes a small right column
+                        // <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
+                        //     <div class="flex-1 space-x-1 flex items-center">
+                        //         <p class="text-sm font-medium text-gray-700">{review_text}</p>
+                        //         <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
+                        //             {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
+                        //         </div>
+                        //         // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
+                        //     </div>
+                        // </div>
+                    </div>
+
+                    // price + CTA
+                    // Compact spacing and smaller button
+                    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mt-auto pt-2">
+                        <div class="flex-1">
+                            // {property_type.clone().map(|pt| view! {
+                            //     <p class="text-sm text-gray-500">{pt}</p>
+                            // })}
+                        </div>
+                        <Show when=move || !disabled fallback=|| view!{
+                            <div class="flex items-center justify-end text-red-600 gap-2">
+                                // Info Icon
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4 flex-shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+
+                                <p class="text-xs">
+                                    This property is not available.
+                                </p>
+                            </div>
+                        }>
+                            <div class="text-right flex-shrink-0">
+                                {move || {
+                                    let selected_currency_symbol =
+                                        currency_symbol_for_code(&selected_currency_code.get());
+                                    if let Some(p) = price_per_night {
+                                        view! {
+                                            <p class="text-lg font-bold">
+                                                {format!("{selected_currency_symbol}{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
+                                            </p>
+                                        }
+                                    } else {
+                                        view! { <p class="text-sm font-bold"></p> }
+                                    }
+                                }}
+                                // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
+
+                                {discount_percent.map(|d| view! {
+                                    <p class="text-xs font-semibold text-green-600 mt-0.5">{format!("{d}% OFF")}</p>
+                                })}
+
+                                <button class="mt-1.5 inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
+                                    "See Availability"
+                                </button>
+                            </div>
+                        </Show>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
+            .into_view()
     }
 }
 
