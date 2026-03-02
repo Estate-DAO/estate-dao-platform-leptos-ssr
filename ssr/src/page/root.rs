@@ -73,13 +73,30 @@ pub fn HeroSection() -> impl IntoView {
                 <div class="flex flex-col items-center justify-center h-full">
                     // <!-- Enhanced mobile typography with better line height -->
                     <h1 class="text-2xl sm:text-3xl md:text-5xl font-semibold text-black mb-2 sm:mb-6 md:mb-8 text-center leading-tight">
-                        Your Next Travel, Paid in Crypto.
+                        Hey! Where are you off to?
                     </h1>
-                    <h6 class="font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight text-sm md:text-base">
-                        Plan your next escape and pay in BTC, ETH, or your favorite token.
-                    </h6>
+                    // <h6 class="font-semibold text-black mb-4 sm:mb-6 md:mb-8 text-center leading-tight text-sm md:text-base">
+                    //     Plan your next escape and pay in BTC, ETH, or your favorite token.
+                    // </h6>
 
                     <InputGroupContainer default_expanded=true given_disabled=false allow_outside_click_collapse=allow_outside_click size="large" />
+
+                    <div class="mt-4 w-full md:hidden">
+                        <div class="rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-sm backdrop-blur-sm">
+                            <div class="flex items-center gap-1">
+                                <p class="min-w-0 flex-1 text-sm font-medium leading-5 text-gray-800">
+                                    "We’re the first decentralised booking platform powered by ICP."
+                                </p>
+                                <a
+                                    href=AppRoutes::AboutUs.to_string()
+                                    class="shrink-0 inline-flex items-center gap-1 whitespace-nowrap font-semibold text-blue-600 text-sm"
+                                >
+                                    <span>"Learn more"</span>
+                                    <span aria-hidden="true">"→"</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
                     // Extra spacing only on desktop
                     <div class="hidden md:block">
@@ -149,6 +166,7 @@ pub fn InputGroup(
 
     let size_clone = size.clone();
     let size_clone1 = size.clone();
+    let size_clone2 = size.clone();
     let height_class = move || {
         match size_clone.get().as_str() {
             "small" => "h-12", // 48px in navbar
@@ -167,55 +185,75 @@ pub fn InputGroup(
     // Height for each row/segment (destination/date/guests)
     let row_h = move || {
         match size.get().as_str() {
-            "small" => "h-12", // 48px in navbar
-            _ => "h-14",       // 56px default
+            "small" => "h-12",   // 48px in navbar
+            _ => "h-16 md:h-14", // 64px mobile, 56px desktop
         }
+    };
+
+    let search_btn_h = move || match size_clone2.get().as_str() {
+        "small" => "h-12",   // keep compact for desktop small navbar
+        _ => "h-12 md:h-14", // 48px mobile button, desktop unchanged
     };
 
     view! {
         <div
             node_ref=parent_div_ref
             class=move || format!(
-                "relative flex flex-col md:flex-row items-stretch md:items-center max-w-4xl w-full z-[70] \
-                 {bg} rounded-md border border-gray-200 shadow-md overflow-hidden md:overflow-visible \
-                 md:space-y-0 space-y-3",
+                "relative flex flex-col gap-1 md:gap-0 md:flex-row items-stretch md:items-center max-w-4xl w-full md:z-[70] \
+                 {bg} rounded-[10px] md:rounded-md border border-[#DFDFE9] md:border-gray-200 \
+                 shadow-[0_4px_20px_rgba(0,0,0,0.10)] md:shadow-md p-1 py-2 md:p-0 overflow-hidden md:overflow-visible",
                 bg = bg_class()
             )
         >
+            <div class="w-full md:contents">
 
             // Destination
-            <div class=format!("flex-1 flex items-center px-2 {}", (row_h.clone())())>
+            <div class=format!("flex-1 flex items-center px-4 md:px-2 {}", (row_h.clone())())>
                 <Show when=move || !disabled.get()>
                     <DestinationPickerV6 />
                 </Show>
                 <Show when=move || disabled.get()>
                      <div class="relative w-full h-full flex items-center">
-                        <div class="absolute inset-y-0 left-2 flex items-center text-xl pointer-events-none">
-                             <Icon icon=icondata::BsMap class="text-blue-500 font-bold"/>
+                        <div class="absolute inset-y-0 left-0 md:left-2 flex items-center text-[22px] pointer-events-none">
+                             <Icon icon=icondata::BsMap class="text-gray-800 md:text-blue-500"/>
                         </div>
-                        <div class="w-full pl-14 text-[15px] font-medium text-left truncate text-gray-500">
-                            {move || place_display.get()}
+                        <div class="w-full pl-10 md:pl-14 pr-2 md:pr-3 text-left">
+                            <p class="md:hidden text-[13px] leading-4 text-slate-500">"Destination"</p>
+                            <p class="truncate text-[15px] leading-[20px] font-medium text-gray-900">
+                                {move || {
+                                    let place = place_display.get();
+                                    if place.trim().is_empty() {
+                                        "Where to?".to_string()
+                                    } else {
+                                        place
+                                    }
+                                }}
+                            </p>
                         </div>
                     </div>
                 </Show>
             </div>
 
+            <div class="md:hidden h-px mx-4 bg-[#DFDFE9]"></div>
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Date range
-            <div class=format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative md:z-[80]", (row_h.clone())())>
+            <div class=format!("flex-1 flex items-center px-4 md:px-2 {} relative md:z-[80]", (row_h.clone())())>
                 <DateTimeRangePickerCustom />
             </div>
 
+            <div class="md:hidden h-px mx-4 bg-[#DFDFE9]"></div>
             <div class="hidden md:block w-px bg-gray-200 self-stretch"></div>
 
             // Guests
-            <div class=move || format!("flex-1 flex items-center px-2 {} border-t md:border-t-0 relative md:z-[80]", row_h())>
+            <div class=move || format!("flex-1 flex items-center px-4 md:px-2 {} relative md:z-[80]", row_h())>
                 <GuestQuantity />
+            </div>
             </div>
 
             // Search button
-            <button
+            <div class="w-full px-4 md:w-auto md:p-0 md:flex-shrink-0">
+                <button
                 on:click=move |ev| {
                     ev.prevent_default();
 
@@ -241,10 +279,10 @@ pub fn InputGroup(
                     search_action.dispatch(());
                 }
                 class=move || format!(
-                    "flex items-center justify-center gap-2 transition-all duration-200 font-medium \
-                    {} {} flex-shrink-0 \
-                    rounded-b-md md:rounded-b-none md:rounded-r-md border-l border-white leading-none {}",
-                    height_class(),            // h-12 or h-14
+                    "w-full md:w-auto flex items-center justify-center gap-2 transition-all duration-200 font-medium \
+                    {} {} md:flex-shrink-0 \
+                    rounded-full md:rounded-l-none md:rounded-b-none md:rounded-r-md border-0 md:border-l md:border-white leading-none {}",
+                    search_btn_h(),            // h-12, h-16(md:h-14)
                     btn_w(),                   // <- new width/min-width
                     bg_search_class()
                 )
@@ -253,12 +291,13 @@ pub fn InputGroup(
                 <Icon
                     icon=icondata::AiSearchOutlined
                     class=format!(
-                        "{} text-[22px] md:text-[22px] leading-none",
+                        "hidden md:block {} text-[22px] leading-none",
                         bg_search_icon_class()
                     )
                 />
-                <span class="block md:hidden text-sm font-medium leading-none">"Search"</span>
-            </button>
+                <span class="block md:hidden text-base font-semibold leading-none">"Search"</span>
+                </button>
+            </div>
         </div>
     }
 }

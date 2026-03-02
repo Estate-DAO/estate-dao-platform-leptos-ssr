@@ -302,6 +302,21 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
         }
     });
 
+    create_effect(move |_| {
+        let dialog_open = is_open.get();
+        if let Some(body) = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.body())
+        {
+            let style = body.style();
+            if dialog_open {
+                let _ = style.set_property("overflow", "hidden");
+            } else {
+                let _ = style.remove_property("overflow");
+            }
+        }
+    });
+
     let search_ctx: UISearchCtx = expect_context();
     let guest_selection = search_ctx.guests;
 
@@ -345,22 +360,25 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
     });
 
     view! {
-        <div class="relative flex items-center w-full h-[56px] py-2">
-                <div class="absolute inset-y-0 left-2 flex items-center text-xl">
-                    <Icon icon=icondata::BiUserRegular class="text-blue-500 font-extralight"/>
+        <div class="relative flex items-center w-full h-full">
+                <div class="absolute inset-y-0 left-0 md:left-2 flex items-center text-[22px]">
+                    <Icon icon=icondata::BiUserRegular class="text-gray-800 md:text-blue-500"/>
                 </div>
 
                 <button
                     class=move || {
                         format!(
-                            "w-full {} h-full pl-14 pr-3 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent border-none rounded-md focus:outline-none text-left flex items-center justify-between",
+                            "w-full {} h-full pl-10 md:pl-14 pr-2 md:pr-3 pt-0 text-[15px] leading-[20px] text-gray-900 bg-transparent border-none rounded-md focus:outline-none text-left flex items-center justify-between",
                             h_class(),
                         )
                     }
                     on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
                 >
-                <div class="text-black font-medium truncate">{guest_count_display}</div>
-                <div class="flex items-center justify-center text-gray-600">
+                <div class="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
+                    <span class="md:hidden text-[13px] leading-4 text-slate-500">"Guests"</span>
+                    <span class="text-black font-medium truncate leading-6">{guest_count_display}</span>
+                </div>
+                <div class="hidden md:flex items-center justify-center text-gray-600">
                     <Icon icon=icon() class="text-gray-600 text-base" />
                 </div>
 
@@ -369,8 +387,8 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
             <Show when=move || is_open()>
                 // !<-- Mobile Overlay -->
                 <div
-                    class="md:hidden fixed inset-0 z-[9999] bg-black/50"
-                    on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::GuestComponent)
+                    class="md:hidden fixed inset-0 z-[1200] bg-black/20 backdrop-blur-[1px]"
+                    on:click=move |_| InputGroupState::set_close_dialog()
                 ></div>
 
                 // !<-- Desktop: Positioned dropdown aligned to right edge, extending beyond section -->
@@ -489,7 +507,7 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
                                 type="button"
                                 class="w-48 bg-blue-500 text-white py-2 rounded-full hover:bg-blue-600 transition-colors text-sm font-medium"
                                 on:click=move |_| {
-                                    InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                    InputGroupState::set_close_dialog()
                                 }
                             >
                                 "Apply"
@@ -500,10 +518,11 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
 
                 // !<-- Mobile: Bottom sheet -->
                 <div
-                    class="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-white rounded-t-lg"
+                    class="md:hidden fixed inset-x-0 bottom-0 z-[1201] max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white shadow-[0_-8px_30px_rgba(15,23,42,0.2)]"
                     on:click=|e| e.stop_propagation()
                 >
                     <div class="p-6 space-y-6">
+                        <div class="mx-auto -mt-2 h-1.5 w-12 rounded-full bg-gray-300"></div>
                         // !<-- Guest Selection Section -->
                         <div class="space-y-4">
                             <h3 class="text-lg font-medium text-center">"Guests and Rooms"</h3>
@@ -613,7 +632,7 @@ pub fn GuestQuantity(#[prop(optional, into)] h_class: MaybeSignal<String>) -> im
                                 type="button"
                                 class="w-full bg-blue-500 text-white py-3 rounded-full hover:bg-blue-600 transition-colors text-sm font-medium"
                                 on:click=move |_| {
-                                    InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                                    InputGroupState::set_close_dialog()
                                 }
                             >
                                 "Apply"

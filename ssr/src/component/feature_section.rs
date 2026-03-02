@@ -34,7 +34,7 @@ pub fn FeaturesSection(#[prop(optional)] show_why_choose_us: bool) -> impl IntoV
                 <FeatureCard
                     icon="/icons/wallet.svg"
                     title="Seamless Crypto Payments"
-                    description="Pay securely with Bitcoin, Ethereum, and more—no banks, no borders."
+                    description="Pay securely with Bitcoin, Ethereum, and more, no banks, no borders."
                 />
 
                 <FeatureCard

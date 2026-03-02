@@ -14,7 +14,7 @@ pub fn HotelListNavbar() -> impl IntoView {
             <div class="h-14 md:h-16 flex items-center gap-8 justify-between px-4 sm:px-6">
                 {/* Left: Logo */}
                 <a href="/" class="flex items-center space-x-2">
-                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking Logo" class="h-8 sm:h-9 w-auto" />
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking Logo" class="h-9 sm:h-10 w-auto" />
                 </a>
 
                 {/* Center: Search (desktop only) */}
@@ -56,7 +56,7 @@ pub fn HotelListNavbar() -> impl IntoView {
 
             <div class="absolute left-1/2 transform -translate-x-1/2">
                  <a href="/" class="flex items-center">
-                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-8 w-auto" />
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-9 w-auto" />
                 </a>
             </div>
 
