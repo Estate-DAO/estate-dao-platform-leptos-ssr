@@ -25,7 +25,7 @@ pub fn Navbar(#[prop(optional)] blue_header: bool) -> impl IntoView {
                     <img
                         src=logo
                         alt="NoFeeBooking Logo"
-                        class="h-8 w-24 sm:h-10 sm:w-32 md:h-12 md:w-48 object-contain"
+                        class="h-11 w-32 sm:h-11 sm:w-36 md:h-12 md:w-52 object-contain"
                     />
                 </a>
             </div>

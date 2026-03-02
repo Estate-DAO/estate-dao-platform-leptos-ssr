@@ -318,23 +318,18 @@ pub fn DateTimeRangePickerCustom(
     // --- Calendar Modal Scroll Lock Effect ---
 
     create_effect(move |_| {
-        log!("[Dialog] open state = {:?}", is_open.get());
-        use web_sys::window;
-        let is_open = is_open.get();
-        let document = window().and_then(|w| w.document());
-        if let Some(body) = document.and_then(|d| d.body()) {
-            if is_open {
-                let _ = body.class_list().add_1("overflow-hidden md:overflow-auto");
+        let dialog_open = is_open.get();
+        if let Some(body) = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.body())
+        {
+            let style = body.style();
+            if dialog_open {
+                let _ = style.set_property("overflow", "hidden");
             } else {
-                let _ = body
-                    .class_list()
-                    .remove_1("overflow-hidden md:overflow-auto");
+                let _ = style.remove_property("overflow");
             }
         }
-        // Clear calendar_ref when dialog is closed to allow re-binding
-        // if !is_open {
-        //     calendar_ref.set(None);
-        // }
     });
 
     // Touch swipe handling for mobile
@@ -365,102 +360,111 @@ pub fn DateTimeRangePickerCustom(
     // );
 
     view! {
-        <div class="relative w-full py-2">
-            <div class="absolute inset-y-0 left-2 flex items-center text-xl">
-                <Icon icon=icondata::AiCalendarOutlined class="text-blue-500 font-extralight"/>
+        <div class="relative w-full h-full">
+            <div class="absolute inset-y-0 left-0 md:left-2 flex items-center text-[22px]">
+                <Icon icon=icondata::AiCalendarOutlined class="text-gray-800 md:text-blue-500"/>
             </div>
 
             <button
                 class=move || {
                     format!(
-                        "w-full {} h-full pl-14 pr-3 text-[15px] leading-[18px] text-gray-900 font-medium bg-transparent border-none rounded-md focus:outline-none text-left",
+                        "w-full {} h-full pl-10 md:pl-14 pr-2 md:pr-3 pt-0 text-[15px] leading-[20px] text-gray-900 bg-transparent border-none rounded-md focus:outline-none text-left flex flex-col justify-center gap-0.5",
                         h_class(),
                     )
                 }
                 on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::DateComponent)
             >
-                {{
-                    move || {
-                        view! { <span class="text-black font-medium truncate">{date_range_display()}</span> }
-                    }
-                }}
+                <span class="md:hidden text-[13px] leading-4 text-slate-500">"Date"</span>
+                <span class="text-black font-medium truncate leading-6">{move || date_range_display()}</span>
             </button>
 
             <Show when=move || is_open()>
-                // --- MOBILE: full-screen modal ---
+                // --- MOBILE: bottom sheet + backdrop ---
                 <div
-                    class="fixed inset-0 z-[99999] bg-white md:hidden flex flex-col"
-                    style="touch-action: none; overscroll-behavior: contain; isolation: isolate;"
+                    class="fixed inset-0 z-[1200] bg-black/20 backdrop-blur-[1px] md:hidden"
+                    on:click=move |_| InputGroupState::set_close_dialog()
+                ></div>
+
+                <div
+                    class="fixed inset-x-0 bottom-0 z-[1201] md:hidden"
+                    on:click=|e| e.stop_propagation()
                 >
-                    // Header
-                    <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-                        <h2 class="text-lg font-semibold text-gray-900">"Select Dates"</h2>
-                        <button
-                            type="button"
-                            class="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
+                    <div class="flex max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-8px_30px_rgba(15,23,42,0.2)]">
+                        <div class="mx-auto mt-3 h-1.5 w-12 rounded-full bg-gray-300"></div>
+
+                        // Header
+                        <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                            <h2 class="text-lg font-semibold text-gray-900">"Select Dates"</h2>
+                            <button
+                                type="button"
+                                class="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                                on:click=move |_| InputGroupState::set_close_dialog()
+                            >
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        // Check-in / Nights / Check-out row
+                        <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                            <div class="text-left">
+                                <p class="text-xs text-gray-500">"Check-in"</p>
+                                <p class="text-sm font-medium text-gray-900">
+                                    {move || {
+                                        let range = selected_range.get();
+                                        range.dd_month_yyyy_start()
+                                    }}
+                                </p>
+                            </div>
+                            <div class="px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">
+                                {move || selected_range.get().formatted_nights()}
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">"Check-out"</p>
+                                <p class="text-sm font-medium text-gray-900">
+                                    {move || {
+                                        let range = selected_range.get();
+                                        range.dd_month_yyyy_end()
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        // Calendar content (scrollable)
+                        <div
+                            _ref=calendar_ref
+                            class="flex-1 overflow-y-auto px-4 py-4"
+                            style="-webkit-overflow-scrolling: touch;"
                         >
-                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-                    </div>
+                            {date_picker_mobile_calendar_content(initial_date, selected_range)}
+                        </div>
 
-                    // Check-in / Nights / Check-out row
-                    <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-                        <div class="text-left">
-                            <p class="text-xs text-gray-500">"Check-in"</p>
-                            <p class="text-sm font-medium text-gray-900">
-                                {move || {
+                        // Apply button
+                        <div
+                            class="px-4 pt-4 border-t border-gray-100 bg-white"
+                            style="padding-bottom: calc(env(safe-area-inset-bottom) + 16px);"
+                        >
+                            <button
+                                type="button"
+                                class=move || {
                                     let range = selected_range.get();
-                                    range.dd_month_yyyy_start()
-                                }}
-                            </p>
-                        </div>
-                        <div class="px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">
-                            {move || selected_range.get().formatted_nights()}
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-gray-500">"Check-out"</p>
-                            <p class="text-sm font-medium text-gray-900">
-                                {move || {
-                                    let range = selected_range.get();
-                                    range.dd_month_yyyy_end()
-                                }}
-                            </p>
-                        </div>
-                    </div>
-
-                    // Calendar content (scrollable)
-                    <div
-                        _ref=calendar_ref
-                        class="flex-1 overflow-y-auto px-4 py-4"
-                        style="-webkit-overflow-scrolling: touch;"
-                    >
-                        {date_picker_mobile_calendar_content(initial_date, selected_range)}
-                    </div>
-
-                    // Apply button
-                    <div class="px-4 py-4 border-t border-gray-100 bg-white">
-                        <button
-                            type="button"
-                            class=move || {
-                                let range = selected_range.get();
-                                let has_both_dates = range.start != (0, 0, 0) && range.end != (0, 0, 0);
-                                if has_both_dates {
-                                    "w-full bg-blue-500 text-white py-3 rounded-full font-medium hover:bg-blue-600 transition-colors"
-                                } else {
-                                    "w-full bg-gray-300 text-gray-500 py-3 rounded-full font-medium cursor-not-allowed"
+                                    let has_both_dates = range.start != (0, 0, 0) && range.end != (0, 0, 0);
+                                    if has_both_dates {
+                                        "w-full bg-blue-500 text-white py-3 rounded-full font-medium hover:bg-blue-600 transition-colors"
+                                    } else {
+                                        "w-full bg-gray-300 text-gray-500 py-3 rounded-full font-medium cursor-not-allowed"
+                                    }
                                 }
-                            }
-                            disabled=move || {
-                                let range = selected_range.get();
-                                !(range.start != (0, 0, 0) && range.end != (0, 0, 0))
-                            }
-                            on:click=move |_| InputGroupState::toggle_dialog(OpenDialogComponent::None)
-                        >
-                            "Apply"
-                        </button>
+                                disabled=move || {
+                                    let range = selected_range.get();
+                                    !(range.start != (0, 0, 0) && range.end != (0, 0, 0))
+                                }
+                                on:click=move |_| InputGroupState::set_close_dialog()
+                            >
+                                "Apply"
+                            </button>
+                        </div>
                     </div>
                 </div>
 

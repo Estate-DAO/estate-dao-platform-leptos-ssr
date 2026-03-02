@@ -13,12 +13,12 @@ pub fn NumberCounter(
     view! {
         <div class=merged_class>
             <p>{label}</p>
-            <div class="flex items-center space-x-1">
+            <div class="flex items-center gap-2">
                 <button
-                    class="ps-2 py-1 text-2xl"
+                    class="flex h-8 w-8 items-center justify-center text-2xl leading-none"
                     on:click=move |_| counter.update(|n| *n = if *n > 0 { *n - 1 } else { 0 })
                 >
-                    {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
+                    {"\u{2212}"}
                 </button>
                 <input
                     type="number"
@@ -28,11 +28,14 @@ pub fn NumberCounter(
                         counter.set(value.max(0));
                     }
                     class=format!(
-                        "{} text-center w-6",
+                        "{} text-center w-8",
                         "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ",
                     )
                 />
-                <button class="py-1 text-2xl" on:click=move |_| on_increment()>
+                <button
+                    class="flex h-8 w-8 items-center justify-center text-2xl leading-none"
+                    on:click=move |_| on_increment()
+                >
                     "+"
                 </button>
             </div>
@@ -84,16 +87,16 @@ pub fn NumberCounterV2(
     view! {
         <div class=merged_class>
             <p>{label}</p>
-            <div class="flex items-center space-x-1">
+            <div class="flex items-center gap-2">
                 <button
                     class=move || format!(
-                        "ps-2 py-1 text-2xl {}",
+                        "flex h-8 w-8 items-center justify-center text-2xl leading-none {}",
                         if is_min.get() { "opacity-50 cursor-not-allowed" } else { "" }
                     )
                     on:click=move |arg| decrement(arg)
                     disabled=move || is_min.get()
                 >
-                    {"\u{2003}\u{2003}\u{2003}\u{2003}-"}
+                    {"\u{2212}"}
                 </button>
                 <input
                     type="number"
@@ -104,11 +107,14 @@ pub fn NumberCounterV2(
                         counter.set(value.max(min_value));
                     }
                     class=format!(
-                        "{} text-center w-6",
-                        "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        "{} text-center w-8",
+                        "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                     )
                 />
-                <button class="py-1 text-2xl" on:click=move |_| on_increment()>
+                <button
+                    class="flex h-8 w-8 items-center justify-center text-2xl leading-none"
+                    on:click=move |_| on_increment()
+                >
                     "+"
                 </button>
             </div>
