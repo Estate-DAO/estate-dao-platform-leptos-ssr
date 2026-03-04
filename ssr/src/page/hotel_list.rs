@@ -7,6 +7,7 @@ use web_sys::MouseEvent;
 use crate::api::auth::auth_state::AuthStateSignal;
 // use crate::api::get_room;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
+use crate::api::consts::FIRST_PAGE_PREFETCH_PAGES;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
     format_price_range_value, CheckboxFilter, Destination, Footer, GuestSelection, Navbar,
@@ -193,6 +194,25 @@ pub fn HotelListPage() -> impl IntoView {
                         place_name
                     );
 
+                    // Show placeName immediately in the destination input while placeId resolves.
+                    // Also clear stale place/place_details so old destination isn't shown/searched.
+                    let pending_destination = Destination {
+                        city: place_name.clone(),
+                        country_name: String::new(),
+                        country_code: String::new(),
+                        city_id: String::new(),
+                        latitude: None,
+                        longitude: None,
+                    };
+                    batch({
+                        let search_ctx2 = search_ctx2.clone();
+                        move || {
+                            search_ctx2.place.set(None);
+                            search_ctx2.place_details.set(None);
+                            search_ctx2.destination.set(Some(pending_destination));
+                        }
+                    });
+
                     // Clone params_map for async closure
                     let params_map_clone = params_map.clone();
                     let place_name_clone = place_name.clone();
@@ -267,13 +287,15 @@ pub fn HotelListPage() -> impl IntoView {
     // Clone search_ctx for use in different closures
     let search_ctx_for_resource = search_ctx.clone();
     let search_ctx_for_url_update = search_ctx.clone();
+    let in_flight_search_signature: RwSignal<Option<String>> = create_rw_signal(None);
 
     // Hotel search resource - triggers only when core search criteria or pagination changes
     // NOT when filters or sorting changes (those are applied client-side)
     let hotel_search_resource = create_resource(
         move || {
             // Depend on query_map to re-run when URL params change
-            query_map.get();
+            let params = query_map.get();
+            let url_place_id = params.0.get("placeId").cloned();
 
             // Track search context changes reactively (but NOT filters/sorting)
             let place = search_ctx_for_resource.place.get();
@@ -305,10 +327,21 @@ pub fn HotelListPage() -> impl IntoView {
                     current_page,
                     page_size,
                     currency_code,
+                    url_place_id,
                 )
             } else {
                 // Return a default/non-ready state
-                (None, None, Default::default(), 0, 0, 0, 0, String::new())
+                (
+                    None,
+                    None,
+                    Default::default(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    String::new(),
+                    None,
+                )
             }
         },
         move |(
@@ -320,10 +353,12 @@ pub fn HotelListPage() -> impl IntoView {
             current_page,
             page_size,
             currency_code,
+            url_place_id,
         )| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             let search_results_clone = search_list_results.clone();
+            let in_flight_search_signature = in_flight_search_signature;
 
             // Capture previous context to check for criteria changes
             let prev_ctx = use_context::<PreviousSearchContext>().unwrap_or_default();
@@ -333,14 +368,37 @@ pub fn HotelListPage() -> impl IntoView {
 
                 // Check if core search criteria changed
                 let criteria_changed = is_ready_place != prev_ctx.place.get()
-                    || Some(date_range) != prev_ctx.date_range.get()
+                    || Some(date_range.clone()) != prev_ctx.date_range.get()
                     || adults != prev_ctx.adults.get()
                     || rooms != prev_ctx.rooms.get()
                     || search_ctx_clone.place_details.get() != prev_ctx.place_details.get()
                     || currency_code != prev_ctx.currency_code.get();
+                let place_changed = is_ready_place != prev_ctx.place.get();
 
                 if !is_ready {
                     return None;
+                }
+
+                // On hotel-list page, destination selection can update place context before URL updates.
+                // Avoid early search with mismatched placeId; wait for URL sync from search action.
+                let place_id_mismatch_with_url = is_ready_place
+                    .as_ref()
+                    .map(|place| {
+                        if place.place_id.starts_with("custom_") {
+                            false
+                        } else {
+                            url_place_id
+                                .as_ref()
+                                .map(|url_id| url_id != &place.place_id)
+                                .unwrap_or(false)
+                        }
+                    })
+                    .unwrap_or(false);
+                if place_id_mismatch_with_url {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Waiting for URL sync: context placeId differs from URL placeId"
+                    );
+                    return Some(search_results_clone.search_result.get_untracked());
                 }
 
                 let target_page = current_page.max(INITIAL_PAGE);
@@ -362,6 +420,18 @@ pub fn HotelListPage() -> impl IntoView {
                     search_results_clone.search_result.get_untracked()
                 };
 
+                let previous_place_details = prev_ctx.place_details.get();
+                let current_place_details = search_ctx_clone.place_details.get();
+                let place_details_stale_for_new_place = place_changed
+                    && previous_place_details.is_some()
+                    && current_place_details == previous_place_details;
+                if place_details_stale_for_new_place {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Waiting for updated place_details before searching new place"
+                    );
+                    return Some(existing_results);
+                }
+
                 let had_existing_results = existing_results.is_some();
                 let existing_results_count = existing_results
                     .as_ref()
@@ -378,6 +448,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                 let mut pages_to_fetch: Vec<u32> = Vec::new();
                 let mut fetch_start_page: Option<u32> = None;
+                let should_prefetch_first_page = loaded_pages == 0 && target_page == INITIAL_PAGE;
 
                 if loaded_pages < target_page {
                     let start_page = if loaded_pages == 0 {
@@ -389,6 +460,18 @@ pub fn HotelListPage() -> impl IntoView {
                         pages_to_fetch.push(page);
                     }
                     fetch_start_page = Some(start_page);
+                }
+
+                if should_prefetch_first_page && !pages_to_fetch.is_empty() {
+                    let prefetch_end = target_page.saturating_add(FIRST_PAGE_PREFETCH_PAGES);
+                    for page in (target_page + 1)..=prefetch_end {
+                        pages_to_fetch.push(page);
+                    }
+
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] First-page prefetch enabled. Will additionally fetch up to page {}",
+                        prefetch_end
+                    );
                 }
 
                 if pages_to_fetch.is_empty() {
@@ -412,10 +495,59 @@ pub fn HotelListPage() -> impl IntoView {
                     target_page
                 );
 
+                let place_id_for_signature = is_ready_place
+                    .as_ref()
+                    .map(|place| place.place_id.clone())
+                    .unwrap_or_default();
+                let location_signature = search_ctx_clone
+                    .place_details
+                    .get_untracked()
+                    .map(|details| {
+                        format!(
+                            "{:.6}:{:.6}",
+                            details.location.latitude, details.location.longitude
+                        )
+                    })
+                    .unwrap_or_else(|| "none".to_string());
+                let request_signature = format!(
+                    "place_id={}|loc={}|date={:?}->{:?}|adults={}|rooms={}|page={}|size={}|currency={}",
+                    place_id_for_signature,
+                    location_signature,
+                    date_range.start,
+                    date_range.end,
+                    adults,
+                    rooms,
+                    target_page,
+                    effective_page_size,
+                    currency_code
+                );
+
+                if in_flight_search_signature.get_untracked().as_ref() == Some(&request_signature) {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Skipping duplicate in-flight search request: {}",
+                        request_signature
+                    );
+                    return Some(search_results_clone.search_result.get_untracked());
+                }
+
+                in_flight_search_signature.set(Some(request_signature.clone()));
+
                 let api_client = ClientSideApiClient::new();
                 let mut latest_result: Option<DomainHotelListAfterSearch> = None;
 
                 for page in pages_to_fetch {
+                    // If another search criteria became active while iterating, stop immediately.
+                    if in_flight_search_signature.get_untracked().as_ref()
+                        != Some(&request_signature)
+                    {
+                        log!(
+                            "[PAGINATION-DEBUG] [hotel_search_resource] Aborting stale fetch loop before page {} for signature {}",
+                            page,
+                            request_signature
+                        );
+                        break;
+                    }
+
                     let mut request: crate::domain::DomainHotelSearchCriteria =
                         search_ctx_clone.clone().into();
                     if let Some(pagination) = request.pagination.as_mut() {
@@ -434,6 +566,18 @@ pub fn HotelListPage() -> impl IntoView {
                     );
                     let page_response = api_client.search_hotel(request).await;
 
+                    // If request became stale while awaiting network, ignore the response.
+                    if in_flight_search_signature.get_untracked().as_ref()
+                        != Some(&request_signature)
+                    {
+                        log!(
+                            "[PAGINATION-DEBUG] [hotel_search_resource] Ignoring stale response for page {} (signature {})",
+                            page,
+                            request_signature
+                        );
+                        break;
+                    }
+
                     match page_response {
                         Some(response) => {
                             log!(
@@ -445,10 +589,23 @@ pub fn HotelListPage() -> impl IntoView {
                             // Always update pagination_meta with the latest response
                             // This ensures "Load More" button has accurate has_next_page info
                             UIPaginationState::set_pagination_meta(response.pagination.clone());
+                            let has_next_page = response
+                                .pagination
+                                .as_ref()
+                                .map(|meta| meta.has_next_page)
+                                .unwrap_or(false);
 
                             // Dedup is now handled automatically in set_search_results
                             SearchListResults::set_search_results(Some(response.clone()));
                             latest_result = Some(response);
+
+                            if should_prefetch_first_page && !has_next_page {
+                                log!(
+                                    "[PAGINATION-DEBUG] [hotel_search_resource] Stopping first-page prefetch at page {} (has_next_page=false)",
+                                    page
+                                );
+                                break;
+                            }
                         }
                         None => {
                             log!(
@@ -464,6 +621,10 @@ pub fn HotelListPage() -> impl IntoView {
                             break;
                         }
                     }
+                }
+
+                if in_flight_search_signature.get_untracked().as_ref() == Some(&request_signature) {
+                    in_flight_search_signature.set(None);
                 }
 
                 PreviousSearchContext::update(search_ctx_clone2.clone(), currency_code);
@@ -761,7 +922,7 @@ pub fn HotelListPage() -> impl IntoView {
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_pagination_effect
             .search_result
-            .get()
+            .get_untracked()
             .is_some()
         {
             leptos::Callable::call(&update_url_with_current_state, ());
@@ -777,7 +938,7 @@ pub fn HotelListPage() -> impl IntoView {
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_filter_effect
             .search_result
-            .get()
+            .get_untracked()
             .is_some()
         {
             leptos::Callable::call(&update_url_with_current_state, ());
@@ -990,25 +1151,39 @@ pub fn HotelListPage() -> impl IntoView {
                                     let pagination_state: UIPaginationState = expect_context();
 
                                     // Get place name
-                                    let place_name = search_ctx.place.get()
+                                    let place_name = search_ctx
+                                        .place
+                                        .get()
                                         .map(|place| place.display_name)
+                                        .or_else(|| {
+                                            search_ctx
+                                                .destination
+                                                .get()
+                                                .map(|destination| destination.city)
+                                                .filter(|city| !city.trim().is_empty())
+                                        })
                                         .unwrap_or_else(|| "this location".to_string());
 
                                     // Get total results from pagination metadata
                                     if let Some(pagination_meta) = pagination_state.pagination_meta.get() {
                                         if let Some(total_results) = pagination_meta.total_results {
-                                            let formatted_count = if total_results >= 1000 {
-                                                format!("{}k+", total_results / 1000)
+                                            if total_results >= 1000 {
+                                                let formatted_count = format!("{}k+", total_results / 1000);
+                                                view! {
+                                                    <span>
+                                                        <span class="font-semibold">{formatted_count}</span>
+                                                        " Properties found in "
+                                                        <span class="font-semibold">{place_name}</span>
+                                                    </span>
+                                                }.into_view()
                                             } else {
-                                                total_results.to_string()
-                                            };
-                                            view! {
-                                                <span>
-                                                    <span class="font-semibold">{formatted_count}</span>
-                                                    " Properties found in "
-                                                    <span class="font-semibold">{place_name}</span>
-                                                </span>
-                                            }.into_view()
+                                                view! {
+                                                    <span>
+                                                        "Properties found in "
+                                                        <span class="font-semibold">{place_name}</span>
+                                                    </span>
+                                                }.into_view()
+                                            }
                                         } else {
                                             view! {
                                                 <span>
@@ -1481,6 +1656,7 @@ pub fn HotelListPage() -> impl IntoView {
                         default_expanded=false
                         given_disabled=disabled_input_group
                         allow_outside_click_collapse=true
+                        auto_search_on_place_select=true
                     />
 
                     // 2. Filter / Sort / Map Row
@@ -1600,25 +1776,39 @@ pub fn HotelListPage() -> impl IntoView {
                                 let pagination_state: UIPaginationState = expect_context();
 
                                 // Get place name
-                                let place_name = search_ctx.place.get()
+                                let place_name = search_ctx
+                                    .place
+                                    .get()
                                     .map(|place| place.display_name)
+                                    .or_else(|| {
+                                        search_ctx
+                                            .destination
+                                            .get()
+                                            .map(|destination| destination.city)
+                                            .filter(|city| !city.trim().is_empty())
+                                    })
                                     .unwrap_or_else(|| "this location".to_string());
 
                                 // Get total results from pagination metadata
                                 if let Some(pagination_meta) = pagination_state.pagination_meta.get() {
                                     if let Some(total_results) = pagination_meta.total_results {
-                                        let formatted_count = if total_results >= 1000 {
-                                            format!("{}k+", total_results / 1000)
+                                        if total_results >= 1000 {
+                                            let formatted_count = format!("{}k+", total_results / 1000);
+                                            view! {
+                                                <span>
+                                                    <span class="font-semibold">{formatted_count}</span>
+                                                    " Properties found in "
+                                                    <span class="font-semibold">{place_name}</span>
+                                                </span>
+                                            }.into_view()
                                         } else {
-                                            total_results.to_string()
-                                        };
-                                        view! {
-                                            <span>
-                                                <span class="font-semibold">{formatted_count}</span>
-                                                " Properties found in "
-                                                <span class="font-semibold">{place_name}</span>
-                                            </span>
-                                        }.into_view()
+                                            view! {
+                                                <span>
+                                                    "Properties found in "
+                                                    <span class="font-semibold">{place_name}</span>
+                                                </span>
+                                            }.into_view()
+                                        }
                                     } else {
                                         view! {
                                             <span>

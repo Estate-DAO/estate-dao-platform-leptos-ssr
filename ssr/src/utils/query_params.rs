@@ -174,8 +174,15 @@ where
 pub fn update_url_with_params(path: &str, params: &HashMap<String, String>) {
     let navigate = use_navigate();
 
+    let mut pairs: Vec<(String, String)> = params
+        .iter()
+        .filter(|(_, v)| !v.is_empty())
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    pairs.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+
     let query_string = form_urlencoded::Serializer::new(String::new())
-        .extend_pairs(params.iter().filter(|(_, v)| !v.is_empty()))
+        .extend_pairs(pairs.iter().map(|(k, v)| (k.as_str(), v.as_str())))
         .finish();
 
     let new_url = if query_string.is_empty() {
@@ -184,13 +191,35 @@ pub fn update_url_with_params(path: &str, params: &HashMap<String, String>) {
         format!("{}?{}", path, query_string)
     };
 
+    if let Some(window) = web_sys::window() {
+        if let (Ok(current_path), Ok(current_search)) =
+            (window.location().pathname(), window.location().search())
+        {
+            let current_url = if current_search.is_empty() {
+                current_path
+            } else {
+                format!("{}{}", current_path, current_search)
+            };
+            if current_url == new_url {
+                return;
+            }
+        }
+    }
+
     navigate(&new_url, Default::default());
 }
 
 /// Helper function to build query string from params
 pub fn build_query_string(params: &HashMap<String, String>) -> String {
+    let mut pairs: Vec<(String, String)> = params
+        .iter()
+        .filter(|(_, v)| !v.is_empty())
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    pairs.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)));
+
     form_urlencoded::Serializer::new(String::new())
-        .extend_pairs(params.iter().filter(|(_, v)| !v.is_empty()))
+        .extend_pairs(pairs.iter().map(|(k, v)| (k.as_str(), v.as_str())))
         .finish()
 }
 

@@ -25,6 +25,7 @@ pub fn HotelListNavbar() -> impl IntoView {
                         given_disabled=false
                         allow_outside_click_collapse=false
                         size="small"
+                        auto_search_on_place_select=true
                         />
                     </div>
                 </div>

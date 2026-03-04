@@ -2,7 +2,7 @@ use super::*;
 use crate::api::client_side_api::{CitySearchResult, ClientSideApiClient, Place};
 
 use crate::log;
-use crate::view_state_layer::ui_search_state::UISearchCtx;
+use crate::view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx};
 use leptos::{html::Div, NodeRef};
 use leptos_use::on_click_outside;
 use wasm_bindgen::JsCast;
@@ -21,7 +21,10 @@ fn city_search_result_to_destination(city: CitySearchResult) -> Destination {
 }
 
 #[component]
-pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>) -> impl IntoView {
+pub fn DestinationPickerV6(
+    #[prop(optional, into)] h_class: MaybeSignal<String>,
+    #[prop(optional_no_strip)] on_place_selected: Option<Callback<Place>>,
+) -> impl IntoView {
     let h_class = create_memo(move |_| {
         let class = h_class.get();
         if class.is_empty() {
@@ -31,6 +34,12 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
         }
     });
     let search_ctx: UISearchCtx = expect_context();
+    let search_results_ctx = use_context::<SearchListResults>();
+    let pagination_ctx = use_context::<UIPaginationState>();
+    let search_results_ctx_for_input = search_results_ctx.clone();
+    let pagination_ctx_for_input = pagination_ctx.clone();
+    let search_results_ctx_for_select = search_results_ctx.clone();
+    let pagination_ctx_for_select = pagination_ctx.clone();
 
     // Simple state management
     let (search_text, set_search_text) = create_signal(String::new());
@@ -56,7 +65,21 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
                 is_open.get()
             );
             if !is_open.get() {
-                let search_text = if place.formatted_address.trim().is_empty() {
+                let search_text = if place.display_name.trim().is_empty()
+                    && place.formatted_address.trim().is_empty()
+                {
+                    search_ctx
+                        .destination
+                        .get()
+                        .map(|dest| {
+                            if dest.country_name.trim().is_empty() {
+                                dest.city
+                            } else {
+                                format!("{}, {}", dest.city, dest.country_name)
+                            }
+                        })
+                        .unwrap_or_default()
+                } else if place.formatted_address.trim().is_empty() {
                     place.display_name.clone()
                 } else {
                     format!("{}, {}", place.display_name, place.formatted_address)
@@ -68,12 +91,28 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
                 set_search_text.set(search_text);
             }
         } else {
-            crate::log!(
-                "[DestinationPickerV6] No place in context, is_open={}",
-                is_open.get()
-            );
-            if !is_open.get() {
-                set_search_text.set(String::new());
+            if let Some(dest) = search_ctx.destination.get() {
+                crate::log!(
+                    "[DestinationPickerV6] No place, using destination fallback: city='{}', is_open={}",
+                    dest.city,
+                    is_open.get()
+                );
+                if !is_open.get() {
+                    let fallback = if dest.country_name.trim().is_empty() {
+                        dest.city.clone()
+                    } else {
+                        format!("{}, {}", dest.city, dest.country_name)
+                    };
+                    set_search_text.set(fallback);
+                }
+            } else {
+                crate::log!(
+                    "[DestinationPickerV6] No place in context, is_open={}",
+                    is_open.get()
+                );
+                if !is_open.get() {
+                    set_search_text.set(String::new());
+                }
             }
         }
     });
@@ -198,6 +237,37 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
         set_is_open.set(true);
         set_active_index.set(0);
 
+        let typed_destination = value.trim().to_string();
+        if typed_destination.is_empty() {
+            search_ctx.destination.set(None);
+        } else {
+            search_ctx.destination.set(Some(Destination {
+                city: typed_destination,
+                country_name: String::new(),
+                country_code: String::new(),
+                city_id: String::new(),
+                latitude: None,
+                longitude: None,
+            }));
+        }
+
+        // If user starts editing destination text, clear previously selected place immediately.
+        // This prevents stale placeId/place_details from being reused when Search is clicked
+        // before a new option is selected.
+        if search_ctx.place.get_untracked().is_some() {
+            batch(move || {
+                search_ctx.place.set(None);
+                search_ctx.place_details.set(None);
+            });
+            if let Some(search_results_ctx) = search_results_ctx_for_input.clone() {
+                search_results_ctx.search_result.set(None);
+            }
+            if let Some(pagination_ctx) = pagination_ctx_for_input.clone() {
+                pagination_ctx.current_page.set(1);
+                pagination_ctx.pagination_meta.set(None);
+            }
+        }
+
         // Clear any existing debounce timeout
         if let Some(handle) = debounce_handle.get_untracked() {
             web_sys::window().unwrap().clear_timeout_with_handle(handle);
@@ -252,13 +322,39 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
         set_is_open.set(true); // Always open on click for debugging
     };
 
-    let select_option = move |place: Place| {
+    let select_option = Callback::new(move |place: Place| {
+        let place_changed = search_ctx
+            .place
+            .get_untracked()
+            .map_or(true, |current| current.place_id != place.place_id);
+
         // log!(
         //     "Selecting option: {}, {}",
         //     place.display_name,
         //     place.formatted_address
         // );
         let _ = UISearchCtx::set_place(place.clone());
+        search_ctx.destination.set(Some(Destination {
+            city: place.display_name.clone(),
+            country_name: place.formatted_address.clone(),
+            country_code: String::new(),
+            city_id: place.place_id.clone(),
+            latitude: None,
+            longitude: None,
+        }));
+
+        if place_changed {
+            if let Some(on_place_selected) = on_place_selected.clone() {
+                leptos::Callable::call(&on_place_selected, place.clone());
+            }
+            if let Some(search_results_ctx) = search_results_ctx_for_select.clone() {
+                search_results_ctx.search_result.set(None);
+            }
+            if let Some(pagination_ctx) = pagination_ctx_for_select.clone() {
+                pagination_ctx.current_page.set(1);
+                pagination_ctx.pagination_meta.set(None);
+            }
+        }
 
         let search_text = if place.formatted_address.trim().is_empty() {
             place.display_name.clone()
@@ -275,7 +371,7 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
 
         // Don't focus input immediately - this was causing the reopen issue
         // The user can click again if they want to search for something else
-    };
+    });
 
     let handle_key_down = move |ev: web_sys::KeyboardEvent| {
         match ev.key().as_str() {
@@ -324,7 +420,7 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
                     let current = active_index.get();
 
                     if !results.is_empty() && current < results.len() {
-                        select_option(results[current].clone());
+                        leptos::Callable::call(&select_option, results[current].clone());
                     }
                 }
             }
@@ -489,7 +585,10 @@ pub fn DestinationPickerV6(#[prop(optional, into)] h_class: MaybeSignal<String>)
                                                         on:click=move | ev | {
                                                             log!("Option clicked");
                                                             ev.stop_propagation();
-                                                            select_option(dest_for_click.clone());
+                                                            leptos::Callable::call(
+                                                                &select_option,
+                                                                dest_for_click.clone(),
+                                                            );
                                                         }
                                                         on:mouseenter=move | _ | {
                                                             set_active_index.set(i);

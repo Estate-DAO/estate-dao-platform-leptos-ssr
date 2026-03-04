@@ -26,7 +26,9 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             .get_untracked()
             .map(|f| f.place_id)
             .unwrap_or_default();
-        let destination = ctx.place_details.get_untracked().unwrap_or_default();
+        let destination = ctx.place_details.get_untracked();
+        let latitude = destination.as_ref().map(|d| d.location.latitude);
+        let longitude = destination.as_ref().map(|d| d.location.longitude);
 
         // Get pagination parameters from UI state if available
         let pagination = UIPaginationState::get_pagination_params();
@@ -49,8 +51,8 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             // destination_country_name: destination.country_name,
             guest_nationality: "US".into(), // Hardcoded for now, can be dynamic based on user profile or selection
             // For coordinate-based searches (e.g., "Search this area" on map)
-            latitude: Some(destination.location.latitude),
-            longitude: Some(destination.location.longitude),
+            latitude,
+            longitude,
             place_id,
             pagination,
             // ..Default::default()
