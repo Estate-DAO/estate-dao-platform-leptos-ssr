@@ -6,10 +6,7 @@ use leptos::*;
 use leptos_icons::*;
 
 #[component]
-pub fn SortBy(
-    #[prop(default = true)]
-    show_label: bool,
-) -> impl IntoView {
+pub fn SortBy(#[prop(default = true)] show_label: bool) -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
     let search_ctx: UISearchCtx = expect_context();
     let current_sort = search_ctx.sort_options;
