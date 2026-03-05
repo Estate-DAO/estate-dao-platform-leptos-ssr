@@ -1662,14 +1662,14 @@ pub fn HotelListPage() -> impl IntoView {
 
                     // 2. Filter / Sort / Map Row
                     <div class="flex items-center justify-between gap-2">
-                         // Filter Button
-                         <button
+                        // Filter Button
+                        <button
                             class="flex items-center justify-center gap-2 bg-white border border-gray-200 shadow-sm rounded-lg py-2.5 px-3 text-sm font-medium text-gray-700 active:bg-gray-50 transition-colors"
                             on:click=move |_| is_filter_drawer_open.set(true)
-                         >
+                        >
                             <Icon icon=icondata::BsSliders class="w-4 h-4" />
                             "Filter"
-                         </button>
+                        </button>
 
                         // Map Toggle Button
                         <button
@@ -1682,7 +1682,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                         // Sort Button
                         <div class="flex-none">
-                            <SortBy />
+                            <SortBy show_label=false />
                         </div>
                     </div>
 

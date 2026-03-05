@@ -6,7 +6,10 @@ use leptos::*;
 use leptos_icons::*;
 
 #[component]
-pub fn SortBy() -> impl IntoView {
+pub fn SortBy(
+    #[prop(default = true)]
+    show_label: bool,
+) -> impl IntoView {
     let (is_open, set_is_open) = create_signal(false);
     let search_ctx: UISearchCtx = expect_context();
     let current_sort = search_ctx.sort_options;
@@ -30,7 +33,9 @@ pub fn SortBy() -> impl IntoView {
 
     view! {
         <div class="relative inline-flex items-center gap-2">
-            <span class="text-gray-700 font-medium text-xs sm:text-sm whitespace-nowrap">"Sort By:"</span>
+            <Show when=move || show_label>
+                <span class="text-gray-700 font-medium text-xs sm:text-sm whitespace-nowrap">"Sort By:"</span>
+            </Show>
             <div class="relative">
                 <button
                     class="flex items-center justify-between w-32 sm:w-44 bg-white border border-gray-300 text-gray-700 rounded-md px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
