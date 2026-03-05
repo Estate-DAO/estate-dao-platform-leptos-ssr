@@ -5,6 +5,7 @@ use crate::log;
 use crate::view_state_layer::ui_search_state::{SearchListResults, UIPaginationState, UISearchCtx};
 use leptos::{html::Div, NodeRef};
 use leptos_use::on_click_outside;
+use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::MouseEvent;
 
@@ -36,7 +37,6 @@ pub fn DestinationPickerV6(
     let search_ctx: UISearchCtx = expect_context();
     let search_results_ctx = use_context::<SearchListResults>();
     let pagination_ctx = use_context::<UIPaginationState>();
-    let search_results_ctx_for_input = search_results_ctx.clone();
     let pagination_ctx_for_input = pagination_ctx.clone();
     let search_results_ctx_for_select = search_results_ctx.clone();
     let pagination_ctx_for_select = pagination_ctx.clone();
@@ -227,6 +227,23 @@ pub fn DestinationPickerV6(
     // Debounce timeout handle
     let debounce_handle = create_rw_signal::<Option<i32>>(None);
 
+    let clear_selected_place = Rc::new(move || {
+        if search_ctx.place.get_untracked().is_some() {
+            batch(move || {
+                search_ctx.place.set(None);
+                search_ctx.place_details.set(None);
+            });
+
+            if let Some(pagination_ctx) = pagination_ctx_for_input.clone() {
+                pagination_ctx.current_page.set(1);
+                pagination_ctx.pagination_meta.set(None);
+            }
+        }
+    });
+
+    let clear_selected_place_for_input = clear_selected_place.clone();
+    let clear_selected_place_for_keydown = clear_selected_place.clone();
+
     // Minimum characters before searching
     const MIN_SEARCH_CHARS: usize = 3;
 
@@ -251,22 +268,7 @@ pub fn DestinationPickerV6(
             }));
         }
 
-        // If user starts editing destination text, clear previously selected place immediately.
-        // This prevents stale placeId/place_details from being reused when Search is clicked
-        // before a new option is selected.
-        if search_ctx.place.get_untracked().is_some() {
-            batch(move || {
-                search_ctx.place.set(None);
-                search_ctx.place_details.set(None);
-            });
-            if let Some(search_results_ctx) = search_results_ctx_for_input.clone() {
-                search_results_ctx.search_result.set(None);
-            }
-            if let Some(pagination_ctx) = pagination_ctx_for_input.clone() {
-                pagination_ctx.current_page.set(1);
-                pagination_ctx.pagination_meta.set(None);
-            }
-        }
+        clear_selected_place_for_input();
 
         // Clear any existing debounce timeout
         if let Some(handle) = debounce_handle.get_untracked() {
@@ -374,6 +376,13 @@ pub fn DestinationPickerV6(
     });
 
     let handle_key_down = move |ev: web_sys::KeyboardEvent| {
+        match ev.key().as_str() {
+            "Backspace" | "Delete" => {
+                clear_selected_place_for_keydown();
+            }
+            _ => {}
+        }
+
         match ev.key().as_str() {
             "ArrowDown" => {
                 ev.prevent_default();

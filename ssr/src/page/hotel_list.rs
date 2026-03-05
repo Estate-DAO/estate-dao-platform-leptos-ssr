@@ -376,7 +376,8 @@ pub fn HotelListPage() -> impl IntoView {
                 let place_changed = is_ready_place != prev_ctx.place.get();
 
                 if !is_ready {
-                    return None;
+                    in_flight_search_signature.set(None);
+                    return Some(search_results_clone.search_result.get_untracked());
                 }
 
                 // On hotel-list page, destination selection can update place context before URL updates.
