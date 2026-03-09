@@ -20,9 +20,7 @@ impl LiteApiMapper {
         // Check if this is a coordinate-based search (from "Search this area" feature)
         // or if we should use the place_id
         let is_coordinate_search = domain_criteria.place_id.starts_with("custom_")
-            || (domain_criteria.latitude.is_some()
-                && domain_criteria.longitude.is_some()
-                && domain_criteria.place_id.is_empty());
+            || (domain_criteria.latitude.is_some() && domain_criteria.longitude.is_some());
 
         if is_coordinate_search {
             // Use latitude/longitude for coordinate-based searches

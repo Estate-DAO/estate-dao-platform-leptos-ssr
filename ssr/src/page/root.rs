@@ -1,6 +1,6 @@
 // use crate::component::outside_click_detector::OutsideClickDetector;
 // use leptos::logging::log;
-use crate::api::client_side_api::ClientSideApiClient;
+use crate::api::client_side_api::{ClientSideApiClient, Place};
 use crate::domain::{DomainHotelListAfterSearch, DomainHotelSearchCriteria};
 use crate::utils::search_action::create_search_action_with_ui_state;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
@@ -119,6 +119,7 @@ pub fn InputGroup(
     #[prop(optional, into)] given_disabled: MaybeSignal<bool>,
     #[prop(optional, into)] h_class: MaybeSignal<String>,
     #[prop(optional, into)] size: MaybeSignal<String>,
+    #[prop(optional, into)] auto_search_on_place_select: MaybeSignal<bool>,
 ) -> impl IntoView {
     let local_disabled = create_rw_signal(false);
     let disabled = create_memo(move |_| given_disabled.get() || local_disabled.get());
@@ -162,6 +163,36 @@ pub fn InputGroup(
     });
 
     let search_action = create_search_action_with_ui_state(local_disabled);
+    let trigger_search = Callback::new(move |_: ()| {
+        // Auto-set dates if not selected
+        let current_dates = search_ctx.date_range.get();
+        let has_no_dates = current_dates.start == (0, 0, 0) || current_dates.end == (0, 0, 0);
+
+        if has_no_dates {
+            log!("[InputGroup] No dates selected, auto-setting to next week");
+            let today = chrono::Local::now().date_naive();
+            let checkin = today + chrono::Duration::days(7);
+            let checkout = today + chrono::Duration::days(8);
+
+            let date_range = SelectedDateRange {
+                start: (checkin.year() as u32, checkin.month(), checkin.day()),
+                end: (checkout.year() as u32, checkout.month(), checkout.day()),
+            };
+
+            UISearchCtx::set_date_range(date_range);
+        }
+
+        UIPaginationState::reset_to_first_page();
+        search_action.dispatch(());
+    });
+    let on_place_selected = if auto_search_on_place_select.get_untracked() {
+        let trigger_search = trigger_search.clone();
+        Some(Callback::new(move |_selected_place: Place| {
+            leptos::Callable::call(&trigger_search, ());
+        }))
+    } else {
+        None
+    };
     let parent_div_ref: NodeRef<html::Div> = create_node_ref();
 
     let size_clone = size.clone();
@@ -210,7 +241,7 @@ pub fn InputGroup(
             // Destination
             <div class=format!("flex-1 flex items-center px-4 md:px-2 {}", (row_h.clone())())>
                 <Show when=move || !disabled.get()>
-                    <DestinationPickerV6 />
+                    <DestinationPickerV6 on_place_selected=on_place_selected />
                 </Show>
                 <Show when=move || disabled.get()>
                      <div class="relative w-full h-full flex items-center">
@@ -256,27 +287,7 @@ pub fn InputGroup(
                 <button
                 on:click=move |ev| {
                     ev.prevent_default();
-
-                    // Auto-set dates if not selected
-                    let current_dates = search_ctx.date_range.get();
-                    let has_no_dates = current_dates.start == (0, 0, 0) || current_dates.end == (0, 0, 0);
-
-                    if has_no_dates {
-                        log!("[InputGroup] No dates selected, auto-setting to next week");
-                        let today = chrono::Local::now().date_naive();
-                        let checkin = today + chrono::Duration::days(7);
-                        let checkout = today + chrono::Duration::days(8);
-
-                        let date_range = SelectedDateRange {
-                            start: (checkin.year() as u32, checkin.month(), checkin.day()),
-                            end: (checkout.year() as u32, checkout.month(), checkout.day()),
-                        };
-
-                        UISearchCtx::set_date_range(date_range);
-                    }
-
-                    UIPaginationState::reset_to_first_page();
-                    search_action.dispatch(());
+                    leptos::Callable::call(&trigger_search, ());
                 }
                 class=move || format!(
                     "w-full md:w-auto flex items-center justify-center gap-2 transition-all duration-200 font-medium \

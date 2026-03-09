@@ -83,42 +83,69 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
         async move {
             log!("Search action async execution started");
 
-            let place_id = search_ctx
-                .place
-                .get_untracked()
-                .as_ref()
-                .and_then(|p| Some(p.place_id.clone()));
+            let mut selected_place = search_ctx.place.get_untracked();
+            if selected_place.is_none() {
+                // Fallback: user may type a destination and hit Search without selecting
+                // from the dropdown. Resolve the first matching place so search can proceed.
+                let typed_destination = search_ctx
+                    .destination
+                    .get_untracked()
+                    .map(|dest| dest.city.trim().to_string())
+                    .filter(|city| !city.is_empty());
 
-            let place_id_clone = place_id.clone();
-            let place_details = if let Some(place_id) = place_id {
-                // Optimize: Check if we already have details for this place_id
-                // We check against the current 'place' in context because PlaceData doesn't store the ID itself.
-                let current_place = search_ctx.place.get_untracked();
-                let existing_details = search_ctx.place_details.get_untracked();
-
-                if let (Some(place), Some(details)) = (current_place, existing_details) {
-                    if place.place_id == place_id {
-                        log!("Using cached place details for {}", place_id);
-                        Ok(details)
-                    } else {
-                        // Different place, fetch new
-                        api_client.get_place_details_by_id(place_id).await
+                if let Some(query) = typed_destination {
+                    match api_client.search_places(query.clone()).await {
+                        Ok(results) => {
+                            if let Some(place) = results.first().cloned() {
+                                UISearchCtx::set_place(place.clone());
+                                selected_place = Some(place);
+                            } else {
+                                log!("No place results found for typed destination: {}", query);
+                                if let Some(disabled_signal) = config.manage_ui_state {
+                                    disabled_signal.set(false);
+                                }
+                                return;
+                            }
+                        }
+                        Err(e) => {
+                            log!("Error resolving typed destination '{}': {:?}", query, e);
+                            if let Some(disabled_signal) = config.manage_ui_state {
+                                disabled_signal.set(false);
+                            }
+                            return;
+                        }
                     }
                 } else {
-                    // No details or place mismatch, fetch new
-                    api_client.get_place_details_by_id(place_id).await
+                    log!("Search blocked: no selected place and no typed destination");
+                    if let Some(disabled_signal) = config.manage_ui_state {
+                        disabled_signal.set(false);
+                    }
+                    return;
                 }
+            }
+
+            let place_id = if let Some(place) = selected_place {
+                place.place_id
             } else {
+                if let Some(disabled_signal) = config.manage_ui_state {
+                    disabled_signal.set(false);
+                }
                 return;
             };
 
-            let place_details = if let Err(e) = place_details {
-                log!("Error fetching place details: {:?}", e);
-                // Handle error (e.g., show notification to user)
-                UISearchCtx::set_place_details(None);
-                return;
-            } else {
-                place_details.unwrap()
+            // Always fetch fresh details for the selected place ID.
+            // Cached place_details can belong to the previous selection because PlaceData
+            // doesn't include a place_id, which can cause stale lat/lng.
+            let place_details = match api_client.get_place_details_by_id(place_id).await {
+                Ok(details) => details,
+                Err(e) => {
+                    log!("Error fetching place details: {:?}", e);
+                    UISearchCtx::set_place_details(None);
+                    if let Some(disabled_signal) = config.manage_ui_state {
+                        disabled_signal.set(false);
+                    }
+                    return;
+                }
             };
 
             UISearchCtx::set_place_details(Some(place_details.clone()));
@@ -151,7 +178,6 @@ pub fn create_search_action(config: SearchActionConfig) -> Action<(), ()> {
                 AppRoutes::HotelList.to_string().to_string()
             };
 
-            log!("[hotel_search_resource] hotel_list_url: {}", hotel_list_url);
             log!("[hotel_search_resource] hotel_list_url: {}", hotel_list_url);
 
             // Navigate to hotel list page
