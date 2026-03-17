@@ -649,9 +649,9 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     let open_image_viewer = RwSignal::new(false);
 
     view! {
-        <section class="relative min-h-screen bg-gray-50 pt-16 md:pt-16">
-            <HotelListNavbar />
-            <div class="lg:hidden px-4 py-4 mb-4">
+        <section class="relative min-h-screen bg-gray-50 pt-0 lg:pt-16">
+            <HotelListNavbar mobile_sticky=true />
+            <div class="lg:hidden px-4 pt-3 pb-2 mb-1">
                 <InputGroupContainer
                     default_expanded=false
                     allow_outside_click_collapse=true
@@ -677,8 +677,14 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 //     </div>
                 // </div>
             } */>
-                <HotelDetailsHeader hotel_name_signal=hotel_name_signal() star_rating_signal=star_rating_signal() address_signal=address_signal() hotel_code=hotel_code_signal() />
-                <HotelImages open_image_viewer/>
+                <div class="flex flex-col">
+                    <div class="order-2 md:order-1">
+                        <HotelDetailsHeader hotel_name_signal=hotel_name_signal() star_rating_signal=star_rating_signal() address_signal=address_signal() hotel_code=hotel_code_signal() />
+                    </div>
+                    <div class="order-1 md:order-2">
+                        <HotelImages open_image_viewer/>
+                    </div>
+                </div>
                 <DetailsSubnav />
                 <OverviewSection
                     description_html=description_signal()
@@ -744,84 +750,130 @@ pub fn HotelDetailsHeader(
     #[prop(into)] hotel_code: String,
 ) -> impl IntoView {
     let wishlist_code = hotel_code.clone();
+    let mobile_wishlist_code = hotel_code.clone();
+    let mobile_wishlist_pressed_code = hotel_code.clone();
     let toggle_wishlist_action = add_to_wishlist_action(hotel_code.clone());
-    let is_wishlisted = move || AuthStateSignal::check_if_added_to_wishlist(&wishlist_code);
+    let is_authenticated =
+        Signal::derive(move || AuthStateSignal::auth_state().get().is_authenticated());
+    let is_wishlisted =
+        Signal::derive(move || AuthStateSignal::check_if_added_to_wishlist(&wishlist_code));
+    let is_wishlisted_mobile =
+        Signal::derive(move || AuthStateSignal::check_if_added_to_wishlist(&mobile_wishlist_code));
+    let is_wishlisted_mobile_pressed = Signal::derive(move || {
+        AuthStateSignal::check_if_added_to_wishlist(&mobile_wishlist_pressed_code)
+    });
     let heart_d = "M19.62 27.81C19.28 27.93 18.72 27.93 18.38 27.81C15.48 26.82 9 22.69 9 15.69C9 12.6 11.49 10.1 14.56 10.1C16.38 10.1 17.99 10.98 19 12.34C20.01 10.98 21.63 10.1 23.44 10.1C26.51 10.1 29 12.6 29 15.69C29 22.69 22.52 26.82 19.62 27.81Z";
     view! {
-        <div class="my-4 w-full max-w-7xl mx-auto px-4 pt-4 pb-2 lg:pt-2 lg:pb-0">
-            {/* on small: actions drop under title; on md+: they sit on the right */}
-            <div class="py-2 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div class="min-w-0">
+        <div class="w-full max-w-7xl mx-auto px-4 pt-3 pb-2 md:pt-2 md:pb-1 lg:pt-2 lg:pb-0">
+            <div class="py-1 md:py-2 flex flex-col md:flex-row md:items-start md:justify-between gap-3 md:gap-4">
+                <div class="flex items-start justify-between gap-3 md:block md:min-w-0">
+                    <div class="min-w-0 flex-1">
                     // {/* tiny blue stars + rating */}
                     // <div class="flex items-center gap-2 text-blue-600">
                     //     <StarRating rating=move || star_rating_signal />
                     //     // <span class="text-sm"> {format!("{}.0", star_rating_signal)} </span>
                     // </div>
-                    <h1 class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 break-words">
-                        {hotel_name_signal}
-                    </h1>
+                        <h1 class="mt-0.5 text-[24px] leading-8 md:text-4xl md:leading-tight font-semibold tracking-tight text-gray-900 break-words">
+                            {hotel_name_signal}
+                        </h1>
 
-                    {/* address row */}
-                    <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
-                        <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
-                        </svg>
-                        <span class="truncate">{address_signal}</span>
-                        <span class="text-gray-300">{"|"}</span>
-                        <a href="#map" class="text-blue-600 hover:underline">"Show in Map"</a>
+                        <div class="mt-2 flex flex-col items-start gap-1.5 md:mt-0 md:flex-row md:flex-wrap md:items-center md:gap-3">
+                            <div class="flex min-w-0 items-start gap-2.5 text-[14px] leading-6 text-gray-700 md:gap-2 md:text-sm md:leading-5">
+                                <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0 md:w-4 md:h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                                </svg>
+                                <span class="min-w-0">{address_signal}</span>
+                            </div>
+                            <a href="#map" class="text-[15px] leading-6 font-medium text-blue-600 hover:underline md:text-sm md:leading-5 md:font-normal">"Show in Map"</a>
+                        </div>
                     </div>
+
+                    <Show when=move || is_authenticated.get()>
+                        <button
+                            class="md:hidden inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 active:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                            aria-label="Add to Wishlist"
+                            aria-pressed=move || is_wishlisted_mobile_pressed.get()
+                            on:click=move |_| toggle_wishlist_action.dispatch(())
+                        >
+                            {move || {
+                                let is_wishlisted = is_wishlisted_mobile.get();
+                                view! {
+                                    <svg
+                                        class={
+                                            if is_wishlisted {
+                                                "h-5 w-5 text-red-500"
+                                            } else {
+                                                "h-5 w-5 text-blue-600"
+                                            }
+                                        }
+                                        viewBox="0 0 24 24"
+                                        fill=if is_wishlisted { "currentColor" } else { "none" }
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M21.435 6.582a5.94 5.94 0 0 0-8.39 0L12 7.626l-1.045-1.044a5.94 5.94 0 1 0-8.402 8.402l1.05 1.044L12 22.5l8.398-6.472 1.05-1.044a5.94 5.94 0 0 0-.013-8.402Z"/>
+                                    </svg>
+                                }
+                            }}
+                        </button>
+                    </Show>
                 </div>
 
                 {/* actions */}
-                <div class="flex items-center gap-3 md:self-start">
-                    <button
-                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm bg-white hover:bg-gray-50 group"
-                        on:click=move |_| toggle_wishlist_action.dispatch(())
-                    >
-                        {move || {
-                            let is_wishlisted = is_wishlisted();
-                            view! {
-                                <div class="flex items-center gap-2">
-                                    <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
-                                        <circle cx="19" cy="19" r="19" fill="white" />
+                <div class="hidden md:flex flex-wrap items-center gap-2 md:gap-3 md:self-start">
+                    <Show when=move || is_authenticated.get()>
+                        <button
+                            class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-[13px] font-medium bg-white hover:bg-gray-50 group md:px-4 md:text-sm"
+                            on:click=move |_| toggle_wishlist_action.dispatch(())
+                        >
+                            {move || {
+                                let is_wishlisted = is_wishlisted.get();
+                                view! {
+                                    <div class="flex items-center gap-2">
+                                        <svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="19" cy="19" r="19" fill="white" />
 
-                                        // FILL heart (underneath)
-                                        <path
-                                            d=heart_d
-                                            fill="currentColor"
-                                            stroke="none"
-                                            class={
-                                                if is_wishlisted {
-                                                    "text-red-500 group-hover:text-blue-600 transition-colors"
-                                                } else {
-                                                    "text-transparent group-hover:text-blue-600 transition-colors"
+                                            // FILL heart (underneath)
+                                            <path
+                                                d=heart_d
+                                                fill="currentColor"
+                                                stroke="none"
+                                                class={
+                                                    if is_wishlisted {
+                                                        "text-red-500 group-hover:text-blue-600 transition-colors"
+                                                    } else {
+                                                        "text-transparent group-hover:text-blue-600 transition-colors"
+                                                    }
                                                 }
-                                            }
-                                        />
+                                            />
 
-                                        // STROKE heart (outline, always gray)
-                                        <path
-                                            d=heart_d
-                                            fill="none"
-                                            stroke="#45556C"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            class={
-                                                if is_wishlisted {
-                                                    "stroke-red-500 group-hover:stroke-blue-600 transition-colors"
-                                                } else {
-                                                    "stroke-[#45556C] group-hover:stroke-blue-600 transition-colors"
+                                            // STROKE heart (outline, always gray)
+                                            <path
+                                                d=heart_d
+                                                fill="none"
+                                                stroke="#45556C"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                class={
+                                                    if is_wishlisted {
+                                                        "stroke-red-500 group-hover:stroke-blue-600 transition-colors"
+                                                    } else {
+                                                        "stroke-[#45556C] group-hover:stroke-blue-600 transition-colors"
+                                                    }
                                                 }
-                                            }
-                                        />
-                                    </svg>
-                                    <Show when=move || !is_wishlisted ><span class="font-semibold text-gray-700">"Add to Wishlist"</span></Show>
-                                </div>
-                            }
-                        }}
-                    </button>
-                    <a href="#rooms" class="rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 inline-flex items-center gap-2">
+                                            />
+                                        </svg>
+                                        <Show when=move || !is_wishlisted ><span class="font-semibold text-gray-700">"Add to Wishlist"</span></Show>
+                                    </div>
+                                }
+                            }}
+                        </button>
+                    </Show>
+                    <a href="#rooms" class="rounded-xl bg-blue-600 text-white px-4 py-2 text-[13px] font-semibold hover:bg-blue-700 inline-flex items-center gap-2 md:text-sm">
                         "Select A Room"
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M5 12h14M13 5l7 7-7 7"/>
@@ -883,10 +935,10 @@ pub fn HotelImages(open_image_viewer: RwSignal<bool>) -> impl IntoView {
             view! { <div class="text-gray-500 text-center py-8">"No images available"</div> }
         } else {
             view! {
-                <div class="py-2  w-full max-w-7xl mx-auto px-4">
+                <div class="pt-2 pb-0 md:py-2 w-full max-w-7xl mx-auto px-4">
                     {/* Mobile: one big image */}
                     <div class="md:hidden">
-                        <div class="relative rounded-2xl overflow-hidden aspect-[16/9] bg-gray-100">
+                        <div class="relative rounded-xl md:rounded-2xl overflow-hidden aspect-[16/9] bg-gray-100">
                             <img
                                 src=move || images_signal()[main_index.get()].clone()
                                 alt="Hotel"
@@ -985,18 +1037,18 @@ pub fn DetailsSubnav() -> impl IntoView {
     ];
     view! {
         <div class="w-full max-w-7xl mx-auto px-4 pt-2 md:pt-4">
-            <div class="flex items-center gap-8 text-gray-600 text-sm md:text-base overflow-x-auto">
+            <div class="flex items-center gap-6 text-gray-600 text-[13px] leading-5 md:text-base overflow-x-auto">
                 <For each=move || tabs.clone() key=|(id, _)| id.to_string() let:tab>
                     {let (id, label) = tab;
                     view!{
-                        <a href={format!("#{id}")} class="relative py-3 whitespace-nowrap hover:text-gray-900 group">
+                        <a href={format!("#{id}")} class="relative py-2.5 whitespace-nowrap hover:text-gray-900 group">
                             <span class="">{label}</span>
                             <span class="absolute left-0 -bottom-[1px] h-[3px] w-0 bg-blue-500 rounded-full group-hover:w-full transition-all"></span>
                         </a>
                     }}
                 </For>
             </div>
-            <div class="mt-3 h-px w-full bg-gray-200"></div>
+            <div class="mt-2 h-px w-full bg-gray-200"></div>
         </div>
     }
 }
@@ -1005,7 +1057,7 @@ pub fn DetailsSubnav() -> impl IntoView {
 pub fn SectionTitle(#[prop(into)] id: String, #[prop(into)] title: String) -> impl IntoView {
     view! {
         // <div id=id class="scroll-mt-24"/>
-        <h2 id=id  class="scroll-mt-24 pl-4 border-l-4 border-blue-500 text-2xl md:text-[28px] font-semibold text-gray-900">
+        <h2 id=id  class="scroll-mt-24 pl-3 md:pl-4 border-l-[3px] md:border-l-4 border-blue-500 text-[20px] leading-7 md:text-[28px] md:leading-9 font-semibold text-gray-900">
             {title}
         </h2>
     }
@@ -1057,7 +1109,7 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
     view! {
         <div id="map" class="scroll-mt-24 mt-4">
             <div class="flex items-center justify-between">
-                <span class="font-semibold text-gray-800">Map</span>
+                <span class="font-semibold text-sm md:text-base text-gray-800">Map</span>
                 <button
                     type="button"
                     class="text-sm text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
@@ -1070,16 +1122,16 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
                 </button>
             </div>
 
-            <div class="mt-2 rounded-xl overflow-hidden bg-gray-200">
+            <div class="mt-2 rounded-xl overflow-hidden bg-gray-200 h-[180px] sm:h-[220px] md:h-auto md:min-h-[260px]">
                 <Show
                     when=move || location_signal().is_some()
                     fallback=|| view! {
-                        <div class="w-full aspect-[21/9] bg-[url('/img/map-placeholder.webp')] bg-cover bg-center"></div>
+                        <div class="w-full h-full bg-[url('/img/map-placeholder.webp')] bg-cover bg-center"></div>
                     }
                 >
                     {move || map_url_signal().map(|url| view! {
                         <iframe
-                            class="w-full"
+                            class="w-full h-full"
                             frameborder="0"
                             scrolling="no"
                             marginheight="0"
@@ -1094,7 +1146,7 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
                 <svg class="w-[18px] h-[18px] text-blue-600 mt-[2px]" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
                 </svg>
-                <span class="text-sm md:text-base">{address.clone()}</span>
+                <span class="text-[13px] leading-5 md:text-base">{address.clone()}</span>
             </div>
         </div>
 
@@ -1175,8 +1227,8 @@ pub fn FacilityChips(amenities: Vec<Amenity>) -> impl IntoView {
     let all_amenities = store_value(amenities);
 
     view! {
-        <div class="flex items-center justify-between">
-            <span class="font-semibold text-gray-800">Most Popular facilities</span>
+        <div class="flex items-center justify-between gap-3">
+            <span class="font-semibold text-sm md:text-base text-gray-800">Most Popular facilities</span>
             <Show when=move || { total_count > 10 }>
                 <button
                     type="button"
@@ -1191,11 +1243,11 @@ pub fn FacilityChips(amenities: Vec<Amenity>) -> impl IntoView {
             </Show>
         </div>
 
-        <div class="mt-4 flex flex-wrap gap-x-6 gap-y-4">
+        <div class="mt-3 flex flex-wrap gap-x-4 gap-y-3 md:gap-x-6 md:gap-y-4">
             <For each=move || top.clone() key=|a| a.text.clone() let:item>
                 <div class="inline-flex items-center text-gray-800">
                     <div class="w-2 h-2 bg-blue-600 rounded-full mr-2"></div>
-                    <span class="text-sm md:text-base">{item.text}</span>
+                    <span class="text-[13px] leading-5 md:text-base">{item.text}</span>
                 </div>
             </For>
         </div>
@@ -1255,13 +1307,13 @@ pub fn OverviewSection(
     amenities: Vec<Amenity>,
 ) -> impl IntoView {
     view! {
-        <section class="w-full max-w-7xl mx-auto px-4 mt-6 md:mt-8">
+        <section class="w-full max-w-7xl mx-auto px-4 mt-4 md:mt-8">
             <SectionTitle id="overview" title="Overview"/>
-            <div class="mt-3 text-gray-700 leading-7" inner_html=description_html></div>
+            <div class="mt-2 text-[15px] leading-6 text-gray-700 md:text-base md:leading-7" inner_html=description_html></div>
 
             <MapBlock address=address />
 
-            <div class="mt-10">
+            <div class="mt-8 md:mt-10">
                 <SectionTitle id="facilities" title="Facility"/>
                 <div class="mt-4">
                     <FacilityChips amenities/>
@@ -1673,11 +1725,11 @@ pub fn PricingBreakdownV1() -> impl IntoView {
     };
 
     view! {
-        <div id="cart-section" class="scroll-mt-24 bg-gray-50 border border-gray-200 rounded-2xl shadow-sm p-5 space-y-5">
+        <div id="cart-section" class="scroll-mt-24 bg-gray-50 border border-gray-200 rounded-xl md:rounded-2xl shadow-sm p-4 md:p-5 space-y-4 md:space-y-5">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <div class="text-lg font-semibold text-gray-900">"Cart"</div>
-                    <p class="text-sm text-gray-500">
+                    <div class="text-base md:text-lg font-semibold text-gray-900">"Cart"</div>
+                    <p class="text-[13px] leading-5 md:text-sm text-gray-500">
                         {move || {
                             if has_rooms_selected() {
                                 format!(
@@ -1739,10 +1791,10 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                     </div>
 
                     <div class="pt-2">
-                        <div class="text-3xl font-semibold text-gray-900">
+                        <div class="text-[28px] leading-8 md:text-3xl md:leading-9 font-semibold text-gray-900">
                             {move || format_currency_with_code(total_for_stay(), &currency_code.get())}
                         </div>
-                        <p class="text-sm text-gray-600 mt-1">
+                        <p class="text-[13px] leading-5 md:text-sm text-gray-600 mt-1">
                             {move || {
                                 let nights = nights();
                                 let rooms = total_selected_rooms();
@@ -1766,7 +1818,7 @@ pub fn PricingBreakdownV1() -> impl IntoView {
                 is_loading=booking_loading.into()
                 loading_text="Processing..."
                 on_click=on_book_now
-                class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600 disabled:hover:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
+                class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600 disabled:hover:bg-gray-300 disabled:cursor-not-allowed text-white text-sm md:text-base font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
                 disabled=button_disabled
             >
                 "Continue Booking"
@@ -1949,10 +2001,10 @@ fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
     // Note: Removed strikethrough pricing display
 
     view! {
-        <div class="flex flex-col md:grid md:grid-cols-[1.5fr_1fr_auto] md:items-stretch gap-4 md:gap-0">
+        <div class="flex flex-col md:grid md:grid-cols-[1.5fr_1fr_auto] md:items-stretch gap-3 md:gap-0">
             <div class="space-y-2 md:pr-6">
-                <p class="text-base font-semibold text-gray-900">{meal_plan}</p>
-                <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                <p class="text-[15px] leading-6 md:text-base font-semibold text-gray-900">{meal_plan}</p>
+                <ul class="list-disc list-inside text-[13px] leading-5 md:text-sm text-gray-700 space-y-1">
                     <For
                         each=move || rate_details.clone()
                         key=|item| item.clone()
@@ -1963,8 +2015,8 @@ fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
                 </ul>
             </div>
             <div class="md:border-l md:border-gray-200 md:px-6 text-left md:text-center space-y-1 flex flex-col justify-center md:h-full">
-                <p class="text-2xl font-semibold text-gray-900">{price_text}</p>
-                <p class="text-[11px] text-gray-500">
+                <p class="text-[22px] leading-7 md:text-2xl md:leading-8 font-semibold text-gray-900">{price_text}</p>
+                <p class="text-[10px] leading-4 md:text-[11px] text-gray-500">
                     // {move || {
                     //     let nights = nights();
                     //     format!(
@@ -1983,15 +2035,15 @@ fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
                         view! {
                             <div class="inline-flex items-center overflow-hidden rounded-lg border border-blue-100 bg-blue-50 text-blue-700">
                                 <button
-                                    class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="px-3 py-2 text-base md:text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     disabled=move || selection_count.get() == 0
                                     on:click=move|_|decrement.dispatch(())
                                 >
                                     "−"
                                 </button>
-                                <span class="px-3 text-sm font-semibold">{move || selection_count.get()}</span>
+                                <span class="px-3 text-[13px] md:text-sm font-semibold">{move || selection_count.get()}</span>
                                 <button
-                                    class="px-3 py-2 text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="px-3 py-2 text-base md:text-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     disabled=move || HotelDetailsUIState::is_at_room_selection_limit()
                                     on:click=move|_|increment.dispatch(())
                                 >
@@ -2002,7 +2054,7 @@ fn RoomRateRow(room_id: String, rate: DomainRoomVariant) -> impl IntoView {
 
                 >
                     <button
-                        class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors duration-150 w-full md:w-auto"
+                        class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 md:px-5 py-2.5 text-[13px] md:text-sm font-semibold text-white hover:bg-blue-700 transition-colors duration-150 w-full md:w-auto"
                         on:click=move|_| {
                             select_room.dispatch(());
                             set_timeout(move || {
@@ -2233,10 +2285,10 @@ fn RoomTypeCard(
                 </div>
             </div>
         </Show>
-        <div class="bg-[#f9f9f9] border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="px-5 pt-5 pb-0">
+        <div class="bg-[#f9f9f9] border border-gray-200 rounded-xl md:rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-4 md:px-5 pt-4 md:pt-5 pb-0">
                 <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-xl font-semibold text-gray-900">{room_display_name}</h3>
+                    <h3 class="text-lg leading-7 md:text-xl md:leading-8 font-semibold text-gray-900">{room_display_name}</h3>
                     <Show when=move || is_recommended>
                         <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1">
                             <Icon class="text-sm" icon=icondata::FaThumbsUpSolid />
@@ -2245,12 +2297,12 @@ fn RoomTypeCard(
                     </Show>
                 </div>
 
-                <div class="mt-5 flex flex-col lg:grid lg:grid-cols-[320px_1fr] items-start gap-5">
+                <div class="mt-4 md:mt-5 flex flex-col lg:grid lg:grid-cols-[320px_1fr] items-start gap-4 md:gap-5">
                     <button
                         type="button"
                         class="w-full text-left"
                         on:click=move |_| open_image_viewer.set(true)>
-                        <div class="w-full h-48 md:h-56 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
+                        <div class="w-full h-40 sm:h-44 md:h-56 rounded-xl overflow-hidden bg-gray-100 shadow-sm">
                             <img
                                 src=hero_image.clone()
                                 // alt={format!("{} photo", room_display_name)}
@@ -2259,10 +2311,10 @@ fn RoomTypeCard(
                         </div>
                     </button>
 
-                    <div class="w-full flex flex-col gap-5">
+                    <div class="w-full flex flex-col gap-4 md:gap-5">
                         <div class="space-y-3">
-                            <p class="text-sm font-semibold text-gray-800">"Room Details"</p>
-                            <div class="flex flex-wrap items-center gap-4">
+                            <p class="text-[13px] leading-5 md:text-sm font-semibold text-gray-800">"Room Details"</p>
+                            <div class="flex flex-wrap items-center gap-3 md:gap-4">
                                 <For
                                     each=move || quick_facts.clone()
                                     key=|(idx, _, _)| *idx
@@ -2270,8 +2322,8 @@ fn RoomTypeCard(
                                 >
                                     {let (_, icon, label) = fact;
                                     view! {
-                                        <span class="inline-flex items-center gap-2 text-sm text-gray-700">
-                                            <Icon class="text-blue-500 text-base" icon=icon />
+                                        <span class="inline-flex items-center gap-2 text-[13px] leading-5 md:text-sm text-gray-700">
+                                            <Icon class="text-blue-500 text-[15px] md:text-base" icon=icon />
                                             {label}
                                         </span>
                                     }}
@@ -2279,8 +2331,8 @@ fn RoomTypeCard(
                             </div>
                         </div>
                         <div class="space-y-2">
-                            <p class="text-sm font-semibold text-gray-800">"Amenities"</p>
-                            <div class="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                            <p class="text-[13px] leading-5 md:text-sm font-semibold text-gray-800">"Amenities"</p>
+                            <div class="flex flex-wrap items-center gap-2.5 md:gap-3 text-[13px] leading-5 md:text-sm text-gray-700">
                                 <For
                                     each=move || amenities_for_render.clone()
                                     key=|amenity| amenity.text.clone()
@@ -2293,7 +2345,7 @@ fn RoomTypeCard(
                                 </For>
                                 <button
                                     type="button"
-                                    class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer"
+                                    class="text-[13px] md:text-sm font-semibold text-blue-600 hover:underline cursor-pointer"
                                     on:click=move |_| show_room_details_modal.set(true)
                                 >
                                     "See All Details"
@@ -2304,13 +2356,13 @@ fn RoomTypeCard(
                 </div>
             </div>
 
-            <div class="mt-5 border-t border-gray-200">
+            <div class="mt-4 md:mt-5 border-t border-gray-200">
                 <For
                     each=move || rates_for_render.clone()
                     key=|rate| rate.rate_key.clone()
                     let:rate
                 >
-                    <div class="px-5 py-4 border-b border-gray-200 last:border-b-0 bg-white">
+                    <div class="px-4 md:px-5 py-4 border-b border-gray-200 last:border-b-0 bg-white">
                         <RoomRateRow
                             room_id=rate.rate_key.clone()
                             rate=rate
@@ -2338,14 +2390,14 @@ pub fn SelectRoomSection() -> impl IntoView {
     };
 
     view! {
-        <section class="w-full max-w-7xl mx-auto px-4 mt-10">
+        <section class="w-full max-w-7xl mx-auto px-4 mt-8 md:mt-10">
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                 <SectionTitle id="rooms" title="Select A Room" />
-                <p class="text-sm text-gray-500">
+                <p class="text-[13px] leading-5 md:text-sm text-gray-500">
                     {move || format!("{} Room types | {} Offers", total_room_types(), total_offers())}
                 </p>
             </div>
-            <div class="mt-6 grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6 items-start">
+            <div class="mt-5 md:mt-6 grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-5 md:gap-6 items-start">
                 <div class="space-y-6">
                     <div>
                         <Show
@@ -2483,23 +2535,23 @@ pub fn GuestReviewsSection() -> impl IntoView {
     };
 
     view! {
-        <section class="w-full max-w-7xl mx-auto px-4 mt-12">
+        <section class="w-full max-w-7xl mx-auto px-4 mt-10 md:mt-12">
             <SectionTitle id="reviews" title="Guest Reviews" />
-            <div class="mt-6 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-                    <div class="flex items-start gap-4 md:gap-6">
-                        <div class="flex items-center justify-center bg-yellow-400 text-white font-semibold text-xl w-12 h-12 rounded-lg">
+            <div class="mt-5 md:mt-6 grid gap-5 md:gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 p-5 md:p-6 space-y-5 md:space-y-6">
+                    <div class="flex items-start gap-3 md:gap-6">
+                        <div class="flex items-center justify-center bg-yellow-400 text-white font-semibold text-lg md:text-xl w-11 h-11 md:w-12 md:h-12 rounded-lg">
                             {format!("{summary_score:.1}")}
                         </div>
                         <div>
-                            <p class="text-lg font-semibold text-gray-900">{summary_label}</p>
-                            <p class="text-sm text-gray-500">"Based on " {total_reviews} " reviews"</p>
+                            <p class="text-base md:text-lg font-semibold text-gray-900">{summary_label}</p>
+                            <p class="text-[13px] leading-5 md:text-sm text-gray-500">"Based on " {total_reviews} " reviews"</p>
                         </div>
                     </div>
 
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
-                            <p class="text-sm font-semibold text-gray-900">"Categories"</p>
+                            <p class="text-[13px] leading-5 md:text-sm font-semibold text-gray-900">"Categories"</p>
                             <Show when=move || { total_categories_count > 6 }>
                                 <button
                                     class="text-sm font-semibold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
@@ -2523,7 +2575,7 @@ pub fn GuestReviewsSection() -> impl IntoView {
                                             let percent = (score / 10.0 * 100.0).clamp(0.0, 100.0);
                                             view! {
                                                 <div class="space-y-1">
-                                                    <div class="flex items-center justify-between text-sm text-gray-700">
+                                                    <div class="flex items-center justify-between text-[13px] leading-5 md:text-sm text-gray-700 gap-3">
                                                         <span>{label}</span>
                                                         <span>{format!("{score:.1}")}</span>
                                                     </div>
@@ -2674,18 +2726,18 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
         .and_then(|d| d.checkin_checkout_times.clone());
 
     view! {
-        <section class="w-full max-w-7xl mx-auto px-4 mt-12">
+        <section class="w-full max-w-7xl mx-auto px-4 mt-10 md:mt-12">
             <SectionTitle id="rules" title="Policy & Rules" />
-            <div class="mt-4 grid gap-6 md:grid-cols-2">
-                <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-                    <p class="text-gray-700 leading-7">
+            <div class="mt-4 grid gap-5 md:gap-6 md:grid-cols-2">
+                <div class="bg-white rounded-xl md:rounded-2xl border border-gray-100 p-5 md:p-6 space-y-4">
+                    <p class="text-[15px] leading-6 md:text-base md:leading-7 text-gray-700">
                         "Please review the key policies for this property before confirming your stay. "
                         "Property address: " {address.clone()} "."
                     </p>
                     <Show
                         when=move || !is_policies_empty()
                         fallback=|| view! {
-                            <ul class="space-y-3 text-sm text-gray-700">
+                            <ul class="space-y-3 text-[13px] leading-5 md:text-sm text-gray-700">
                                 <li>
                                     <span class="font-semibold text-gray-900">"Children & extra beds: "</span>
                                     "Children are welcome. Extra beds depend on the room you choose; please check the individual room capacity."
@@ -2724,11 +2776,11 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
                                 policy_groups.into_iter().map(|(name, descriptions)| {
                                     view! {
                                         <div>
-                                            <p class="font-semibold text-gray-900 text-sm">{name}</p>
+                                            <p class="font-semibold text-gray-900 text-[13px] leading-5 md:text-sm">{name}</p>
                                             <ul class="space-y-1">
                                                 {descriptions.into_iter().map(|desc| {
                                                     view! {
-                                                        <li class="text-sm text-gray-700 whitespace-pre-line">
+                                                        <li class="text-[13px] leading-5 md:text-sm text-gray-700 whitespace-pre-line">
                                                             {desc}
                                                         </li>
                                                     }
@@ -2741,12 +2793,12 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
                         </div>
                     </Show>
                 </div>
-                <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+                <div class="bg-white rounded-xl md:rounded-2xl border border-gray-100 p-5 md:p-6 space-y-4">
                     <div>
-                        <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                        <p class="text-[13px] leading-5 md:text-sm font-semibold text-gray-900 uppercase tracking-wide">
                             "Check-in / Check-out"
                         </p>
-                        <p class="text-sm text-gray-700 mt-1">
+                        <p class="text-[13px] leading-5 md:text-sm text-gray-700 mt-1">
                             {move || {
                                 if let Some(times) = check_times.clone() {
                                     let checkin = if times.checkin.is_empty() { "03:00 PM".to_string() } else { times.checkin };
@@ -2759,18 +2811,18 @@ pub fn PolicyRulesSection(#[prop(into)] address: String) -> impl IntoView {
                         </p>
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                        <p class="text-[13px] leading-5 md:text-sm font-semibold text-gray-900 uppercase tracking-wide">
                             "Important Info"
                         </p>
-                        <p class="text-sm text-gray-700 mt-1">
+                        <p class="text-[13px] leading-5 md:text-sm text-gray-700 mt-1">
                             "Policies vary by room type and rate plan. Please review specific rate details before booking."
                         </p>
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                        <p class="text-[13px] leading-5 md:text-sm font-semibold text-gray-900 uppercase tracking-wide">
                             "Cancellation / Prepayment"
                         </p>
-                        <p class="text-sm text-gray-700 mt-1">
+                        <p class="text-[13px] leading-5 md:text-sm text-gray-700 mt-1">
                             "Cancellation and prepayment policies vary according to the room rate selected. Review the plan before confirming."
                         </p>
                     </div>
