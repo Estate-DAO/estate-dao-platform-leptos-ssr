@@ -1122,7 +1122,7 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
                 </button>
             </div>
 
-            <div class="mt-2 rounded-xl overflow-hidden bg-gray-200 h-[180px] sm:h-[220px] md:h-auto md:min-h-[260px]">
+            <div class="mt-2 h-[180px] overflow-hidden rounded-xl bg-gray-200 sm:h-[220px] md:h-[320px] lg:h-[360px]">
                 <Show
                     when=move || location_signal().is_some()
                     fallback=|| view! {
@@ -1132,6 +1132,7 @@ pub fn MapBlock(#[prop(into)] address: String) -> impl IntoView {
                     {move || map_url_signal().map(|url| view! {
                         <iframe
                             class="w-full h-full"
+                            title="Hotel map"
                             frameborder="0"
                             scrolling="no"
                             marginheight="0"
