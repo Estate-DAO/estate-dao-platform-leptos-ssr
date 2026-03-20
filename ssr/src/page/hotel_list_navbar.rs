@@ -6,7 +6,13 @@ use crate::{
 };
 
 #[component]
-pub fn HotelListNavbar() -> impl IntoView {
+pub fn HotelListNavbar(#[prop(optional)] mobile_sticky: bool) -> impl IntoView {
+    let mobile_nav_class = if mobile_sticky {
+        "lg:hidden sticky top-0 z-[1001] bg-white/95 supports-[backdrop-filter]:bg-white/90 backdrop-blur border-b border-gray-100 h-14 flex items-center justify-between px-4"
+    } else {
+        "lg:hidden fixed top-0 left-0 right-0 z-[1001] bg-white shadow-sm h-14 flex items-center justify-between px-4"
+    };
+
     view! {
         // Fixed top bar only
         <nav class="hidden lg:block p-2 fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
@@ -38,9 +44,9 @@ pub fn HotelListNavbar() -> impl IntoView {
         </nav>
 
         // Mobile Header (lg:hidden)
-        <nav class="lg:hidden fixed top-0 left-0 right-0 z-[1001] bg-white shadow-sm h-14 flex items-center justify-between px-4">
+        <nav class=mobile_nav_class>
             <a href="/" class="flex items-center">
-                <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-9 w-auto" />
+                <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-8 w-auto" />
             </a>
 
             <div class="flex items-center gap-2">

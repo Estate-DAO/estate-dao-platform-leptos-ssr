@@ -1027,7 +1027,7 @@ pub fn HotelListPage() -> impl IntoView {
                     if show_map.get() {
                         "w-[98%] max-w-[1920px] flex h-[calc(100vh-2rem)]"
                     } else {
-                        "w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]"
+                        "w-[85%] max-w-7xl flex min-h-[calc(100vh-7rem)]"
                     }
                 }>
                     // Fixed aside on left (desktop only)
