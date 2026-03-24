@@ -1,17 +1,15 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::use_navigate;
 use leptos_use::{use_interval_fn, utils::Pausable};
 
-use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
-use crate::api::client_side_api::{ClientSideApiClient, SendOtpResponse, VerifyOtpResponse};
+use crate::api::auth::auth_state::AuthStateSignal;
+use crate::api::client_side_api::ClientSideApiClient;
 use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
 use crate::api::payments::{create_domain_request, PaymentProvider};
-use crate::app::AppRoutes;
 use crate::application_services::BookingService;
 use crate::component::yral_auth_provider::YralAuthProvider;
 use crate::component::ChildrenAgesSignalExt;
-use crate::component::{Divider, Navbar, SpinnerGray};
+use crate::component::{CurrencySelectorModal, Divider, Navbar};
 use crate::domain::{
     DomainAdultDetail, DomainBlockRoomRequest, DomainChildDetail, DomainDestination,
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomData,
@@ -56,6 +54,14 @@ fn format_tax_label(label: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+
+const MSITE_CARD_CLASS: &str = "rounded-xl border border-gray-200 bg-white shadow-sm";
+const MSITE_SECTION_CLASS: &str = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6";
+const MSITE_SUBSECTION_CLASS: &str = "rounded-lg border border-gray-200 bg-slate-50 p-3.5";
+const MSITE_INPUT_CLASS: &str =
+    "w-full rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors";
+const MSITE_SELECT_CLASS: &str =
+    "w-full rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors";
 
 /// Round a value to the nearest cent using proper rounding rules.
 /// This ensures displayed totals accurately match the sum of line items.
@@ -103,8 +109,6 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
-    let auth_state_signal: AuthStateSignal = expect_context();
-    let navigate = use_navigate();
 
     // Initialize form data on mount - only once
     let (initialized, set_initialized) = create_signal(false);
@@ -441,38 +445,75 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let formatted_nights = move || ui_search_ctx.date_range.get().formatted_nights();
 
     view! {
-        <section class="relative min-h-screen bg-[#f7f7f7]">
-            <Navbar />
+        <section class="relative min-h-screen bg-slate-50">
+            <div class="hidden lg:block">
+                <Navbar />
+            </div>
 
-            <div class="max-w-7xl mx-auto px-4 sm:px-8">
-                <div class="flex items-center py-3 md:py-5">
-                    <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
-                        <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
-                    </span>
-                    <h1 class="ml-2 sm:ml-4 text-xl sm:text-2xl font-semibold text-gray-800">"You're just one step away!"</h1>
+            <nav class="lg:hidden sticky top-0 z-[1001] bg-white/95 supports-[backdrop-filter]:bg-white/90 backdrop-blur border-b border-gray-100 h-14 flex items-center justify-between px-4">
+                <a href="/" class="flex items-center">
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-8 w-auto" />
+                </a>
+
+                <div class="flex items-center gap-2">
+                    <CurrencySelectorModal />
+                    <YralAuthProvider />
+                </div>
+            </nav>
+
+            <div class="mx-auto max-w-7xl px-4 pb-10 pt-3 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6">
+                <div class=format!("{MSITE_CARD_CLASS} px-4 py-3.5 sm:px-5 sm:py-4")>
+                    <div class="flex items-start gap-3 sm:items-center">
+                        <button
+                            type="button"
+                            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
+                            on:click=go_back_to_details
+                        >
+                            <Icon icon=icondata::AiArrowLeftOutlined class="text-base" />
+                        </button>
+                        <div class="min-w-0 space-y-0.5">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                "Booking Details"
+                            </p>
+                            <h1 class="text-lg font-semibold text-slate-900 sm:text-xl">
+                                "You're just one step away!"
+                            </h1>
+                            <p class="text-sm text-slate-600">
+                                "Review your stay and complete the guest information."
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-between pb-14 gap-6 sm:gap-8">
-                    <div class="w-full lg:w-3/5 flex flex-col gap-5">
+                <div class="relative mt-4 flex min-h-[calc(100vh-5rem)] flex-col items-start justify-between gap-4 pb-14 lg:flex-row lg:gap-8">
+                    <div class="flex w-full flex-col gap-4 lg:w-3/5 lg:gap-5">
                         // Hotel information card
-                        <div class="p-6 sm:p-7 bg-white rounded-xl border border-gray-200 w-full space-y-5">
-                            <div class="flex items-start gap-4 sm:gap-5">
+                        <div class=format!("{MSITE_SECTION_CLASS} w-full space-y-4")>
+                            <div class="flex items-start gap-3.5 sm:gap-4">
                                 <img
                                     src=hotel_image
                                     alt=hotel_name
-                                    class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover flex-shrink-0 border border-gray-200"
+                                    class="h-20 w-20 rounded-lg border border-gray-200 object-cover flex-shrink-0 sm:h-24 sm:w-24"
                                 />
-                                <div class="flex-1 min-w-0 space-y-2">
-                                    <div class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight truncate">
+                                <div class="min-w-0 flex-1 space-y-2.5">
+                                    <div
+                                        class="text-base font-semibold leading-tight text-slate-900 sm:text-lg"
+                                        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                    >
                                         {hotel_name}
                                     </div>
                                     {move || {
                                         let address = hotel_address();
                                         (!address.trim().is_empty()).then(|| {
                                             view! {
-                                                <div class="flex items-center gap-2 text-sm text-gray-600 leading-tight">
-                                                    <Icon icon=icondata::AiEnvironmentOutlined class="text-blue-500 text-base" />
-                                                    <span class="truncate">{address}</span>
+                                                <div class="flex items-start gap-2 text-sm leading-snug text-slate-600">
+                                                    <Icon icon=icondata::AiEnvironmentOutlined class="mt-0.5 text-base text-blue-500" />
+                                                    <span
+                                                        class="min-w-0"
+                                                        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                                    >
+                                                        {address}
+                                                    </span>
                                                 </div>
                                             }
                                         })
@@ -490,8 +531,8 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                                                 (None, None) => "".to_string(),
                                             };
                                             view! {
-                                                <div class="flex items-center gap-3 text-sm text-gray-700 leading-tight">
-                                                    <span class="inline-flex items-center rounded-md bg-amber-200 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+                                                <div class="flex flex-wrap items-center gap-2 text-sm leading-tight text-slate-700">
+                                                    <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
                                                         {badge}
                                                     </span>
                                                     <span class="text-gray-700">{review_text}</span>
@@ -502,34 +543,36 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                                 </div>
                             </div>
 
-                            <Divider class="border-gray-200".into() />
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div class=MSITE_SUBSECTION_CLASS>
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                        "Check-in & Check-out"
+                                    </p>
+                                    <p class="mt-1.5 text-sm font-semibold leading-snug text-slate-900 sm:text-base">
+                                        {move || format!("{} - {} ( {} )", checkin_date(), checkout_date(), formatted_nights())}
+                                    </p>
+                                </div>
 
-                            <div class="space-y-1.5">
-                                <p class="text-sm text-gray-500">"Check-in & Check-out"</p>
-                                <p class="text-lg font-semibold text-gray-900 leading-tight">
-                                    {move || format!("{} - {} ( {} )", checkin_date(), checkout_date(), formatted_nights())}
-                                </p>
-                            </div>
-
-                            <Divider class="border-gray-200".into() />
-
-                            <div class="space-y-1.5">
-                                <p class="text-sm text-gray-500">"Guests & Room"</p>
-                                <p class="text-lg font-semibold text-gray-900 leading-tight">
-                                    {move || {
-                                        let rooms = num_rooms();
-                                        let adults = adult_count();
-                                        let children = child_count();
-                                        let mut parts = vec![
-                                            format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
-                                            format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
-                                        ];
-                                        if children > 0 {
-                                            parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
-                                        }
-                                        parts.join(" • ")
-                                    }}
-                                </p>
+                                <div class=MSITE_SUBSECTION_CLASS>
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                        "Guests & Rooms"
+                                    </p>
+                                    <p class="mt-1.5 text-sm font-semibold leading-snug text-slate-900 sm:text-base">
+                                        {move || {
+                                            let rooms = num_rooms();
+                                            let adults = adult_count();
+                                            let children = child_count();
+                                            let mut parts = vec![
+                                                format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
+                                                format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
+                                            ];
+                                            if children > 0 {
+                                                parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
+                                            }
+                                            parts.join(" • ")
+                                        }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -544,7 +587,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     </div>
 
                     // Right side pricing
-                    <div class="w-full lg:w-2/5 flex flex-col gap-4 lg:sticky lg:top-24">
+                    <div class="hidden w-full lg:flex lg:w-2/5 lg:flex-col lg:gap-4 lg:sticky lg:top-24">
                         <EnhancedPricingDisplay mobile=false booking_id_signal=booking_id_signal />
                     </div>
                 </div>
@@ -587,9 +630,9 @@ pub fn EnhancedPricingDisplay(
     };
 
     let container_class = if mobile {
-        "lg:hidden w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-md flex flex-col items-stretch space-y-4"
+        "lg:hidden w-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex flex-col items-stretch space-y-4 sm:p-5"
     } else {
-        "hidden lg:flex w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-md flex-col items-stretch space-y-4"
+        "hidden lg:flex w-full rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex-col items-stretch space-y-4 sm:p-6"
     };
 
     let included_taxes_summary =
@@ -636,7 +679,7 @@ pub fn EnhancedPricingDisplay(
 
     view! {
         <div class=container_class>
-            <div class="text-xs text-gray-500">"Price Breakup"</div>
+            <div class="text-sm font-semibold text-slate-700">"Price Breakup"</div>
 
             // <!-- Per-room breakdown -->
             <div class="price-breakdown space-y-3">
@@ -727,7 +770,7 @@ pub fn EnhancedPricingDisplay(
                 </Show>
             </div>
 
-            <Divider class="my-2".into() />
+            <Divider class="my-1.5".into() />
                 // <!-- Platform fees -->
             <div class="space-y-1">
                 <div class="flex justify-between items-center text-sm">
@@ -737,7 +780,7 @@ pub fn EnhancedPricingDisplay(
                     </span>
                 </div>
             </div>
-            <Divider class="my-2".into() />
+            <Divider class="my-1.5".into() />
                 // <!-- Markup fees -->
             <div class="space-y-1">
                 <div class="flex justify-between items-center text-sm">
@@ -748,12 +791,12 @@ pub fn EnhancedPricingDisplay(
                 </div>
             </div>
 
-            <Divider class="my-2".into() />
+            <Divider class="my-1.5".into() />
 
             // <!-- Total -->
             <div class="flex justify-between items-center font-bold text-lg">
                 <span>Total</span>
-                <span class="text-2xl">
+                <span class="text-xl sm:text-2xl">
                     {move || format_currency_with_code(rounded_total_with_included(), &included_tax_currency())}
                 </span>
             </div>
@@ -928,7 +971,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
 #[component]
 pub fn LoginPrompt() -> impl IntoView {
     view! {
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-6 text-center">
+        <div class=format!("{MSITE_SECTION_CLASS} text-center")>
             <div class="mb-4">
                 <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-4xl mx-auto mb-3" />
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">
@@ -956,13 +999,13 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let children_ages = ui_search_ctx.guests.children_ages.clone();
 
     view! {
-        <div class="guest-form mt-4 space-y-5 sm:space-y-6">
+        <div class="guest-form space-y-4 sm:space-y-5">
             {move || {
                 let rooms = ui_search_ctx.guests.rooms.get();
                 let adults = BlockRoomUIState::get_adults().len() as u32;
 
                 (rooms > adults).then_some(view! {
-                    <div class="rounded-md bg-amber-50 text-amber-800 text-sm px-3 py-2">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                         {format!(
                             "{} room(s) selected. Please add a primary adult for each room ({} required).",
                             rooms, rooms
@@ -1080,30 +1123,28 @@ pub fn AdultFormSection(
     };
 
     view! {
-        <div class="person-details bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-7 space-y-5">
+        <div class=format!("person-details {} space-y-4", MSITE_SECTION_CLASS)>
             <div class="space-y-1">
-                <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {if index == 0 { "Primary Guest" } else { "Guest Details" }}
+                </p>
+                <h3 class="text-base font-semibold text-gray-900 sm:text-lg">
                     {move || {
-                        let descriptor = if index == 0 {
-                            "Primary Guest Detail"
-                        } else {
-                            "Guest Details"
-                        };
-                        format!("{}, {}", room_label.get(), descriptor)
+                        room_label.get()
                     }}
                 </h3>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "First Name"
                         <span class="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         placeholder="Enter Name"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         required=true
                         on:input=move |ev| {
                             let value = event_target_value(&ev);
@@ -1119,14 +1160,14 @@ pub fn AdultFormSection(
                     />
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "Last Name"
                         <span class="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         placeholder="Enter Surname"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         required=true
                         on:input=move |ev| {
                             update_adult("last_name", event_target_value(&ev));
@@ -1139,9 +1180,9 @@ pub fn AdultFormSection(
             {move || {
                 if index == 0 {
                     view! {
-                        <div class="grid grid-cols-1 gap-4 sm:gap-5">
+                        <div class="grid grid-cols-1 gap-4 sm:gap-4">
                             <div class="space-y-2">
-                                <label class="text-sm font-medium text-gray-800">
+                                <label class="text-sm font-medium text-slate-700">
                                     "Email ID"
                                     <span class="text-red-500">*</span>
                                 </label>
@@ -1150,11 +1191,11 @@ pub fn AdultFormSection(
                                         type="email"
                                         placeholder="Enter Email"
                                         class=move || {
-                                            let base = "w-full rounded-xl border border-gray-200 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 pr-11";
+                                            let base = "w-full rounded-lg border border-gray-200 p-3 text-sm text-gray-900 placeholder:text-gray-400 pr-11";
                                             if user_email.get().is_some() {
-                                                format!("{base} bg-gray-100 cursor-not-allowed")
+                                                format!("{base} bg-slate-100 cursor-not-allowed")
                                             } else {
-                                                format!("{base} bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors")
+                                                format!("{base} bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors")
                                             }
                                         }
                                         required=true
@@ -1182,13 +1223,13 @@ pub fn AdultFormSection(
                             </div>
 
                             <div class="space-y-2">
-                                <label class="text-sm font-medium text-gray-800">
+                                <label class="text-sm font-medium text-slate-700">
                                     "Phone Number"
                                     <span class="text-red-500">*</span>
                                 </label>
                                 <div class="flex flex-col sm:flex-row gap-3">
                                     <select
-                                        class="sm:w-28 w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                        class=format!("w-full sm:w-28 {}", MSITE_SELECT_CLASS)
                                         value=move || country_code.get()
                                         on:input=move |ev| {
                                             let value = event_target_value(&ev);
@@ -1205,7 +1246,7 @@ pub fn AdultFormSection(
                                     <input
                                         type="tel"
                                         placeholder="Enter Number"
-                                        class="flex-1 rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                        class=format!("flex-1 {}", MSITE_INPUT_CLASS)
                                         required=true
                                         on:input=move |ev| {
                                             let value = event_target_value(&ev);
@@ -1246,22 +1287,25 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
     let age_value = ui_search_ctx.guests.children_ages.get_value_at(index);
 
     view! {
-        <div class="person-details bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-7 space-y-5">
+        <div class=format!("person-details {} space-y-4", MSITE_SECTION_CLASS)>
             <div class="space-y-1">
-                <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    "Child Details"
+                </p>
+                <h3 class="text-base font-semibold text-gray-900 sm:text-lg">
                     {format!("Child {}", index + 1)}
                 </h3>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4">
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "First Name"
                         <span class="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         placeholder="Enter Name"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         required=true
                         on:input=move |ev| {
                             update_child("first_name", event_target_value(&ev));
@@ -1269,23 +1313,23 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
                     />
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">"Last Name"</label>
+                    <label class="text-sm font-medium text-slate-700">"Last Name"</label>
                     <input
                         type="text"
                         placeholder="Enter Surname"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         on:input=move |ev| {
                             update_child("last_name", event_target_value(&ev));
                         }
                     />
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "Age"
                         <span class="text-red-500">*</span>
                     </label>
                     <select
-                        class="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_SELECT_CLASS
                         required=true
                         on:input=move |ev| {
                             update_child("age", event_target_value(&ev));
@@ -1314,7 +1358,7 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
 #[component]
 pub fn TermsCheckbox() -> impl IntoView {
     view! {
-        <div class="flex items-start gap-2 text-sm text-gray-700">
+        <div class="flex items-start gap-3 rounded-lg border border-gray-200 bg-slate-50 p-3 text-sm text-gray-700">
             <input
                 type="checkbox"
                 id="agree"
@@ -1344,20 +1388,20 @@ pub fn PromoCodeSection() -> impl IntoView {
 
     let apply_button_class = move || {
         if promo_code.get().trim().is_empty() {
-            "w-full sm:w-28 rounded-xl bg-blue-200 text-white font-semibold px-4 py-3 text-sm cursor-not-allowed"
+            "w-full sm:w-28 rounded-lg bg-blue-200 text-white font-semibold px-4 py-3 text-sm cursor-not-allowed"
         } else {
-            "w-full sm:w-28 rounded-xl bg-blue-400 hover:bg-blue-500 text-white font-semibold px-4 py-3 text-sm transition-colors"
+            "w-full sm:w-28 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-3 text-sm transition-colors"
         }
     };
 
     view! {
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-5 sm:p-6 space-y-3">
+        <div class=format!("{MSITE_SECTION_CLASS} space-y-3")>
             <h3 class="text-lg sm:text-xl font-semibold text-gray-900">"Redeem Promo Code"</h3>
             <div class="flex flex-col sm:flex-row gap-3">
                 <input
                     type="text"
                     placeholder="Enter Code"
-                    class="flex-1 rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                    class=format!("flex-1 {}", MSITE_INPUT_CLASS)
                     value=move || promo_code.get()
                     on:input=move |ev| {
                         set_promo_code.set(event_target_value(&ev));
@@ -1516,12 +1560,15 @@ pub fn ConfirmButton(
     };
 
     // <!-- Phase 4.3: Enhanced button styling with validation feedback -->
-    let button_class =
-        "mt-6 w-full rounded-2xl py-3.5 text-white text-base sm:text-lg font-semibold shadow-md min-h-[48px] transition-all duration-200";
+    let button_class = if mobile {
+        "w-full rounded-xl py-3 text-white text-base font-semibold shadow-sm min-h-[48px] transition-all duration-200"
+    } else {
+        "w-full rounded-xl py-3.5 text-white text-base sm:text-lg font-semibold shadow-sm min-h-[48px] transition-all duration-200"
+    };
 
     let button_style = move || {
         if is_form_valid() {
-            "bg-blue-500 hover:bg-blue-600 hover:shadow-lg"
+            "bg-blue-600 hover:bg-blue-700"
         } else {
             "bg-blue-200 cursor-not-allowed"
         }

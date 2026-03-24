@@ -3,17 +3,23 @@ use leptos_icons::Icon;
 use leptos_router::use_query_map;
 use std::collections::HashMap;
 
-use crate::api::client_side_api::{
-    ClientSideApiClient, ConfirmationProcessRequest, ConfirmationProcessResponse,
+use crate::api::client_side_api::{ClientSideApiClient, ConfirmationProcessRequest};
+use crate::component::yral_auth_provider::YralAuthProvider;
+use crate::component::{
+    CurrencySelectorModal, Divider, Navbar, NotificationData, NotificationListener, SpinnerGray,
 };
-use crate::component::{Divider, Navbar, NotificationData, NotificationListener, SpinnerGray};
 use crate::log;
-use crate::utils::app_reference::BookingId;
 use crate::view_state_layer::{
     cookie_booking_context_state::CookieBookingContextState,
     ui_confirmation_page_v2::{ConfirmationPageState, ConfirmationStep},
-    GlobalStateForLeptos,
 };
+
+const MSITE_CARD_CLASS: &str = "rounded-xl border border-gray-200 bg-white shadow-sm";
+const MSITE_SECTION_CLASS: &str =
+    "w-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6";
+const MSITE_SUBSECTION_CLASS: &str = "rounded-lg border border-gray-200 bg-slate-50 p-3.5";
+const MSITE_LABEL_CLASS: &str =
+    "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500";
 
 /// **Simplified Confirmation Page V2**
 ///
@@ -26,8 +32,6 @@ use crate::view_state_layer::{
 
 #[component]
 pub fn ConfirmationPageV2() -> impl IntoView {
-    let confirmation_state: ConfirmationPageState = expect_context();
-    let booking_context: CookieBookingContextState = expect_context();
     let query_map = use_query_map();
 
     // Initialize state on component mount
@@ -212,18 +216,40 @@ pub fn ConfirmationPageV2() -> impl IntoView {
     });
 
     view! {
-        <section class="flex flex-col items-center min-h-screen w-full bg-gray-50">
-            <div class="w-full">
+        <section class="relative min-h-screen bg-slate-50">
+            <div class="hidden lg:block">
                 <Navbar />
             </div>
 
-            // SSE Integration
-            <NotificationListenerWrapper />
+            <nav class="lg:hidden sticky top-0 z-[1001] bg-white/95 supports-[backdrop-filter]:bg-white/90 backdrop-blur border-b border-gray-100 h-14 flex items-center justify-between px-4">
+                <a href="/" class="flex items-center">
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-8 w-auto" />
+                </a>
 
-            <div class="flex flex-col items-center w-full max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8">
+                <div class="flex items-center gap-2">
+                    <CurrencySelectorModal />
+                    <YralAuthProvider />
+                </div>
+            </nav>
+
+            <div class="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 pb-10 pt-3 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6">
+                <div class=format!("{MSITE_CARD_CLASS} px-4 py-3.5 sm:px-5 sm:py-4")>
+                    <div class="space-y-0.5">
+                        <p class=MSITE_LABEL_CLASS>"Confirmation"</p>
+                        <h1 class="text-lg font-semibold text-slate-900 sm:text-xl">
+                            "Booking Confirmation"
+                        </h1>
+                        <p class="text-sm text-slate-600">
+                            "Keep this page open while we finalize your reservation details."
+                        </p>
+                    </div>
+                </div>
+
+                // SSE Integration
+                <NotificationListenerWrapper />
 
                 // Integrated Progress Stepper
-                <div class="w-full mb-8 sm:mb-12 md:mb-16">
+                <div class="w-full">
                     <IntegratedProgressStepper />
                 </div>
 
@@ -282,14 +308,14 @@ fn NotificationListenerWrapper() -> impl IntoView {
                     }.into_view()
                 } else {
                     view! {
-                        <div class="text-sm text-yellow-600 mb-4">
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                             "Missing order details for real-time updates"
                         </div>
                     }.into_view()
                 }
             } else {
                 view! {
-                    <div class="text-sm text-yellow-600 mb-4">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                         {if payment_id.is_some() {
                             "Payment ID found but no booking reference - manual confirmation only"
                         } else {
@@ -306,102 +332,111 @@ fn NotificationListenerWrapper() -> impl IntoView {
 #[component]
 fn IntegratedProgressStepper() -> impl IntoView {
     view! {
-        <div class="flex flex-col items-center justify-center w-full py-4 sm:py-6 md:py-8">
+        <div class=MSITE_SECTION_CLASS>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <p class=MSITE_LABEL_CLASS>"Confirmation Progress"</p>
+                    <p class="text-sm text-slate-600">
+                        "Track each step as your booking is confirmed."
+                    </p>
+                </div>
 
-            // Step indicators
-            <div class="flex flex-row items-center justify-center w-full overflow-x-auto px-2 pb-2">
-                {move || {
-                    let current_step = ConfirmationPageState::get_current_step().get();
-                    let completed_steps = ConfirmationPageState::get_completed_steps().get();
+                // Step indicators
+                <div class="flex flex-row items-center justify-center w-full overflow-x-auto pb-1">
+                    {move || {
+                        let current_step = ConfirmationPageState::get_current_step().get();
+                        let completed_steps = ConfirmationPageState::get_completed_steps().get();
 
-                    let steps = vec![
-                        (ConfirmationStep::PaymentConfirmation, "Payment"),
-                        (ConfirmationStep::BookingProcessing, "Booking"),
-                        (ConfirmationStep::EmailSending, "Email"),
-                        (ConfirmationStep::Completed, "Complete"),
-                    ];
+                        let steps = vec![
+                            (ConfirmationStep::PaymentConfirmation, "Payment"),
+                            (ConfirmationStep::BookingProcessing, "Booking"),
+                            (ConfirmationStep::EmailSending, "Email"),
+                            (ConfirmationStep::Completed, "Complete"),
+                        ];
 
-                    steps
-                        .into_iter()
-                        .enumerate()
-                        .map(|(index, (step, label))| {
-                            let is_current = current_step == step;
-                            let is_completed = completed_steps.contains(&step) ||
-                                (step == ConfirmationStep::Completed && current_step == ConfirmationStep::Completed);
+                        steps
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, (step, label))| {
+                                let is_current = current_step == step;
+                                let is_completed = completed_steps.contains(&step)
+                                    || (step == ConfirmationStep::Completed
+                                        && current_step == ConfirmationStep::Completed);
 
-                            let circle_classes = if is_completed {
-                                "min-w-[2rem] w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-medium transition-colors bg-green-500 text-white"
-                            } else if is_current {
-                                "min-w-[2rem] w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-medium transition-colors bg-blue-500 text-white animate-pulse"
-                            } else {
-                                "min-w-[2rem] w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-medium transition-colors bg-gray-300 text-black"
-                            };
+                                let circle_classes = if is_completed {
+                                    "flex h-7 w-7 min-w-[1.75rem] items-center justify-center rounded-full bg-green-500 text-white transition-colors sm:h-8 sm:w-8"
+                                } else if is_current {
+                                    "flex h-7 w-7 min-w-[1.75rem] items-center justify-center rounded-full bg-blue-600 text-white transition-colors animate-pulse sm:h-8 sm:w-8"
+                                } else {
+                                    "flex h-7 w-7 min-w-[1.75rem] items-center justify-center rounded-full bg-slate-300 text-slate-700 transition-colors sm:h-8 sm:w-8"
+                                };
 
-                            let line_color = if is_completed || (is_current && index > 0) {
-                                "bg-green-500"
-                            } else if is_current {
-                                "bg-blue-500"
-                            } else {
-                                "bg-gray-300"
-                            };
+                                let line_color = if is_completed || (is_current && index > 0) {
+                                    "bg-green-500"
+                                } else if is_current {
+                                    "bg-blue-600"
+                                } else {
+                                    "bg-slate-300"
+                                };
 
-                            view! {
-                                <div class="flex items-start shrink-0">
-                                    <div class="flex flex-col items-center">
-                                        <div class=circle_classes>
-                                            {if is_completed {
-                                                view! {
-                                                    <Icon icon=icondata::AiCheckOutlined class="w-3 h-3 sm:w-4 sm:h-4" />
-                                                }.into_view()
-                                            } else {
-                                                view! {
-                                                    <span class="text-xs sm:text-sm">{(index + 1).to_string()}</span>
-                                                }.into_view()
-                                            }}
-                                        </div>
-                                        <span class="mt-2 sm:mt-3 md:mt-4 text-[10px] sm:text-xs text-gray-600 text-center break-words max-w-[80px] sm:max-w-[100px] md:max-w-[120px]">
-                                            {label}
-                                        </span>
-                                    </div>
-                                    {if index < 3 {
-                                        view! {
-                                            <div class=format!("h-[1px] w-12 sm:w-16 md:w-24 lg:w-40 transition-colors mt-3 sm:mt-4 mx-1 sm:mx-2 {}", line_color) />
-                                        }.into_view()
-                                    } else {
-                                        view! { <div /> }.into_view()
-                                    }}
-                                </div>
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                }}
-            </div>
-
-            // Current step message
-            <div class="mt-4 text-center">
-                <p class="text-sm sm:text-base text-gray-700 font-medium">
-                    {move || ConfirmationPageState::get_current_step_message().get()}
-                </p>
-
-                // Step details (debug mode or detailed progress)
-                <Show when=move || cfg!(feature = "debug_display")>
-                    <div class="mt-2 text-xs text-gray-500">
-                        {move || {
-                            let step_details = ConfirmationPageState::get_step_progress().get().step_details;
-                            if !step_details.is_empty() {
                                 view! {
-                                    <div class="space-y-1">
-                                        {step_details.into_iter().map(|detail| {
-                                            view! { <div>{detail}</div> }
-                                        }).collect::<Vec<_>>()}
+                                    <div class="flex items-start shrink-0">
+                                        <div class="flex flex-col items-center">
+                                            <div class=circle_classes>
+                                                {if is_completed {
+                                                    view! {
+                                                        <Icon icon=icondata::AiCheckOutlined class="h-3 w-3 sm:h-4 sm:w-4" />
+                                                    }.into_view()
+                                                } else {
+                                                    view! {
+                                                        <span class="text-xs font-medium sm:text-sm">{(index + 1).to_string()}</span>
+                                                    }.into_view()
+                                                }}
+                                            </div>
+                                            <span class="mt-2 max-w-[84px] break-words text-center text-[11px] font-medium text-slate-600 sm:max-w-[100px]">
+                                                {label}
+                                            </span>
+                                        </div>
+                                        {if index < 3 {
+                                            view! {
+                                                <div class=format!("mt-3 mx-1 h-px w-10 transition-colors sm:mt-4 sm:mx-2 sm:w-14 md:w-20 {}", line_color) />
+                                            }.into_view()
+                                        } else {
+                                            view! { <div /> }.into_view()
+                                        }}
                                     </div>
-                                }.into_view()
-                            } else {
-                                view! { <div /> }.into_view()
-                            }
-                        }}
-                    </div>
-                </Show>
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                    }}
+                </div>
+
+                // Current step message
+                <div class="text-center">
+                    <p class="text-sm font-medium text-slate-700 sm:text-base">
+                        {move || ConfirmationPageState::get_current_step_message().get()}
+                    </p>
+
+                    // Step details (debug mode or detailed progress)
+                    <Show when=move || cfg!(feature = "debug_display")>
+                        <div class="mt-2 text-xs text-slate-500">
+                            {move || {
+                                let step_details = ConfirmationPageState::get_step_progress().get().step_details;
+                                if !step_details.is_empty() {
+                                    view! {
+                                        <div class="space-y-1">
+                                            {step_details.into_iter().map(|detail| {
+                                                view! { <div>{detail}</div> }
+                                            }).collect::<Vec<_>>()}
+                                        </div>
+                                    }.into_view()
+                                } else {
+                                    view! { <div /> }.into_view()
+                                }
+                            }}
+                        </div>
+                    </Show>
+                </div>
             </div>
         </div>
     }
@@ -411,18 +446,18 @@ fn IntegratedProgressStepper() -> impl IntoView {
 #[component]
 fn LoadingView() -> impl IntoView {
     view! {
-        <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-blue-100 md:border-blue-200 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-8 lg:p-10 bg-white shadow-md md:shadow-lg space-y-4 sm:space-y-6 md:space-y-8 mx-auto mt-4 md:mt-10">
+        <div class=format!("{MSITE_SECTION_CLASS} max-w-3xl mx-auto")>
             <div class="flex flex-col items-center justify-center text-center">
                 <div class="flex justify-center items-center">
                     <SpinnerGray />
                 </div>
-            <p class="mt-4 text-gray-600">
+                <p class="mt-4 text-sm text-slate-600 sm:text-base">
                     {move || ConfirmationPageState::get_current_step_message().get()}
                 </p>
             </div>
 
             // Warning message
-            <div class="text-center text-red-500 text-sm border-t border-b py-4 my-8">
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-center text-sm text-amber-800">
                 <p>"Do not close this tab until your payment is fully processed"</p>
                 <p>"to avoid issues with your booking."</p>
             </div>
@@ -434,12 +469,12 @@ fn LoadingView() -> impl IntoView {
 #[component]
 fn ErrorView() -> impl IntoView {
     view! {
-        <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-red-100 md:border-red-200 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-8 lg:p-10 bg-white shadow-md md:shadow-lg space-y-4 sm:space-y-6 md:space-y-8 mx-auto mt-4 md:mt-10">
+        <div class=format!("{MSITE_SECTION_CLASS} max-w-3xl mx-auto")>
 
             // Error header
-            <div class="text-center">
+            <div class="space-y-2 text-center">
                 <Icon icon=icondata::AiCloseCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-red-500" />
-                <h2 class="text-lg sm:text-xl md:text-2xl font-semibold text-red-600 mb-2">
+                <h2 class="text-lg font-semibold text-red-600 sm:text-xl">
                     "Booking Processing Error"
                 </h2>
             </div>
@@ -448,20 +483,20 @@ fn ErrorView() -> impl IntoView {
 
             // Error message
             <div class="space-y-2">
-                <h3 class="font-semibold text-gray-800">
+                <h3 class="text-sm font-semibold text-slate-800">
                     "What happened?"
                 </h3>
-                <p class="text-sm sm:text-base text-gray-700 bg-red-50 p-3 rounded-lg border border-red-100">
+                <p class="rounded-lg border border-red-200 bg-red-50 p-3.5 text-sm text-red-800 sm:text-base">
                     {move || ConfirmationPageState::get_error().get().unwrap_or_else(|| "An unknown error occurred".to_string())}
                 </p>
             </div>
 
             // Support information
             <div class="space-y-2 border-t border-gray-200 pt-4">
-                <h3 class="font-semibold text-gray-800">
+                <h3 class="text-sm font-semibold text-slate-800">
                     "Need Help?"
                 </h3>
-                <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <div class="rounded-lg border border-green-200 bg-green-50 p-3.5">
                     <p class="text-sm text-green-800 mb-1 font-medium">
                         "Our support team is here to help"
                     </p>
@@ -478,7 +513,7 @@ fn ErrorView() -> impl IntoView {
 #[component]
 fn BookingConfirmationDisplay() -> impl IntoView {
     view! {
-        <div class="w-full max-w-full sm:max-w-[450px] md:max-w-[500px] lg:max-w-[600px] border border-blue-100 md:border-blue-200 rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-8 lg:p-10 bg-white shadow-md md:shadow-lg space-y-4 sm:space-y-6 md:space-y-8 mx-auto mt-4 md:mt-10">
+        <div class=format!("{MSITE_SECTION_CLASS} max-w-3xl mx-auto")>
 
             // Success header - dynamic based on booking status
             {move || {
@@ -486,17 +521,21 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                     Some(display_info) => {
                         if display_info.is_confirmed {
                             view! {
-                                <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-green-600">
+                                <div class="space-y-2 text-center">
                                     <Icon icon=icondata::AiCheckCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
-                                    "Your Booking has been confirmed!"
+                                    <div class="text-lg font-semibold text-green-600 sm:text-xl">
+                                        "Your Booking has been confirmed!"
+                                    </div>
                                 </div>
                             }.into_view()
                         } else {
                             view! {
-                                <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-blue-600">
+                                <div class="space-y-2 text-center">
                                     <Icon icon=icondata::AiClockCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
-                                    "Your Booking is being processed"
-                                    <p class="text-sm text-gray-600 mt-2 font-normal">
+                                    <div class="text-lg font-semibold text-blue-600 sm:text-xl">
+                                        "Your Booking is being processed"
+                                    </div>
+                                    <p class="text-sm font-normal text-slate-600">
                                         {format!("Status: {}", display_info.booking_status_message)}
                                     </p>
                                 </div>
@@ -505,9 +544,11 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                     }
                     None => {
                         view! {
-                            <div class="text-center text-lg sm:text-xl md:text-2xl font-semibold text-blue-600">
+                            <div class="space-y-2 text-center">
                                 <Icon icon=icondata::AiClockCircleOutlined class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2" />
-                                "Loading booking details..."
+                                <div class="text-lg font-semibold text-blue-600 sm:text-xl">
+                                    "Loading booking details..."
+                                </div>
                             </div>
                         }.into_view()
                     }
@@ -521,112 +562,118 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                 match ConfirmationPageState::get_display_info().get() {
                     Some(display_info) => {
                         view! {
-                            <div class="space-y-4 sm:space-y-6">
+                            <div class="space-y-4">
 
                                 // Hotel information
-                                <div class="space-y-1">
-                                    <h2 class="text-left text-base sm:text-lg md:text-xl font-semibold">
+                                <div class=MSITE_SUBSECTION_CLASS>
+                                    <p class=MSITE_LABEL_CLASS>"Hotel"</p>
+                                    <h2 class="mt-1.5 text-left text-base font-semibold text-slate-900 sm:text-lg">
                                         {display_info.hotel_name}
                                     </h2>
-                                    <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">
+                                    <p class="mt-1 text-left text-sm text-slate-600">
                                         {display_info.hotel_location}
                                     </p>
                                 </div>
 
                                 // Reference ID (app reference)
-                                <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                                    <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">"Reference ID"</p>
-                                    <p class="font-mono text-xs sm:text-sm md:text-base lg:text-lg break-all">
-                                        {display_info.booking_reference}
-                                    </p>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class=MSITE_SUBSECTION_CLASS>
+                                        <p class=MSITE_LABEL_CLASS>"Reference ID"</p>
+                                        <p class="mt-1.5 break-all font-mono text-sm text-slate-900 sm:text-base">
+                                            {display_info.booking_reference}
+                                        </p>
+                                    </div>
+
+                                    // Booking ID (from provider - only show if available)
+                                    {if !display_info.booking_ref_no.is_empty() {
+                                        view! {
+                                            <div class=MSITE_SUBSECTION_CLASS>
+                                                <p class=MSITE_LABEL_CLASS>"Booking ID"</p>
+                                                <p class="mt-1.5 break-all font-mono text-sm text-slate-900 sm:text-base">
+                                                    {display_info.booking_ref_no.clone()}
+                                                </p>
+                                            </div>
+                                        }.into_view()
+                                    } else {
+                                        view! { <div /> }.into_view()
+                                    }}
+
+                                    // Confirmation Number (from provider - only show if available)
+                                    {if !display_info.confirmation_no.is_empty() {
+                                        view! {
+                                            <div class=MSITE_SUBSECTION_CLASS>
+                                                <p class=MSITE_LABEL_CLASS>"Confirmation Number"</p>
+                                                <p class="mt-1.5 break-all font-mono text-sm text-slate-900 sm:text-base">
+                                                    {display_info.confirmation_no}
+                                                </p>
+                                            </div>
+                                        }.into_view()
+                                    } else {
+                                        view! { <div /> }.into_view()
+                                    }}
                                 </div>
 
-                                // Booking ID (from provider - only show if available)
-                                {if !display_info.booking_ref_no.is_empty() {
-                                    view! {
-                                        <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                                            <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">"Booking ID"</p>
-                                            <p class="font-mono text-xs sm:text-sm md:text-base lg:text-lg break-all">
-                                                {display_info.booking_ref_no.clone()}
-                                            </p>
-                                        </div>
-                                    }.into_view()
-                                } else {
-                                    view! { <div></div> }.into_view()
-                                }}
-
-                                // Confirmation Number (from provider - only show if available)
-                                {if !display_info.confirmation_no.is_empty() {
-                                    view! {
-                                        <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                                            <p class="text-left text-gray-600 text-xs md:text-sm lg:text-base">"Confirmation Number"</p>
-                                            <p class="font-mono text-xs sm:text-sm md:text-base lg:text-lg break-all">
-                                                {display_info.confirmation_no}
-                                            </p>
-                                        </div>
-                                    }.into_view()
-                                } else {
-                                    view! { <div></div> }.into_view()
-                                }}
-
                                 // Check-in and Check-out dates
-                                <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
-                                    <div class="flex-1">
-                                        <div class="flex items-center space-x-2">
-                                            <Icon icon=icondata::FaCalendarSolid class="w-3 h-3 text-gray-500" />
-                                            <span class="text-gray-600 text-xs md:text-sm">"Check-in"</span>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class=MSITE_SUBSECTION_CLASS>
+                                        <div class="flex items-center gap-2">
+                                            <Icon icon=icondata::FaCalendarSolid class="h-3 w-3 text-slate-500" />
+                                            <span class=MSITE_LABEL_CLASS>"Check-in"</span>
                                         </div>
-                                        <p class="text-sm md:text-base font-medium mt-1">
+                                        <p class="mt-1.5 text-sm font-medium text-slate-900 sm:text-base">
                                             {display_info.check_in_date_formatted}
                                         </p>
                                     </div>
 
-                                    <div class="flex items-center justify-center text-gray-400 text-xs md:text-sm">
-                                        {format!("{} Night{}", display_info.number_of_nights, if display_info.number_of_nights > 1 { "s" } else { "" })}
-                                    </div>
-
-                                    <div class="flex-1">
-                                        <div class="flex items-center space-x-2">
-                                            <Icon icon=icondata::FaCalendarSolid class="w-3 h-3 text-gray-500" />
-                                            <span class="text-gray-600 text-xs md:text-sm">"Check-out"</span>
+                                    <div class=MSITE_SUBSECTION_CLASS>
+                                        <div class="flex items-center gap-2">
+                                            <Icon icon=icondata::FaCalendarSolid class="h-3 w-3 text-slate-500" />
+                                            <span class=MSITE_LABEL_CLASS>"Check-out"</span>
                                         </div>
-                                        <p class="text-sm md:text-base font-medium mt-1">
+                                        <p class="mt-1.5 text-sm font-medium text-slate-900 sm:text-base">
                                             {display_info.check_out_date_formatted}
                                         </p>
                                     </div>
                                 </div>
 
                                 // Guests & Rooms
-                                <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                                    <div class="flex items-center space-x-2">
-                                        <Icon icon=icondata::FaUsersSolid class="w-3 h-3 text-gray-500" />
-                                        <span class="text-gray-600 text-xs md:text-sm">"Guests & Rooms"</span>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class=MSITE_SUBSECTION_CLASS>
+                                        <p class=MSITE_LABEL_CLASS>"Stay Length"</p>
+                                        <p class="mt-1.5 text-sm font-medium text-slate-900 sm:text-base">
+                                            {format!("{} Night{}", display_info.number_of_nights, if display_info.number_of_nights > 1 { "s" } else { "" })}
+                                        </p>
                                     </div>
-                                    <p class="text-sm md:text-base font-medium">
-                                        {format!(
-                                            "{} Room{}, {} Adult{} • {} children",
-                                            display_info.number_of_rooms,
-                                            if display_info.number_of_rooms == 1 { "" } else { "s" },
-                                            display_info.number_of_adults,
-                                            if display_info.number_of_adults > 1 { "s" } else { "" },
-                                            display_info.number_of_children
-                                        )}
-                                    </p>
+
+                                    <div class=MSITE_SUBSECTION_CLASS>
+                                        <div class="flex items-center gap-2">
+                                            <Icon icon=icondata::FaUsersSolid class="h-3 w-3 text-slate-500" />
+                                            <span class=MSITE_LABEL_CLASS>"Guests & Rooms"</span>
+                                        </div>
+                                        <p class="mt-1.5 text-sm font-medium text-slate-900 sm:text-base">
+                                            {format!(
+                                                "{} Room{}, {} Adult{} • {} children",
+                                                display_info.number_of_rooms,
+                                                if display_info.number_of_rooms == 1 { "" } else { "s" },
+                                                display_info.number_of_adults,
+                                                if display_info.number_of_adults == 1 { "" } else { "s" },
+                                                display_info.number_of_children
+                                            )}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 // Guest Information
-                                <div class="space-y-1 sm:space-y-1.5 md:space-y-2">
-                                    <h3 class="font-semibold mb-1 sm:mb-2 md:mb-3 text-xs sm:text-sm md:text-base lg:text-lg">
-                                        "Guest Information"
-                                    </h3>
-                                    <div class="space-y-0.5 sm:space-y-1">
-                                        <p class="text-[10px] sm:text-xs md:text-sm lg:text-base font-medium">
+                                <div class=MSITE_SUBSECTION_CLASS>
+                                    <p class=MSITE_LABEL_CLASS>"Guest Information"</p>
+                                    <div class="mt-1.5 space-y-1">
+                                        <p class="text-sm font-medium text-slate-900 sm:text-base">
                                             {format!("{} (Primary Guest)", display_info.user_name)}
                                         </p>
-                                        <p class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600">
+                                        <p class="text-sm text-slate-600 sm:text-base">
                                             {display_info.user_email}
                                         </p>
-                                        <p class="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600">
+                                        <p class="text-sm text-slate-600 sm:text-base">
                                             {display_info.user_phone}
                                         </p>
                                     </div>
@@ -636,11 +683,11 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                     }
                     None => {
                         view! {
-                            <div class="flex flex-col items-center justify-center text-center text-gray-500">
+                            <div class="flex flex-col items-center justify-center text-center text-slate-500">
                                 <div class="flex justify-center items-center">
                                     <SpinnerGray />
                                 </div>
-                                <p class="mt-2">"Loading booking details..."</p>
+                                <p class="mt-2 text-sm sm:text-base">"Loading booking details..."</p>
                             </div>
                         }.into_view()
                     }
@@ -648,7 +695,7 @@ fn BookingConfirmationDisplay() -> impl IntoView {
             }}
 
             // Footer message
-            <div class="text-center text-[10px] sm:text-xs md:text-sm lg:text-base font-medium text-gray-600 pt-2 border-t border-gray-200">
+            <div class="border-t border-gray-200 pt-3 text-center text-sm font-medium text-slate-600">
                 "Please take a screenshot for your reference"
             </div>
         </div>
