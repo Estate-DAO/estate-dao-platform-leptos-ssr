@@ -55,6 +55,20 @@ fn format_tax_label(label: &str) -> String {
         .join(" ")
 }
 
+fn payment_provider_display_name(provider: &PaymentProvider) -> &'static str {
+    match provider {
+        PaymentProvider::NowPayments => "NowPayments",
+        PaymentProvider::Stripe => "Stripe",
+    }
+}
+
+fn payment_provider_description(provider: &PaymentProvider) -> &'static str {
+    match provider {
+        PaymentProvider::NowPayments => "Pay with crypto currencies",
+        PaymentProvider::Stripe => "Pay with credit or debit card",
+    }
+}
+
 const MSITE_CARD_CLASS: &str = "rounded-xl border border-gray-200 bg-white shadow-sm";
 const MSITE_SECTION_CLASS: &str = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6";
 const MSITE_SUBSECTION_CLASS: &str = "rounded-lg border border-gray-200 bg-slate-50 p-3.5";
@@ -676,9 +690,14 @@ pub fn EnhancedPricingDisplay(
 
     let total_with_included = move || base_total() + included_taxes_total();
     let rounded_total_with_included = move || round_to_cents(total_with_included());
+    let container_id = if mobile {
+        "price-breakup-section"
+    } else {
+        "price-breakup-section-desktop"
+    };
 
     view! {
-        <div class=container_class>
+        <div id=container_id class=container_class>
             <div class="text-sm font-semibold text-slate-700">"Price Breakup"</div>
 
             // <!-- Per-room breakdown -->
@@ -1621,17 +1640,8 @@ pub fn ConfirmButton(
 
 #[component]
 pub fn PaymentModal() -> impl IntoView {
-    let block_room_state: BlockRoomUIState = expect_context();
-    let ui_search_ctx: UISearchCtx = expect_context();
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
-
     let show_modal = move || BlockRoomUIState::get_show_payment_modal();
-    // let is_loading = move || BlockRoomUIState::get_loading();
-    // let block_room_called = move || BlockRoomUIState::get_block_room_called();
-
-    let room_price = move || BlockRoomUIState::get_room_price();
     let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
-    let num_nights = move || BlockRoomUIState::get_num_nights();
     let selected_currency_code = store_value(resolve_currency_code(None));
 
     // Note: Prebook API is now called when user clicks "Confirm & Book" button via action pattern
@@ -1640,80 +1650,89 @@ pub fn PaymentModal() -> impl IntoView {
         BlockRoomUIState::set_show_payment_modal(false);
     };
 
+    let view_breakup = move |_| {
+        BlockRoomUIState::set_show_payment_modal(false);
+        if let Some(element) = document().get_element_by_id("price-breakup-section") {
+            element.scroll_into_view();
+        }
+    };
+
     view! {
         <Show when=show_modal>
-            <div class="fixed inset-0 flex items-center justify-center z-50">
-                <div
-                    class="fixed inset-0 bg-black opacity-50"
-                    on:click=close_modal
-                />
-                <div class="w-full max-w-lg bg-white rounded-lg p-4 sm:p-8 z-50 shadow-xl relative mx-2">
-                    <button
-                        class="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 hover:text-gray-700"
-                        on:click=close_modal
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+            <div
+                class="fixed inset-0 z-[1200] bg-black/20 backdrop-blur-[1px]"
+                on:click=close_modal
+            ></div>
 
-                    // <!-- Phase 4.2: Enhanced loading states and error components -->
-                    <Show
-                        when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
-                        fallback=move || view! {
-                            <div class="flex flex-col justify-center items-center h-40 space-y-4">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                <div class="text-center space-y-2">
-                                    <div class="font-semibold text-lg">
-                                        "Reserving Your Room"
-                                    </div>
-                                    <div class="text-sm text-gray-600">
-                                        "Securing your reservation for 15 minutes..."
+            <div
+                class="fixed inset-0 z-[1201] flex items-center justify-center p-4"
+                on:click=|e| e.stop_propagation()
+            >
+                <div class="relative w-full max-w-[375px] max-h-[92dvh] overflow-y-auto rounded-[12px] bg-white px-5 pb-5 pt-5 shadow-[0_12px_40px_rgba(15,23,42,0.24)]">
+                        <button
+                            class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                            on:click=close_modal
+                            aria-label="Close payment popup"
+                            type="button"
+                        >
+                            <Icon icon=icondata::ChCross class="text-base" />
+                        </button>
+
+                        // <!-- Phase 4.2: Enhanced loading states and error components -->
+                        <Show
+                            when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
+                            fallback=move || view! {
+                                <div class="flex min-h-[240px] flex-col items-center justify-center space-y-4 py-6">
+                                    <div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-[#145EF0]"></div>
+                                    <div class="space-y-1 text-center">
+                                        <div class="text-lg font-semibold text-[#181818]">
+                                            "Reserving Your Room"
+                                        </div>
+                                        <div class="text-sm leading-6 text-[#45556C]">
+                                            "Securing your reservation for 15 minutes..."
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                    >
-                        // <!-- Phase 4.2: Enhanced error display -->
-                        <Show when=move || BlockRoomUIState::get_error().is_some()>
-                            <EnhancedErrorDisplay />
-                        </Show>
+                            }
+                        >
+                            // <!-- Phase 4.2: Enhanced error display -->
+                            <Show when=move || BlockRoomUIState::get_error().is_some()>
+                                <EnhancedErrorDisplay />
+                            </Show>
 
-                        <Show when=move || BlockRoomUIState::get_error().is_none()>
-                            <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
-                            <div class="flex flex-col gap-2 mb-6">
-                                // <div class="flex justify-between items-end">
-                                //     <span class="text-lg font-bold">{move || format!("${:.2}", room_price())}</span>
-                                //     // <span class="ml-1 text-base font-normal text-gray-600">/night</span>
-                                // </div>
-                                // <div class="flex justify-between items-center text-base">
-                                //     // <span class="text-gray-700">
-                                //     //     {move || format!("${:.2} x {} nights", room_price(), num_nights())}
-                                //     // </span>
-                                //     <span class="font-semibold">
-                                //         {move || format!("${:.2}", room_price() * num_nights() as f64)}
-                                //     </span>
-                                // </div>
-                                <Divider class="my-2".into() />
-                                <div class="flex justify-between items-center font-bold text-lg mb-2">
-                                    <span>Total</span>
-                                    <span class="text-2xl">
-                                        {move || format_currency_with_code(
-                                            calculated_total(),
-                                            &selected_currency_code.get_value(),
-                                        )}
-                                    </span>
-                                </div>
-                            </div>
+                            <Show when=move || BlockRoomUIState::get_error().is_none()>
+                                <div class="space-y-5">
+                                    <div class="pt-1">
+                                        <h2 class="text-center text-[24px] font-bold leading-[1.4] tracking-[-0.02em] text-[#181818]">
+                                            "Payment"
+                                        </h2>
+                                    </div>
 
-                            <div class="font-bold">
-                                <label>"Pay with"</label>
-                                <div class="flex flex-col w-full mt-4 space-y-2">
+                                    <div class="space-y-2 rounded-[8px]">
+                                        <div class="flex items-center justify-between gap-4 text-[18px] font-semibold leading-[1.4] text-[#01030A]">
+                                            <span>"Total Amount"</span>
+                                            <span>
+                                                {move || format_currency_with_code(
+                                                    calculated_total(),
+                                                    &selected_currency_code.get_value(),
+                                                )}
+                                            </span>
+                                        </div>
+                                        <button
+                                            class="text-sm font-normal leading-[1.4] text-[#145EF0]"
+                                            on:click=view_breakup
+                                            type="button"
+                                        >
+                                            "View Breakup"
+                                        </button>
+                                    </div>
+
+                                    <div class="h-px w-full bg-[#E2E8F0]"></div>
+
                                     <PaymentProviderButtons />
                                 </div>
-                            </div>
+                            </Show>
                         </Show>
-                    </Show>
                 </div>
             </div>
         </Show>
@@ -2187,27 +2206,19 @@ pub fn EmailVerificationStep(
 
 #[component]
 pub fn PaymentProviderButtons() -> impl IntoView {
-    let block_room_state: BlockRoomUIState = expect_context();
-    let ui_search_ctx: UISearchCtx = expect_context();
-
     // Get pricing information
     let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
 
-    // Payment loading state
-    let (payment_loading, set_payment_loading) = create_signal(false);
-    let (selected_provider, set_selected_provider) = create_signal::<Option<PaymentProvider>>(None);
+    let (selected_provider, set_selected_provider) = create_signal(PaymentProvider::NowPayments);
 
     // Create payment action
     let create_payment_action = create_action(move |provider: &PaymentProvider| {
         let provider = provider.clone();
         async move {
             log!("Creating payment invoice with provider: {:?}", provider);
-            set_payment_loading.set(true);
-            set_selected_provider.set(Some(provider.clone()));
 
             // Get booking details
             let block_room_state: BlockRoomUIState = expect_context();
-            let ui_search_ctx: UISearchCtx = expect_context();
             let hotel_info_ctx: HotelInfoCtx = expect_context();
 
             // Validate required email with debug logging
@@ -2235,8 +2246,6 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                     Some("Email required for payment".to_string()),
                     Some("Primary adult email is required to create payment invoice".to_string()),
                 );
-                set_payment_loading.set(false);
-                set_selected_provider.set(None);
                 return None;
             };
 
@@ -2250,8 +2259,6 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                     Some("App Reference generation failed".to_string()),
                     Some("Unable to generate app reference for payment".to_string()),
                 );
-                set_payment_loading.set(false);
-                set_selected_provider.set(None);
                 return None;
             };
 
@@ -2314,45 +2321,54 @@ pub fn PaymentProviderButtons() -> impl IntoView {
         }
     });
 
-    // Handle action completion
-    create_effect(move |_| {
-        if create_payment_action.value().get().is_some() {
-            set_payment_loading.set(false);
-            set_selected_provider.set(None);
+    let payment_loading = move || create_payment_action.pending().get();
+
+    let submit_selected_provider = move |_| {
+        if !payment_loading() {
+            create_payment_action.dispatch(selected_provider());
         }
-    });
+    };
 
     view! {
-        <div class="space-y-3">
+        <div class="space-y-5">
             // <!-- NowPayments Button -->
             <button
                 class=move || format!(
-                    "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
-                    if selected_provider().map_or(false, |p| p == PaymentProvider::NowPayments) {
-                        "border-blue-500 bg-blue-50"
+                    "payment-button flex w-full items-center gap-5 rounded-[8px] border-2 p-4 text-left transition-all duration-200 {}",
+                    if selected_provider() == PaymentProvider::NowPayments {
+                        "border-[#145EF0] bg-white"
                     } else {
-                        "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+                        "border-[#E2E8F0] bg-white hover:border-blue-200"
                     }
                 )
                 disabled=payment_loading
+                aria-pressed=move || (selected_provider() == PaymentProvider::NowPayments).to_string()
                 on:click=move |_| {
                     if !payment_loading() {
-                        create_payment_action.dispatch(PaymentProvider::NowPayments);
+                        set_selected_provider.set(PaymentProvider::NowPayments);
                     }
                 }
+                type="button"
             >
-                <div class="flex items-center justify-between w-full">
-                    <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
-                            <span class="text-white text-sm font-bold">"C"</span>
+                <div class="flex w-full items-center justify-between gap-4">
+                    <div class="flex items-center gap-5">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#202733] text-white shadow-sm">
+                            <div class="flex flex-col items-center leading-none">
+                                <span class="text-[8px] font-bold uppercase tracking-[0.08em]">"NOW"</span>
+                                <span class="mt-0.5 text-[7px] font-medium">"Payments"</span>
+                            </div>
                         </div>
                         <div class="text-left">
-                            <div class="font-semibold text-gray-900">"Crypto"</div>
-                            <div class="text-sm text-gray-600">"Pay with crypto currencies"</div>
+                            <div class="text-[18px] font-semibold leading-[1.4] text-[#01030A]">
+                                "NowPayments"
+                            </div>
+                            <div class="text-sm font-normal leading-[1.4] text-[#45556C]">
+                                {payment_provider_description(&PaymentProvider::NowPayments)}
+                            </div>
                         </div>
                     </div>
-                    <Show when=move || selected_provider().map_or(false, |p| p == PaymentProvider::NowPayments) && payment_loading()>
-                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                    <Show when=move || payment_loading() && selected_provider() == PaymentProvider::NowPayments>
+                        <div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-100 border-t-[#145EF0]"></div>
                     </Show>
                 </div>
             </button>
@@ -2360,46 +2376,73 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             // <!-- Stripe Button -->
             <button
                 class=move || format!(
-                    "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
-                    if selected_provider().map_or(false, |p| p == PaymentProvider::Stripe) {
-                        "border-indigo-500 bg-indigo-50"
+                    "payment-button flex w-full items-center gap-5 rounded-[8px] border-2 p-4 text-left transition-all duration-200 {}",
+                    if selected_provider() == PaymentProvider::Stripe {
+                        "border-[#145EF0] bg-white"
                     } else {
-                        "border-gray-300 hover:border-indigo-400 hover:bg-gray-50"
+                        "border-[#E2E8F0] bg-white hover:border-blue-200"
                     }
                 )
                 disabled=payment_loading
+                aria-pressed=move || (selected_provider() == PaymentProvider::Stripe).to_string()
                 on:click=move |_| {
                     if !payment_loading() {
-                        create_payment_action.dispatch(PaymentProvider::Stripe);
+                        set_selected_provider.set(PaymentProvider::Stripe);
                     }
                 }
+                type="button"
             >
-                <div class="flex items-center justify-between w-full">
-                    <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center mr-3">
-                            <span class="text-white text-sm font-bold">"S"</span>
+                <div class="flex w-full items-center justify-between gap-4">
+                    <div class="flex items-center gap-5">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#635BFF] text-[28px] font-bold text-white shadow-sm">
+                            "S"
                         </div>
                         <div class="text-left">
-                            <div class="font-semibold text-gray-900">"Stripe"</div>
-                            <div class="text-sm text-gray-600">"Pay with credit/debit cards"</div>
+                            <div class="text-[18px] font-semibold leading-[1.4] text-[#01030A]">
+                                "Stripe"
+                            </div>
+                            <div class="text-sm font-normal leading-[1.4] text-[#45556C]">
+                                {payment_provider_description(&PaymentProvider::Stripe)}
+                            </div>
                         </div>
                     </div>
-                    <Show when=move || selected_provider().map_or(false, |p| p == PaymentProvider::Stripe) && payment_loading()>
-                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
+                    <Show when=move || payment_loading() && selected_provider() == PaymentProvider::Stripe>
+                        <div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-100 border-t-[#145EF0]"></div>
                     </Show>
                 </div>
             </button>
 
-            // <!-- Loading overlay for general payment processing -->
-            <Show when=payment_loading>
-                <div class="text-center py-2">
-                    <div class="text-sm text-gray-600">
-                        {move || format!("Creating {} payment...",
-                            selected_provider().map_or("payment".to_string(), |p| p.as_str().to_string())
-                        )}
-                    </div>
+            <button
+                class=move || format!(
+                    "flex w-full items-center justify-center rounded-[8px] px-5 py-3 text-[16px] font-semibold leading-[1.4] text-white transition-colors {}",
+                    if payment_loading() {
+                        "bg-[#7EA6F8] cursor-wait"
+                    } else {
+                        "bg-[#145EF0] hover:bg-[#0F52D8]"
+                    }
+                )
+                disabled=payment_loading
+                on:click=submit_selected_provider
+                type="button"
+            >
+                <div class="flex items-center gap-2">
+                    <Show when=payment_loading>
+                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></div>
+                    </Show>
+                    <span>
+                        {move || {
+                            if payment_loading() {
+                                format!(
+                                    "Creating {} payment...",
+                                    payment_provider_display_name(&selected_provider())
+                                )
+                            } else {
+                                "Continue To Pay".to_string()
+                            }
+                        }}
+                    </span>
                 </div>
-            </Show>
+            </button>
         </div>
     }
 }
