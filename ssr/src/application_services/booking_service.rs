@@ -28,6 +28,36 @@ pub struct IntegratedBlockRoomResponse {
     pub debug_error: Option<String>,
 }
 
+impl IntegratedBlockRoomResponse {
+    fn indicates_room_unavailable(&self) -> bool {
+        let message = self.message.to_lowercase();
+        let debug_error = self
+            .debug_error
+            .as_deref()
+            .unwrap_or_default()
+            .to_lowercase();
+
+        [
+            "no prebook availability",
+            "no availability found",
+            "unable to reserve the room",
+            "room not available",
+        ]
+        .iter()
+        .any(|needle| message.contains(needle) || debug_error.contains(needle))
+    }
+
+    fn into_booking_error(self) -> BookingError {
+        let is_room_unavailable = self.indicates_room_unavailable();
+        let details = self.debug_error.unwrap_or(self.message);
+        if is_room_unavailable {
+            BookingError::ProviderError(details)
+        } else {
+            BookingError::BackendError(details)
+        }
+    }
+}
+
 /// BookingService provides a clean interface for booking operations
 /// This version focuses on UI-to-domain conversion and calling server functions
 #[derive(Clone)]
@@ -115,7 +145,7 @@ impl BookingService {
                 .map(|f| f.total_price.room_price);
             Ok((booking_id, price))
         } else {
-            Err(BookingError::BackendError(response.message))
+            Err(response.into_booking_error())
         }
     }
 
@@ -183,5 +213,48 @@ impl BookingService {
 impl Default for BookingService {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn failed_response(message: &str, debug_error: Option<&str>) -> IntegratedBlockRoomResponse {
+        IntegratedBlockRoomResponse {
+            success: false,
+            message: message.to_string(),
+            block_room_response: None,
+            booking_id: "booking-id".to_string(),
+            debug_error: debug_error.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn maps_availability_failures_to_provider_error() {
+        let response = failed_response(
+            "Block room failed: We were unable to reserve the room. Please try again.",
+            Some(
+                "LiteAPI Error 400 Bad Request: {\"error\":{\"description\":\"no prebook availability\"}}",
+            ),
+        );
+
+        assert!(matches!(
+            response.into_booking_error(),
+            BookingError::ProviderError(_)
+        ));
+    }
+
+    #[test]
+    fn keeps_non_provider_failures_as_backend_errors() {
+        let response = failed_response(
+            "Room blocked successfully, but failed to save to backend",
+            None,
+        );
+
+        assert!(matches!(
+            response.into_booking_error(),
+            BookingError::BackendError(_)
+        ));
     }
 }
