@@ -2323,52 +2323,38 @@ pub fn PaymentProviderButtons() -> impl IntoView {
 
     let payment_loading = move || create_payment_action.pending().get();
 
-    let submit_selected_provider = move |_| {
-        if !payment_loading() {
-            create_payment_action.dispatch(selected_provider());
-        }
-    };
-
     view! {
-        <div class="space-y-5">
+        <div class="space-y-4 w-full">
             // <!-- NowPayments Button -->
             <button
                 class=move || format!(
-                    "payment-button flex w-full items-center gap-5 rounded-[8px] border-2 p-4 text-left transition-all duration-200 {}",
+                    "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
                     if selected_provider() == PaymentProvider::NowPayments {
-                        "border-[#145EF0] bg-white"
+                        "border-blue-500 bg-blue-50"
                     } else {
-                        "border-[#E2E8F0] bg-white hover:border-blue-200"
+                        "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
                     }
                 )
                 disabled=payment_loading
-                aria-pressed=move || (selected_provider() == PaymentProvider::NowPayments).to_string()
                 on:click=move |_| {
                     if !payment_loading() {
                         set_selected_provider.set(PaymentProvider::NowPayments);
+                        create_payment_action.dispatch(PaymentProvider::NowPayments);
                     }
                 }
-                type="button"
             >
-                <div class="flex w-full items-center justify-between gap-4">
-                    <div class="flex items-center gap-5">
-                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#202733] text-white shadow-sm">
-                            <div class="flex flex-col items-center leading-none">
-                                <span class="text-[8px] font-bold uppercase tracking-[0.08em]">"NOW"</span>
-                                <span class="mt-0.5 text-[7px] font-medium">"Payments"</span>
-                            </div>
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mr-3">
+                            <span class="text-white text-sm font-bold">"C"</span>
                         </div>
                         <div class="text-left">
-                            <div class="text-[18px] font-semibold leading-[1.4] text-[#01030A]">
-                                "NowPayments"
-                            </div>
-                            <div class="text-sm font-normal leading-[1.4] text-[#45556C]">
-                                {payment_provider_description(&PaymentProvider::NowPayments)}
-                            </div>
+                            <div class="font-semibold text-gray-900">"Crypto"</div>
+                            <div class="text-sm text-gray-600">"Pay with crypto currencies"</div>
                         </div>
                     </div>
-                    <Show when=move || payment_loading() && selected_provider() == PaymentProvider::NowPayments>
-                        <div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-100 border-t-[#145EF0]"></div>
+                    <Show when=move || selected_provider() == PaymentProvider::NowPayments && payment_loading()>
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
                     </Show>
                 </div>
             </button>
@@ -2376,73 +2362,47 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             // <!-- Stripe Button -->
             <button
                 class=move || format!(
-                    "payment-button flex w-full items-center gap-5 rounded-[8px] border-2 p-4 text-left transition-all duration-200 {}",
+                    "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
                     if selected_provider() == PaymentProvider::Stripe {
-                        "border-[#145EF0] bg-white"
+                        "border-indigo-500 bg-indigo-50"
                     } else {
-                        "border-[#E2E8F0] bg-white hover:border-blue-200"
+                        "border-gray-300 hover:border-indigo-400 hover:bg-gray-50"
                     }
                 )
                 disabled=payment_loading
-                aria-pressed=move || (selected_provider() == PaymentProvider::Stripe).to_string()
                 on:click=move |_| {
                     if !payment_loading() {
                         set_selected_provider.set(PaymentProvider::Stripe);
+                        create_payment_action.dispatch(PaymentProvider::Stripe);
                     }
                 }
-                type="button"
             >
-                <div class="flex w-full items-center justify-between gap-4">
-                    <div class="flex items-center gap-5">
-                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#635BFF] text-[28px] font-bold text-white shadow-sm">
-                            "S"
+                <div class="flex items-center justify-between w-full">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center mr-3">
+                            <span class="text-white text-sm font-bold">"S"</span>
                         </div>
                         <div class="text-left">
-                            <div class="text-[18px] font-semibold leading-[1.4] text-[#01030A]">
-                                "Stripe"
-                            </div>
-                            <div class="text-sm font-normal leading-[1.4] text-[#45556C]">
-                                {payment_provider_description(&PaymentProvider::Stripe)}
-                            </div>
+                            <div class="font-semibold text-gray-900">"Stripe"</div>
+                            <div class="text-sm text-gray-600">"Pay with credit/debit cards"</div>
                         </div>
                     </div>
-                    <Show when=move || payment_loading() && selected_provider() == PaymentProvider::Stripe>
-                        <div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-100 border-t-[#145EF0]"></div>
+                    <Show when=move || selected_provider() == PaymentProvider::Stripe && payment_loading()>
+                        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
                     </Show>
                 </div>
             </button>
 
-            <button
-                class=move || format!(
-                    "flex w-full items-center justify-center rounded-[8px] px-5 py-3 text-[16px] font-semibold leading-[1.4] text-white transition-colors {}",
-                    if payment_loading() {
-                        "bg-[#7EA6F8] cursor-wait"
-                    } else {
-                        "bg-[#145EF0] hover:bg-[#0F52D8]"
-                    }
-                )
-                disabled=payment_loading
-                on:click=submit_selected_provider
-                type="button"
-            >
-                <div class="flex items-center gap-2">
-                    <Show when=payment_loading>
-                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></div>
-                    </Show>
-                    <span>
-                        {move || {
-                            if payment_loading() {
-                                format!(
-                                    "Creating {} payment...",
-                                    payment_provider_display_name(&selected_provider())
-                                )
-                            } else {
-                                "Continue To Pay".to_string()
-                            }
-                        }}
-                    </span>
+            // <!-- Loading overlay for general payment processing -->
+            <Show when=payment_loading>
+                <div class="text-center py-2">
+                    <div class="text-sm text-gray-600">
+                        {move || format!("Creating {} payment...",
+                            payment_provider_display_name(&selected_provider())
+                        )}
+                    </div>
                 </div>
-            </button>
+            </Show>
         </div>
     }
 }
