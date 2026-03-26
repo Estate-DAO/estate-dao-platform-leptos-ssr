@@ -567,8 +567,8 @@ pub struct StripeCreateCheckoutSessionResponse {
     id: String, // Session ID
     /// Checkout URL - this is the one we will use to redirect the user    
     url: String,
-    amount_total: i64,
-    currency: String,
+    amount_total: Option<i64>,
+    currency: Option<String>,
     metadata: HashMap<String, String>,
     /// stripe's notation of payment_status
     payment_status: StripePaymentStatusEnum,
@@ -612,8 +612,8 @@ impl From<StripeCreateCheckoutSessionResponse> for CreateInvoiceResponse {
             token_id: String::new(), // Not available in Stripe response
             order_id: response.client_reference_id,
             order_description: String::new(), // Will be set by the caller
-            price_amount: (response.amount_total as f64).to_string(),
-            price_currency: response.currency,
+            price_amount: response.amount_total.unwrap_or(0).to_string(),
+            price_currency: response.currency.unwrap_or_default(),
             pay_currency: None,
             ipn_callback_url: String::new(), // Will be set by the caller
             invoice_url: response.url,
