@@ -940,8 +940,8 @@ mod tests {
             vec![line_item],
             "payment".to_string(),
             Some(metadata),
-            "NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com".to_string(),
-            "tripathi.abhishek.iitkgp@gmail.com".to_string(),
+            "NP$6:ABC123$34:support@estatedao.org".to_string(),
+            "support@estatedao.org".to_string(),
             StripeUIModeEnum::Hosted,
         );
 
@@ -978,14 +978,13 @@ mod tests {
         assert!(
             form_string.contains(
                 "client_reference_id=NP%246%3AABC123%2434%3Atripathi.abhishek.iitkgp%40gmail.com"
-            ) || form_string
-                .contains("client_reference_id=NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com")
+            ) || form_string.contains("client_reference_id=NP$6:ABC123$34:support@estatedao.org")
         );
 
         // Assert customer email
         assert!(
             form_string.contains("customer_email=tripathi.abhishek.iitkgp%40gmail.com")
-                || form_string.contains("customer_email=tripathi.abhishek.iitkgp@gmail.com")
+                || form_string.contains("customer_email=support@estatedao.org")
         );
 
         // Assert address/name collection settings required for India export compliance
