@@ -396,12 +396,15 @@ impl StripeCreateCheckoutSession {
     }
 }
 
-#[derive(Debug, Serialize, Default, Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum StripeUIModeEnum {
-    #[default]
-    Hosted,
+    #[serde(rename = "hosted_page")]
+    HostedPage,
+
+    #[serde(rename = "embedded")]
     Embedded,
+
+    #[serde(rename = "custom")]
     Custom,
 }
 
@@ -864,7 +867,7 @@ mod tests {
             Some(metadata),
             "test_order_123".to_string(),
             "test@example.com".to_string(),
-            StripeUIModeEnum::Hosted,
+            StripeUIModeEnum::HostedPage,
         );
 
         // Act: Serialize to form data

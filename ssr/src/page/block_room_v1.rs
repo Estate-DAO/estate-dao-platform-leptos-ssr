@@ -1894,6 +1894,7 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
             "bg-yellow-50",
         ),
         Some("server") => (icondata::FaServerSolid, "text-red-600", "bg-red-50"),
+        Some("payment") => (icondata::BsCreditCard, "text-red-600", "bg-red-50"),
         _ => (icondata::AiWarningOutlined, "text-gray-600", "bg-gray-50"),
     };
 
@@ -1928,6 +1929,7 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
                             Some("network") => "Connection Issue",
                             Some("validation") => "Booking Information Issue",
                             Some("server") => "Service Temporarily Unavailable",
+                            Some("payment") => "Payment Initialization Failed",
                             _ => "Something Went Wrong"
                         }}
                     </h3>

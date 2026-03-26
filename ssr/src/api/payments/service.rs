@@ -183,7 +183,7 @@ impl PaymentServiceImpl {
             Some(metadata),
             domain_request.order_id,
             domain_request.customer_email.clone(),
-            StripeUIModeEnum::Hosted,
+            StripeUIModeEnum::HostedPage,
         );
 
         Ok(stripe_request)
