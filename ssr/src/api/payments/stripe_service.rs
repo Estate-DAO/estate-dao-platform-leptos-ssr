@@ -830,7 +830,7 @@ pub fn create_stripe_checkout_session(
         Some(StripeMetadata(HashMap::new())),
         order_id,
         email.clone(),
-        StripeUIModeEnum::Hosted,
+        StripeUIModeEnum::HostedPage,
     ))
 }
 
@@ -945,7 +945,7 @@ mod tests {
             Some(metadata),
             "NP$6:ABC123$34:support@estatedao.org".to_string(),
             "support@estatedao.org".to_string(),
-            StripeUIModeEnum::Hosted,
+            StripeUIModeEnum::HostedPage,
         );
 
         // Act: Serialize to form data
