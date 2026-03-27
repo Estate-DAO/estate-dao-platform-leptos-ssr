@@ -396,12 +396,15 @@ impl StripeCreateCheckoutSession {
     }
 }
 
-#[derive(Debug, Serialize, Default, Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum StripeUIModeEnum {
-    #[default]
-    Hosted,
+    #[serde(rename = "hosted_page")]
+    HostedPage,
+
+    #[serde(rename = "embedded")]
     Embedded,
+
+    #[serde(rename = "custom")]
     Custom,
 }
 
@@ -567,8 +570,8 @@ pub struct StripeCreateCheckoutSessionResponse {
     id: String, // Session ID
     /// Checkout URL - this is the one we will use to redirect the user    
     url: String,
-    amount_total: i64,
-    currency: String,
+    amount_total: Option<i64>,
+    currency: Option<String>,
     metadata: HashMap<String, String>,
     /// stripe's notation of payment_status
     payment_status: StripePaymentStatusEnum,
@@ -612,8 +615,8 @@ impl From<StripeCreateCheckoutSessionResponse> for CreateInvoiceResponse {
             token_id: String::new(), // Not available in Stripe response
             order_id: response.client_reference_id,
             order_description: String::new(), // Will be set by the caller
-            price_amount: (response.amount_total as f64).to_string(),
-            price_currency: response.currency,
+            price_amount: response.amount_total.unwrap_or(0).to_string(),
+            price_currency: response.currency.unwrap_or_default(),
             pay_currency: None,
             ipn_callback_url: String::new(), // Will be set by the caller
             invoice_url: response.url,
@@ -827,7 +830,7 @@ pub fn create_stripe_checkout_session(
         Some(StripeMetadata(HashMap::new())),
         order_id,
         email.clone(),
-        StripeUIModeEnum::Hosted,
+        StripeUIModeEnum::HostedPage,
     ))
 }
 
@@ -864,7 +867,7 @@ mod tests {
             Some(metadata),
             "test_order_123".to_string(),
             "test@example.com".to_string(),
-            StripeUIModeEnum::Hosted,
+            StripeUIModeEnum::HostedPage,
         );
 
         // Act: Serialize to form data
@@ -940,9 +943,9 @@ mod tests {
             vec![line_item],
             "payment".to_string(),
             Some(metadata),
-            "NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com".to_string(),
-            "tripathi.abhishek.iitkgp@gmail.com".to_string(),
-            StripeUIModeEnum::Hosted,
+            "NP$6:ABC123$34:support@estatedao.org".to_string(),
+            "support@estatedao.org".to_string(),
+            StripeUIModeEnum::HostedPage,
         );
 
         // Act: Serialize to form data
@@ -978,14 +981,13 @@ mod tests {
         assert!(
             form_string.contains(
                 "client_reference_id=NP%246%3AABC123%2434%3Atripathi.abhishek.iitkgp%40gmail.com"
-            ) || form_string
-                .contains("client_reference_id=NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com")
+            ) || form_string.contains("client_reference_id=NP$6:ABC123$34:support@estatedao.org")
         );
 
         // Assert customer email
         assert!(
             form_string.contains("customer_email=tripathi.abhishek.iitkgp%40gmail.com")
-                || form_string.contains("customer_email=tripathi.abhishek.iitkgp@gmail.com")
+                || form_string.contains("customer_email=support@estatedao.org")
         );
 
         // Assert address/name collection settings required for India export compliance

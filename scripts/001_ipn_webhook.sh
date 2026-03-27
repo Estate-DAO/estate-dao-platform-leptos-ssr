@@ -18,7 +18,7 @@ PAYMENT_DETAILS='{
   "pay_amount":155.38559757,
   "actually_paid":10,
   "pay_currency":"USD",
-  "order_id": "NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com",
+  "order_id": "NP$6:ABC123$34:support@estatedao.org",
   "order_description":"Apple Macbook Pro 2019 x 1",
   "purchase_id":"6084744717",
   "created_at":"2021-04-12T14:22:54.942Z",

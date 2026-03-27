@@ -41,3 +41,7 @@ search.txt
 
 logs/
 memories/
+
+# Ignore agent skills and workflows
+/.agents/
+docs/

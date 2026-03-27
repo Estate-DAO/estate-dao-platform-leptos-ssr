@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn test_pattern_matching_for_frontend_subscription() {
         // Test the exact scenario from confirmation_page_v2.rs
-        let email = "tripathi.abhishek.iitkgp@gmail.com";
+        let email = "support@estatedao.org";
         let order_id = "ORDER123";
 
         // This is what the frontend subscribes to (email-based pattern)
@@ -436,11 +436,11 @@ mod tests {
         // Verify the expected formats
         assert_eq!(
             subscription_pattern,
-            "step:*:step_type:*:booking:*:email:tripathi.abhishek.iitkgp@gmail.com"
+            "step:*:step_type:*:booking:*:email:support@estatedao.org"
         );
         assert_eq!(
             published_topic,
-            "step:payment:step_type:on_step_start:booking:ORDER123:email:tripathi.abhishek.iitkgp@gmail.com"
+            "step:payment:step_type:on_step_start:booking:ORDER123:email:support@estatedao.org"
         );
     }
 
