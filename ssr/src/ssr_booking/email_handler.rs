@@ -241,8 +241,7 @@ impl EmailClient {
 
         let username = &booking.get_user_name();
         let to = &booking.get_user_email();
-        // todo change this later
-        let cc = "abhishek@estatedao.org";
+        let bcc = "ayushi@estatedao.org, prakash@estatedao.org, utkarsh@gobazzinga.io";
         let booking_id = booking.get_booking_ref();
         let check_in_date = booking.get_check_in_date();
         let check_out_date = booking.get_check_out_date();
@@ -380,7 +379,7 @@ Team Nofeebooking"
                 // Create the email message
                 let email_raw = format!(
                     "To: {to}\r\n\
-Cc: {cc}\r\n\
+Bcc: {bcc}\r\n\
 Subject: {subject}\r\n\
 MIME-Version: 1.0\r\n\
 Content-Type: multipart/alternative; boundary=\"{boundary}\"\r\n\
@@ -501,6 +500,7 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
         &self,
         to: &str,
         cc: Option<&str>,
+        bcc: Option<&str>,
         subject: &str,
         text_body: &str,
         html_body: &str,
@@ -512,13 +512,16 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
             .map_err(|e| e.to_string())?;
 
         let cc_header = cc.map(|addr| format!("Cc: {addr}\r\n")).unwrap_or_default();
+        let bcc_header = bcc
+            .map(|addr| format!("Bcc: {addr}\r\n"))
+            .unwrap_or_default();
         let reply_to_header = reply_to
             .map(|addr| format!("Reply-To: {addr}\r\n"))
             .unwrap_or_default();
         let boundary = "nofeebooking-support-boundary";
         let email_raw = format!(
             "To: {to}\r\n\
-{cc_header}{reply_to_header}Subject: {subject}\r\n\
+{cc_header}{bcc_header}{reply_to_header}Subject: {subject}\r\n\
 MIME-Version: 1.0\r\n\
 Content-Type: multipart/alternative; boundary=\"{boundary}\"\r\n\
 \r\n\
