@@ -7,14 +7,13 @@ use estate_fe::view_state_layer::AppState;
 use estate_fe::{
     application_services::HotelService,
     domain::DomainHotelSearchCriteria,
-    init::get_provider_registry,
     ports::hotel_provider_port::ProviderError,
     utils::error_alerts::{CriticalError, ErrorType},
 };
 use serde_json::json;
 
 use super::{
-    filter_hotels_with_valid_pricing, get_currency_aware_liteapi_driver, parse_json_request,
+    filter_hotels_with_valid_pricing, get_currency_aware_provider_registry, parse_json_request,
 };
 
 #[axum::debug_handler]
@@ -26,8 +25,8 @@ pub async fn search_hotel_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainHotelSearchCriteria = parse_json_request(&body)?;
     // tracing::error!("Hotel search request: {:?}", request);
-    // <!-- Create the hotel service with LiteApiDriver from global client -->
-    let provider = get_provider_registry().hotel_provider();
+    // <!-- Create the hotel service with Provider Registry from global client -->
+    let provider = get_currency_aware_provider_registry(&headers).hotel_provider();
     let hotel_service = HotelService::new(provider);
 
     // <!-- Perform the hotel search -->

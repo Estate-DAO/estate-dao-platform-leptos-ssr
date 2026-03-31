@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use estate_fe::view_state_layer::AppState;
-use estate_fe::{application_services::HotelService, init::get_provider_registry};
+use estate_fe::application_services::HotelService;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -14,10 +14,13 @@ pub struct GetHotelDetailsQuery {
     pub hotel_id: String,
 }
 
+use axum::http::HeaderMap;
+
 #[cfg_attr(feature = "debug_log", axum::debug_handler)]
 #[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
 pub async fn get_hotel_details_api_server_fn_route(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<GetHotelDetailsQuery>,
 ) -> Result<Response, Response> {
     // Validate hotel_id is provided
@@ -28,8 +31,8 @@ pub async fn get_hotel_details_api_server_fn_route(
         return Err((StatusCode::BAD_REQUEST, error_response.to_string()).into_response());
     }
 
-    // Create the hotel service with provider registry (fallback enabled)
-    let provider = get_provider_registry().hotel_provider();
+    // Create the hotel service with provider registry (currency enabled)
+    let provider = crate::server_functions_impl_custom_routes::get_currency_aware_provider_registry(&headers).hotel_provider();
     let hotel_service = HotelService::new(provider);
 
     // Get hotel details without rates

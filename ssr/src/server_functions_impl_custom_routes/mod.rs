@@ -133,12 +133,14 @@ pub fn extract_currency_from_headers(headers: &HeaderMap) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-pub fn get_currency_aware_liteapi_driver(
+
+
+pub fn get_currency_aware_provider_registry(
     headers: &HeaderMap,
-) -> hotel_providers::liteapi::LiteApiDriver {
+) -> std::sync::Arc<hotel_providers::ProviderRegistry> {
     let raw_currency = extract_currency_from_headers(headers);
     let resolved_currency = resolve_currency_code(raw_currency.as_deref());
-    get_liteapi_driver_with_currency(Some(&resolved_currency))
+    crate::init::get_currency_aware_provider_registry(Some(&resolved_currency))
 }
 
 // Helper function to call block room API using HotelService
@@ -148,8 +150,11 @@ pub async fn call_block_room_api(
     headers: Option<&HeaderMap>,
     request: DomainBlockRoomRequest,
 ) -> Result<DomainBlockRoomResponse, ProviderError> {
-    // Use provider registry (fallback enabled)
-    let provider = get_provider_registry().hotel_provider();
+    // Use provider registry (currency enabled)
+    let provider = match headers {
+        Some(h) => get_currency_aware_provider_registry(h).hotel_provider(),
+        None => crate::init::get_provider_registry().hotel_provider(),
+    };
     let hotel_service = HotelService::new(provider);
 
     hotel_service.block_room(request).await

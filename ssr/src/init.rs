@@ -150,6 +150,26 @@ pub fn get_booking_driver() -> BookingDriver {
         .clone()
 }
 
+pub fn get_booking_driver_with_currency(currency: Option<&str>) -> BookingDriver {
+    let api_token = std::env::var("BOOKING_API_TOKEN").unwrap_or_default();
+    let affiliate_id = std::env::var("BOOKING_AFFILIATE_ID")
+        .ok()
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    let base_url = std::env::var("BOOKING_BASE_URL")
+        .unwrap_or_else(|_| "https://demandapi.booking.com/3.1".to_string());
+    let resolved_currency = resolve_currency_code(currency);
+    let use_mock = std::env::var("BOOKING_USE_MOCK")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(api_token.is_empty());
+
+    if use_mock {
+        BookingDriver::new_mock(resolved_currency)
+    } else {
+        BookingDriver::new_real(api_token, affiliate_id, base_url, resolved_currency)
+    }
+}
+
 fn configure_hotel_providers(
     builder: ProviderRegistryBuilder,
     primary_hotel_provider: PrimaryHotelProvider,
@@ -223,6 +243,22 @@ pub fn get_provider_registry() -> Arc<ProviderRegistry> {
         .read()
         .expect("Provider registry lock poisoned")
         .clone()
+}
+
+pub fn get_currency_aware_provider_registry(currency: Option<&str>) -> Arc<ProviderRegistry> {
+    let resolved_currency = resolve_currency_code(currency);
+    let liteapi_driver = get_liteapi_driver_with_currency(Some(&resolved_currency));
+    let booking_driver = get_booking_driver_with_currency(Some(&resolved_currency));
+
+    let primary_provider_str = get_primary_hotel_provider();
+    let primary_hotel_provider = PrimaryHotelProvider::from_str(&primary_provider_str)
+        .unwrap_or(PRIMARY_HOTEL_PROVIDER);
+
+    Arc::new(build_provider_registry(
+        primary_hotel_provider,
+        &liteapi_driver,
+        &booking_driver,
+    ))
 }
 
 pub fn get_primary_hotel_provider() -> String {

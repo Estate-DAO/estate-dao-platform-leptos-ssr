@@ -16,8 +16,8 @@ use hotel_providers::liteapi::models::booking::LiteApiPrebookResponse;
 use serde_json::json;
 
 use super::{
-    call_block_room_api, get_currency_aware_liteapi_driver, parse_json_request,
-    IntegratedBlockRoomRequest, IntegratedBlockRoomResponse,
+    call_block_room_api, parse_json_request, IntegratedBlockRoomRequest,
+    IntegratedBlockRoomResponse,
 };
 
 /// HTTP status code for partial success (room blocked but backend save failed)
@@ -415,12 +415,13 @@ async fn fetch_actual_hotel_details(
     headers: &HeaderMap,
     hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
 ) -> Result<DomainHotelDetails, String> {
-    use estate_fe::{application_services::HotelService, init::get_provider_registry};
+    use estate_fe::application_services::HotelService;
+    use crate::server_functions_impl_custom_routes::get_currency_aware_provider_registry;
 
     tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
 
-    // Create the hotel service with provider registry (fallback enabled)
-    let provider = get_provider_registry().hotel_provider();
+    // Create the hotel service with provider registry (currency enabled)
+    let provider = get_currency_aware_provider_registry(headers).hotel_provider();
     let hotel_service = HotelService::new(provider);
 
     // Get hotel information
