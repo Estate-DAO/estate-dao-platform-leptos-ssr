@@ -598,19 +598,6 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                         view! { <div /> }.into_view()
                                     }}
 
-                                    // Confirmation Number (from provider - only show if available)
-                                    {if !display_info.confirmation_no.is_empty() {
-                                        view! {
-                                            <div class=MSITE_SUBSECTION_CLASS>
-                                                <p class=MSITE_LABEL_CLASS>"Confirmation Number"</p>
-                                                <p class="mt-1.5 break-all font-mono text-sm text-slate-900 sm:text-base">
-                                                    {display_info.confirmation_no}
-                                                </p>
-                                            </div>
-                                        }.into_view()
-                                    } else {
-                                        view! { <div /> }.into_view()
-                                    }}
                                 </div>
 
                                 // Check-in and Check-out dates
@@ -663,20 +650,37 @@ fn BookingConfirmationDisplay() -> impl IntoView {
                                     </div>
                                 </div>
 
-                                // Guest Information
-                                <div class=MSITE_SUBSECTION_CLASS>
-                                    <p class=MSITE_LABEL_CLASS>"Guest Information"</p>
-                                    <div class="mt-1.5 space-y-1">
-                                        <p class="text-sm font-medium text-slate-900 sm:text-base">
-                                            {format!("{} (Primary Guest)", display_info.user_name)}
-                                        </p>
-                                        <p class="text-sm text-slate-600 sm:text-base">
-                                            {display_info.user_email}
-                                        </p>
-                                        <p class="text-sm text-slate-600 sm:text-base">
-                                            {display_info.user_phone}
-                                        </p>
+                                // Guest Information & Confirmation Number
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    // Guest Information
+                                    <div class=MSITE_SUBSECTION_CLASS>
+                                        <p class=MSITE_LABEL_CLASS>"Guest Information"</p>
+                                        <div class="mt-1.5 space-y-1">
+                                            <p class="text-sm font-medium text-slate-900 sm:text-base">
+                                                {format!("{} (Primary Guest)", display_info.user_name)}
+                                            </p>
+                                            <p class="text-sm text-slate-600 sm:text-base">
+                                                {display_info.user_email}
+                                            </p>
+                                            <p class="text-sm text-slate-600 sm:text-base">
+                                                {display_info.user_phone}
+                                            </p>
+                                        </div>
                                     </div>
+
+                                    // Confirmation Number (from provider - only show if available)
+                                    {if !display_info.confirmation_no.is_empty() {
+                                        view! {
+                                            <div class=MSITE_SUBSECTION_CLASS>
+                                                <p class=MSITE_LABEL_CLASS>"Confirmation Number"</p>
+                                                <p class="mt-1.5 break-all font-mono text-sm text-slate-900 sm:text-base">
+                                                    {display_info.confirmation_no}
+                                                </p>
+                                            </div>
+                                        }.into_view()
+                                    } else {
+                                        view! { <div /> }.into_view()
+                                    }}
                                 </div>
                             </div>
                         }.into_view()
