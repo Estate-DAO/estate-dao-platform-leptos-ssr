@@ -415,8 +415,8 @@ async fn fetch_actual_hotel_details(
     headers: &HeaderMap,
     hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
 ) -> Result<DomainHotelDetails, String> {
-    use estate_fe::application_services::HotelService;
     use crate::server_functions_impl_custom_routes::get_currency_aware_provider_registry;
+    use estate_fe::application_services::HotelService;
 
     tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
 

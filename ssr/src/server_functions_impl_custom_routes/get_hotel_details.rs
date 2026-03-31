@@ -4,8 +4,8 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use estate_fe::view_state_layer::AppState;
 use estate_fe::application_services::HotelService;
+use estate_fe::view_state_layer::AppState;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -32,7 +32,7 @@ pub async fn get_hotel_details_api_server_fn_route(
     }
 
     // Create the hotel service with provider registry (currency enabled)
-    let provider = crate::server_functions_impl_custom_routes::get_currency_aware_provider_registry(&headers).hotel_provider();
+    let provider = super::get_currency_aware_provider_registry(&headers).hotel_provider();
     let hotel_service = HotelService::new(provider);
 
     // Get hotel details without rates

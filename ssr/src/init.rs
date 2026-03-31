@@ -251,8 +251,8 @@ pub fn get_currency_aware_provider_registry(currency: Option<&str>) -> Arc<Provi
     let booking_driver = get_booking_driver_with_currency(Some(&resolved_currency));
 
     let primary_provider_str = get_primary_hotel_provider();
-    let primary_hotel_provider = PrimaryHotelProvider::from_str(&primary_provider_str)
-        .unwrap_or(PRIMARY_HOTEL_PROVIDER);
+    let primary_hotel_provider =
+        PrimaryHotelProvider::from_str(&primary_provider_str).unwrap_or(PRIMARY_HOTEL_PROVIDER);
 
     Arc::new(build_provider_registry(
         primary_hotel_provider,

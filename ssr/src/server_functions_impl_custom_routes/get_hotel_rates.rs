@@ -4,9 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use estate_fe::view_state_layer::AppState;
-use estate_fe::{
-    application_services::HotelService, domain::DomainHotelInfoCriteria,
-};
+use estate_fe::{application_services::HotelService, domain::DomainHotelInfoCriteria};
 use serde_json::json;
 
 use super::{get_currency_aware_provider_registry, parse_json_request};
