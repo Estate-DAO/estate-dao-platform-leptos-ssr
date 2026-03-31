@@ -446,7 +446,7 @@ fn IntegratedProgressStepper() -> impl IntoView {
 #[component]
 fn LoadingView() -> impl IntoView {
     view! {
-        <div class=format!("{MSITE_SECTION_CLASS} max-w-3xl mx-auto")>
+        <div class=MSITE_SECTION_CLASS>
             <div class="flex flex-col items-center justify-center text-center">
                 <div class="flex justify-center items-center">
                     <SpinnerGray />
@@ -469,7 +469,7 @@ fn LoadingView() -> impl IntoView {
 #[component]
 fn ErrorView() -> impl IntoView {
     view! {
-        <div class=format!("{MSITE_SECTION_CLASS} max-w-3xl mx-auto")>
+        <div class=MSITE_SECTION_CLASS>
 
             // Error header
             <div class="space-y-2 text-center">
@@ -513,7 +513,7 @@ fn ErrorView() -> impl IntoView {
 #[component]
 fn BookingConfirmationDisplay() -> impl IntoView {
     view! {
-        <div class=format!("{MSITE_SECTION_CLASS} max-w-3xl mx-auto")>
+        <div class=MSITE_SECTION_CLASS>
 
             // Success header - dynamic based on booking status
             {move || {
