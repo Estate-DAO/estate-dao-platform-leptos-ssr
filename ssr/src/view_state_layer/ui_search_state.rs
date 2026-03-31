@@ -379,8 +379,11 @@ impl UIPaginationState {
 
         if let Some(pagination_meta) = meta {
             if pagination_meta.has_next_page {
-                // crate::log!("[PAGINATION-DEBUG] 🔄 Setting current_page from {} to {}", current, current + 1);
-                this.current_page.set(current + 1);
+                // When first-page prefetch is enabled, `pagination_meta.page` can be ahead of
+                // `current_page`. Jump to the next unfetched page instead of `current + 1`.
+                let next_page = (current + 1).max(pagination_meta.page + 1);
+                // crate::log!("[PAGINATION-DEBUG] 🔄 Setting current_page from {} to {}", current, next_page);
+                this.current_page.set(next_page);
                 // crate::log!("[PAGINATION-DEBUG] 🔄 Current page updated to: {}", this.current_page.get_untracked());
             } else {
                 // crate::log!("[PAGINATION-DEBUG] 🔄 No next page available (has_next_page=false)");

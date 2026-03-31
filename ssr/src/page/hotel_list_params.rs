@@ -555,6 +555,12 @@ impl HotelListParams {
         // Place information - always include if present
         if let Some(ref place) = self.place {
             params.insert("placeId".to_string(), place.place_id.clone());
+            if !place.display_name.trim().is_empty() {
+                params.insert("placeName".to_string(), place.display_name.clone());
+            }
+            if !place.formatted_address.trim().is_empty() {
+                params.insert("placeAddress".to_string(), place.formatted_address.clone());
+            }
         }
 
         // Dates - always include if present
@@ -652,15 +658,23 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
 
         // Set destination if available
         if let Some(place) = &self.place {
-            // Check if we need to fetch place details:
-            // 1. If place_details is None, OR
-            // 2. If the incoming placeId is different from the currently stored place
             let current_place = search_ctx.place.get_untracked();
-            let should_fetch = self.place_details.is_none()
-                || current_place.as_ref().map_or(true, |current| {
-                    // Fetch if placeId has changed
-                    current.place_id != place.place_id
-                });
+            let current_place_details = search_ctx.place_details.get_untracked();
+            let place_id_changed = current_place
+                .as_ref()
+                .map_or(true, |current| current.place_id != place.place_id);
+
+            // Fetch place details only when they are really needed:
+            // - always for a new place_id
+            // - for same place_id only when no details are currently available
+            // Avoid re-fetching on URL sync when context already has fresh details.
+            let should_fetch = if place_id_changed {
+                true
+            } else if self.place_details.is_some() {
+                false
+            } else {
+                current_place_details.is_none()
+            };
 
             // If place has changed, clear search results to trigger hotel search resource
             if current_place
@@ -679,6 +693,14 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
             if should_fetch {
                 let place_id = place.place_id.clone();
                 let place_for_update = place.clone();
+
+                // Immediately reflect the newly selected place and clear stale coordinates.
+                // This prevents old-place lat/lng from being used while details are loading.
+                let immediate_place = place.clone();
+                batch(move || {
+                    UISearchCtx::set_place(immediate_place);
+                    UISearchCtx::set_place_details(None);
+                });
 
                 // Handle custom place_ids (from "Search this area" feature)
                 // Format: custom_<lat>_<lng>
@@ -712,8 +734,10 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                                 formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
                             };
 
-                            UISearchCtx::set_place(updated_place);
-                            UISearchCtx::set_place_details(Some(place_details));
+                            batch(move || {
+                                UISearchCtx::set_place(updated_place);
+                                UISearchCtx::set_place_details(Some(place_details));
+                            });
                         } else {
                             log!("[sync_to_app_state] Failed to parse coordinates from custom place_id: {}", place_id);
                         }
@@ -732,24 +756,37 @@ impl QueryParamsSync<HotelListParams> for HotelListParams {
                             };
 
                             // Set both place (for DestinationPicker display) and place_details
-                            UISearchCtx::set_place(updated_place);
-                            UISearchCtx::set_place_details(Some(place_details));
+                            // in one batch to avoid duplicate reactive search triggers.
+                            batch(move || {
+                                UISearchCtx::set_place(updated_place);
+                                UISearchCtx::set_place_details(Some(place_details));
+                            });
                         }
                     });
                 }
             } else {
                 // If we already have place_details and placeId matches, update the place with proper names
-                if let Some(ref details) = self.place_details {
-                    let updated_place = Place {
+                let place_details = self
+                    .place_details
+                    .clone()
+                    .or_else(|| current_place_details.clone());
+                let resolved_place = if let Some(ref details) = place_details {
+                    Place {
                         place_id: place.place_id.clone(),
                         display_name: get_display_name_from_place_data(details),
                         formatted_address: get_formatted_address_from_place_data(details),
-                    };
-                    UISearchCtx::set_place(updated_place);
+                    }
+                } else if !place.display_name.trim().is_empty()
+                    || !place.formatted_address.trim().is_empty()
+                {
+                    place.clone()
                 } else {
-                    UISearchCtx::set_place(place.clone());
-                }
-                UISearchCtx::set_place_details(self.place_details.clone());
+                    current_place.unwrap_or_else(|| place.clone())
+                };
+                batch(move || {
+                    UISearchCtx::set_place(resolved_place);
+                    UISearchCtx::set_place_details(place_details);
+                });
             }
         }
 

@@ -6,6 +6,7 @@ pub const BOOK_ROOM_RESPONSE: &str = "estatedao_book_room_response";
 pub const USER_IDENTITY: &str = "estatedao_user_identity";
 pub const USER_EMAIL_MAPPING_SYNCED: &str = "estatedao_user_email_mapping_synced";
 pub const PAGINATION_LIMIT: i32 = 100;
+pub const FIRST_PAGE_PREFETCH_PAGES: u32 = 2;
 pub const ENFORCE_SINGLE_ROOM_TYPE_BOOKING: bool = true;
 
 /// Enable room mapping in LiteAPI rates request to get mapped_room_id values.

@@ -105,12 +105,32 @@ impl StripeEstate {
             let response_status = response.status();
             log!("[Stripe] Response Status = {}", response_status);
             let response_text_value = response.text().await?;
+            let body_string = response_text_value;
 
             if !response_status.is_success() {
-                log!("[Stripe] Error Response = {:#?}", response_text_value);
+                log!("[Stripe] Error Response = {:#?}", body_string);
+                let parsed_error = serde_json::from_str::<StripeErrorResponse>(&body_string).ok();
+                let stripe_message = parsed_error
+                    .as_ref()
+                    .and_then(|e| e.error.message.clone())
+                    .unwrap_or_else(|| body_string.clone());
+                let stripe_code = parsed_error
+                    .as_ref()
+                    .and_then(|e| e.error.code.clone())
+                    .unwrap_or_else(|| "unknown".to_string());
+                let stripe_type = parsed_error
+                    .as_ref()
+                    .and_then(|e| e.error.error_type.clone())
+                    .unwrap_or_else(|| "unknown".to_string());
+                return Err(anyhow::anyhow!(
+                    "Stripe API {} (type: {}, code: {}): {}",
+                    response_status.as_u16(),
+                    stripe_type,
+                    stripe_code,
+                    stripe_message
+                ));
             }
 
-            let body_string = response_text_value;
             log!("[Stripe] stripe response = {:#?}", body_string);
 
             let jd = &mut serde_json::Deserializer::from_str(&body_string);
@@ -129,6 +149,19 @@ impl StripeEstate {
             Ok(response_struct)
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct StripeErrorResponse {
+    error: StripeErrorBody,
+}
+
+#[derive(Debug, Deserialize)]
+struct StripeErrorBody {
+    #[serde(rename = "type")]
+    error_type: Option<String>,
+    code: Option<String>,
+    message: Option<String>,
 }
 
 impl Default for StripeEstate {
@@ -249,6 +282,14 @@ fn build_form_fields(
 ) -> HashMap<String, String> {
     let mut fields = HashMap::new();
 
+    // India export compliance for Checkout:
+    // collect full billing address and persist customer name/address on the created customer.
+    fields.insert(
+        "billing_address_collection".to_string(),
+        "required".to_string(),
+    );
+    fields.insert("customer_creation".to_string(), "always".to_string());
+
     // --- Line Items ---
     // This part remains the same as it correctly processes the Vec<StripeLineItem>
     for (idx, item) in line_items_data.iter().enumerate() {
@@ -355,12 +396,15 @@ impl StripeCreateCheckoutSession {
     }
 }
 
-#[derive(Debug, Serialize, Default, Deserialize, Clone)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum StripeUIModeEnum {
-    #[default]
-    Hosted,
+    #[serde(rename = "hosted_page")]
+    HostedPage,
+
+    #[serde(rename = "embedded")]
     Embedded,
+
+    #[serde(rename = "custom")]
     Custom,
 }
 
@@ -526,8 +570,8 @@ pub struct StripeCreateCheckoutSessionResponse {
     id: String, // Session ID
     /// Checkout URL - this is the one we will use to redirect the user    
     url: String,
-    amount_total: i64,
-    currency: String,
+    amount_total: Option<i64>,
+    currency: Option<String>,
     metadata: HashMap<String, String>,
     /// stripe's notation of payment_status
     payment_status: StripePaymentStatusEnum,
@@ -571,8 +615,8 @@ impl From<StripeCreateCheckoutSessionResponse> for CreateInvoiceResponse {
             token_id: String::new(), // Not available in Stripe response
             order_id: response.client_reference_id,
             order_description: String::new(), // Will be set by the caller
-            price_amount: (response.amount_total as f64).to_string(),
-            price_currency: response.currency,
+            price_amount: response.amount_total.unwrap_or(0).to_string(),
+            price_currency: response.currency.unwrap_or_default(),
             pay_currency: None,
             ipn_callback_url: String::new(), // Will be set by the caller
             invoice_url: response.url,
@@ -786,7 +830,7 @@ pub fn create_stripe_checkout_session(
         Some(StripeMetadata(HashMap::new())),
         order_id,
         email.clone(),
-        StripeUIModeEnum::Hosted,
+        StripeUIModeEnum::HostedPage,
     ))
 }
 
@@ -823,7 +867,7 @@ mod tests {
             Some(metadata),
             "test_order_123".to_string(),
             "test@example.com".to_string(),
-            StripeUIModeEnum::Hosted,
+            StripeUIModeEnum::HostedPage,
         );
 
         // Act: Serialize to form data
@@ -867,6 +911,10 @@ mod tests {
 
         // Assert customer email
         assert!(form_string.contains("customer_email=test%40example.com"));
+
+        // Assert address/name collection settings required for India export compliance
+        assert!(form_string.contains("billing_address_collection=required"));
+        assert!(form_string.contains("customer_creation=always"));
     }
 
     #[test]
@@ -895,9 +943,9 @@ mod tests {
             vec![line_item],
             "payment".to_string(),
             Some(metadata),
-            "NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com".to_string(),
-            "tripathi.abhishek.iitkgp@gmail.com".to_string(),
-            StripeUIModeEnum::Hosted,
+            "NP$6:ABC123$34:support@estatedao.org".to_string(),
+            "support@estatedao.org".to_string(),
+            StripeUIModeEnum::HostedPage,
         );
 
         // Act: Serialize to form data
@@ -933,14 +981,17 @@ mod tests {
         assert!(
             form_string.contains(
                 "client_reference_id=NP%246%3AABC123%2434%3Atripathi.abhishek.iitkgp%40gmail.com"
-            ) || form_string
-                .contains("client_reference_id=NP$6:ABC123$34:tripathi.abhishek.iitkgp@gmail.com")
+            ) || form_string.contains("client_reference_id=NP$6:ABC123$34:support@estatedao.org")
         );
 
         // Assert customer email
         assert!(
             form_string.contains("customer_email=tripathi.abhishek.iitkgp%40gmail.com")
-                || form_string.contains("customer_email=tripathi.abhishek.iitkgp@gmail.com")
+                || form_string.contains("customer_email=support@estatedao.org")
         );
+
+        // Assert address/name collection settings required for India export compliance
+        assert!(form_string.contains("billing_address_collection=required"));
+        assert!(form_string.contains("customer_creation=always"));
     }
 }

@@ -33,6 +33,7 @@ use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::AdminCanisters;
 use crate::utils::app_reference::BookingId;
 use crate::utils::booking_id::PaymentIdentifiers;
+use crate::utils::currency::currency_symbol_for_code;
 use crate::utils::notifier::{self, Notifier};
 use crate::utils::notifier_event::{NotifierEvent, NotifierEventType};
 use crate::utils::uuidv7;
@@ -240,8 +241,7 @@ impl EmailClient {
 
         let username = &booking.get_user_name();
         let to = &booking.get_user_email();
-        // todo change this later
-        let cc = "abhishek@estatedao.org";
+        let bcc = "ayushi@estatedao.org, prakash@estatedao.org, utkarsh@gobazzinga.io";
         let booking_id = booking.get_booking_ref();
         let check_in_date = booking.get_check_in_date();
         let check_out_date = booking.get_check_out_date();
@@ -252,6 +252,37 @@ impl EmailClient {
         let number_of_adults = booking.get_number_of_adults();
         let number_of_children = booking.get_number_of_children();
         let amount_paid = booking.get_amount_paid();
+        let amount_currency_code = if !booking
+            .payment_details
+            .payment_api_response
+            .price_currency
+            .trim()
+            .is_empty()
+        {
+            booking
+                .payment_details
+                .payment_api_response
+                .price_currency
+                .clone()
+        } else if !booking
+            .payment_details
+            .payment_api_response
+            .pay_currency
+            .trim()
+            .is_empty()
+        {
+            booking
+                .payment_details
+                .payment_api_response
+                .pay_currency
+                .clone()
+        } else {
+            "USD".to_string()
+        };
+        let amount_paid_text = format!(
+            "{}{amount_paid:.2}",
+            currency_symbol_for_code(&amount_currency_code)
+        );
 
         match mail_state {
             Some(state) => {
@@ -266,7 +297,7 @@ Location: {hotel_location}\n\
 Booking ID / App Reference: {booking_id}\n\
 Stay Dates: {check_in_date} to {check_out_date}\n\
 Guests: {number_of_adults} Adults, {number_of_children} Children\n\
-Amount Paid: {amount_paid}\n\n\
+Amount Paid: {amount_paid_text}\n\n\
 Note: This booking is non-cancellable. If you need anything, reply to this email.\n\n\
 Team Nofeebooking"
                 );
@@ -313,7 +344,7 @@ Team Nofeebooking"
                         <div><strong>Booking ID:</strong> {booking_id}</div>
                         <div><strong>Stay:</strong> {check_in_date} to {check_out_date}</div>
                         <div><strong>Guests:</strong> {number_of_adults} Primary Adults, {number_of_children} Children</div>
-                        <div><strong>Amount Paid:</strong>$ {amount_paid}</div>
+                        <div><strong>Amount Paid:</strong> {amount_paid_text}</div>
                       </div>
                     </td>
                   </tr>
@@ -348,7 +379,7 @@ Team Nofeebooking"
                 // Create the email message
                 let email_raw = format!(
                     "To: {to}\r\n\
-Cc: {cc}\r\n\
+Bcc: {bcc}\r\n\
 Subject: {subject}\r\n\
 MIME-Version: 1.0\r\n\
 Content-Type: multipart/alternative; boundary=\"{boundary}\"\r\n\
@@ -469,6 +500,7 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
         &self,
         to: &str,
         cc: Option<&str>,
+        bcc: Option<&str>,
         subject: &str,
         text_body: &str,
         html_body: &str,
@@ -480,13 +512,16 @@ Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n\
             .map_err(|e| e.to_string())?;
 
         let cc_header = cc.map(|addr| format!("Cc: {addr}\r\n")).unwrap_or_default();
+        let bcc_header = bcc
+            .map(|addr| format!("Bcc: {addr}\r\n"))
+            .unwrap_or_default();
         let reply_to_header = reply_to
             .map(|addr| format!("Reply-To: {addr}\r\n"))
             .unwrap_or_default();
         let boundary = "nofeebooking-support-boundary";
         let email_raw = format!(
             "To: {to}\r\n\
-{cc_header}{reply_to_header}Subject: {subject}\r\n\
+{cc_header}{bcc_header}{reply_to_header}Subject: {subject}\r\n\
 MIME-Version: 1.0\r\n\
 Content-Type: multipart/alternative; boundary=\"{boundary}\"\r\n\
 \r\n\

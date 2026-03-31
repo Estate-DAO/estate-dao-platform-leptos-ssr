@@ -48,14 +48,14 @@ pub fn InputGroupMobile() -> impl IntoView {
 
     view! {
         // Main wrapper (Card style like the image)
-        <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md border border-gray-100 p-3 flex items-center justify-between gap-3">
+        <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-md border border-gray-100 px-3 py-2.5 flex items-center justify-between gap-3">
 
             // Left Content: Destination + Subtitle
             <div class="flex-1 min-w-0 flex flex-col justify-center">
-                <div class="text-base font-bold text-gray-900 truncate leading-tight">
+                <div class="text-[15px] leading-5 font-bold text-gray-900 truncate">
                     {move || place_display()}
                 </div>
-                <div class="text-sm text-gray-500 truncate mt-1 leading-tight">
+                <div class="text-[13px] leading-5 text-gray-500 truncate mt-0.5">
                     {move || format!("{} • {}", date_range_display.get(), guest_info_display.get())}
                 </div>
             </div>
@@ -63,12 +63,12 @@ pub fn InputGroupMobile() -> impl IntoView {
             // Right Content: Search Button
             <button
                 type="button"
-                class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-xl w-12 h-12 flex items-center justify-center transition-colors shadow-sm"
+                class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-xl w-11 h-11 flex items-center justify-center transition-colors shadow-sm"
                 on:click=move |_| {
                     InputGroupState::set_show_full_input(true);
                 }
             >
-                <Icon icon=icondata::BiSearchRegular class="w-6 h-6" />
+                <Icon icon=icondata::BiSearchRegular class="w-5 h-5" />
             </button>
         </div>
     }

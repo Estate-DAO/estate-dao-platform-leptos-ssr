@@ -7,6 +7,7 @@ use web_sys::MouseEvent;
 use crate::api::auth::auth_state::AuthStateSignal;
 // use crate::api::get_room;
 use crate::api::client_side_api::{ClientSideApiClient, Place, PlaceData};
+use crate::api::consts::FIRST_PAGE_PREFETCH_PAGES;
 use crate::application_services::filter_types::UISearchFilters;
 use crate::component::{
     format_price_range_value, CheckboxFilter, Destination, Footer, GuestSelection, Navbar,
@@ -16,6 +17,9 @@ use crate::component::{
 use crate::domain::{DomainHotelListAfterSearch, DomainPaginationParams};
 use crate::log;
 use crate::page::{HotelDetailsParams, HotelListNavbar, HotelListParams, InputGroupContainer};
+use crate::utils::currency::{
+    currency_symbol_for_code, resolve_currency_code, CURRENCY_CHANGE_EVENT,
+};
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -42,6 +46,7 @@ pub struct PreviousSearchContext {
     pub adults: RwSignal<u32>,
     pub children: RwSignal<u32>,
     pub rooms: RwSignal<u32>,
+    pub currency_code: RwSignal<String>,
     /// false by default
     pub first_time_filled: RwSignal<bool>,
 }
@@ -55,6 +60,7 @@ impl Default for PreviousSearchContext {
             adults: create_rw_signal(0),
             children: create_rw_signal(0),
             rooms: create_rw_signal(0),
+            currency_code: create_rw_signal(resolve_currency_code(None)),
             first_time_filled: create_rw_signal(false),
         }
     }
@@ -63,7 +69,7 @@ impl Default for PreviousSearchContext {
 impl GlobalStateForLeptos for PreviousSearchContext {}
 
 impl PreviousSearchContext {
-    pub fn update(new_ctx: UISearchCtx) {
+    pub fn update(new_ctx: UISearchCtx, currency_code: String) {
         let this: Self = expect_context();
         // let mut this = Self::get();
         this.place.set(new_ctx.place.get_untracked());
@@ -74,12 +80,13 @@ impl PreviousSearchContext {
         this.rooms.set(new_ctx.guests.rooms.get_untracked());
         this.children.set(new_ctx.guests.children.get_untracked());
         this.adults.set(new_ctx.guests.adults.get_untracked());
+        this.currency_code.set(currency_code);
         log!("[PreviousSearchContext] updated");
     }
 
     pub fn update_first_time_filled(new_ctx: UISearchCtx) {
         let this: Self = expect_context();
-        Self::update(new_ctx);
+        Self::update(new_ctx, resolve_currency_code(None));
         this.first_time_filled.set(true);
     }
 
@@ -126,6 +133,44 @@ pub fn HotelListPage() -> impl IntoView {
     // Initialize pagination state
     let pagination_state: UIPaginationState = expect_context();
     let search_list_results: SearchListResults = expect_context();
+    let selected_currency_code = create_rw_signal(resolve_currency_code(None));
+    let pagination_state_for_currency = pagination_state.clone();
+
+    #[cfg(not(feature = "ssr"))]
+    {
+        create_effect(move |_| {
+            let selected_currency_code = selected_currency_code;
+            let pagination_state = pagination_state_for_currency.clone();
+            selected_currency_code.set(resolve_currency_code(None));
+
+            use wasm_bindgen::{closure::Closure, JsCast};
+            let Some(window) = web_sys::window() else {
+                return;
+            };
+
+            let handler = Closure::<dyn FnMut(web_sys::Event)>::wrap(Box::new(move |_| {
+                selected_currency_code.set(resolve_currency_code(None));
+                SearchListResults::set_search_results(None);
+                UIPaginationState::set_pagination_meta(None);
+                pagination_state.current_page.set(INITIAL_PAGE);
+            }));
+
+            let _ = window.add_event_listener_with_callback(
+                CURRENCY_CHANGE_EVENT,
+                handler.as_ref().unchecked_ref(),
+            );
+
+            on_cleanup({
+                let window = window.clone();
+                move || {
+                    let _ = window.remove_event_listener_with_callback(
+                        CURRENCY_CHANGE_EVENT,
+                        handler.as_ref().unchecked_ref(),
+                    );
+                }
+            });
+        });
+    }
 
     // Sync query params with state on page load (URL → State)
     // Parse URL params and sync to app state (URL → State)
@@ -148,6 +193,25 @@ pub fn HotelListPage() -> impl IntoView {
                         "[HotelListPage] Only placeName in URL: '{}', searching for placeId...",
                         place_name
                     );
+
+                    // Show placeName immediately in the destination input while placeId resolves.
+                    // Also clear stale place/place_details so old destination isn't shown/searched.
+                    let pending_destination = Destination {
+                        city: place_name.clone(),
+                        country_name: String::new(),
+                        country_code: String::new(),
+                        city_id: String::new(),
+                        latitude: None,
+                        longitude: None,
+                    };
+                    batch({
+                        let search_ctx2 = search_ctx2.clone();
+                        move || {
+                            search_ctx2.place.set(None);
+                            search_ctx2.place_details.set(None);
+                            search_ctx2.destination.set(Some(pending_destination));
+                        }
+                    });
 
                     // Clone params_map for async closure
                     let params_map_clone = params_map.clone();
@@ -223,13 +287,15 @@ pub fn HotelListPage() -> impl IntoView {
     // Clone search_ctx for use in different closures
     let search_ctx_for_resource = search_ctx.clone();
     let search_ctx_for_url_update = search_ctx.clone();
+    let in_flight_search_signature: RwSignal<Option<String>> = create_rw_signal(None);
 
     // Hotel search resource - triggers only when core search criteria or pagination changes
     // NOT when filters or sorting changes (those are applied client-side)
     let hotel_search_resource = create_resource(
         move || {
             // Depend on query_map to re-run when URL params change
-            query_map.get();
+            let params = query_map.get();
+            let url_place_id = params.0.get("placeId").cloned();
 
             // Track search context changes reactively (but NOT filters/sorting)
             let place = search_ctx_for_resource.place.get();
@@ -237,6 +303,7 @@ pub fn HotelListPage() -> impl IntoView {
             let date_range = search_ctx_for_resource.date_range.get();
             let adults = search_ctx_for_resource.guests.adults.get();
             let rooms = search_ctx_for_resource.guests.rooms.get();
+            let currency_code = selected_currency_code.get();
 
             // Track pagination changes reactively (this should trigger new API calls)
             let current_page = pagination_state.current_page.get();
@@ -259,10 +326,22 @@ pub fn HotelListPage() -> impl IntoView {
                     rooms,
                     current_page,
                     page_size,
+                    currency_code,
+                    url_place_id,
                 )
             } else {
                 // Return a default/non-ready state
-                (None, None, Default::default(), 0, 0, 0, 0)
+                (
+                    None,
+                    None,
+                    Default::default(),
+                    0,
+                    0,
+                    0,
+                    0,
+                    String::new(),
+                    None,
+                )
             }
         },
         move |(
@@ -273,10 +352,13 @@ pub fn HotelListPage() -> impl IntoView {
             rooms,
             current_page,
             page_size,
+            currency_code,
+            url_place_id,
         )| {
             let search_ctx_clone = search_ctx_for_resource.clone();
             let search_ctx_clone2 = search_ctx_for_resource.clone();
             let search_results_clone = search_list_results.clone();
+            let in_flight_search_signature = in_flight_search_signature;
 
             // Capture previous context to check for criteria changes
             let prev_ctx = use_context::<PreviousSearchContext>().unwrap_or_default();
@@ -286,13 +368,38 @@ pub fn HotelListPage() -> impl IntoView {
 
                 // Check if core search criteria changed
                 let criteria_changed = is_ready_place != prev_ctx.place.get()
-                    || Some(date_range) != prev_ctx.date_range.get()
+                    || Some(date_range.clone()) != prev_ctx.date_range.get()
                     || adults != prev_ctx.adults.get()
                     || rooms != prev_ctx.rooms.get()
-                    || search_ctx_clone.place_details.get() != prev_ctx.place_details.get();
+                    || search_ctx_clone.place_details.get() != prev_ctx.place_details.get()
+                    || currency_code != prev_ctx.currency_code.get();
+                let place_changed = is_ready_place != prev_ctx.place.get();
 
                 if !is_ready {
-                    return None;
+                    in_flight_search_signature.set(None);
+                    return Some(search_results_clone.search_result.get_untracked());
+                }
+
+                // On hotel-list page, destination selection can update place context before URL updates.
+                // Avoid early search with mismatched placeId; wait for URL sync from search action.
+                let place_id_mismatch_with_url = is_ready_place
+                    .as_ref()
+                    .map(|place| {
+                        if place.place_id.starts_with("custom_") {
+                            false
+                        } else {
+                            url_place_id
+                                .as_ref()
+                                .map(|url_id| url_id != &place.place_id)
+                                .unwrap_or(false)
+                        }
+                    })
+                    .unwrap_or(false);
+                if place_id_mismatch_with_url {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Waiting for URL sync: context placeId differs from URL placeId"
+                    );
+                    return Some(search_results_clone.search_result.get_untracked());
                 }
 
                 let target_page = current_page.max(INITIAL_PAGE);
@@ -314,6 +421,18 @@ pub fn HotelListPage() -> impl IntoView {
                     search_results_clone.search_result.get_untracked()
                 };
 
+                let previous_place_details = prev_ctx.place_details.get();
+                let current_place_details = search_ctx_clone.place_details.get();
+                let place_details_stale_for_new_place = place_changed
+                    && previous_place_details.is_some()
+                    && current_place_details == previous_place_details;
+                if place_details_stale_for_new_place {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Waiting for updated place_details before searching new place"
+                    );
+                    return Some(existing_results);
+                }
+
                 let had_existing_results = existing_results.is_some();
                 let existing_results_count = existing_results
                     .as_ref()
@@ -330,6 +449,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                 let mut pages_to_fetch: Vec<u32> = Vec::new();
                 let mut fetch_start_page: Option<u32> = None;
+                let should_prefetch_first_page = loaded_pages == 0 && target_page == INITIAL_PAGE;
 
                 if loaded_pages < target_page {
                     let start_page = if loaded_pages == 0 {
@@ -343,6 +463,18 @@ pub fn HotelListPage() -> impl IntoView {
                     fetch_start_page = Some(start_page);
                 }
 
+                if should_prefetch_first_page && !pages_to_fetch.is_empty() {
+                    let prefetch_end = target_page.saturating_add(FIRST_PAGE_PREFETCH_PAGES);
+                    for page in (target_page + 1)..=prefetch_end {
+                        pages_to_fetch.push(page);
+                    }
+
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] First-page prefetch enabled. Will additionally fetch up to page {}",
+                        prefetch_end
+                    );
+                }
+
                 if pages_to_fetch.is_empty() {
                     log!(
                         "[PAGINATION-DEBUG] [hotel_search_resource] No additional pages to fetch (loaded_pages={}, target_page={})",
@@ -353,7 +485,7 @@ pub fn HotelListPage() -> impl IntoView {
                     if let Some(ref existing) = existing_results {
                         UIPaginationState::set_pagination_meta(existing.pagination.clone());
                     }
-                    PreviousSearchContext::update(search_ctx_clone2.clone());
+                    PreviousSearchContext::update(search_ctx_clone2.clone(), currency_code.clone());
                     PreviousSearchContext::reset_first_time_filled();
                     return Some(existing_results);
                 }
@@ -364,10 +496,59 @@ pub fn HotelListPage() -> impl IntoView {
                     target_page
                 );
 
+                let place_id_for_signature = is_ready_place
+                    .as_ref()
+                    .map(|place| place.place_id.clone())
+                    .unwrap_or_default();
+                let location_signature = search_ctx_clone
+                    .place_details
+                    .get_untracked()
+                    .map(|details| {
+                        format!(
+                            "{:.6}:{:.6}",
+                            details.location.latitude, details.location.longitude
+                        )
+                    })
+                    .unwrap_or_else(|| "none".to_string());
+                let request_signature = format!(
+                    "place_id={}|loc={}|date={:?}->{:?}|adults={}|rooms={}|page={}|size={}|currency={}",
+                    place_id_for_signature,
+                    location_signature,
+                    date_range.start,
+                    date_range.end,
+                    adults,
+                    rooms,
+                    target_page,
+                    effective_page_size,
+                    currency_code
+                );
+
+                if in_flight_search_signature.get_untracked().as_ref() == Some(&request_signature) {
+                    log!(
+                        "[PAGINATION-DEBUG] [hotel_search_resource] Skipping duplicate in-flight search request: {}",
+                        request_signature
+                    );
+                    return Some(search_results_clone.search_result.get_untracked());
+                }
+
+                in_flight_search_signature.set(Some(request_signature.clone()));
+
                 let api_client = ClientSideApiClient::new();
                 let mut latest_result: Option<DomainHotelListAfterSearch> = None;
 
                 for page in pages_to_fetch {
+                    // If another search criteria became active while iterating, stop immediately.
+                    if in_flight_search_signature.get_untracked().as_ref()
+                        != Some(&request_signature)
+                    {
+                        log!(
+                            "[PAGINATION-DEBUG] [hotel_search_resource] Aborting stale fetch loop before page {} for signature {}",
+                            page,
+                            request_signature
+                        );
+                        break;
+                    }
+
                     let mut request: crate::domain::DomainHotelSearchCriteria =
                         search_ctx_clone.clone().into();
                     if let Some(pagination) = request.pagination.as_mut() {
@@ -386,6 +567,18 @@ pub fn HotelListPage() -> impl IntoView {
                     );
                     let page_response = api_client.search_hotel(request).await;
 
+                    // If request became stale while awaiting network, ignore the response.
+                    if in_flight_search_signature.get_untracked().as_ref()
+                        != Some(&request_signature)
+                    {
+                        log!(
+                            "[PAGINATION-DEBUG] [hotel_search_resource] Ignoring stale response for page {} (signature {})",
+                            page,
+                            request_signature
+                        );
+                        break;
+                    }
+
                     match page_response {
                         Some(response) => {
                             log!(
@@ -397,10 +590,23 @@ pub fn HotelListPage() -> impl IntoView {
                             // Always update pagination_meta with the latest response
                             // This ensures "Load More" button has accurate has_next_page info
                             UIPaginationState::set_pagination_meta(response.pagination.clone());
+                            let has_next_page = response
+                                .pagination
+                                .as_ref()
+                                .map(|meta| meta.has_next_page)
+                                .unwrap_or(false);
 
                             // Dedup is now handled automatically in set_search_results
                             SearchListResults::set_search_results(Some(response.clone()));
                             latest_result = Some(response);
+
+                            if should_prefetch_first_page && !has_next_page {
+                                log!(
+                                    "[PAGINATION-DEBUG] [hotel_search_resource] Stopping first-page prefetch at page {} (has_next_page=false)",
+                                    page
+                                );
+                                break;
+                            }
                         }
                         None => {
                             log!(
@@ -418,7 +624,11 @@ pub fn HotelListPage() -> impl IntoView {
                     }
                 }
 
-                PreviousSearchContext::update(search_ctx_clone2.clone());
+                if in_flight_search_signature.get_untracked().as_ref() == Some(&request_signature) {
+                    in_flight_search_signature.set(None);
+                }
+
+                PreviousSearchContext::update(search_ctx_clone2.clone(), currency_code);
                 PreviousSearchContext::reset_first_time_filled();
 
                 Some(latest_result)
@@ -713,7 +923,7 @@ pub fn HotelListPage() -> impl IntoView {
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_pagination_effect
             .search_result
-            .get()
+            .get_untracked()
             .is_some()
         {
             leptos::Callable::call(&update_url_with_current_state, ());
@@ -729,7 +939,7 @@ pub fn HotelListPage() -> impl IntoView {
         // Only update URL if we have search results (prevents initial load URL spam)
         if search_list_page_for_filter_effect
             .search_result
-            .get()
+            .get_untracked()
             .is_some()
         {
             leptos::Callable::call(&update_url_with_current_state, ());
@@ -817,7 +1027,7 @@ pub fn HotelListPage() -> impl IntoView {
                     if show_map.get() {
                         "w-[98%] max-w-[1920px] flex h-[calc(100vh-2rem)]"
                     } else {
-                        "w-[85%] max-w-7xl flex h-[calc(100vh-7rem)]"
+                        "w-[85%] max-w-7xl flex min-h-[calc(100vh-7rem)]"
                     }
                 }>
                     // Fixed aside on left (desktop only)
@@ -942,25 +1152,39 @@ pub fn HotelListPage() -> impl IntoView {
                                     let pagination_state: UIPaginationState = expect_context();
 
                                     // Get place name
-                                    let place_name = search_ctx.place.get()
+                                    let place_name = search_ctx
+                                        .place
+                                        .get()
                                         .map(|place| place.display_name)
+                                        .or_else(|| {
+                                            search_ctx
+                                                .destination
+                                                .get()
+                                                .map(|destination| destination.city)
+                                                .filter(|city| !city.trim().is_empty())
+                                        })
                                         .unwrap_or_else(|| "this location".to_string());
 
                                     // Get total results from pagination metadata
                                     if let Some(pagination_meta) = pagination_state.pagination_meta.get() {
                                         if let Some(total_results) = pagination_meta.total_results {
-                                            let formatted_count = if total_results >= 1000 {
-                                                format!("{}k+", total_results / 1000)
+                                            if total_results >= 1000 {
+                                                let formatted_count = format!("{}k+", total_results / 1000);
+                                                view! {
+                                                    <span>
+                                                        <span class="font-semibold">{formatted_count}</span>
+                                                        " Properties found in "
+                                                        <span class="font-semibold">{place_name}</span>
+                                                    </span>
+                                                }.into_view()
                                             } else {
-                                                total_results.to_string()
-                                            };
-                                            view! {
-                                                <span>
-                                                    <span class="font-semibold">{formatted_count}</span>
-                                                    " Properties found in "
-                                                    <span class="font-semibold">{place_name}</span>
-                                                </span>
-                                            }.into_view()
+                                                view! {
+                                                    <span>
+                                                        "Properties found in "
+                                                        <span class="font-semibold">{place_name}</span>
+                                                    </span>
+                                                }.into_view()
+                                            }
                                         } else {
                                             view! {
                                                 <span>
@@ -1170,6 +1394,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                                 )
                                                                             hotel_address
                                                                             distance_from_center_km=hotel_result.distance_from_center_km
+                                                                            selected_currency_code=selected_currency_code
                                                                             disabled=is_disabled
                                                                             compact=false
                                                                         />
@@ -1319,6 +1544,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                                         class="w-full".to_string()
                                                                                         hotel_address
                                                                                         distance_from_center_km=hotel_result.distance_from_center_km
+                                                                                        selected_currency_code=selected_currency_code
                                                                                         disabled=is_disabled
                                                                                         compact=true
                                                                                     />
@@ -1374,6 +1600,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                             )
                                                         hotel_address
                                                         distance_from_center_km=hotel_result.distance_from_center_km
+                                                        selected_currency_code=selected_currency_code
                                                         disabled=is_disabled
                                                     />
                                                     // <HotelCard
@@ -1430,18 +1657,19 @@ pub fn HotelListPage() -> impl IntoView {
                         default_expanded=false
                         given_disabled=disabled_input_group
                         allow_outside_click_collapse=true
+                        auto_search_on_place_select=true
                     />
 
                     // 2. Filter / Sort / Map Row
                     <div class="flex items-center justify-between gap-2">
-                         // Filter Button
-                         <button
+                        // Filter Button
+                        <button
                             class="flex items-center justify-center gap-2 bg-white border border-gray-200 shadow-sm rounded-lg py-2.5 px-3 text-sm font-medium text-gray-700 active:bg-gray-50 transition-colors"
                             on:click=move |_| is_filter_drawer_open.set(true)
-                         >
+                        >
                             <Icon icon=icondata::BsSliders class="w-4 h-4" />
                             "Filter"
-                         </button>
+                        </button>
 
                         // Map Toggle Button
                         <button
@@ -1454,7 +1682,7 @@ pub fn HotelListPage() -> impl IntoView {
 
                         // Sort Button
                         <div class="flex-none">
-                            <SortBy />
+                            <SortBy show_label=false />
                         </div>
                     </div>
 
@@ -1549,25 +1777,39 @@ pub fn HotelListPage() -> impl IntoView {
                                 let pagination_state: UIPaginationState = expect_context();
 
                                 // Get place name
-                                let place_name = search_ctx.place.get()
+                                let place_name = search_ctx
+                                    .place
+                                    .get()
                                     .map(|place| place.display_name)
+                                    .or_else(|| {
+                                        search_ctx
+                                            .destination
+                                            .get()
+                                            .map(|destination| destination.city)
+                                            .filter(|city| !city.trim().is_empty())
+                                    })
                                     .unwrap_or_else(|| "this location".to_string());
 
                                 // Get total results from pagination metadata
                                 if let Some(pagination_meta) = pagination_state.pagination_meta.get() {
                                     if let Some(total_results) = pagination_meta.total_results {
-                                        let formatted_count = if total_results >= 1000 {
-                                            format!("{}k+", total_results / 1000)
+                                        if total_results >= 1000 {
+                                            let formatted_count = format!("{}k+", total_results / 1000);
+                                            view! {
+                                                <span>
+                                                    <span class="font-semibold">{formatted_count}</span>
+                                                    " Properties found in "
+                                                    <span class="font-semibold">{place_name}</span>
+                                                </span>
+                                            }.into_view()
                                         } else {
-                                            total_results.to_string()
-                                        };
-                                        view! {
-                                            <span>
-                                                <span class="font-semibold">{formatted_count}</span>
-                                                " Properties found in "
-                                                <span class="font-semibold">{place_name}</span>
-                                            </span>
-                                        }.into_view()
+                                            view! {
+                                                <span>
+                                                    "Properties found in "
+                                                    <span class="font-semibold">{place_name}</span>
+                                                </span>
+                                            }.into_view()
+                                        }
                                     } else {
                                         view! {
                                             <span>
@@ -1736,6 +1978,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                         class="w-full".to_string()
                                                                         hotel_address
                                                                         distance_from_center_km=hotel_result.distance_from_center_km
+                                                                        selected_currency_code=selected_currency_code
                                                                         disabled=is_disabled
                                                                         compact=true
                                                                     />
@@ -1805,7 +2048,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                                      )
                                                                      hotel_address
                                                                      distance_from_center_km=hotel_result.distance_from_center_km
+                                                                     selected_currency_code=selected_currency_code
                                                                      disabled=is_disabled
+                                                                     msite=true
                                                                      // On mobile list, we can keep standard layout or use compact if desired.
                                                                      // Default is standard horizontal card.
                                                                  />
@@ -1965,7 +2210,11 @@ pub fn HotelCardTile(
     hotel_address: Option<String>,
     #[prop(default = None)] distance_from_center_km: Option<f64>,
     #[prop(into)] class: String,
+    selected_currency_code: RwSignal<String>,
     disabled: bool,
+    /// When true, use the simplified msite tile layout.
+    #[prop(default = false)]
+    msite: bool,
     /// When true, forces vertical card layout (like mobile) even on desktop
     #[prop(default = false)]
     compact: bool,
@@ -2076,116 +2325,224 @@ pub fn HotelCardTile(
         "w-full h-full object-cover md:rounded-l-lg rounded-t-lg md:rounded-t-none"
     };
 
-    view! {
-        // Smaller, more compact card design
-        <div on:click=move |ev| {
-                ev.prevent_default();
-                ev.stop_propagation();
-                on_navigate();
+    let format_price_with_commas = |amount: f64| {
+        let rounded = amount.round() as i64;
+        let digits = rounded.abs().to_string();
+        let mut with_commas_reversed = String::with_capacity(digits.len() + digits.len() / 3);
+        for (index, ch) in digits.chars().rev().enumerate() {
+            if index != 0 && index % 3 == 0 {
+                with_commas_reversed.push(',');
             }
-            class=format!("{} {}", card_layout_class, class)>
-            // IMAGE: smaller dimensions for more compact design
-            <div clone:hotel_code class=image_layout_class>
-                <img class=image_class src=img alt=hotel_name.clone() />
-                <Wishlist hotel_code />
-            </div>
+            with_commas_reversed.push(ch);
+        }
+        let mut formatted: String = with_commas_reversed.chars().rev().collect();
+        if rounded < 0 {
+            formatted.insert(0, '-');
+        }
+        formatted
+    };
 
-            // RIGHT CONTENT
-            // Smaller padding and content area for more compact design
-            <div class="flex-1 min-w-0 flex flex-col justify-between p-3 md:p-4 min-h-[140px] md:min-h-0">
-                // title + reviews row
-                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        // Smaller text and tighter spacing
-                        <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
-                        <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
+    if msite {
+        view! {
+            <div
+                on:click=move |ev| {
+                    ev.prevent_default();
+                    ev.stop_propagation();
+                    on_navigate();
+                }
+                class=format!(
+                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm",
+                    class
+                )
+            >
+                <img class="w-full h-44 object-cover" src=img alt=hotel_name.clone() />
 
-                        // Distance from center if available
-                        {distance_from_center_km.map(|distance| {
-                            let formatted_distance = if distance < 1.0 {
-                                format!("{:.0} m from centre", distance * 1000.0)
-                            } else {
-                                format!("{:.1} km from centre", distance)
-                            };
+                <div class="p-3.5 space-y-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <h3
+                            class="min-w-0 flex-1 text-sm font-medium text-slate-800 leading-tight overflow-hidden whitespace-nowrap text-ellipsis"
+                        >
+                            {hotel_name.clone()}
+                        </h3>
+
+                        {if rating > 0 {
                             view! {
-                                <p class="text-xs text-blue-600 mt-1 leading-snug">
-                                    {formatted_distance}
-                                </p>
+                                <div class="flex items-center gap-0.5 shrink-0">
+                                    {(0..5).map(|index| {
+                                        let star_class = if index < rating.min(5) {
+                                            "w-3.5 h-3.5 text-blue-600"
+                                        } else {
+                                            "w-3.5 h-3.5 text-blue-200"
+                                        };
+                                        view! {
+                                            <Icon icon=icondata::BsStarFill class=star_class />
+                                        }
+                                    }).collect_view()}
+                                    <span class="ml-1 text-[15px] font-medium text-blue-600 leading-none">
+                                        {format!("{:.1}", rating as f32)}
+                                    </span>
+                                </div>
                             }
-                        })}
-
-                        // Fewer amenities with smaller spacing
-                        <div class="flex flex-wrap gap-1 mt-2">{amenities.iter().take(4).map(|a| view! {
-                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded whitespace-nowrap">{a}</span>
-                            }).collect_view()}
-                        </div>
+                                .into_view()
+                        } else {
+                            view! { <></> }.into_view()
+                        }}
                     </div>
 
-                    // review block
-                    // on small screens it becomes full width (so it won't force overflow); on md it becomes a small right column
-                    // <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
-                    //     <div class="flex-1 space-x-1 flex items-center">
-                    //         <p class="text-sm font-medium text-gray-700">{review_text}</p>
-                    //         <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
-                    //             {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
-                    //         </div>
-                    //         // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
-                    //     </div>
-                    // </div>
+                    <div class="flex items-end justify-between gap-3">
+                        <Show when=move || !disabled fallback=|| view! {
+                            <p class="text-xs text-red-600">"This property is not available."</p>
+                        }>
+                            <>
+                                <div class="flex items-end gap-1 text-slate-900">
+                                    {move || {
+                                        let selected_currency_symbol =
+                                            currency_symbol_for_code(&selected_currency_code.get());
+                                        if let Some(p) = price_per_night {
+                                            let formatted_amount = format_price_with_commas(p);
+                                            view! {
+                                                <>
+                                                    <span class="[font-family:Figtree] text-[20px] font-semibold leading-[100%]">
+                                                        {format!("{selected_currency_symbol}{formatted_amount}")}
+                                                    </span>
+                                                    <span class="[font-family:Figtree] text-[12px] font-normal leading-[20px] text-slate-700">"/night"</span>
+                                                </>
+                                            }
+                                                .into_view()
+                                        } else {
+                                            view! {
+                                                <span class="text-base font-semibold leading-none">"-"</span>
+                                            }
+                                                .into_view()
+                                        }
+                                    }}
+                                </div>
+
+                                <button class="text-[16px] font-semibold leading-none text-slate-800 underline decoration-2 underline-offset-2">
+                                    "View details"
+                                </button>
+                            </>
+                        </Show>
+                    </div>
+                </div>
+            </div>
+        }
+            .into_view()
+    } else {
+        view! {
+            // Smaller, more compact card design
+            <div on:click=move |ev| {
+                    ev.prevent_default();
+                    ev.stop_propagation();
+                    on_navigate();
+                }
+                class=format!("{} {}", card_layout_class, class)>
+                // IMAGE: smaller dimensions for more compact design
+                <div clone:hotel_code class=image_layout_class>
+                    <img class=image_class src=img alt=hotel_name.clone() />
+                    <Wishlist hotel_code />
                 </div>
 
-                // price + CTA
-                // Compact spacing and smaller button
-                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mt-auto pt-2">
-                    <div class="flex-1">
-                        // {property_type.clone().map(|pt| view! {
-                        //     <p class="text-sm text-gray-500">{pt}</p>
-                        // })}
-                    </div>
-                    <Show when=move || !disabled fallback=|| view!{
-                        <div class="flex items-center justify-end text-red-600 gap-2">
-                            // Info Icon
-                            <svg xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4 flex-shrink-0"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                // RIGHT CONTENT
+                // Smaller padding and content area for more compact design
+                <div class="flex-1 min-w-0 flex flex-col justify-between p-3 md:p-4 min-h-[140px] md:min-h-0">
+                    // title + reviews row
+                    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            // Smaller text and tighter spacing
+                            <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
+                            <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
 
-                            <p class="text-xs">
-                                This property is not available.
-                            </p>
-                        </div>
-                    }>
-                        <div class="text-right flex-shrink-0">
-                            {move || {
-                                if let Some(p) = price_per_night {
-                                    view! {
-                                        <p class="text-lg font-bold">
-                                            ${format!("{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
-                                        </p>
-                                    }
+                            // Distance from center if available
+                            {distance_from_center_km.map(|distance| {
+                                let formatted_distance = if distance < 1.0 {
+                                    format!("{:.0} m from centre", distance * 1000.0)
                                 } else {
-                                    view! { <p class="text-sm font-bold"></p> }
+                                    format!("{:.1} km from centre", distance)
+                                };
+                                view! {
+                                    <p class="text-xs text-blue-600 mt-1 leading-snug">
+                                        {formatted_distance}
+                                    </p>
                                 }
-                            }}
-                            // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
-
-                            {discount_percent.map(|d| view! {
-                                <p class="text-xs font-semibold text-green-600 mt-0.5">{format!("{d}% OFF")}</p>
                             })}
 
-                            <button class="mt-1.5 inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
-                                "See Availability"
-                            </button>
+                            // Fewer amenities with smaller spacing
+                            <div class="flex flex-wrap gap-1 mt-2">{amenities.iter().take(4).map(|a| view! {
+                                    <span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded whitespace-nowrap">{a}</span>
+                                }).collect_view()}
+                            </div>
                         </div>
-                    </Show>
+
+                        // review block
+                        // on small screens it becomes full width (so it won't force overflow); on md it becomes a small right column
+                        // <div class="w-full md:w-28 flex md:flex-col flex-row items-center gap-2">
+                        //     <div class="flex-1 space-x-1 flex items-center">
+                        //         <p class="text-sm font-medium text-gray-700">{review_text}</p>
+                        //         <div class=format!("mt-1 inline-flex items-center justify-center rounded-md px-2 py-1 text-sm font-semibold {}", rating_badge_class)>
+                        //             {move || displayed_score.map(|s| format!("{:.1}", s)).unwrap_or_else(|| "-".to_string())}
+                        //         </div>
+                        //         // <p class="text-xs text-gray-500 mt-1">(100 Reviews)</p>
+                        //     </div>
+                        // </div>
+                    </div>
+
+                    // price + CTA
+                    // Compact spacing and smaller button
+                    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mt-auto pt-2">
+                        <div class="flex-1">
+                            // {property_type.clone().map(|pt| view! {
+                            //     <p class="text-sm text-gray-500">{pt}</p>
+                            // })}
+                        </div>
+                        <Show when=move || !disabled fallback=|| view!{
+                            <div class="flex items-center justify-end text-red-600 gap-2">
+                                // Info Icon
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4 flex-shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+
+                                <p class="text-xs">
+                                    This property is not available.
+                                </p>
+                            </div>
+                        }>
+                            <div class="text-right flex-shrink-0">
+                                {move || {
+                                    let selected_currency_symbol =
+                                        currency_symbol_for_code(&selected_currency_code.get());
+                                    if let Some(p) = price_per_night {
+                                        view! {
+                                            <p class="text-lg font-bold">
+                                                {format!("{selected_currency_symbol}{:.0}", p)} <span class="text-xs font-normal text-gray-500">"/ night"</span>
+                                            </p>
+                                        }
+                                    } else {
+                                        view! { <p class="text-sm font-bold"></p> }
+                                    }
+                                }}
+                                // <p class="text-xs text-gray-500 mt-1">"4 Nights, 1 room including taxes"</p>
+
+                                {discount_percent.map(|d| view! {
+                                    <p class="text-xs font-semibold text-green-600 mt-0.5">{format!("{d}% OFF")}</p>
+                                })}
+
+                                <button class="mt-1.5 inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
+                                    "See Availability"
+                                </button>
+                            </div>
+                        </Show>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
+            .into_view()
     }
 }
 

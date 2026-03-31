@@ -152,11 +152,12 @@ impl PaymentServiceImpl {
         use std::collections::HashMap;
 
         warn!("Converting domain request to Stripe request - using placeholder data for demo");
+        let stripe_currency = domain_request.price_currency.trim().to_ascii_lowercase();
 
         // Create line item for the booking
         let line_item = StripeLineItem {
             price_data: crate::api::payments::stripe_service::StripePriceData {
-                currency: domain_request.price_currency.clone(),
+                currency: stripe_currency,
                 product_data: crate::api::payments::stripe_service::StripeProductData {
                     name: domain_request.order_description.clone(),
                     description: Some("Hotel Room Booking".to_string()),
@@ -182,7 +183,7 @@ impl PaymentServiceImpl {
             Some(metadata),
             domain_request.order_id,
             domain_request.customer_email.clone(),
-            StripeUIModeEnum::Hosted,
+            StripeUIModeEnum::HostedPage,
         );
 
         Ok(stripe_request)

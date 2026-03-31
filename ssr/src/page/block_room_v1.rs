@@ -1,17 +1,15 @@
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::use_navigate;
 use leptos_use::{use_interval_fn, utils::Pausable};
 
-use crate::api::auth::auth_state::{AuthState, AuthStateSignal};
-use crate::api::client_side_api::{ClientSideApiClient, SendOtpResponse, VerifyOtpResponse};
+use crate::api::auth::auth_state::AuthStateSignal;
+use crate::api::client_side_api::ClientSideApiClient;
 use crate::api::consts::{get_ipn_callback_url, get_payments_url_v2};
 use crate::api::payments::{create_domain_request, PaymentProvider};
-use crate::app::AppRoutes;
 use crate::application_services::BookingService;
 use crate::component::yral_auth_provider::YralAuthProvider;
 use crate::component::ChildrenAgesSignalExt;
-use crate::component::{Divider, Navbar, SpinnerGray};
+use crate::component::{CurrencySelectorModal, Divider, Navbar};
 use crate::domain::{
     DomainAdultDetail, DomainBlockRoomRequest, DomainChildDetail, DomainDestination,
     DomainHotelDetails, DomainHotelInfoCriteria, DomainHotelSearchCriteria, DomainRoomData,
@@ -20,6 +18,7 @@ use crate::domain::{
 use crate::log;
 use crate::utils::app_reference::generate_app_reference;
 use crate::utils::cookie_storage::CookieBookingStorage;
+use crate::utils::currency::{currency_symbol_for_code, resolve_currency_code};
 use crate::utils::{app_reference::BookingId, BackendIntegrationHelper};
 use crate::view_state_layer::booking_id_state::BookingIdState;
 use crate::view_state_layer::email_verification_state::EmailVerificationState;
@@ -31,16 +30,6 @@ use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
 use crate::view_state_layer::ui_search_state::UISearchCtx;
 use crate::view_state_layer::view_state::HotelInfoCtx;
 use std::collections::HashMap;
-
-fn currency_symbol_for_code(code: &str) -> &str {
-    match code {
-        "INR" => "₹",
-        "EUR" => "€",
-        "GBP" => "£",
-        "USD" => "$",
-        _ => "$",
-    }
-}
 
 fn format_currency_with_code(amount: f64, currency_code: &str) -> String {
     let symbol = currency_symbol_for_code(currency_code);
@@ -65,6 +54,28 @@ fn format_tax_label(label: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+
+fn payment_provider_display_name(provider: &PaymentProvider) -> &'static str {
+    match provider {
+        PaymentProvider::NowPayments => "NowPayments",
+        PaymentProvider::Stripe => "Stripe",
+    }
+}
+
+fn payment_provider_description(provider: &PaymentProvider) -> &'static str {
+    match provider {
+        PaymentProvider::NowPayments => "Pay with crypto currencies",
+        PaymentProvider::Stripe => "Pay with credit or debit card",
+    }
+}
+
+const MSITE_CARD_CLASS: &str = "rounded-xl border border-gray-200 bg-white shadow-sm";
+const MSITE_SECTION_CLASS: &str = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6";
+const MSITE_SUBSECTION_CLASS: &str = "rounded-lg border border-gray-200 bg-slate-50 p-3.5";
+const MSITE_INPUT_CLASS: &str =
+    "w-full rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors";
+const MSITE_SELECT_CLASS: &str =
+    "w-full rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors";
 
 /// Round a value to the nearest cent using proper rounding rules.
 /// This ensures displayed totals accurately match the sum of line items.
@@ -112,8 +123,6 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let block_room_state: BlockRoomUIState = expect_context();
     let ui_search_ctx: UISearchCtx = expect_context();
     let hotel_info_ctx: HotelInfoCtx = expect_context();
-    let auth_state_signal: AuthStateSignal = expect_context();
-    let navigate = use_navigate();
 
     // Initialize form data on mount - only once
     let (initialized, set_initialized) = create_signal(false);
@@ -200,14 +209,15 @@ pub fn BlockRoomV1Page() -> impl IntoView {
 
         // Also try to get room selection summary to see if it's populated
         let room_summary = BlockRoomUIState::get_room_selection_summary_untracked();
+        let selected_currency_code = resolve_currency_code(None);
         log!("  room_selection_summary length: {}", room_summary.len());
         for (i, room) in room_summary.iter().enumerate() {
             log!(
-                "    Room {}: {} x{} @ ${:.2}/night",
+                "    Room {}: {} x{} @ {}/night",
                 i + 1,
                 room.display_name(),
                 room.quantity,
-                room.price_per_night
+                format_currency_with_code(room.price_per_night, &selected_currency_code)
             );
         }
 
@@ -449,38 +459,75 @@ pub fn BlockRoomV1Page() -> impl IntoView {
     let formatted_nights = move || ui_search_ctx.date_range.get().formatted_nights();
 
     view! {
-        <section class="relative min-h-screen bg-[#f7f7f7]">
-            <Navbar />
+        <section class="relative min-h-screen bg-slate-50">
+            <div class="hidden lg:block">
+                <Navbar />
+            </div>
 
-            <div class="max-w-7xl mx-auto px-4 sm:px-8">
-                <div class="flex items-center py-3 md:py-5">
-                    <span class="inline-flex items-center cursor-pointer" on:click=go_back_to_details>
-                        <Icon icon=icondata::AiArrowLeftOutlined class="text-black font-light" />
-                    </span>
-                    <h1 class="ml-2 sm:ml-4 text-xl sm:text-2xl font-semibold text-gray-800">"You're just one step away!"</h1>
+            <nav class="lg:hidden sticky top-0 z-[1001] bg-white/95 supports-[backdrop-filter]:bg-white/90 backdrop-blur border-b border-gray-100 h-14 flex items-center justify-between px-4">
+                <a href="/" class="flex items-center">
+                    <img src="/img/nofeebooking.webp" alt="NoFeeBooking" class="h-8 w-auto" />
+                </a>
+
+                <div class="flex items-center gap-2">
+                    <CurrencySelectorModal />
+                    <YralAuthProvider />
+                </div>
+            </nav>
+
+            <div class="mx-auto max-w-7xl px-4 pb-10 pt-3 sm:px-6 sm:pt-5 lg:px-8 lg:pt-6">
+                <div class=format!("{MSITE_CARD_CLASS} px-4 py-3.5 sm:px-5 sm:py-4")>
+                    <div class="flex items-start gap-3 sm:items-center">
+                        <button
+                            type="button"
+                            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-slate-50 text-slate-700 transition-colors hover:bg-slate-100"
+                            on:click=go_back_to_details
+                        >
+                            <Icon icon=icondata::AiArrowLeftOutlined class="text-base" />
+                        </button>
+                        <div class="min-w-0 space-y-0.5">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                "Booking Details"
+                            </p>
+                            <h1 class="text-lg font-semibold text-slate-900 sm:text-xl">
+                                "You're just one step away!"
+                            </h1>
+                            <p class="text-sm text-slate-600">
+                                "Review your stay and complete the guest information."
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="relative flex flex-col lg:flex-row min-h-[calc(100vh-5rem)] items-start justify-between pb-14 gap-6 sm:gap-8">
-                    <div class="w-full lg:w-3/5 flex flex-col gap-5">
+                <div class="relative mt-4 flex min-h-[calc(100vh-5rem)] flex-col items-start justify-between gap-4 pb-14 lg:flex-row lg:gap-8">
+                    <div class="flex w-full flex-col gap-4 lg:w-3/5 lg:gap-5">
                         // Hotel information card
-                        <div class="p-6 sm:p-7 bg-white rounded-xl border border-gray-200 w-full space-y-5">
-                            <div class="flex items-start gap-4 sm:gap-5">
+                        <div class=format!("{MSITE_SECTION_CLASS} w-full space-y-4")>
+                            <div class="flex items-start gap-3.5 sm:gap-4">
                                 <img
                                     src=hotel_image
                                     alt=hotel_name
-                                    class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover flex-shrink-0 border border-gray-200"
+                                    class="h-20 w-20 rounded-lg border border-gray-200 object-cover flex-shrink-0 sm:h-24 sm:w-24"
                                 />
-                                <div class="flex-1 min-w-0 space-y-2">
-                                    <div class="text-lg sm:text-xl font-semibold text-gray-900 leading-tight truncate">
+                                <div class="min-w-0 flex-1 space-y-2.5">
+                                    <div
+                                        class="text-base font-semibold leading-tight text-slate-900 sm:text-lg"
+                                        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                    >
                                         {hotel_name}
                                     </div>
                                     {move || {
                                         let address = hotel_address();
                                         (!address.trim().is_empty()).then(|| {
                                             view! {
-                                                <div class="flex items-center gap-2 text-sm text-gray-600 leading-tight">
-                                                    <Icon icon=icondata::AiEnvironmentOutlined class="text-blue-500 text-base" />
-                                                    <span class="truncate">{address}</span>
+                                                <div class="flex items-start gap-2 text-sm leading-snug text-slate-600">
+                                                    <Icon icon=icondata::AiEnvironmentOutlined class="mt-0.5 text-base text-blue-500" />
+                                                    <span
+                                                        class="min-w-0"
+                                                        style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                                    >
+                                                        {address}
+                                                    </span>
                                                 </div>
                                             }
                                         })
@@ -498,8 +545,8 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                                                 (None, None) => "".to_string(),
                                             };
                                             view! {
-                                                <div class="flex items-center gap-3 text-sm text-gray-700 leading-tight">
-                                                    <span class="inline-flex items-center rounded-md bg-amber-200 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+                                                <div class="flex flex-wrap items-center gap-2 text-sm leading-tight text-slate-700">
+                                                    <span class="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
                                                         {badge}
                                                     </span>
                                                     <span class="text-gray-700">{review_text}</span>
@@ -510,34 +557,36 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                                 </div>
                             </div>
 
-                            <Divider class="border-gray-200".into() />
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div class=MSITE_SUBSECTION_CLASS>
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                        "Check-in & Check-out"
+                                    </p>
+                                    <p class="mt-1.5 text-sm font-semibold leading-snug text-slate-900 sm:text-base">
+                                        {move || format!("{} - {} ( {} )", checkin_date(), checkout_date(), formatted_nights())}
+                                    </p>
+                                </div>
 
-                            <div class="space-y-1.5">
-                                <p class="text-sm text-gray-500">"Check-in & Check-out"</p>
-                                <p class="text-lg font-semibold text-gray-900 leading-tight">
-                                    {move || format!("{} - {} ( {} )", checkin_date(), checkout_date(), formatted_nights())}
-                                </p>
-                            </div>
-
-                            <Divider class="border-gray-200".into() />
-
-                            <div class="space-y-1.5">
-                                <p class="text-sm text-gray-500">"Guests & Room"</p>
-                                <p class="text-lg font-semibold text-gray-900 leading-tight">
-                                    {move || {
-                                        let rooms = num_rooms();
-                                        let adults = adult_count();
-                                        let children = child_count();
-                                        let mut parts = vec![
-                                            format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
-                                            format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
-                                        ];
-                                        if children > 0 {
-                                            parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
-                                        }
-                                        parts.join(" • ")
-                                    }}
-                                </p>
+                                <div class=MSITE_SUBSECTION_CLASS>
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                        "Guests & Rooms"
+                                    </p>
+                                    <p class="mt-1.5 text-sm font-semibold leading-snug text-slate-900 sm:text-base">
+                                        {move || {
+                                            let rooms = num_rooms();
+                                            let adults = adult_count();
+                                            let children = child_count();
+                                            let mut parts = vec![
+                                                format!("{} Room{}", rooms, if rooms == 1 { "" } else { "s" }),
+                                                format!("{} Adult{}", adults, if adults == 1 { "" } else { "s" }),
+                                            ];
+                                            if children > 0 {
+                                                parts.push(format!("{} Child{}", children, if children == 1 { "" } else { "ren" }));
+                                            }
+                                            parts.join(" • ")
+                                        }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -552,7 +601,7 @@ pub fn BlockRoomV1Page() -> impl IntoView {
                     </div>
 
                     // Right side pricing
-                    <div class="w-full lg:w-2/5 flex flex-col gap-4 lg:sticky lg:top-24">
+                    <div class="hidden w-full lg:flex lg:w-2/5 lg:flex-col lg:gap-4 lg:sticky lg:top-24">
                         <EnhancedPricingDisplay mobile=false booking_id_signal=booking_id_signal />
                     </div>
                 </div>
@@ -595,9 +644,9 @@ pub fn EnhancedPricingDisplay(
     };
 
     let container_class = if mobile {
-        "lg:hidden w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-6 shadow-md flex flex-col items-stretch space-y-4"
+        "lg:hidden w-full rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex flex-col items-stretch space-y-4 sm:p-5"
     } else {
-        "hidden lg:flex w-full rounded-2xl border border-gray-200 bg-white p-5 sm:p-7 shadow-md flex-col items-stretch space-y-4"
+        "hidden lg:flex w-full rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex-col items-stretch space-y-4 sm:p-6"
     };
 
     let included_taxes_summary =
@@ -621,30 +670,35 @@ pub fn EnhancedPricingDisplay(
             .sum::<f64>()
     };
 
+    let selected_currency_code = store_value(resolve_currency_code(None));
+
     let included_tax_currency = move || {
         included_taxes_summary()
             .first()
             .map(|entry| entry.1.clone())
-            .unwrap_or_else(|| "USD".to_string())
+            .unwrap_or_else(|| selected_currency_code.get_value())
     };
 
-    let platform_markup_currency = move || "USD".to_string();
+    let platform_markup_currency = move || selected_currency_code.get_value();
 
     let excluded_tax_currency = move || {
         excluded_taxes_summary()
             .first()
             .map(|entry| entry.1.clone())
-            .unwrap_or_else(|| "USD".to_string())
+            .unwrap_or_else(|| selected_currency_code.get_value())
     };
 
     let total_with_included = move || base_total() + included_taxes_total();
     let rounded_total_with_included = move || round_to_cents(total_with_included());
-
-    let format_currency = |val: f64| format!("${:.2}", val);
+    let container_id = if mobile {
+        "price-breakup-section"
+    } else {
+        "price-breakup-section-desktop"
+    };
 
     view! {
-        <div class=container_class>
-            <div class="text-xs text-gray-500">"Price Breakup"</div>
+        <div id=container_id class=container_class>
+            <div class="text-sm font-semibold text-slate-700">"Price Breakup"</div>
 
             // <!-- Per-room breakdown -->
             <div class="price-breakdown space-y-3">
@@ -653,6 +707,7 @@ pub fn EnhancedPricingDisplay(
                         let display_name = room.display_name();
                         let price_per_night = room.price_per_night;
                         let quantity = room.quantity;
+                        let selected_currency = selected_currency_code.get_value();
                         // Round price to 2 decimals to match displayed value, then calculate total
                         let rounded_price = (price_per_night * 100.0).round() / 100.0;
                         let line_total = rounded_price * quantity as f64 * num_nights() as f64;
@@ -673,12 +728,12 @@ pub fn EnhancedPricingDisplay(
                                             format!("{quantity} rooms")
                                         };
                                         view! {
-                                            "(" {format_currency(price_per_night)} "/night × " {nights_label} " × " {rooms_label} ")"
+                                            "(" {format_currency_with_code(price_per_night, &selected_currency)} "/night × " {nights_label} " × " {rooms_label} ")"
                                         }}
                                     </div>
                                 </div>
                                 <div class="text-sm font-semibold text-gray-900 ml-3">
-                                    {format_currency(line_total)}
+                                    {format_currency_with_code(line_total, &selected_currency)}
                                 </div>
                             </div>
                         }
@@ -689,43 +744,52 @@ pub fn EnhancedPricingDisplay(
                 <Show when=move || room_summary().is_empty()>
                     <div class="flex justify-between items-center text-base">
                         <span class="text-gray-700">
-                            {move || format!("${:.2} x {} nights", rooms_total_per_night(), num_nights())}
+                            {move || {
+                                let selected_currency = selected_currency_code.get_value();
+                                format!(
+                                    "{} x {} nights",
+                                    format_currency_with_code(rooms_total_per_night(), &selected_currency),
+                                    num_nights()
+                                )
+                            }}
                         </span>
                         <span class="font-semibold">
-                            {move || format_currency(base_total())}
+                            {move || format_currency_with_code(base_total(), &selected_currency_code.get_value())}
                         </span>
                     </div>
                 </Show>
 
                 // <!-- Taxes and fees -->
-                <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-600">"Taxes and fees"</span>
-                        <span class="font-semibold text-gray-900">
-                            {move || format_currency_with_code(included_taxes_total(), &included_tax_currency())}
-                        </span>
-                    </div>
-                    <Show when=move || !included_taxes_summary().is_empty()>
-                        <div class="space-y-1 text-xs text-gray-500">
-                            {move || included_taxes_summary()
-                                .iter()
-                                .map(|(description, currency, amount)| {
-                                    let desc = format_tax_label(description);
-                                    let currency_code = currency.clone();
-                                    view! {
-                                        <div class="flex justify-between">
-                                            <span>{desc}</span>
-                                            <span>{format_currency_with_code(*amount, &currency_code)}</span>
-                                        </div>
-                                    }
-                                })
-                                .collect::<Vec<_>>() }
+                <Show when=move || { included_taxes_total().abs() > 0.0 }>
+                    <div class="space-y-1 pt-1 border-t border-dashed border-gray-200">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">"Taxes and fees"</span>
+                            <span class="font-semibold text-gray-900">
+                                {move || format_currency_with_code(included_taxes_total(), &included_tax_currency())}
+                            </span>
                         </div>
-                    </Show>
-                </div>
+                        <Show when=move || !included_taxes_summary().is_empty()>
+                            <div class="space-y-1 text-xs text-gray-500">
+                                {move || included_taxes_summary()
+                                    .iter()
+                                    .map(|(description, currency, amount)| {
+                                        let desc = format_tax_label(description);
+                                        let currency_code = currency.clone();
+                                        view! {
+                                            <div class="flex justify-between">
+                                                <span>{desc}</span>
+                                                <span>{format_currency_with_code(*amount, &currency_code)}</span>
+                                            </div>
+                                        }
+                                    })
+                                    .collect::<Vec<_>>() }
+                            </div>
+                        </Show>
+                    </div>
+                </Show>
             </div>
 
-            <Divider class="my-2".into() />
+            <Divider class="my-1.5".into() />
                 // <!-- Platform fees -->
             <div class="space-y-1">
                 <div class="flex justify-between items-center text-sm">
@@ -735,7 +799,7 @@ pub fn EnhancedPricingDisplay(
                     </span>
                 </div>
             </div>
-            <Divider class="my-2".into() />
+            <Divider class="my-1.5".into() />
                 // <!-- Markup fees -->
             <div class="space-y-1">
                 <div class="flex justify-between items-center text-sm">
@@ -746,12 +810,12 @@ pub fn EnhancedPricingDisplay(
                 </div>
             </div>
 
-            <Divider class="my-2".into() />
+            <Divider class="my-1.5".into() />
 
             // <!-- Total -->
             <div class="flex justify-between items-center font-bold text-lg">
                 <span>Total</span>
-                <span class="text-2xl">
+                <span class="text-xl sm:text-2xl">
                     {move || format_currency_with_code(rounded_total_with_included(), &included_tax_currency())}
                 </span>
             </div>
@@ -837,6 +901,12 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
     let display_name = room.display_name();
     let quantity = room.quantity;
     let price_per_night = room.price_per_night;
+    let selected_currency_code = resolve_currency_code(None);
+    let price_per_night_display =
+        format_currency_with_code(price_per_night, &selected_currency_code);
+    let total_per_night_display =
+        format_currency_with_code(price_per_night * quantity as f64, &selected_currency_code);
+    let price_times_quantity_display = format!("{price_per_night_display} × {quantity}");
     view! {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-2xl p-3 sm:p-4 bg-gray-50">
             // <!-- Room details -->
@@ -849,18 +919,18 @@ pub fn RoomSummaryCard(room: RoomSelectionSummary) -> impl IntoView {
                         {format!("{} room{}", quantity, if quantity == 1 { "" } else { "s" })}
                     </span>
                     <span class="text-gray-500">"•"</span>
-                    <span>${format!("{:.2}", price_per_night)} /night</span>
+                    <span>{price_per_night_display.clone()} " /night"</span>
                 </div>
             </div>
 
             // <!-- Price display -->
             <div class="flex flex-col items-start sm:items-end sm:text-right">
                 <div class="text-lg font-bold">
-                    ${format!("{:.2}", price_per_night * quantity as f64)}
+                    {total_per_night_display}
                     <span class="text-sm font-normal text-gray-600 ml-1">/night</span>
                 </div>
                 <div class="text-xs text-gray-500">
-                    {format!("${:.2} × {}", price_per_night, quantity)}
+                    {price_times_quantity_display}
                 </div>
             </div>
         </div>
@@ -920,7 +990,7 @@ pub fn AuthGatedGuestForm() -> impl IntoView {
 #[component]
 pub fn LoginPrompt() -> impl IntoView {
     view! {
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-6 text-center">
+        <div class=format!("{MSITE_SECTION_CLASS} text-center")>
             <div class="mb-4">
                 <Icon icon=icondata::AiUserOutlined class="text-gray-400 text-4xl mx-auto mb-3" />
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">
@@ -948,13 +1018,13 @@ pub fn GuestForm(#[prop(into)] user_email: Signal<Option<String>>) -> impl IntoV
     let children_ages = ui_search_ctx.guests.children_ages.clone();
 
     view! {
-        <div class="guest-form mt-4 space-y-5 sm:space-y-6">
+        <div class="guest-form space-y-4 sm:space-y-5">
             {move || {
                 let rooms = ui_search_ctx.guests.rooms.get();
                 let adults = BlockRoomUIState::get_adults().len() as u32;
 
                 (rooms > adults).then_some(view! {
-                    <div class="rounded-md bg-amber-50 text-amber-800 text-sm px-3 py-2">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
                         {format!(
                             "{} room(s) selected. Please add a primary adult for each room ({} required).",
                             rooms, rooms
@@ -1072,30 +1142,28 @@ pub fn AdultFormSection(
     };
 
     view! {
-        <div class="person-details bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-7 space-y-5">
+        <div class=format!("person-details {} space-y-4", MSITE_SECTION_CLASS)>
             <div class="space-y-1">
-                <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {if index == 0 { "Primary Guest" } else { "Guest Details" }}
+                </p>
+                <h3 class="text-base font-semibold text-gray-900 sm:text-lg">
                     {move || {
-                        let descriptor = if index == 0 {
-                            "Primary Guest Detail"
-                        } else {
-                            "Guest Details"
-                        };
-                        format!("{}, {}", room_label.get(), descriptor)
+                        room_label.get()
                     }}
                 </h3>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "First Name"
                         <span class="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         placeholder="Enter Name"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         required=true
                         on:input=move |ev| {
                             let value = event_target_value(&ev);
@@ -1111,14 +1179,14 @@ pub fn AdultFormSection(
                     />
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "Last Name"
                         <span class="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         placeholder="Enter Surname"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         required=true
                         on:input=move |ev| {
                             update_adult("last_name", event_target_value(&ev));
@@ -1131,9 +1199,9 @@ pub fn AdultFormSection(
             {move || {
                 if index == 0 {
                     view! {
-                        <div class="grid grid-cols-1 gap-4 sm:gap-5">
+                        <div class="grid grid-cols-1 gap-4 sm:gap-4">
                             <div class="space-y-2">
-                                <label class="text-sm font-medium text-gray-800">
+                                <label class="text-sm font-medium text-slate-700">
                                     "Email ID"
                                     <span class="text-red-500">*</span>
                                 </label>
@@ -1142,11 +1210,11 @@ pub fn AdultFormSection(
                                         type="email"
                                         placeholder="Enter Email"
                                         class=move || {
-                                            let base = "w-full rounded-xl border border-gray-200 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 pr-11";
+                                            let base = "w-full rounded-lg border border-gray-200 p-3 text-sm text-gray-900 placeholder:text-gray-400 pr-11";
                                             if user_email.get().is_some() {
-                                                format!("{base} bg-gray-100 cursor-not-allowed")
+                                                format!("{base} bg-slate-100 cursor-not-allowed")
                                             } else {
-                                                format!("{base} bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors")
+                                                format!("{base} bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors")
                                             }
                                         }
                                         required=true
@@ -1174,13 +1242,13 @@ pub fn AdultFormSection(
                             </div>
 
                             <div class="space-y-2">
-                                <label class="text-sm font-medium text-gray-800">
+                                <label class="text-sm font-medium text-slate-700">
                                     "Phone Number"
                                     <span class="text-red-500">*</span>
                                 </label>
                                 <div class="flex flex-col sm:flex-row gap-3">
                                     <select
-                                        class="sm:w-28 w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                        class=format!("w-full sm:w-28 {}", MSITE_SELECT_CLASS)
                                         value=move || country_code.get()
                                         on:input=move |ev| {
                                             let value = event_target_value(&ev);
@@ -1197,7 +1265,7 @@ pub fn AdultFormSection(
                                     <input
                                         type="tel"
                                         placeholder="Enter Number"
-                                        class="flex-1 rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                                        class=format!("flex-1 {}", MSITE_INPUT_CLASS)
                                         required=true
                                         on:input=move |ev| {
                                             let value = event_target_value(&ev);
@@ -1238,22 +1306,25 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
     let age_value = ui_search_ctx.guests.children_ages.get_value_at(index);
 
     view! {
-        <div class="person-details bg-gray-50 rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-7 space-y-5">
+        <div class=format!("person-details {} space-y-4", MSITE_SECTION_CLASS)>
             <div class="space-y-1">
-                <h3 class="text-lg sm:text-xl font-semibold text-gray-900">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    "Child Details"
+                </p>
+                <h3 class="text-base font-semibold text-gray-900 sm:text-lg">
                     {format!("Child {}", index + 1)}
                 </h3>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4">
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "First Name"
                         <span class="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         placeholder="Enter Name"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         required=true
                         on:input=move |ev| {
                             update_child("first_name", event_target_value(&ev));
@@ -1261,23 +1332,23 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
                     />
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">"Last Name"</label>
+                    <label class="text-sm font-medium text-slate-700">"Last Name"</label>
                     <input
                         type="text"
                         placeholder="Enter Surname"
-                        class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_INPUT_CLASS
                         on:input=move |ev| {
                             update_child("last_name", event_target_value(&ev));
                         }
                     />
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-gray-800">
+                    <label class="text-sm font-medium text-slate-700">
                         "Age"
                         <span class="text-red-500">*</span>
                     </label>
                     <select
-                        class="w-full rounded-xl border border-gray-200 bg-white p-3.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                        class=MSITE_SELECT_CLASS
                         required=true
                         on:input=move |ev| {
                             update_child("age", event_target_value(&ev));
@@ -1306,7 +1377,7 @@ pub fn ChildFormSection(index: u32) -> impl IntoView {
 #[component]
 pub fn TermsCheckbox() -> impl IntoView {
     view! {
-        <div class="flex items-start gap-2 text-sm text-gray-700">
+        <div class="flex items-start gap-3 rounded-lg border border-gray-200 bg-slate-50 p-3 text-sm text-gray-700">
             <input
                 type="checkbox"
                 id="agree"
@@ -1336,20 +1407,20 @@ pub fn PromoCodeSection() -> impl IntoView {
 
     let apply_button_class = move || {
         if promo_code.get().trim().is_empty() {
-            "w-full sm:w-28 rounded-xl bg-blue-200 text-white font-semibold px-4 py-3 text-sm cursor-not-allowed"
+            "w-full sm:w-28 rounded-lg bg-blue-200 text-white font-semibold px-4 py-3 text-sm cursor-not-allowed"
         } else {
-            "w-full sm:w-28 rounded-xl bg-blue-400 hover:bg-blue-500 text-white font-semibold px-4 py-3 text-sm transition-colors"
+            "w-full sm:w-28 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-3 text-sm transition-colors"
         }
     };
 
     view! {
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-md p-5 sm:p-6 space-y-3">
+        <div class=format!("{MSITE_SECTION_CLASS} space-y-3")>
             <h3 class="text-lg sm:text-xl font-semibold text-gray-900">"Redeem Promo Code"</h3>
             <div class="flex flex-col sm:flex-row gap-3">
                 <input
                     type="text"
                     placeholder="Enter Code"
-                    class="flex-1 rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-colors"
+                    class=format!("flex-1 {}", MSITE_INPUT_CLASS)
                     value=move || promo_code.get()
                     on:input=move |ev| {
                         set_promo_code.set(event_target_value(&ev));
@@ -1508,12 +1579,15 @@ pub fn ConfirmButton(
     };
 
     // <!-- Phase 4.3: Enhanced button styling with validation feedback -->
-    let button_class =
-        "mt-6 w-full rounded-2xl py-3.5 text-white text-base sm:text-lg font-semibold shadow-md min-h-[48px] transition-all duration-200";
+    let button_class = if mobile {
+        "w-full rounded-xl py-3 text-white text-base font-semibold shadow-sm min-h-[48px] transition-all duration-200"
+    } else {
+        "w-full rounded-xl py-3.5 text-white text-base sm:text-lg font-semibold shadow-sm min-h-[48px] transition-all duration-200"
+    };
 
     let button_style = move || {
         if is_form_valid() {
-            "bg-blue-500 hover:bg-blue-600 hover:shadow-lg"
+            "bg-blue-600 hover:bg-blue-700"
         } else {
             "bg-blue-200 cursor-not-allowed"
         }
@@ -1566,17 +1640,9 @@ pub fn ConfirmButton(
 
 #[component]
 pub fn PaymentModal() -> impl IntoView {
-    let block_room_state: BlockRoomUIState = expect_context();
-    let ui_search_ctx: UISearchCtx = expect_context();
-    let hotel_info_ctx: HotelInfoCtx = expect_context();
-
     let show_modal = move || BlockRoomUIState::get_show_payment_modal();
-    // let is_loading = move || BlockRoomUIState::get_loading();
-    // let block_room_called = move || BlockRoomUIState::get_block_room_called();
-
-    let room_price = move || BlockRoomUIState::get_room_price();
     let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
-    let num_nights = move || BlockRoomUIState::get_num_nights();
+    let selected_currency_code = store_value(resolve_currency_code(None));
 
     // Note: Prebook API is now called when user clicks "Confirm & Book" button via action pattern
 
@@ -1584,75 +1650,89 @@ pub fn PaymentModal() -> impl IntoView {
         BlockRoomUIState::set_show_payment_modal(false);
     };
 
+    let view_breakup = move |_| {
+        BlockRoomUIState::set_show_payment_modal(false);
+        if let Some(element) = document().get_element_by_id("price-breakup-section") {
+            element.scroll_into_view();
+        }
+    };
+
     view! {
         <Show when=show_modal>
-            <div class="fixed inset-0 flex items-center justify-center z-50">
-                <div
-                    class="fixed inset-0 bg-black opacity-50"
-                    on:click=close_modal
-                />
-                <div class="w-full max-w-lg bg-white rounded-lg p-4 sm:p-8 z-50 shadow-xl relative mx-2">
-                    <button
-                        class="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-500 hover:text-gray-700"
-                        on:click=close_modal
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+            <div
+                class="fixed inset-0 z-[1200] bg-black/20 backdrop-blur-[1px]"
+                on:click=close_modal
+            ></div>
 
-                    // <!-- Phase 4.2: Enhanced loading states and error components -->
-                    <Show
-                        when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
-                        fallback=move || view! {
-                            <div class="flex flex-col justify-center items-center h-40 space-y-4">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                <div class="text-center space-y-2">
-                                    <div class="font-semibold text-lg">
-                                        "Reserving Your Room"
-                                    </div>
-                                    <div class="text-sm text-gray-600">
-                                        "Securing your reservation for 15 minutes..."
+            <div
+                class="fixed inset-0 z-[1201] flex items-center justify-center p-4"
+                on:click=|e| e.stop_propagation()
+            >
+                <div class="relative w-full max-w-[375px] max-h-[92dvh] overflow-y-auto rounded-[12px] bg-white px-5 pb-5 pt-5 shadow-[0_12px_40px_rgba(15,23,42,0.24)]">
+                        <button
+                            class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                            on:click=close_modal
+                            aria-label="Close payment popup"
+                            type="button"
+                        >
+                            <Icon icon=icondata::ChCross class="text-base" />
+                        </button>
+
+                        // <!-- Phase 4.2: Enhanced loading states and error components -->
+                        <Show
+                            when=move || !BlockRoomUIState::get_loading() && BlockRoomUIState::get_block_room_called()
+                            fallback=move || view! {
+                                <div class="flex min-h-[240px] flex-col items-center justify-center space-y-4 py-6">
+                                    <div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-[#145EF0]"></div>
+                                    <div class="space-y-1 text-center">
+                                        <div class="text-lg font-semibold text-[#181818]">
+                                            "Reserving Your Room"
+                                        </div>
+                                        <div class="text-sm leading-6 text-[#45556C]">
+                                            "Securing your reservation for 15 minutes..."
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                    >
-                        // <!-- Phase 4.2: Enhanced error display -->
-                        <Show when=move || BlockRoomUIState::get_error().is_some()>
-                            <EnhancedErrorDisplay />
-                        </Show>
+                            }
+                        >
+                            // <!-- Phase 4.2: Enhanced error display -->
+                            <Show when=move || BlockRoomUIState::get_error().is_some()>
+                                <EnhancedErrorDisplay />
+                            </Show>
 
-                        <Show when=move || BlockRoomUIState::get_error().is_none()>
-                            <h2 class="text-xl font-bold text-center mb-6">Payment</h2>
-                            <div class="flex flex-col gap-2 mb-6">
-                                // <div class="flex justify-between items-end">
-                                //     <span class="text-lg font-bold">{move || format!("${:.2}", room_price())}</span>
-                                //     // <span class="ml-1 text-base font-normal text-gray-600">/night</span>
-                                // </div>
-                                // <div class="flex justify-between items-center text-base">
-                                //     // <span class="text-gray-700">
-                                //     //     {move || format!("${:.2} x {} nights", room_price(), num_nights())}
-                                //     // </span>
-                                //     <span class="font-semibold">
-                                //         {move || format!("${:.2}", room_price() * num_nights() as f64)}
-                                //     </span>
-                                // </div>
-                                <Divider class="my-2".into() />
-                                <div class="flex justify-between items-center font-bold text-lg mb-2">
-                                    <span>Total</span>
-                                    <span class="text-2xl">{move || format!("${:.2}", calculated_total())}</span>
-                                </div>
-                            </div>
+                            <Show when=move || BlockRoomUIState::get_error().is_none()>
+                                <div class="space-y-5">
+                                    <div class="pt-1">
+                                        <h2 class="text-center text-[24px] font-bold leading-[1.4] tracking-[-0.02em] text-[#181818]">
+                                            "Payment"
+                                        </h2>
+                                    </div>
 
-                            <div class="font-bold">
-                                <label>"Pay with"</label>
-                                <div class="flex flex-col w-full mt-4 space-y-2">
+                                    <div class="space-y-2 rounded-[8px]">
+                                        <div class="flex items-center justify-between gap-4 text-[18px] font-semibold leading-[1.4] text-[#01030A]">
+                                            <span>"Total Amount"</span>
+                                            <span>
+                                                {move || format_currency_with_code(
+                                                    calculated_total(),
+                                                    &selected_currency_code.get_value(),
+                                                )}
+                                            </span>
+                                        </div>
+                                        <button
+                                            class="text-sm font-normal leading-[1.4] text-[#145EF0]"
+                                            on:click=view_breakup
+                                            type="button"
+                                        >
+                                            "View Breakup"
+                                        </button>
+                                    </div>
+
+                                    <div class="h-px w-full bg-[#E2E8F0]"></div>
+
                                     <PaymentProviderButtons />
                                 </div>
-                            </div>
+                            </Show>
                         </Show>
-                    </Show>
                 </div>
             </div>
         </Show>
@@ -1814,6 +1894,7 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
             "bg-yellow-50",
         ),
         Some("server") => (icondata::FaServerSolid, "text-red-600", "bg-red-50"),
+        Some("payment") => (icondata::BsCreditCard, "text-red-600", "bg-red-50"),
         _ => (icondata::AiWarningOutlined, "text-gray-600", "bg-gray-50"),
     };
 
@@ -1848,6 +1929,7 @@ pub fn EnhancedErrorDisplay() -> impl IntoView {
                             Some("network") => "Connection Issue",
                             Some("validation") => "Booking Information Issue",
                             Some("server") => "Service Temporarily Unavailable",
+                            Some("payment") => "Payment Initialization Failed",
                             _ => "Something Went Wrong"
                         }}
                     </h3>
@@ -2126,27 +2208,19 @@ pub fn EmailVerificationStep(
 
 #[component]
 pub fn PaymentProviderButtons() -> impl IntoView {
-    let block_room_state: BlockRoomUIState = expect_context();
-    let ui_search_ctx: UISearchCtx = expect_context();
-
     // Get pricing information
     let calculated_total = move || BlockRoomUIState::get_calculated_total_from_summary();
 
-    // Payment loading state
-    let (payment_loading, set_payment_loading) = create_signal(false);
-    let (selected_provider, set_selected_provider) = create_signal::<Option<PaymentProvider>>(None);
+    let (selected_provider, set_selected_provider) = create_signal(PaymentProvider::NowPayments);
 
     // Create payment action
     let create_payment_action = create_action(move |provider: &PaymentProvider| {
         let provider = provider.clone();
         async move {
             log!("Creating payment invoice with provider: {:?}", provider);
-            set_payment_loading.set(true);
-            set_selected_provider.set(Some(provider.clone()));
 
             // Get booking details
             let block_room_state: BlockRoomUIState = expect_context();
-            let ui_search_ctx: UISearchCtx = expect_context();
             let hotel_info_ctx: HotelInfoCtx = expect_context();
 
             // Validate required email with debug logging
@@ -2174,8 +2248,6 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                     Some("Email required for payment".to_string()),
                     Some("Primary adult email is required to create payment invoice".to_string()),
                 );
-                set_payment_loading.set(false);
-                set_selected_provider.set(None);
                 return None;
             };
 
@@ -2189,8 +2261,6 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                     Some("App Reference generation failed".to_string()),
                     Some("Unable to generate app reference for payment".to_string()),
                 );
-                set_payment_loading.set(false);
-                set_selected_provider.set(None);
                 return None;
             };
 
@@ -2200,6 +2270,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
 
             // Get price information
             let price_amount = calculated_total();
+            let selected_currency_code = resolve_currency_code(None);
 
             // Create domain request using proper URL helper functions
             let hotel_name = hotel_info_ctx.selected_hotel_name.get_untracked();
@@ -2208,7 +2279,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             let consts_provider: crate::api::consts::PaymentProvider = provider.clone().into();
             let domain_request = create_domain_request(
                 price_amount,
-                "USD".to_string(),
+                selected_currency_code.clone(),
                 order_id,
                 if hotel_name.is_empty() {
                     "Hotel Room Booking".to_string()
@@ -2252,21 +2323,15 @@ pub fn PaymentProviderButtons() -> impl IntoView {
         }
     });
 
-    // Handle action completion
-    create_effect(move |_| {
-        if create_payment_action.value().get().is_some() {
-            set_payment_loading.set(false);
-            set_selected_provider.set(None);
-        }
-    });
+    let payment_loading = move || create_payment_action.pending().get();
 
     view! {
-        <div class="space-y-3">
+        <div class="space-y-4 w-full">
             // <!-- NowPayments Button -->
             <button
                 class=move || format!(
                     "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
-                    if selected_provider().map_or(false, |p| p == PaymentProvider::NowPayments) {
+                    if selected_provider() == PaymentProvider::NowPayments {
                         "border-blue-500 bg-blue-50"
                     } else {
                         "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
@@ -2275,6 +2340,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                 disabled=payment_loading
                 on:click=move |_| {
                     if !payment_loading() {
+                        set_selected_provider.set(PaymentProvider::NowPayments);
                         create_payment_action.dispatch(PaymentProvider::NowPayments);
                     }
                 }
@@ -2289,7 +2355,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                             <div class="text-sm text-gray-600">"Pay with crypto currencies"</div>
                         </div>
                     </div>
-                    <Show when=move || selected_provider().map_or(false, |p| p == PaymentProvider::NowPayments) && payment_loading()>
+                    <Show when=move || selected_provider() == PaymentProvider::NowPayments && payment_loading()>
                         <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
                     </Show>
                 </div>
@@ -2299,7 +2365,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
             <button
                 class=move || format!(
                     "payment-button border-2 rounded-lg p-3 flex items-center cursor-pointer relative transition-all duration-200 w-full {}",
-                    if selected_provider().map_or(false, |p| p == PaymentProvider::Stripe) {
+                    if selected_provider() == PaymentProvider::Stripe {
                         "border-indigo-500 bg-indigo-50"
                     } else {
                         "border-gray-300 hover:border-indigo-400 hover:bg-gray-50"
@@ -2308,6 +2374,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                 disabled=payment_loading
                 on:click=move |_| {
                     if !payment_loading() {
+                        set_selected_provider.set(PaymentProvider::Stripe);
                         create_payment_action.dispatch(PaymentProvider::Stripe);
                     }
                 }
@@ -2322,7 +2389,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                             <div class="text-sm text-gray-600">"Pay with credit/debit cards"</div>
                         </div>
                     </div>
-                    <Show when=move || selected_provider().map_or(false, |p| p == PaymentProvider::Stripe) && payment_loading()>
+                    <Show when=move || selected_provider() == PaymentProvider::Stripe && payment_loading()>
                         <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-500"></div>
                     </Show>
                 </div>
@@ -2333,7 +2400,7 @@ pub fn PaymentProviderButtons() -> impl IntoView {
                 <div class="text-center py-2">
                     <div class="text-sm text-gray-600">
                         {move || format!("Creating {} payment...",
-                            selected_provider().map_or("payment".to_string(), |p| p.as_str().to_string())
+                            payment_provider_display_name(&selected_provider())
                         )}
                     </div>
                 </div>

@@ -10,8 +10,8 @@ use leptos_router::RouteListing;
 use crate::api::consts::LITEAPI_ROOM_MAPPING;
 use crate::{
     api::consts::EnvVarConfig, ssr_booking::email_handler::EmailClient,
-    ssr_booking::PipelineLockManager, utils::error_alerts::ErrorAlertService,
-    utils::notifier::Notifier, view_state_layer::AppState,
+    ssr_booking::PipelineLockManager, utils::currency::resolve_currency_code,
+    utils::error_alerts::ErrorAlertService, utils::notifier::Notifier, view_state_layer::AppState,
 };
 
 use hotel_providers::{PlaceProviderPort, ProviderRegistry, ProviderRegistryBuilder};
@@ -106,6 +106,13 @@ pub fn get_liteapi_driver() -> LiteApiDriver {
         .get()
         .expect("Failed to get LiteAPI driver")
         .clone()
+}
+
+pub fn get_liteapi_driver_with_currency(currency: Option<&str>) -> LiteApiDriver {
+    let api_key = std::env::var("LITEAPI_KEY").unwrap_or_else(|_| "".to_string());
+    let resolved_currency = resolve_currency_code(currency);
+    let client = LiteApiClient::with_currency(api_key, None, resolved_currency);
+    LiteApiDriver::new(client, *LITEAPI_ROOM_MAPPING)
 }
 
 pub fn initialize_booking_driver() {

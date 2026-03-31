@@ -8,6 +8,7 @@ use crate::component::{Footer, Navbar, SkeletonCards};
 use crate::domain::{DomainHotelCodeId, DomainHotelDetails};
 use crate::log;
 use crate::page::HotelCardTile;
+use crate::utils::currency::resolve_currency_code;
 
 #[component]
 pub fn WishlistPage() -> impl IntoView {
@@ -27,6 +28,7 @@ pub fn WishlistPage() -> impl IntoView {
 #[component]
 pub fn WishlistComponent() -> impl IntoView {
     let navigate = use_navigate();
+    let selected_currency_code = create_rw_signal(resolve_currency_code(None));
 
     // Get wishlist hotel codes from auth state
     let wishlist_hotel_codes = move || AuthStateSignal::wishlist_hotel_codes();
@@ -189,6 +191,7 @@ pub fn WishlistComponent() -> impl IntoView {
                                                         Some(hotel.address.clone())
                                                     }
                                                 }
+                                                selected_currency_code=selected_currency_code
                                                 disabled=false
                                             />
                                         </For>

@@ -17,12 +17,9 @@ use super::parse_json_request;
 
 const SESSION_COOKIE: &str = "session";
 const SUPPORT_RECIPIENTS: &[&str] = &["support@nofeebooking.com"];
-const SUPPORT_CC_RECIPIENTS: &[&str] = &[
-    "support@estatedao.org",
-    "ayushi@estatedao.org",
-    "prakash@estatedao.org",
-];
-const PROD_SUPPORT_CC: &str = "utkarsh@gobazzinga.io";
+const SUPPORT_CC: &str = "support@estatedao.org";
+const SUPPORT_BCC_RECIPIENTS: &[&str] = &["ayushi@estatedao.org", "prakash@estatedao.org"];
+const PROD_SUPPORT_BCC: &str = "utkarsh@gobazzinga.io";
 const MAX_SUBJECT_LEN: usize = 120;
 const MAX_QUERY_LEN: usize = 500;
 const BOOKING_FALLBACK_IMAGE: &str = "https://nofeebooking.com/img/home.png";
@@ -140,7 +137,7 @@ fn has_booking_context(ctx: &SupportBookingContext) -> bool {
 
 fn booking_amount_text(ctx: &SupportBookingContext) -> Option<String> {
     ctx.total_amount.map(|amount| {
-        let currency = ctx.currency.clone().unwrap_or_default();
+        let currency = ctx.currency.clone().unwrap_or_default().to_uppercase();
         if currency.trim().is_empty() {
             format!("{:.2}", amount)
         } else {
@@ -493,21 +490,22 @@ Team Nofeebooking"
     let config = EnvVarConfig::try_from_env();
     let email_client = EmailClient::new(config.email_client_config);
 
-    let mut cc_list: Vec<&str> = SUPPORT_CC_RECIPIENTS.to_vec();
+    let mut bcc_list: Vec<&str> = SUPPORT_BCC_RECIPIENTS.to_vec();
     if is_production_env() {
-        cc_list.push(PROD_SUPPORT_CC);
+        bcc_list.push(PROD_SUPPORT_BCC);
     }
-    let support_cc = if cc_list.is_empty() {
+    let support_bcc = if bcc_list.is_empty() {
         None
     } else {
-        Some(cc_list.join(", "))
+        Some(bcc_list.join(", "))
     };
 
     for recipient in SUPPORT_RECIPIENTS {
         if let Err(e) = email_client
             .send_multipart_email(
                 recipient,
-                support_cc.as_deref(),
+                Some(SUPPORT_CC),
+                support_bcc.as_deref(),
                 &support_subject,
                 &support_text_body,
                 &support_html_body,
@@ -533,6 +531,7 @@ Team Nofeebooking"
     if let Err(e) = email_client
         .send_multipart_email(
             &user_email,
+            None,
             None,
             &confirmation_subject,
             &confirmation_text_body,

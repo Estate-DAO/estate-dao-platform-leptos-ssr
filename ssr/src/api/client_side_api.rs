@@ -8,6 +8,7 @@ use crate::domain::{
     DomainHotelInfoCriteria, DomainHotelListAfterSearch, DomainHotelSearchCriteria,
 };
 use crate::log;
+use crate::utils::currency::resolve_currency_code;
 use crate::utils::route::join_base_and_path_url;
 use candid::Principal;
 use leptos::*;
@@ -338,11 +339,11 @@ impl ClientSideApiClient {
         }
     }
 
-    async fn make_post_request<T: DeserializeOwned>(
+    async fn send_post_request(
         endpoint: &str,
         body: String,
         context: &str,
-    ) -> Result<T, String> {
+    ) -> Result<(reqwest::StatusCode, String), String> {
         log!("[CLIENT_API_DEBUG] Making POST request to: {}", endpoint);
         log!("[CLIENT_API_DEBUG] Request context: {}", context);
         log!("[CLIENT_API_DEBUG] Request body: {}", body);
@@ -358,10 +359,12 @@ impl ClientSideApiClient {
 
         // Create client - in WASM, cookies are handled automatically by the browser
         let client = reqwest::Client::new();
+        let currency_code = resolve_currency_code(None);
 
         let mut request_builder = client
             .post(Self::build_api_url(endpoint))
             .header("Content-Type", "application/json")
+            .header("X-Currency", currency_code)
             .body(body);
 
         // Add basic auth headers for admin endpoints
@@ -424,43 +427,7 @@ impl ClientSideApiClient {
                 match text_result {
                     Ok(text) => {
                         log!("[CLIENT_API_DEBUG] Response body: {}", text);
-                        if status.is_success() {
-                            Self::parse_server_response(&text)
-                        } else {
-                            // Handle error responses (400, 422, etc.) by extracting the error message
-                            let error_msg = if let Ok(error_json) =
-                                serde_json::from_str::<serde_json::Value>(&text)
-                            {
-                                if let Some(error_msg) =
-                                    error_json.get("error").and_then(|v| v.as_str())
-                                {
-                                    log!(
-                                        "{} API call failed with status {}: {}",
-                                        context,
-                                        status,
-                                        error_msg
-                                    );
-                                    error_msg.to_string()
-                                } else {
-                                    log!(
-                                        "{} API call failed with status {}: {}",
-                                        context,
-                                        status,
-                                        text
-                                    );
-                                    format!("API call failed with status {}", status)
-                                }
-                            } else {
-                                log!(
-                                    "{} API call failed with status {}: {}",
-                                    context,
-                                    status,
-                                    text
-                                );
-                                format!("API call failed with status {}", status)
-                            };
-                            Err(error_msg)
-                        }
+                        Ok((status, text))
                     }
                     Err(e) => {
                         log!("Failed to get {} response text: {}", context, e);
@@ -472,6 +439,48 @@ impl ClientSideApiClient {
                 log!("{} API call error: {}", context, e);
                 Err(format!("Network error: {}", e))
             }
+        }
+    }
+
+    async fn make_post_request<T: DeserializeOwned>(
+        endpoint: &str,
+        body: String,
+        context: &str,
+    ) -> Result<T, String> {
+        let (status, text) = Self::send_post_request(endpoint, body, context).await?;
+        if status.is_success() {
+            Self::parse_server_response(&text)
+        } else {
+            // Handle error responses (400, 422, etc.) by extracting the error message
+            let error_msg = if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&text)
+            {
+                if let Some(error_msg) = error_json.get("error").and_then(|v| v.as_str()) {
+                    log!(
+                        "{} API call failed with status {}: {}",
+                        context,
+                        status,
+                        error_msg
+                    );
+                    error_msg.to_string()
+                } else {
+                    log!(
+                        "{} API call failed with status {}: {}",
+                        context,
+                        status,
+                        text
+                    );
+                    format!("API call failed with status {}", status)
+                }
+            } else {
+                log!(
+                    "{} API call failed with status {}: {}",
+                    context,
+                    status,
+                    text
+                );
+                format!("API call failed with status {}", status)
+            };
+            Err(error_msg)
         }
     }
 
@@ -587,12 +596,36 @@ impl ClientSideApiClient {
         &self,
         request: IntegratedBlockRoomRequest,
     ) -> Option<IntegratedBlockRoomResponse> {
-        Self::api_call(
-            request,
-            "server_fn_api/integrated_block_room_api",
-            "integrated block room",
-        )
-        .await
+        let context = "integrated block room";
+        let body = Self::serialize_request(&request, context)?;
+        let (status, text) =
+            Self::send_post_request("server_fn_api/integrated_block_room_api", body, context)
+                .await
+                .ok()?;
+
+        if status.is_success() {
+            return Self::parse_server_response(&text).ok();
+        }
+
+        match Self::parse_server_response::<IntegratedBlockRoomResponse>(&text) {
+            Ok(response) => {
+                log!(
+                    "{} returned structured error payload with status {}",
+                    context,
+                    status
+                );
+                Some(response)
+            }
+            Err(e) => {
+                log!(
+                    "{} API call failed with status {} and unparseable body: {}",
+                    context,
+                    status,
+                    e
+                );
+                None
+            }
+        }
     }
 
     // <!-- Helper function for parsing server responses -->

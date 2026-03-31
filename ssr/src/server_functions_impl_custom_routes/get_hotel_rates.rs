@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 use estate_fe::view_state_layer::AppState;
@@ -10,11 +10,12 @@ use estate_fe::{
 };
 use serde_json::json;
 
-use super::parse_json_request;
+use super::{get_currency_aware_liteapi_driver, parse_json_request};
 
 #[axum::debug_handler]
 pub async fn get_hotel_rates_api_server_fn_route(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
+    headers: HeaderMap,
     body: String,
 ) -> Result<Response, Response> {
     // <!-- Parse input string to struct -->

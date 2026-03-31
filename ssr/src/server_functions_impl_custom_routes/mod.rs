@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, options, post},
     Router,
@@ -22,7 +22,7 @@ use estate_fe::{
         DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
         DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
-    init::get_provider_registry,
+    init::{get_liteapi_driver_with_currency, get_provider_registry},
     ports::hotel_provider_port::ProviderError,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
@@ -32,7 +32,7 @@ use estate_fe::{
     },
     utils::{
         app_reference::BookingId, booking_backend_conversions::BookingBackendConversions,
-        booking_id::PaymentIdentifiers,
+        booking_id::PaymentIdentifiers, currency::resolve_currency_code,
     },
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -123,10 +123,29 @@ pub fn parse_json_request<T: DeserializeOwned>(body: &str) -> Result<T, Response
     })
 }
 
+pub fn extract_currency_from_headers(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get("X-Currency")
+        .or_else(|| headers.get("x-currency"))
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+pub fn get_currency_aware_liteapi_driver(
+    headers: &HeaderMap,
+) -> hotel_providers::liteapi::LiteApiDriver {
+    let raw_currency = extract_currency_from_headers(headers);
+    let resolved_currency = resolve_currency_code(raw_currency.as_deref());
+    get_liteapi_driver_with_currency(Some(&resolved_currency))
+}
+
 // Helper function to call block room API using HotelService
 // This properly delegates provider selection to the service layer
 pub async fn call_block_room_api(
     _state: &AppState,
+    headers: Option<&HeaderMap>,
     request: DomainBlockRoomRequest,
 ) -> Result<DomainBlockRoomResponse, ProviderError> {
     // Use provider registry (fallback enabled)

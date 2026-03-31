@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 use estate_fe::view_state_layer::AppState;
@@ -13,11 +13,14 @@ use estate_fe::{
 };
 use serde_json::json;
 
-use super::{filter_hotels_with_valid_pricing, parse_json_request};
+use super::{
+    filter_hotels_with_valid_pricing, get_currency_aware_liteapi_driver, parse_json_request,
+};
 
 #[axum::debug_handler]
 pub async fn search_hotel_api_server_fn_route(
     State(state): State<AppState>,
+    headers: HeaderMap,
     body: String,
 ) -> Result<Response, Response> {
     // <!-- Parse input string to struct -->

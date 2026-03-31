@@ -19,9 +19,7 @@ impl LiteApiMapper {
         // Check if this is a coordinate-based search (from "Search this area" feature)
         // or if we should use the place_id
         let is_coordinate_search = domain_criteria.place_id.starts_with("custom_")
-            || (domain_criteria.latitude.is_some()
-                && domain_criteria.longitude.is_some()
-                && domain_criteria.place_id.is_empty());
+            || (domain_criteria.latitude.is_some() && domain_criteria.longitude.is_some());
 
         if is_coordinate_search {
             // Use latitude/longitude for coordinate-based searches
@@ -575,13 +573,28 @@ impl LiteApiMapper {
         room_type_id: String,
         offer_id: String,
     ) -> DomainRoomOption {
-        // Use retail_rate.total as the primary price source (Gross)
-        // suggested_selling_price is mapped to its own field
+        // Use retail_rate.total as the primary price source (Gross).
+        // For providerDirect rates, total is empty — fall back to initial_price
+        // (original/gross price before discount), then suggested_selling_price.
         let room_price = rate
             .retail_rate
             .total
             .first()
             .map(|amount| amount.amount)
+            .or_else(|| {
+                rate.retail_rate
+                    .initial_price
+                    .as_ref()
+                    .and_then(|v| v.first())
+                    .map(|amount| amount.amount)
+            })
+            .or_else(|| {
+                rate.retail_rate
+                    .suggested_selling_price
+                    .as_ref()
+                    .and_then(|v| v.first())
+                    .map(|amount| amount.amount)
+            })
             .unwrap_or(0.0);
 
         let currency_code = rate
@@ -651,7 +664,14 @@ impl LiteApiMapper {
             .as_ref()
             .and_then(|v| v.first())
             .map(|amount| amount.amount)
-            .unwrap_or_else(|| room_price - included_tax_total);
+            .unwrap_or_else(|| {
+                let net = room_price - included_tax_total;
+                if net.is_sign_negative() {
+                    room_price
+                } else {
+                    net
+                }
+            });
 
         let excluded_tax_total: f64 = tax_lines
             .iter()

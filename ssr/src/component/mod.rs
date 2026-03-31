@@ -70,6 +70,9 @@ pub use feature_section::*;
 mod crypto_carousel;
 pub use crypto_carousel::*;
 
+mod currency_selector_modal;
+pub use currency_selector_modal::*;
+
 mod feedback_section;
 pub use feedback_section::*;
 

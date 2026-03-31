@@ -447,7 +447,8 @@ impl DomainRoomOption {
     pub fn price_excluding_included_taxes(&self) -> f64 {
         let base_price = self.price.room_price - self.included_taxes_total();
         if base_price.is_sign_negative() {
-            0.0
+            // Fallback to gross price if included taxes sum to more than the price
+            self.price.room_price
         } else {
             base_price
         }

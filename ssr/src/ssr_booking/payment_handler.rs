@@ -20,6 +20,7 @@ use crate::ssr_booking::pipeline::{PipelineExecutor, PipelineValidator};
 use crate::ssr_booking::{PipelineDecision, ServerSideBookingEvent};
 use crate::utils::admin::{admin_canister, AdminCanisters};
 use crate::utils::booking_id::PaymentIdentifiers;
+use crate::utils::currency::currency_symbol_for_code;
 
 use crate::utils::app_reference::BookingId as FrontendBookingId;
 
@@ -61,11 +62,43 @@ pub fn create_payment_api_response_from_booking(
         .user_selected_hotel_room_details
         .requested_payment_amount;
     let date_range = &backend_booking.user_selected_hotel_room_details.date_range;
+    let order_amount_currency = domain_response
+        .and_then(|r| r.currency.clone())
+        .or_else(|| {
+            (!backend_booking
+                .payment_details
+                .payment_api_response
+                .price_currency
+                .is_empty())
+            .then_some(
+                backend_booking
+                    .payment_details
+                    .payment_api_response
+                    .price_currency
+                    .clone(),
+            )
+        })
+        .or_else(|| {
+            (!backend_booking
+                .payment_details
+                .payment_api_response
+                .pay_currency
+                .is_empty())
+            .then_some(
+                backend_booking
+                    .payment_details
+                    .payment_api_response
+                    .pay_currency
+                    .clone(),
+            )
+        })
+        .unwrap_or_else(|| "USD".to_string());
+    let order_amount_symbol = currency_symbol_for_code(&order_amount_currency);
 
     // Create rich order description from booking details
     let order_description = if !room_details.is_empty() {
         format!(
-            "Hotel: {} | Room: {} | Dates: {}-{}-{} to {}-{}-{} | Amount: ${:.2}",
+            "Hotel: {} | Room: {} | Dates: {}-{}-{} to {}-{}-{} | Amount: {}{:.2}",
             hotel_details.hotel_name,
             room_details[0].room_type_name,
             date_range.start.0,
@@ -74,11 +107,12 @@ pub fn create_payment_api_response_from_booking(
             date_range.end.0,
             date_range.end.1,
             date_range.end.2,
+            order_amount_symbol,
             requested_amount
         )
     } else {
         format!(
-            "Hotel: {} | Dates: {}-{}-{} to {}-{}-{} | Amount: ${:.2}",
+            "Hotel: {} | Dates: {}-{}-{} to {}-{}-{} | Amount: {}{:.2}",
             hotel_details.hotel_name,
             date_range.start.0,
             date_range.start.1,
@@ -86,6 +120,7 @@ pub fn create_payment_api_response_from_booking(
             date_range.end.0,
             date_range.end.1,
             date_range.end.2,
+            order_amount_symbol,
             requested_amount
         )
     };
