@@ -2677,6 +2677,7 @@ mod tests {
                 create_test_hotel("hotel3", "Beach Resort", Some(200.0)),
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2709,6 +2710,7 @@ mod tests {
                 create_test_hotel("hotel3", "Grand Hotel", Some(140.0)),
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2741,6 +2743,7 @@ mod tests {
                 create_test_hotel("hotel3", " Grand Hotel ", Some(140.0)),
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2773,6 +2776,7 @@ mod tests {
                 create_test_hotel("hotel3", "City Inn", Some(80.0)),
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2797,6 +2801,7 @@ mod tests {
                 create_test_hotel("hotel5", "Beach Resort", Some(200.0)),
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2830,6 +2835,7 @@ mod tests {
                 create_test_hotel("hotel3", "Grand Hotel", None),        // No price
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2855,6 +2861,7 @@ mod tests {
                 create_test_hotel("hotel3", "Grand Hotel", None),
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2876,6 +2883,7 @@ mod tests {
                 create_test_hotel("hotel5", "Beach Resort", Some(180.0)), // Duplicate, lower price
             ],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2901,6 +2909,7 @@ mod tests {
         let results = DomainHotelListAfterSearch {
             hotel_results: vec![],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2915,6 +2924,7 @@ mod tests {
         let results = DomainHotelListAfterSearch {
             hotel_results: vec![create_test_hotel("hotel1", "Grand Hotel", Some(150.0))],
             pagination: None,
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);
@@ -2941,6 +2951,7 @@ mod tests {
                 has_next_page: true,
                 has_previous_page: false,
             }),
+            provider: None,
         };
 
         let deduplicated = dedup_hotels_by_name(results);

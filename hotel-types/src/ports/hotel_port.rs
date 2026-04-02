@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::ports::ProviderError;
 use crate::{
@@ -77,4 +78,69 @@ pub trait HotelProviderPort: Send + Sync {
         &self,
         request: DomainGetBookingRequest,
     ) -> Result<DomainGetBookingResponse, ProviderError>;
+}
+
+#[async_trait]
+impl<T> HotelProviderPort for Arc<T>
+where
+    T: HotelProviderPort + ?Sized,
+{
+    fn name(&self) -> &'static str {
+        (**self).name()
+    }
+
+    fn is_healthy(&self) -> bool {
+        (**self).is_healthy()
+    }
+
+    async fn search_hotels(
+        &self,
+        criteria: DomainHotelSearchCriteria,
+        ui_filters: UISearchFilters,
+    ) -> Result<DomainHotelListAfterSearch, ProviderError> {
+        (**self).search_hotels(criteria, ui_filters).await
+    }
+
+    async fn get_hotel_static_details(
+        &self,
+        hotel_id: &str,
+    ) -> Result<DomainHotelStaticDetails, ProviderError> {
+        (**self).get_hotel_static_details(hotel_id).await
+    }
+
+    async fn get_hotel_rates(
+        &self,
+        criteria: DomainHotelInfoCriteria,
+    ) -> Result<DomainGroupedRoomRates, ProviderError> {
+        (**self).get_hotel_rates(criteria).await
+    }
+
+    async fn get_min_rates(
+        &self,
+        criteria: DomainHotelSearchCriteria,
+        hotel_ids: Vec<String>,
+    ) -> Result<HashMap<String, DomainPrice>, ProviderError> {
+        (**self).get_min_rates(criteria, hotel_ids).await
+    }
+
+    async fn block_room(
+        &self,
+        block_request: DomainBlockRoomRequest,
+    ) -> Result<DomainBlockRoomResponse, ProviderError> {
+        (**self).block_room(block_request).await
+    }
+
+    async fn book_room(
+        &self,
+        book_request: DomainBookRoomRequest,
+    ) -> Result<DomainBookRoomResponse, ProviderError> {
+        (**self).book_room(book_request).await
+    }
+
+    async fn get_booking_details(
+        &self,
+        request: DomainGetBookingRequest,
+    ) -> Result<DomainGetBookingResponse, ProviderError> {
+        (**self).get_booking_details(request).await
+    }
 }

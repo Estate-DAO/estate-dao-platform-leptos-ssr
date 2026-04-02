@@ -52,9 +52,10 @@ See [hotel-providers/DESIGN.md](hotel-providers/DESIGN.md) for the multi-provide
 
 | Component | Description |
 |-----------|-------------|
-| `hotel-providers` | Multi-provider abstraction with LiteAPI integration |
+| `hotel-providers` | Multi-provider abstraction with LiteAPI + Booking.com integration |
 | `hotel-types` | Shared domain types and provider port traits |
-| `LiteApiDriver` | Primary hotel/place provider (implements HotelProviderPort) |
+| `LiteApiDriver` | LiteAPI provider (implements `HotelProviderPort` + `PlaceProviderPort`) |
+| `BookingDriver` | Booking.com Demand API provider (implements HotelProviderPort) |
 | `ProviderRegistry` | Configures and manages providers |
 
 ## Environment Variables
@@ -65,7 +66,21 @@ LEPTOS_SITE_ROOT="site"
 LEPTOS_SITE_PKG_DIR="pkg"
 LEPTOS_SITE_ADDR="127.0.0.1:3000"
 LEPTOS_RELOAD_PORT="3001"
+LITEAPI_KEY="..."
+LITEAPI_ROOM_MAPPING="true"
+BOOKING_API_TOKEN="..."
+BOOKING_AFFILIATE_ID="..."
+BOOKING_BASE_URL="https://demandapi.booking.com/3.1"
+BOOKING_CURRENCY="USD"
+BOOKING_USE_MOCK="true"
 ```
+
+Provider identification:
+- Hotel and place API responses include an optional `provider` field (e.g., `LiteAPI`, `Booking.com`).
+- Booking requests may include `provider` to route to a specific upstream when multiple providers are configured.
+- Primary hotel provider default is compile-time in `ssr/src/init.rs` via `PRIMARY_HOTEL_PROVIDER`.
+- Admin can update primary hotel provider at runtime via `POST /server_fn_api/admin/update_hotel_provider_config`.
+- Primary place provider is compile-time and configured in `ssr/src/init.rs` via `PRIMARY_PLACE_PROVIDER` (currently `LiteApi`).
 
 ## Testing
 

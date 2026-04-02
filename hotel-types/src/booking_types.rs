@@ -12,6 +12,8 @@ use crate::DomainCancellationPolicies;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainBookRoomRequest {
     pub block_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
     pub holder: DomainBookingHolder,
     pub guests: Vec<DomainBookingGuest>,
     pub payment: DomainPaymentInfo,
@@ -55,6 +57,8 @@ pub struct DomainPlace {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DomainPlacesResponse {
     pub data: Vec<DomainPlace>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Default, Deserialize)]
@@ -121,6 +125,8 @@ pub struct DomainBookRoomResponse {
     pub know_before_you_go: Option<String>,
     pub remarks: Option<String>,
     pub guest_id: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -208,6 +214,8 @@ pub struct DomainGetBookingRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainGetBookingResponse {
     pub bookings: Vec<DomainBookingDetails>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 impl DomainGetBookingResponse {

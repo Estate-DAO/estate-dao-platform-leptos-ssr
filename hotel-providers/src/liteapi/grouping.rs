@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
+use hotel_types::ports::ProviderNames;
 use hotel_types::{
     DomainGroupedRoomRates, DomainRoomGroup, DomainRoomOption, DomainRoomVariant, DomainStaticRoom,
     GroupedTaxItem,
@@ -273,5 +274,6 @@ pub fn group_liteapi_rates(
 
     DomainGroupedRoomRates {
         room_groups: groups,
+        provider: Some(ProviderNames::LiteApi.to_string()),
     }
 }

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time;
 use tracing::{debug, error, info, instrument, warn};
@@ -28,7 +29,7 @@ use crate::domain::{
     DomainGetBookingResponse, DomainOriginalSearchInfo, DomainPaymentInfo, DomainPaymentMethod,
     DomainRoomOccupancyForBooking,
 };
-use hotel_providers::liteapi::LiteApiDriver;
+use hotel_providers::HotelProviderPort;
 
 // ---------------------
 // external api calls
@@ -437,6 +438,7 @@ fn backend_booking_to_domain_book_room_request(
 
     Ok(DomainBookRoomRequest {
         block_id,
+        provider: None,
         holder,
         guests,
         payment,
@@ -547,10 +549,10 @@ async fn store_booking_error_in_backend(
     Ok(())
 }
 
-/// Initialize hotel service with liteapi driver
-#[instrument(name = "create_hotel_service_with_liteapi")]
-fn create_hotel_service_with_liteapi() -> HotelService<LiteApiDriver> {
-    HotelService::init(crate::init::get_liteapi_driver())
+/// Initialize hotel service with provider registry (fallback enabled)
+#[instrument(name = "create_hotel_service_with_provider")]
+fn create_hotel_service_with_provider() -> HotelService<Arc<dyn HotelProviderPort>> {
+    HotelService::init(crate::init::get_provider_registry().hotel_provider())
 }
 
 /// New version of book_room_and_update_backend with full hotel service integration
@@ -589,7 +591,7 @@ async fn book_room_and_update_backend_v1(
     info!("Transformed to domain request: {domain_request:?}");
 
     // Step 2: Initialize hotel service and call book_room
-    let hotel_service = create_hotel_service_with_liteapi();
+    let hotel_service = create_hotel_service_with_provider();
     let domain_response = match hotel_service.book_room(domain_request).await {
         Ok(response) => response,
         Err(e) => {
@@ -657,7 +659,7 @@ pub async fn get_booking_from_provider_and_update_backend(
     info!("Created domain request: {domain_request:?}");
 
     // Step 2: Initialize hotel service and call get_booking_details
-    let hotel_service = create_hotel_service_with_liteapi();
+    let hotel_service = create_hotel_service_with_provider();
     let domain_response = match hotel_service.get_booking_details(domain_request).await {
         Ok(response) => response,
         Err(e) => {

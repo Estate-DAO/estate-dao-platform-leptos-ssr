@@ -22,9 +22,8 @@ use estate_fe::{
         DomainBookRoomResponse, DomainHotelDetails, DomainHotelInfoCriteria,
         DomainHotelListAfterSearch, DomainHotelSearchCriteria,
     },
-    init::{get_liteapi_driver, get_liteapi_driver_with_currency},
+    init::{get_liteapi_driver_with_currency, get_provider_registry},
     ports::hotel_provider_port::ProviderError,
-    ports::traits::HotelProviderPort,
     ssr_booking::{
         booking_handler::MakeBookingFromBookingProvider,
         email_handler::SendEmailAfterSuccessfullBooking,
@@ -42,6 +41,7 @@ use serde_json::json;
 // Import all route modules
 mod admin_error_alerts;
 mod admin_payment;
+mod admin_provider;
 mod block_room;
 mod book_room;
 mod create_payment_invoice;
@@ -133,12 +133,12 @@ pub fn extract_currency_from_headers(headers: &HeaderMap) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-pub fn get_currency_aware_liteapi_driver(
+pub fn get_currency_aware_provider_registry(
     headers: &HeaderMap,
-) -> hotel_providers::liteapi::LiteApiDriver {
+) -> std::sync::Arc<hotel_providers::ProviderRegistry> {
     let raw_currency = extract_currency_from_headers(headers);
     let resolved_currency = resolve_currency_code(raw_currency.as_deref());
-    get_liteapi_driver_with_currency(Some(&resolved_currency))
+    estate_fe::init::get_currency_aware_provider_registry(Some(&resolved_currency))
 }
 
 // Helper function to call block room API using HotelService
@@ -148,12 +148,12 @@ pub async fn call_block_room_api(
     headers: Option<&HeaderMap>,
     request: DomainBlockRoomRequest,
 ) -> Result<DomainBlockRoomResponse, ProviderError> {
-    let liteapi_driver = if let Some(headers) = headers {
-        get_currency_aware_liteapi_driver(headers)
-    } else {
-        get_liteapi_driver()
+    // Use provider registry (currency enabled)
+    let provider = match headers {
+        Some(h) => get_currency_aware_provider_registry(h).hotel_provider(),
+        None => estate_fe::init::get_provider_registry().hotel_provider(),
     };
-    let hotel_service = HotelService::new(liteapi_driver);
+    let hotel_service = HotelService::new(provider);
 
     hotel_service.block_room(request).await
 }
@@ -294,6 +294,14 @@ pub fn api_routes() -> Router<AppState> {
         .route(
             "/admin/flush_error_alerts",
             post(admin_error_alerts::flush_pending_errors).options(handle_options),
+        )
+        .route(
+            "/admin/get_hotel_provider_config",
+            post(admin_provider::get_hotel_provider_config).options(handle_options),
+        )
+        .route(
+            "/admin/update_hotel_provider_config",
+            post(admin_provider::update_hotel_provider_config).options(handle_options),
         )
         .route(
             "/send_otp_email_api",

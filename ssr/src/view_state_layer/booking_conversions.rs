@@ -348,6 +348,7 @@ impl BookingConversions {
 
         Ok(DomainBookRoomRequest {
             block_id,
+            provider: None,
             holder,
             guests,
             payment,

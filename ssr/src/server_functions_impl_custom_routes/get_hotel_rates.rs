@@ -7,7 +7,7 @@ use estate_fe::view_state_layer::AppState;
 use estate_fe::{application_services::HotelService, domain::DomainHotelInfoCriteria};
 use serde_json::json;
 
-use super::{get_currency_aware_liteapi_driver, parse_json_request};
+use super::{get_currency_aware_provider_registry, parse_json_request};
 
 #[axum::debug_handler]
 pub async fn get_hotel_rates_api_server_fn_route(
@@ -18,9 +18,9 @@ pub async fn get_hotel_rates_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainHotelInfoCriteria = parse_json_request(&body)?;
 
-    // <!-- Create the hotel service with LiteApiDriver from global client -->
-    let liteapi_driver = get_currency_aware_liteapi_driver(&headers);
-    let hotel_service = HotelService::new(liteapi_driver);
+    // <!-- Create the hotel service with provider registry (currency enabled) -->
+    let provider = get_currency_aware_provider_registry(&headers).hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     // <!-- Get hotel rates -->
     let result = hotel_service.get_hotel_rates(request).await.map_err(|e| {
