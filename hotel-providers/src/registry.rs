@@ -1,5 +1,6 @@
 //! Provider Registry - manages provider registration and access
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::composite::{CompositeHotelProvider, CompositePlaceProvider, FallbackStrategy};
@@ -8,6 +9,7 @@ use crate::ports::{HotelProviderPort, PlaceProviderPort};
 /// Provider registry that holds configured providers
 pub struct ProviderRegistry {
     hotel_provider: Arc<dyn HotelProviderPort>,
+    hotel_provider_by_key: HashMap<&'static str, Arc<dyn HotelProviderPort>>,
     place_provider: Arc<dyn PlaceProviderPort>,
 }
 
@@ -20,6 +22,11 @@ impl ProviderRegistry {
     /// Get the hotel provider
     pub fn hotel_provider(&self) -> Arc<dyn HotelProviderPort> {
         self.hotel_provider.clone()
+    }
+
+    /// Get a hotel provider by its stable key
+    pub fn hotel_provider_by_key(&self, key: &str) -> Option<Arc<dyn HotelProviderPort>> {
+        self.hotel_provider_by_key.get(key).cloned()
     }
 
     /// Get the place provider
@@ -102,6 +109,12 @@ impl ProviderRegistryBuilder {
             panic!("At least one place provider must be configured");
         }
 
+        let hotel_provider_by_key = self
+            .hotel_providers
+            .iter()
+            .map(|provider| (provider.key(), provider.clone()))
+            .collect::<HashMap<_, _>>();
+
         let hotel_provider: Arc<dyn HotelProviderPort> = if self.hotel_providers.len() == 1 {
             // Single provider - no need for composite
             self.hotel_providers.into_iter().next().unwrap()
@@ -123,6 +136,7 @@ impl ProviderRegistryBuilder {
 
         ProviderRegistry {
             hotel_provider,
+            hotel_provider_by_key,
             place_provider,
         }
     }
@@ -143,5 +157,25 @@ impl ProviderRegistryBuilder {
 impl Default for ProviderRegistryBuilder {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::adapters::mock::{MockHotelProvider, MockPlaceProvider};
+
+    #[test]
+    fn registry_can_resolve_hotel_provider_by_stable_key() {
+        let registry = ProviderRegistry::builder()
+            .with_hotel_provider(MockHotelProvider::new().with_name("liteapi"))
+            .with_hotel_provider(MockHotelProvider::new().with_name("amadeus"))
+            .with_place_provider(MockPlaceProvider::new())
+            .build();
+
+        assert_eq!(
+            registry.hotel_provider_by_key("amadeus").unwrap().key(),
+            "amadeus"
+        );
     }
 }

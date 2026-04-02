@@ -6,7 +6,9 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::domain::*;
-use crate::ports::{HotelProviderPort, PlaceProviderPort, ProviderError, UISearchFilters};
+use crate::ports::{
+    HotelProviderPort, PlaceProviderPort, ProviderError, ProviderKeys, UISearchFilters,
+};
 
 /// Strategy for handling provider fallback
 #[derive(Debug, Clone, Default)]
@@ -67,6 +69,10 @@ impl CompositeHotelProvider {
 
 #[async_trait]
 impl HotelProviderPort for CompositeHotelProvider {
+    fn key(&self) -> &'static str {
+        ProviderKeys::Composite
+    }
+
     fn name(&self) -> &'static str {
         "CompositeHotelProvider"
     }

@@ -8,7 +8,8 @@ use crate::domain::{
 use crate::liteapi::client::LiteApiClient;
 use crate::liteapi::mapper::LiteApiMapper;
 use crate::ports::{
-    HotelProviderPort, PlaceProviderPort, ProviderError, ProviderNames, UISearchFilters,
+    HotelProviderPort, PlaceProviderPort, ProviderError, ProviderKeys, ProviderNames,
+    UISearchFilters,
 };
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -30,6 +31,10 @@ impl LiteApiDriver {
 
 #[async_trait]
 impl HotelProviderPort for LiteApiDriver {
+    fn key(&self) -> &'static str {
+        ProviderKeys::LiteApi
+    }
+
     fn name(&self) -> &'static str {
         ProviderNames::LiteApi
     }

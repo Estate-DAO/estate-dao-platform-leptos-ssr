@@ -8,12 +8,14 @@ use std::collections::HashMap;
 
 use crate::domain::*;
 use crate::ports::{
-    HotelProviderPort, PlaceProviderPort, ProviderError, ProviderSteps, UISearchFilters,
+    HotelProviderPort, PlaceProviderPort, ProviderError, ProviderKeys, ProviderSteps,
+    UISearchFilters,
 };
 
 /// Mock hotel provider for testing
 #[derive(Clone, Default)]
 pub struct MockHotelProvider {
+    key: &'static str,
     name: &'static str,
     healthy: bool,
     should_fail: bool,
@@ -22,6 +24,7 @@ pub struct MockHotelProvider {
 impl MockHotelProvider {
     pub fn new() -> Self {
         Self {
+            key: ProviderKeys::Mock,
             name: "MockHotelProvider",
             healthy: true,
             should_fail: false,
@@ -30,6 +33,14 @@ impl MockHotelProvider {
 
     pub fn with_name(mut self, name: &'static str) -> Self {
         self.name = name;
+        if self.key == ProviderKeys::Mock {
+            self.key = name;
+        }
+        self
+    }
+
+    pub fn with_key(mut self, key: &'static str) -> Self {
+        self.key = key;
         self
     }
 
@@ -46,6 +57,10 @@ impl MockHotelProvider {
 
 #[async_trait]
 impl HotelProviderPort for MockHotelProvider {
+    fn key(&self) -> &'static str {
+        self.key
+    }
+
     fn name(&self) -> &'static str {
         self.name
     }

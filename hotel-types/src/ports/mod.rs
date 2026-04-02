@@ -12,6 +12,22 @@ pub use hotel_port::{HotelProviderPort, UISearchFilters};
 pub use place_port::PlaceProviderPort;
 
 #[allow(non_upper_case_globals)]
+pub struct ProviderKeys;
+
+impl ProviderKeys {
+    #[allow(non_upper_case_globals)]
+    pub const LiteApi: &'static str = "liteapi";
+    #[allow(non_upper_case_globals)]
+    pub const Booking: &'static str = "booking";
+    #[allow(non_upper_case_globals)]
+    pub const Amadeus: &'static str = "amadeus";
+    #[allow(non_upper_case_globals)]
+    pub const Composite: &'static str = "composite";
+    #[allow(non_upper_case_globals)]
+    pub const Mock: &'static str = "mock";
+}
+
+#[allow(non_upper_case_globals)]
 pub struct ProviderNames;
 
 impl ProviderNames {

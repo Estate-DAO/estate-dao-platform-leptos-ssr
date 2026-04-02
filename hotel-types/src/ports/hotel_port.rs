@@ -27,6 +27,9 @@ pub struct UISearchFilters {
 /// The main trait that all hotel providers must implement
 #[async_trait]
 pub trait HotelProviderPort: Send + Sync {
+    /// Returns the stable provider key used for routing and configuration
+    fn key(&self) -> &'static str;
+
     /// Returns the name of the provider for logging and identification
     fn name(&self) -> &'static str;
 
@@ -85,6 +88,10 @@ impl<T> HotelProviderPort for Arc<T>
 where
     T: HotelProviderPort + ?Sized,
 {
+    fn key(&self) -> &'static str {
+        (**self).key()
+    }
+
     fn name(&self) -> &'static str {
         (**self).name()
     }
