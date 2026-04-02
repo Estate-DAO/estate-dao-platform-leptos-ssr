@@ -45,3 +45,4 @@ memories/
 # Ignore agent skills and workflows
 /.agents/
 docs/
+.worktrees/
