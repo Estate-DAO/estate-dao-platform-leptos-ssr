@@ -17,6 +17,8 @@ pub mod adapters;
 
 #[cfg(feature = "booking")]
 pub mod booking;
+#[cfg(feature = "amadeus")]
+pub mod amadeus;
 #[cfg(feature = "liteapi")]
 pub mod liteapi;
 

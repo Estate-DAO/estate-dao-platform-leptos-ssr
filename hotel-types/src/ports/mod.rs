@@ -35,4 +35,6 @@ impl ProviderNames {
     pub const LiteApi: &'static str = "LiteAPI";
     #[allow(non_upper_case_globals)]
     pub const Booking: &'static str = "Booking.com";
+    #[allow(non_upper_case_globals)]
+    pub const Amadeus: &'static str = "Amadeus";
 }
