@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::amadeus::client::AmadeusClient;
+use crate::amadeus::mapper::AmadeusMapper;
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBookRoomRequest, DomainBookRoomResponse,
     DomainGetBookingRequest, DomainGetBookingResponse, DomainGroupedRoomRates,
@@ -9,7 +10,8 @@ use crate::domain::{
     DomainHotelStaticDetails, DomainPrice,
 };
 use crate::ports::{
-    HotelProviderPort, ProviderError, ProviderKeys, ProviderNames, ProviderSteps, UISearchFilters,
+    HotelProviderPort, ProviderError, ProviderErrorKind, ProviderKeys, ProviderNames,
+    ProviderSteps, UISearchFilters,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -43,13 +45,38 @@ impl HotelProviderPort for AmadeusDriver {
 
     async fn search_hotels(
         &self,
-        _criteria: DomainHotelSearchCriteria,
+        criteria: DomainHotelSearchCriteria,
         _ui_filters: UISearchFilters,
     ) -> Result<DomainHotelListAfterSearch, ProviderError> {
-        Err(ProviderError::other(
-            self.name(),
-            ProviderSteps::HotelSearch,
-            "Amadeus search is not implemented yet",
+        let (latitude, longitude) = criteria.latitude.zip(criteria.longitude).ok_or_else(|| {
+            ProviderError::new(
+                self.name(),
+                ProviderErrorKind::InvalidRequest,
+                ProviderSteps::HotelSearch,
+                "Amadeus search requires latitude and longitude",
+            )
+        })?;
+
+        let hotel_list = self.client.get_hotels_by_geocode(latitude, longitude).await?;
+        if hotel_list.data.is_empty() {
+            return Ok(DomainHotelListAfterSearch {
+                hotel_results: Vec::new(),
+                pagination: None,
+                provider: Some(self.name().to_string()),
+            });
+        }
+
+        let hotel_ids = hotel_list
+            .data
+            .iter()
+            .map(|hotel| hotel.hotel_id.clone())
+            .collect::<Vec<_>>();
+        let offers = self.client.get_hotel_offers(&hotel_ids, &criteria).await?;
+
+        Ok(AmadeusMapper::map_search_to_domain(
+            hotel_list,
+            offers,
+            &criteria.pagination,
         ))
     }
 

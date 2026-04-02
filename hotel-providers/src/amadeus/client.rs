@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::amadeus::models::auth::AmadeusAuthResponse;
+use crate::amadeus::models::search::{AmadeusHotelListResponse, AmadeusHotelOffersResponse};
+use crate::domain::DomainHotelSearchCriteria;
 use crate::ports::{ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps};
 
 const DEFAULT_AUTH_BASE_URL: &str = "https://test.api.amadeus.com";
@@ -93,6 +95,107 @@ impl AmadeusClient {
         Ok(access_token)
     }
 
+    pub async fn get_hotels_by_geocode(
+        &self,
+        latitude: f64,
+        longitude: f64,
+    ) -> Result<AmadeusHotelListResponse, ProviderError> {
+        if self.is_mock() {
+            return Ok(AmadeusHotelListResponse::default());
+        }
+
+        let access_token = self.access_token().await?;
+        let url = format!(
+            "{}/v1/reference-data/locations/hotels/by-geocode",
+            self.api_base_url.trim_end_matches('/')
+        );
+
+        let response = self
+            .http
+            .get(url)
+            .bearer_auth(access_token)
+            .query(&[
+                ("latitude", latitude.to_string()),
+                ("longitude", longitude.to_string()),
+            ])
+            .send()
+            .await
+            .map_err(|error| {
+                ProviderError::network(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelSearch,
+                    format!("Amadeus hotel list request failed: {error}"),
+                )
+            })?;
+
+        response
+            .json::<AmadeusHotelListResponse>()
+            .await
+            .map_err(|error| {
+                ProviderError::parse_error(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelSearch,
+                    format!("Failed to parse Amadeus hotel list response: {error}"),
+                )
+            })
+    }
+
+    pub async fn get_hotel_offers(
+        &self,
+        hotel_ids: &[String],
+        criteria: &DomainHotelSearchCriteria,
+    ) -> Result<AmadeusHotelOffersResponse, ProviderError> {
+        if self.is_mock() {
+            return Ok(AmadeusHotelOffersResponse::default());
+        }
+
+        let access_token = self.access_token().await?;
+        let url = format!(
+            "{}/v3/shopping/hotel-offers",
+            self.api_base_url.trim_end_matches('/')
+        );
+        let hotel_ids = hotel_ids.join(",");
+        let adults = criteria
+            .room_guests
+            .iter()
+            .map(|guest| guest.no_of_adults)
+            .sum::<u32>()
+            .max(1)
+            .to_string();
+
+        let response = self
+            .http
+            .get(url)
+            .bearer_auth(access_token)
+            .query(&[
+                ("hotelIds", hotel_ids),
+                ("adults", adults),
+                ("checkInDate", Self::format_date(criteria.check_in_date)),
+                ("checkOutDate", Self::format_date(criteria.check_out_date)),
+                ("roomQuantity", criteria.no_of_rooms.max(1).to_string()),
+            ])
+            .send()
+            .await
+            .map_err(|error| {
+                ProviderError::network(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelSearch,
+                    format!("Amadeus hotel offers request failed: {error}"),
+                )
+            })?;
+
+        response
+            .json::<AmadeusHotelOffersResponse>()
+            .await
+            .map_err(|error| {
+                ProviderError::parse_error(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelSearch,
+                    format!("Failed to parse Amadeus hotel offers response: {error}"),
+                )
+            })
+    }
+
     fn cached_access_token(&self) -> Option<String> {
         let cache = self.token_cache.lock().expect("token cache lock poisoned");
         let cached = cache.as_ref()?;
@@ -168,6 +271,10 @@ impl AmadeusClient {
             access_token: payload.access_token,
             expires_at: Instant::now() + Duration::from_secs(payload.expires_in.max(1)),
         })
+    }
+
+    fn format_date(date: (u32, u32, u32)) -> String {
+        format!("{:04}-{:02}-{:02}", date.0, date.1, date.2)
     }
 }
 
