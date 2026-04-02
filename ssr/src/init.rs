@@ -17,11 +17,13 @@ use crate::{
 use hotel_providers::{PlaceProviderPort, ProviderRegistry, ProviderRegistryBuilder};
 use once_cell::sync::OnceCell;
 
+use hotel_providers::amadeus::{AmadeusClient, AmadeusDriver};
 use hotel_providers::booking::BookingDriver;
 use hotel_providers::liteapi::{LiteApiClient, LiteApiDriver};
 
 static LITEAPI_DRIVER: OnceCell<LiteApiDriver> = OnceCell::new();
 static BOOKING_DRIVER: OnceCell<BookingDriver> = OnceCell::new();
+static AMADEUS_DRIVER: OnceCell<AmadeusDriver> = OnceCell::new();
 static PROVIDER_REGISTRY: OnceCell<RwLock<Arc<ProviderRegistry>>> = OnceCell::new();
 static CURRENT_HOTEL_PROVIDER: OnceCell<RwLock<PrimaryHotelProvider>> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
@@ -32,6 +34,7 @@ static ERROR_ALERT_SERVICE: OnceCell<ErrorAlertService> = OnceCell::new();
 enum PrimaryHotelProvider {
     LiteApi,
     Booking,
+    Amadeus,
 }
 
 // Compile-time default. Can be overridden at runtime via admin endpoint.
@@ -42,6 +45,7 @@ impl PrimaryHotelProvider {
         match self {
             PrimaryHotelProvider::LiteApi => "liteapi",
             PrimaryHotelProvider::Booking => "booking",
+            PrimaryHotelProvider::Amadeus => "amadeus",
         }
     }
 }
@@ -59,8 +63,9 @@ impl FromStr for PrimaryHotelProvider {
         match normalized.as_str() {
             "liteapi" => Ok(PrimaryHotelProvider::LiteApi),
             "booking" | "bookingcom" => Ok(PrimaryHotelProvider::Booking),
+            "amadeus" => Ok(PrimaryHotelProvider::Amadeus),
             _ => Err(format!(
-                "Unsupported hotel provider '{}'. Valid values: liteapi, booking",
+                "Unsupported hotel provider '{}'. Valid values: liteapi, booking, amadeus",
                 value
             )),
         }
@@ -170,19 +175,62 @@ pub fn get_booking_driver_with_currency(currency: Option<&str>) -> BookingDriver
     }
 }
 
+pub fn initialize_amadeus_driver() {
+    let api_key = std::env::var("AMADEUS_API_KEY").unwrap_or_default();
+    let api_secret = std::env::var("AMADEUS_API_SECRET").unwrap_or_default();
+    let auth_base_url = std::env::var("AMADEUS_AUTH_BASE_URL").ok();
+    let api_base_url = std::env::var("AMADEUS_API_BASE_URL").ok();
+    let use_mock = std::env::var("AMADEUS_USE_MOCK")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(api_key.is_empty() || api_secret.is_empty());
+
+    if api_key.is_empty() || api_secret.is_empty() {
+        tracing::warn!("AMADEUS_API_KEY or AMADEUS_API_SECRET environment variable is empty or not set!");
+    }
+
+    let driver = if use_mock {
+        AmadeusDriver::new_mock()
+    } else {
+        AmadeusDriver::new(AmadeusClient::new(
+            api_key,
+            api_secret,
+            auth_base_url,
+            api_base_url,
+        ))
+    };
+
+    AMADEUS_DRIVER
+        .set(driver)
+        .expect("Failed to initialize Amadeus driver");
+}
+
+pub fn get_amadeus_driver() -> AmadeusDriver {
+    AMADEUS_DRIVER
+        .get()
+        .expect("Failed to get Amadeus driver")
+        .clone()
+}
+
 fn configure_hotel_providers(
     builder: ProviderRegistryBuilder,
     primary_hotel_provider: PrimaryHotelProvider,
     liteapi_driver: &LiteApiDriver,
     booking_driver: &BookingDriver,
+    amadeus_driver: &AmadeusDriver,
 ) -> ProviderRegistryBuilder {
     match primary_hotel_provider {
-        PrimaryHotelProvider::Booking => builder
-            .with_hotel_provider(booking_driver.clone())
-            .with_hotel_provider(liteapi_driver.clone()),
-        PrimaryHotelProvider::LiteApi => builder
+        PrimaryHotelProvider::Amadeus => builder
+            .with_hotel_provider(amadeus_driver.clone())
             .with_hotel_provider(liteapi_driver.clone())
             .with_hotel_provider(booking_driver.clone()),
+        PrimaryHotelProvider::Booking => builder
+            .with_hotel_provider(booking_driver.clone())
+            .with_hotel_provider(liteapi_driver.clone())
+            .with_hotel_provider(amadeus_driver.clone()),
+        PrimaryHotelProvider::LiteApi => builder
+            .with_hotel_provider(liteapi_driver.clone())
+            .with_hotel_provider(booking_driver.clone())
+            .with_hotel_provider(amadeus_driver.clone()),
     }
 }
 
@@ -203,6 +251,7 @@ fn build_provider_registry(
     primary_hotel_provider: PrimaryHotelProvider,
     liteapi_driver: &LiteApiDriver,
     booking_driver: &BookingDriver,
+    amadeus_driver: &AmadeusDriver,
 ) -> ProviderRegistry {
     configure_place_provider(
         configure_hotel_providers(
@@ -210,6 +259,7 @@ fn build_provider_registry(
             primary_hotel_provider,
             liteapi_driver,
             booking_driver,
+            amadeus_driver,
         ),
         liteapi_driver,
     )
@@ -219,12 +269,14 @@ fn build_provider_registry(
 pub fn initialize_provider_registry() {
     let liteapi_driver = get_liteapi_driver();
     let booking_driver = get_booking_driver();
+    let amadeus_driver = get_amadeus_driver();
 
     let primary_hotel_provider = PRIMARY_HOTEL_PROVIDER;
     let registry = Arc::new(build_provider_registry(
         primary_hotel_provider,
         &liteapi_driver,
         &booking_driver,
+        &amadeus_driver,
     ));
 
     CURRENT_HOTEL_PROVIDER
@@ -249,6 +301,7 @@ pub fn get_currency_aware_provider_registry(currency: Option<&str>) -> Arc<Provi
     let resolved_currency = resolve_currency_code(currency);
     let liteapi_driver = get_liteapi_driver_with_currency(Some(&resolved_currency));
     let booking_driver = get_booking_driver_with_currency(Some(&resolved_currency));
+    let amadeus_driver = get_amadeus_driver();
 
     let primary_provider_str = get_primary_hotel_provider();
     let primary_hotel_provider =
@@ -258,6 +311,7 @@ pub fn get_currency_aware_provider_registry(currency: Option<&str>) -> Arc<Provi
         primary_hotel_provider,
         &liteapi_driver,
         &booking_driver,
+        &amadeus_driver,
     ))
 }
 
@@ -275,10 +329,12 @@ pub fn update_primary_hotel_provider(provider_key: &str) -> Result<String, Strin
     let selected_provider = PrimaryHotelProvider::from_str(provider_key)?;
     let liteapi_driver = get_liteapi_driver();
     let booking_driver = get_booking_driver();
+    let amadeus_driver = get_amadeus_driver();
     let registry = Arc::new(build_provider_registry(
         selected_provider,
         &liteapi_driver,
         &booking_driver,
+        &amadeus_driver,
     ));
 
     let registry_lock = PROVIDER_REGISTRY
@@ -344,6 +400,7 @@ impl AppStateBuilder {
     pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
         initialize_liteapi_driver(); // Initialize the new driver
         initialize_booking_driver();
+        initialize_amadeus_driver();
         initialize_notifier();
         initialize_provider_registry(); // Registry now uses the driver via adapter
 
@@ -414,5 +471,34 @@ impl AppStateBuilder {
         }
 
         app_state
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hotel_providers::amadeus::AmadeusDriver;
+    use hotel_providers::booking::BookingDriver;
+    use hotel_providers::liteapi::{LiteApiClient, LiteApiDriver};
+
+    #[test]
+    fn init_can_build_registry_with_amadeus_primary() {
+        let liteapi_driver = LiteApiDriver::new(LiteApiClient::new("test-key".to_string(), None), false);
+        let booking_driver = BookingDriver::new_mock("USD".to_string());
+        let amadeus_driver = AmadeusDriver::new_mock();
+
+        let registry = build_provider_registry(
+            PrimaryHotelProvider::Amadeus,
+            &liteapi_driver,
+            &booking_driver,
+            &amadeus_driver,
+        );
+
+        assert_eq!(registry.hotel_provider().key(), "composite");
+        assert_eq!(PrimaryHotelProvider::Amadeus.as_key(), "amadeus");
+        assert_eq!(
+            registry.hotel_provider_by_key("amadeus").unwrap().key(),
+            "amadeus"
+        );
     }
 }

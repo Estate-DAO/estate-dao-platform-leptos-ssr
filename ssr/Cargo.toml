@@ -166,7 +166,7 @@ moka = { version = "0.12.12", features = ["future"] }
 maxminddb = "0.26.0"
 
 # Multi-provider support crate (SSR only - uses reqwest which is not Send in WASM)
-hotel-providers = { path = "../hotel-providers", features = ["liteapi", "booking", "mock"], optional = true }
+hotel-providers = { path = "../hotel-providers", features = ["liteapi", "booking", "mock", "amadeus"], optional = true }
 hotel-types = { path = "../hotel-types" }
 
 # duck-searcher for city search functionality

@@ -14,6 +14,14 @@ use tracing::{error, info, instrument};
 
 use crate::basic_auth::validate_basic_auth_from_headers;
 
+fn available_hotel_providers() -> Vec<String> {
+    vec![
+        "liteapi".to_string(),
+        "booking".to_string(),
+        "amadeus".to_string(),
+    ]
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HotelProviderConfigResponse {
     pub primary_hotel_provider: String,
@@ -43,7 +51,7 @@ pub async fn get_hotel_provider_config(
 
     let response = HotelProviderConfigResponse {
         primary_hotel_provider: get_primary_hotel_provider(),
-        available_providers: vec!["liteapi".to_string(), "booking".to_string()],
+        available_providers: available_hotel_providers(),
     };
 
     Json(response).into_response()
@@ -77,7 +85,7 @@ pub async fn update_hotel_provider_config(
             );
             Json(HotelProviderConfigResponse {
                 primary_hotel_provider: updated_provider,
-                available_providers: vec!["liteapi".to_string(), "booking".to_string()],
+                available_providers: available_hotel_providers(),
             })
             .into_response()
         }
@@ -92,5 +100,22 @@ pub async fn update_hotel_provider_config(
             )
                 .into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::available_hotel_providers;
+
+    #[test]
+    fn admin_provider_config_lists_amadeus() {
+        assert_eq!(
+            available_hotel_providers(),
+            vec![
+                "liteapi".to_string(),
+                "booking".to_string(),
+                "amadeus".to_string(),
+            ]
+        );
     }
 }
