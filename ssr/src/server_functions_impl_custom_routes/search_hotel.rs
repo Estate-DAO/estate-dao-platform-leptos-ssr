@@ -13,7 +13,7 @@ use estate_fe::{
 use serde_json::json;
 
 use super::{
-    filter_hotels_with_valid_pricing, get_currency_aware_liteapi_driver, parse_json_request,
+    filter_hotels_with_valid_pricing, get_currency_aware_provider_registry, parse_json_request,
 };
 
 #[axum::debug_handler]
@@ -25,9 +25,9 @@ pub async fn search_hotel_api_server_fn_route(
     // <!-- Parse input string to struct -->
     let request: DomainHotelSearchCriteria = parse_json_request(&body)?;
     // tracing::error!("Hotel search request: {:?}", request);
-    // <!-- Create the hotel service with LiteApiDriver from global client -->
-    let liteapi_driver = get_currency_aware_liteapi_driver(&headers);
-    let hotel_service = HotelService::new(liteapi_driver);
+    // <!-- Create the hotel service with Provider Registry from global client -->
+    let provider = get_currency_aware_provider_registry(&headers).hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     // <!-- Perform the hotel search -->
     let result = hotel_service
@@ -64,7 +64,7 @@ pub async fn search_hotel_api_server_fn_route(
                     }
                 }
                 _ => ErrorType::BookingProviderFailure {
-                    provider: "liteapi".to_string(),
+                    provider: "multi".to_string(),
                     hotel_id: None,
                     operation: "search".to_string(),
                 },

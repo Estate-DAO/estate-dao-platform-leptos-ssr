@@ -3,8 +3,7 @@ use crate::liteapi::models::booking::*;
 use crate::liteapi::models::hotel_details::*;
 use crate::liteapi::models::places::*;
 use crate::liteapi::models::search::*;
-use crate::ports::ProviderError;
-use crate::ports::UISearchFilters;
+use crate::ports::{ProviderError, ProviderNames, UISearchFilters};
 
 const PAGINATION_LIMIT: i32 = 100; // Default limit (LiteAPI may have its own max)
 
@@ -74,6 +73,7 @@ impl LiteApiMapper {
         DomainHotelListAfterSearch {
             hotel_results,
             pagination,
+            provider: Some(ProviderNames::LiteApi.to_string()),
         }
     }
 
@@ -230,6 +230,7 @@ impl LiteApiMapper {
                     formatted_address: place.formatted_address,
                 })
                 .collect(),
+            provider: Some(ProviderNames::LiteApi.to_string()),
         }
     }
 
@@ -843,6 +844,7 @@ impl LiteApiMapper {
                     description: p.description,
                 })
                 .collect(),
+            provider: Some(ProviderNames::LiteApi.to_string()),
         }
     }
 
@@ -934,7 +936,10 @@ impl LiteApiMapper {
             })
             .collect();
 
-        Ok(DomainGetBookingResponse { bookings })
+        Ok(DomainGetBookingResponse {
+            bookings,
+            provider: Some(ProviderNames::LiteApi.to_string()),
+        })
     }
 
     pub fn map_domain_get_booking_to_liteapi(
@@ -1012,6 +1017,7 @@ impl LiteApiMapper {
                         currency_code: "".to_string(),
                     },
                     provider_data: Some(provider_data_json),
+                    provider: Some(ProviderNames::LiteApi.to_string()),
                 };
             }
         };
@@ -1120,6 +1126,7 @@ impl LiteApiMapper {
             blocked_rooms,
             total_price,
             provider_data: Some(provider_data_json),
+            provider: Some(ProviderNames::LiteApi.to_string()),
         }
     }
     pub fn map_domain_book_to_liteapi_book(
@@ -1219,6 +1226,7 @@ impl LiteApiMapper {
                     know_before_you_go: None,
                     remarks: None,
                     guest_id: None,
+                    provider: Some(ProviderNames::LiteApi.to_string()),
                 };
             }
         };
@@ -1316,6 +1324,7 @@ impl LiteApiMapper {
             know_before_you_go: data.know_before_you_go,
             remarks: data.remarks,
             guest_id: data.guest_id,
+            provider: Some(ProviderNames::LiteApi.to_string()),
         }
     }
 }

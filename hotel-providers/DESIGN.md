@@ -27,10 +27,13 @@ The `hotel-providers` crate provides a multi-provider abstraction layer for hote
 ┌─────────────────────────────────────────────────────────────────┐
 │                      hotel-providers crate                       │
 ├─────────────────────────────────────────────────────────────────┤
-│  LiteAPI Integration                                            │
+│  Providers                                                      │
 │  ├── LiteApiDriver (implements HotelProviderPort, PlacePort)    │
-│  ├── LiteApiClient (HTTP client)                                │
-│  └── LiteApiMapper (domain ↔ API type conversion)               │
+│  │   ├── LiteApiClient (HTTP client)                            │
+│  │   └── LiteApiMapper (domain ↔ API type conversion)           │
+│  ├── BookingDriver (implements HotelProviderPort)               │
+│  │   ├── BookingClient (HTTP client)                            │
+│  │   └── BookingMapper (domain ↔ API type conversion)           │
 │                                                                 │
 │  Ports (Traits) - from hotel-types                              │
 │  ├── HotelProviderPort                                          │
@@ -75,21 +78,23 @@ impl HotelProviderPort for LiteApiDriver {
 
 ### Direct Driver Usage
 
-SSR uses `LiteApiDriver` directly without any bridge/adapter layer:
+SSR uses `ProviderRegistry` to compose providers with fallback:
 
 ```rust
 // ssr/src/init.rs
-pub fn get_liteapi_driver() -> LiteApiDriver {
-    LITEAPI_DRIVER.get().expect("...").clone()
-}
-
 pub fn initialize_provider_registry() {
-    let driver = get_liteapi_driver();
-    
-    let registry = ProviderRegistry::builder()
-        .with_hotel_provider(driver.clone())
-        .with_place_provider(driver)
-        .build();
+    let liteapi = get_liteapi_driver();
+    let booking = get_booking_driver();
+
+    let registry = configure_place_provider(
+        configure_hotel_providers(
+            ProviderRegistry::builder(),
+            &liteapi,
+            &booking,
+        ),
+        &liteapi,
+    )
+    .build();
     // ...
 }
 ```
@@ -105,6 +110,17 @@ pub async fn search_hotel_api(...) {
     // ...
 }
 ```
+
+### Provider Identification
+
+All provider-facing domain responses include an optional `provider` field (e.g., `"LiteAPI"`, `"Booking.com"`),
+so the frontend can display or log which upstream handled the request. The booking flow can optionally include
+`provider` in `DomainBookRoomRequest` to force the composite provider to route the booking to a specific
+provider instead of defaulting to the primary.
+
+For Booking.com, the `block_id` returned from preview is encoded to include both the
+`order_token` and the preview `product_ids`, so the subsequent booking call can construct
+the correct `orders/create` payload without extra storage.
 
 ## Adding a New Provider
 
@@ -161,6 +177,12 @@ hotel-providers/
     │   ├── client.rs       # HTTP client
     │   ├── mapper.rs       # Type conversions
     │   └── models/         # LiteAPI-specific types
+    ├── booking/            # Booking.com Demand API integration
+    │   ├── mod.rs
+    │   ├── driver.rs       # BookingDriver
+    │   ├── client.rs       # HTTP client + mock
+    │   ├── mapper.rs       # Type conversions
+    │   └── models/         # Booking-specific types
     ├── composite.rs        # Composite providers (fallback)
     └── registry.rs         # ProviderRegistry builder
 ```
@@ -173,3 +195,13 @@ The driver reads configuration from environment variables:
 |----------|-------------|---------|
 | `LITEAPI_KEY` | API key for LiteAPI | Required |
 | `LITEAPI_ROOM_MAPPING` | Enable room type consolidation | `true` |
+| `BOOKING_API_TOKEN` | Booking.com Demand API bearer token | Optional (required for real requests) |
+| `BOOKING_AFFILIATE_ID` | Booking.com affiliate ID (`X-Affiliate-Id`) | Optional |
+| `BOOKING_BASE_URL` | Booking.com Demand API base URL | `https://demandapi.booking.com/3.1` |
+| `BOOKING_CURRENCY` | Currency for Booking.com requests | `USD` |
+| `BOOKING_USE_MOCK` | Use mock Booking client (no real HTTP) | `true` when token is missing |
+
+Primary provider ordering is configured in `ssr/src/init.rs`:
+- `PRIMARY_HOTEL_PROVIDER` is the startup default for hotel provider priority.
+- Hotel provider priority can be changed at runtime via admin API (`update_hotel_provider_config`).
+- `PRIMARY_PLACE_PROVIDER` controls place provider selection (currently LiteAPI).

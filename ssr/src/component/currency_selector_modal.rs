@@ -117,8 +117,8 @@ pub fn CurrencySelectorModal() -> impl IntoView {
 
         <Show when=move || show_modal.get()>
             <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-black/50 p-4">
-                <div class="flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
-                    <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <div class="flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl sm:max-h-[85vh]">
+                    <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
                         <h2 class="text-xl font-semibold text-gray-900">"Choose your currency"</h2>
                         <button
                             class="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"

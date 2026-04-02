@@ -16,8 +16,8 @@ use hotel_providers::liteapi::models::booking::LiteApiPrebookResponse;
 use serde_json::json;
 
 use super::{
-    call_block_room_api, get_currency_aware_liteapi_driver, parse_json_request,
-    IntegratedBlockRoomRequest, IntegratedBlockRoomResponse,
+    call_block_room_api, parse_json_request, IntegratedBlockRoomRequest,
+    IntegratedBlockRoomResponse,
 };
 
 /// HTTP status code for partial success (room blocked but backend save failed)
@@ -295,6 +295,12 @@ fn enrich_room_details_with_provider_data(
         return;
     }
 
+    if let Some(provider) = block_result.provider.as_deref() {
+        if !provider.eq_ignore_ascii_case("LiteAPI") {
+            return;
+        }
+    }
+
     let provider_data = match &block_result.provider_data {
         Some(data) => data,
         None => return,
@@ -409,13 +415,14 @@ async fn fetch_actual_hotel_details(
     headers: &HeaderMap,
     hotel_criteria: &estate_fe::domain::DomainHotelInfoCriteria,
 ) -> Result<DomainHotelDetails, String> {
+    use crate::server_functions_impl_custom_routes::get_currency_aware_provider_registry;
     use estate_fe::application_services::HotelService;
 
     tracing::info!("Fetching hotel details for token: {}", hotel_criteria.token);
 
-    // Create the hotel service with LiteApiDriver from global client
-    let liteapi_driver = get_currency_aware_liteapi_driver(headers);
-    let hotel_service = HotelService::new(liteapi_driver);
+    // Create the hotel service with provider registry (currency enabled)
+    let provider = get_currency_aware_provider_registry(headers).hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     // Get hotel information
     hotel_service
@@ -547,6 +554,7 @@ async fn build_hotel_details(
         amenities: actual_amenities,
         search_criteria: None,
         search_info: None,
+        provider: block_result.provider.clone(),
     }
 }
 

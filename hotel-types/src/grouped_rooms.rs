@@ -78,4 +78,6 @@ pub struct DomainRoomGroup {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainGroupedRoomRates {
     pub room_groups: Vec<DomainRoomGroup>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }

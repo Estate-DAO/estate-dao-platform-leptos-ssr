@@ -329,6 +329,8 @@ pub struct DomainHotelAfterSearch {
 pub struct DomainHotelListAfterSearch {
     pub hotel_results: Vec<DomainHotelAfterSearch>,
     pub pagination: Option<DomainPaginationMeta>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 impl DomainHotelListAfterSearch {
@@ -493,6 +495,8 @@ pub struct DomainHotelDetails {
     pub amenities: Vec<String>,
     pub search_info: Option<DomainHotelSearchInfo>,
     pub search_criteria: Option<DomainHotelSearchCriteria>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -512,6 +516,8 @@ pub struct DomainHotelStaticDetails {
     pub location: Option<DomainLocation>,
     pub checkin_checkout_times: Option<DomainCheckinCheckoutTimes>,
     pub policies: Vec<DomainPolicy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 impl DomainHotelStaticDetails {
@@ -540,6 +546,7 @@ impl DomainHotelStaticDetails {
             amenities: self.amenities.clone(),
             search_info,
             search_criteria,
+            provider: self.provider.clone(),
         }
     }
 }
@@ -648,6 +655,8 @@ pub struct DomainBlockRoomResponse {
     pub blocked_rooms: Vec<DomainBlockedRoom>,
     pub total_price: DomainDetailedPrice,
     pub provider_data: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

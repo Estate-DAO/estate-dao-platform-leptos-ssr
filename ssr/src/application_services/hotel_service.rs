@@ -129,6 +129,9 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
         let static_details = static_details_result?;
         let rates = rates_result?;
 
+        let rates_provider = rates.provider;
+        let room_groups = rates.room_groups;
+
         Ok(DomainHotelDetails {
             hotel_name: static_details.hotel_name,
             hotel_code: static_details.hotel_code,
@@ -141,11 +144,12 @@ impl<T: HotelProviderPort + Clone> HotelService<T> {
             address: static_details.address,
             images: static_details.images,
             amenities: static_details.amenities,
-            all_rooms: rates.room_groups, // Updated to use Room Groups
+            all_rooms: room_groups, // Updated to use Room Groups
             checkin: date_tuple_to_yyyy_mm_dd(criteria.search_criteria.check_in_date),
             checkout: date_tuple_to_yyyy_mm_dd(criteria.search_criteria.check_out_date),
             search_info: None,
             search_criteria: Some(criteria.search_criteria),
+            provider: static_details.provider.or(rates_provider),
         })
     }
 

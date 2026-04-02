@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::str::FromStr;
+use std::sync::{Arc, Mutex, RwLock};
 
 use axum_extra::extract::cookie::Key;
 use axum_extra::extract::PrivateCookieJar;
@@ -13,15 +14,66 @@ use crate::{
     utils::error_alerts::ErrorAlertService, utils::notifier::Notifier, view_state_layer::AppState,
 };
 
-use hotel_providers::ProviderRegistry;
+use hotel_providers::{PlaceProviderPort, ProviderRegistry, ProviderRegistryBuilder};
 use once_cell::sync::OnceCell;
 
+use hotel_providers::booking::BookingDriver;
 use hotel_providers::liteapi::{LiteApiClient, LiteApiDriver};
 
 static LITEAPI_DRIVER: OnceCell<LiteApiDriver> = OnceCell::new();
-static PROVIDER_REGISTRY: OnceCell<Arc<ProviderRegistry>> = OnceCell::new();
+static BOOKING_DRIVER: OnceCell<BookingDriver> = OnceCell::new();
+static PROVIDER_REGISTRY: OnceCell<RwLock<Arc<ProviderRegistry>>> = OnceCell::new();
+static CURRENT_HOTEL_PROVIDER: OnceCell<RwLock<PrimaryHotelProvider>> = OnceCell::new();
 static NOTIFIER: OnceCell<Notifier> = OnceCell::new();
 static ERROR_ALERT_SERVICE: OnceCell<ErrorAlertService> = OnceCell::new();
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
+enum PrimaryHotelProvider {
+    LiteApi,
+    Booking,
+}
+
+// Compile-time default. Can be overridden at runtime via admin endpoint.
+const PRIMARY_HOTEL_PROVIDER: PrimaryHotelProvider = PrimaryHotelProvider::LiteApi;
+
+impl PrimaryHotelProvider {
+    fn as_key(self) -> &'static str {
+        match self {
+            PrimaryHotelProvider::LiteApi => "liteapi",
+            PrimaryHotelProvider::Booking => "booking",
+        }
+    }
+}
+
+impl FromStr for PrimaryHotelProvider {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let normalized: String = value
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .flat_map(|c| c.to_lowercase())
+            .collect();
+
+        match normalized.as_str() {
+            "liteapi" => Ok(PrimaryHotelProvider::LiteApi),
+            "booking" | "bookingcom" => Ok(PrimaryHotelProvider::Booking),
+            _ => Err(format!(
+                "Unsupported hotel provider '{}'. Valid values: liteapi, booking",
+                value
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PrimaryPlaceProvider {
+    LiteApi,
+}
+
+// Compile-time place provider selection. Extend this enum as more place providers are added.
+const PRIMARY_PLACE_PROVIDER: PrimaryPlaceProvider = PrimaryPlaceProvider::LiteApi;
 
 pub fn initialize_liteapi_driver() {
     // Load config from environment directly for driver initialization
@@ -63,25 +115,197 @@ pub fn get_liteapi_driver_with_currency(currency: Option<&str>) -> LiteApiDriver
     LiteApiDriver::new(client, *LITEAPI_ROOM_MAPPING)
 }
 
-pub fn initialize_provider_registry() {
-    // Use LiteApiDriver directly (it implements HotelProviderPort and PlaceProviderPort)
-    let driver = get_liteapi_driver();
+pub fn initialize_booking_driver() {
+    let api_token = std::env::var("BOOKING_API_TOKEN").unwrap_or_default();
+    let affiliate_id = std::env::var("BOOKING_AFFILIATE_ID")
+        .ok()
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    let base_url = std::env::var("BOOKING_BASE_URL")
+        .unwrap_or_else(|_| "https://demandapi.booking.com/3.1".to_string());
+    let currency = std::env::var("BOOKING_CURRENCY").unwrap_or_else(|_| "USD".to_string());
+    let use_mock = std::env::var("BOOKING_USE_MOCK")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(api_token.is_empty());
 
-    let registry = ProviderRegistry::builder()
-        .with_hotel_provider(driver.clone())
-        .with_place_provider(driver)
-        .build();
+    if api_token.is_empty() {
+        tracing::warn!("BOOKING_API_TOKEN environment variable is empty or not set!");
+    }
+
+    let driver = if use_mock {
+        BookingDriver::new_mock(currency)
+    } else {
+        BookingDriver::new_real(api_token, affiliate_id, base_url, currency)
+    };
+
+    BOOKING_DRIVER
+        .set(driver)
+        .expect("Failed to initialize Booking.com driver");
+}
+
+pub fn get_booking_driver() -> BookingDriver {
+    BOOKING_DRIVER
+        .get()
+        .expect("Failed to get Booking.com driver")
+        .clone()
+}
+
+pub fn get_booking_driver_with_currency(currency: Option<&str>) -> BookingDriver {
+    let api_token = std::env::var("BOOKING_API_TOKEN").unwrap_or_default();
+    let affiliate_id = std::env::var("BOOKING_AFFILIATE_ID")
+        .ok()
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    let base_url = std::env::var("BOOKING_BASE_URL")
+        .unwrap_or_else(|_| "https://demandapi.booking.com/3.1".to_string());
+    let resolved_currency = resolve_currency_code(currency);
+    let use_mock = std::env::var("BOOKING_USE_MOCK")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(api_token.is_empty());
+
+    if use_mock {
+        BookingDriver::new_mock(resolved_currency)
+    } else {
+        BookingDriver::new_real(api_token, affiliate_id, base_url, resolved_currency)
+    }
+}
+
+fn configure_hotel_providers(
+    builder: ProviderRegistryBuilder,
+    primary_hotel_provider: PrimaryHotelProvider,
+    liteapi_driver: &LiteApiDriver,
+    booking_driver: &BookingDriver,
+) -> ProviderRegistryBuilder {
+    match primary_hotel_provider {
+        PrimaryHotelProvider::Booking => builder
+            .with_hotel_provider(booking_driver.clone())
+            .with_hotel_provider(liteapi_driver.clone()),
+        PrimaryHotelProvider::LiteApi => builder
+            .with_hotel_provider(liteapi_driver.clone())
+            .with_hotel_provider(booking_driver.clone()),
+    }
+}
+
+fn configure_place_provider(
+    builder: ProviderRegistryBuilder,
+    liteapi_driver: &LiteApiDriver,
+) -> ProviderRegistryBuilder {
+    builder.with_place_provider_arc(select_primary_place_provider(liteapi_driver))
+}
+
+fn select_primary_place_provider(liteapi_driver: &LiteApiDriver) -> Arc<dyn PlaceProviderPort> {
+    match PRIMARY_PLACE_PROVIDER {
+        PrimaryPlaceProvider::LiteApi => Arc::new(liteapi_driver.clone()),
+    }
+}
+
+fn build_provider_registry(
+    primary_hotel_provider: PrimaryHotelProvider,
+    liteapi_driver: &LiteApiDriver,
+    booking_driver: &BookingDriver,
+) -> ProviderRegistry {
+    configure_place_provider(
+        configure_hotel_providers(
+            ProviderRegistry::builder(),
+            primary_hotel_provider,
+            liteapi_driver,
+            booking_driver,
+        ),
+        liteapi_driver,
+    )
+    .build()
+}
+
+pub fn initialize_provider_registry() {
+    let liteapi_driver = get_liteapi_driver();
+    let booking_driver = get_booking_driver();
+
+    let primary_hotel_provider = PRIMARY_HOTEL_PROVIDER;
+    let registry = Arc::new(build_provider_registry(
+        primary_hotel_provider,
+        &liteapi_driver,
+        &booking_driver,
+    ));
+
+    CURRENT_HOTEL_PROVIDER
+        .set(RwLock::new(primary_hotel_provider))
+        .expect("Failed to initialize current hotel provider state");
 
     PROVIDER_REGISTRY
-        .set(Arc::new(registry))
+        .set(RwLock::new(registry))
         .expect("Failed to initialize provider registry");
 }
 
 pub fn get_provider_registry() -> Arc<ProviderRegistry> {
     PROVIDER_REGISTRY
         .get()
-        .expect("Failed to get provider registry")
+        .expect("Provider registry not initialized")
+        .read()
+        .expect("Provider registry lock poisoned")
         .clone()
+}
+
+pub fn get_currency_aware_provider_registry(currency: Option<&str>) -> Arc<ProviderRegistry> {
+    let resolved_currency = resolve_currency_code(currency);
+    let liteapi_driver = get_liteapi_driver_with_currency(Some(&resolved_currency));
+    let booking_driver = get_booking_driver_with_currency(Some(&resolved_currency));
+
+    let primary_provider_str = get_primary_hotel_provider();
+    let primary_hotel_provider =
+        PrimaryHotelProvider::from_str(&primary_provider_str).unwrap_or(PRIMARY_HOTEL_PROVIDER);
+
+    Arc::new(build_provider_registry(
+        primary_hotel_provider,
+        &liteapi_driver,
+        &booking_driver,
+    ))
+}
+
+pub fn get_primary_hotel_provider() -> String {
+    CURRENT_HOTEL_PROVIDER
+        .get()
+        .expect("Current hotel provider state not initialized")
+        .read()
+        .expect("Current hotel provider lock poisoned")
+        .as_key()
+        .to_string()
+}
+
+pub fn update_primary_hotel_provider(provider_key: &str) -> Result<String, String> {
+    let selected_provider = PrimaryHotelProvider::from_str(provider_key)?;
+    let liteapi_driver = get_liteapi_driver();
+    let booking_driver = get_booking_driver();
+    let registry = Arc::new(build_provider_registry(
+        selected_provider,
+        &liteapi_driver,
+        &booking_driver,
+    ));
+
+    let registry_lock = PROVIDER_REGISTRY
+        .get()
+        .ok_or_else(|| "Provider registry not initialized".to_string())?;
+    {
+        let mut write_guard = registry_lock
+            .write()
+            .map_err(|_| "Provider registry lock poisoned".to_string())?;
+        *write_guard = registry;
+    }
+
+    let provider_lock = CURRENT_HOTEL_PROVIDER
+        .get()
+        .ok_or_else(|| "Current hotel provider state not initialized".to_string())?;
+    {
+        let mut write_guard = provider_lock
+            .write()
+            .map_err(|_| "Current hotel provider lock poisoned".to_string())?;
+        *write_guard = selected_provider;
+    }
+
+    tracing::info!(
+        "Primary hotel provider updated at runtime: {}",
+        selected_provider.as_key()
+    );
+    Ok(selected_provider.as_key().to_string())
 }
 
 pub fn initialize_notifier() {
@@ -119,6 +343,7 @@ pub struct AppStateBuilder {
 impl AppStateBuilder {
     pub fn new(leptos_options: LeptosOptions, routes: Vec<RouteListing>) -> Self {
         initialize_liteapi_driver(); // Initialize the new driver
+        initialize_booking_driver();
         initialize_notifier();
         initialize_provider_registry(); // Registry now uses the driver via adapter
 

@@ -17,4 +17,6 @@ pub struct ProviderNames;
 impl ProviderNames {
     #[allow(non_upper_case_globals)]
     pub const LiteApi: &'static str = "LiteAPI";
+    #[allow(non_upper_case_globals)]
+    pub const Booking: &'static str = "Booking.com";
 }

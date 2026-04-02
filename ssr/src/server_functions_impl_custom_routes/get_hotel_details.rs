@@ -4,8 +4,8 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use estate_fe::application_services::HotelService;
 use estate_fe::view_state_layer::AppState;
-use estate_fe::{application_services::HotelService, init::get_liteapi_driver};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -14,10 +14,13 @@ pub struct GetHotelDetailsQuery {
     pub hotel_id: String,
 }
 
+use axum::http::HeaderMap;
+
 #[cfg_attr(feature = "debug_log", axum::debug_handler)]
 #[cfg_attr(feature = "debug_log", tracing::instrument(skip(state)))]
 pub async fn get_hotel_details_api_server_fn_route(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<GetHotelDetailsQuery>,
 ) -> Result<Response, Response> {
     // Validate hotel_id is provided
@@ -28,9 +31,9 @@ pub async fn get_hotel_details_api_server_fn_route(
         return Err((StatusCode::BAD_REQUEST, error_response.to_string()).into_response());
     }
 
-    // Create the hotel service with LiteApiDriver from global client
-    let liteapi_driver = get_liteapi_driver();
-    let hotel_service = HotelService::new(liteapi_driver);
+    // Create the hotel service with provider registry (currency enabled)
+    let provider = super::get_currency_aware_provider_registry(&headers).hotel_provider();
+    let hotel_service = HotelService::new(provider);
 
     // Get hotel details without rates
     let result = hotel_service

@@ -1,7 +1,6 @@
 // <!-- Example server functions demonstrating the new hexagonal architecture -->
 
 use leptos::*;
-use std::sync::Arc;
 
 use crate::adapters::LiteApiAdapter;
 use crate::adapters::ProvabAdapter;
@@ -19,10 +18,10 @@ pub async fn search_hotels_filtered_app_service(
     sort_options: UISortOptions,
 ) -> Result<crate::domain::DomainHotelSearchResponse, ServerFnError> {
     // <!-- 1. Create the provider driver (using shared driver) -->
-    let liteapi_driver = Arc::new(crate::init::get_liteapi_driver());
+    let provider = crate::init::get_provider_registry().hotel_provider();
 
     // <!-- 2. Create the hotel service -->
-    let hotel_service = HotelService::new(liteapi_driver);
+    let hotel_service = HotelService::new(provider);
 
     // <!-- 3. Call the service with filters -->
     hotel_service

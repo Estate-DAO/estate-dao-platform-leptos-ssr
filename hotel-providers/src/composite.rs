@@ -244,6 +244,22 @@ impl HotelProviderPort for CompositeHotelProvider {
         // The user has already selected a specific room from a specific provider
         let providers = self.healthy_providers();
 
+        if let Some(target) = book_request.provider.as_deref() {
+            let normalized_target = normalize_provider_name(target);
+            if let Some(provider) = providers.iter().find(|provider| {
+                let normalized_name = normalize_provider_name(provider.name());
+                normalized_name == normalized_target
+                    || normalized_name.starts_with(&normalized_target)
+                    || normalized_target.starts_with(&normalized_name)
+            }) {
+                return provider.book_room(book_request).await;
+            }
+            warn!(
+                requested = target,
+                "Requested provider not found; falling back to primary provider"
+            );
+        }
+
         if let Some(provider) = providers.first() {
             provider.book_room(book_request).await
         } else {
@@ -288,6 +304,13 @@ impl HotelProviderPort for CompositeHotelProvider {
 pub struct CompositePlaceProvider {
     providers: Vec<Arc<dyn PlaceProviderPort>>,
     fallback_strategy: FallbackStrategy,
+}
+
+fn normalize_provider_name(name: &str) -> String {
+    name.chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .flat_map(|c| c.to_lowercase())
+        .collect()
 }
 
 impl CompositePlaceProvider {

@@ -1,7 +1,7 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use estate_fe::view_state_layer::AppState;
 use estate_fe::{
-    application_services::HotelService, domain::DomainBookRoomRequest, init::get_liteapi_driver,
+    application_services::HotelService, domain::DomainBookRoomRequest, init::get_provider_registry,
 };
 use serde_json::json;
 
@@ -30,8 +30,8 @@ pub async fn book_room_api_server_fn_route(
         }
     };
 
-    // Create hotel service with provider from global client
-    let provider = get_liteapi_driver();
+    // Create hotel service with provider registry (fallback enabled)
+    let provider = get_provider_registry().hotel_provider();
     let hotel_service = HotelService::new(provider);
 
     estate_fe::log!(

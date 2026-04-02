@@ -86,6 +86,7 @@ impl HotelProviderPort for MockHotelProvider {
                 location: None,
             }],
             pagination: None,
+            provider: Some(self.name.to_string()),
         })
     }
 
@@ -117,6 +118,7 @@ impl HotelProviderPort for MockHotelProvider {
             location: None,
             checkin_checkout_times: None,
             policies: vec![],
+            provider: Some(self.name.to_string()),
         })
     }
 
@@ -134,6 +136,7 @@ impl HotelProviderPort for MockHotelProvider {
 
         Ok(DomainGroupedRoomRates {
             room_groups: vec![],
+            provider: Some(self.name.to_string()),
         })
     }
 
@@ -256,6 +259,7 @@ impl PlaceProviderPort for MockPlaceProvider {
                 display_name: format!("Mock Place for '{}'", criteria.text_query),
                 formatted_address: "123 Mock Street, Mock City".to_string(),
             }],
+            provider: Some(self.name.to_string()),
         })
     }
 
