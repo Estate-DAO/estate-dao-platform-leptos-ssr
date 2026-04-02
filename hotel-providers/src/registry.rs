@@ -160,7 +160,7 @@ impl Default for ProviderRegistryBuilder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "mock"))]
 mod tests {
     use super::*;
     use crate::adapters::mock::{MockHotelProvider, MockPlaceProvider};
