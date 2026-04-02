@@ -47,6 +47,11 @@ pub struct AmadeusHotelOffersResponse {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct AmadeusHotelOfferResponse {
+    pub data: AmadeusHotelOffer,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AmadeusHotelOffer {
     pub hotel: AmadeusOfferHotel,
     pub available: bool,

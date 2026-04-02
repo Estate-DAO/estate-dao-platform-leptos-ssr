@@ -1,15 +1,21 @@
 use std::collections::HashMap;
 
+use base64::Engine;
+use crate::amadeus::models::booking::AmadeusBlockRoomSnapshot;
 use crate::amadeus::models::hotel_details::AmadeusHotelDetailsResponse;
 use crate::amadeus::models::search::{
-    AmadeusAddress, AmadeusHotelListResponse, AmadeusHotelOffersResponse, AmadeusOffer,
+    AmadeusAddress, AmadeusHotelListResponse, AmadeusHotelOfferResponse,
+    AmadeusHotelOffersResponse, AmadeusOffer,
 };
 use crate::domain::{
+    DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
     DomainGroupedRoomRates, DomainHotelAfterSearch, DomainHotelListAfterSearch,
     DomainHotelStaticDetails, DomainLocation, DomainPaginationParams, DomainPrice, DomainStaticRoom,
 };
-use crate::ports::ProviderNames;
+use crate::ports::{ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps};
 use hotel_types::{DomainRoomGroup, DomainRoomVariant, GroupedTaxItem};
+
+const AMADEUS_BLOCK_ID_PREFIX: &str = "amadeus-block:";
 
 #[derive(Clone, Debug, Default)]
 pub struct AmadeusMapper;
@@ -257,6 +263,76 @@ impl AmadeusMapper {
         }
     }
 
+    pub fn map_offer_revalidation_to_domain_block(
+        offer_response: AmadeusHotelOfferResponse,
+        original_request: &DomainBlockRoomRequest,
+    ) -> Result<DomainBlockRoomResponse, ProviderError> {
+        let offer_id = Self::selected_offer_id(original_request)?;
+        let hotel_offer = offer_response.data;
+        let offer = hotel_offer
+            .offers
+            .into_iter()
+            .find(|offer| offer.id == offer_id)
+            .ok_or_else(|| {
+                ProviderError::not_found(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelBlockRoom,
+                    format!("Amadeus offer {offer_id} was not present in the lookup response"),
+                )
+            })?;
+
+        let room_name = Self::room_name(&offer);
+        let currency_code = offer.price.currency.clone();
+        let total_price = Self::parse_amount(&offer.price.total);
+        let base_price = offer
+            .price
+            .base
+            .as_deref()
+            .map(Self::parse_amount)
+            .unwrap_or(total_price);
+        let cancellation_policy = Self::cancellation_policy_summary(&offer);
+        let snapshot = AmadeusBlockRoomSnapshot {
+            offer_id: offer.id.clone(),
+            hotel_id: hotel_offer.hotel.hotel_id.clone(),
+            room_name: room_name.clone(),
+            total_price,
+            currency_code: currency_code.clone(),
+            cancellation_policy: cancellation_policy.clone(),
+        };
+        let provider_data = serde_json::to_string(&snapshot).map_err(|error| {
+            ProviderError::parse_error(
+                ProviderNames::Amadeus,
+                ProviderSteps::HotelBlockRoom,
+                format!("Failed to serialize Amadeus block-room snapshot: {error}"),
+            )
+        })?;
+        let block_id = Self::encode_block_id(&snapshot)?;
+        let requested_total = Self::requested_total_price(original_request);
+
+        let blocked_room = DomainBlockedRoom {
+            room_code: if original_request.selected_room.room_unique_id.is_empty() {
+                offer.id.clone()
+            } else {
+                original_request.selected_room.room_unique_id.clone()
+            },
+            room_name,
+            room_type_code: Some(original_request.selected_room.mapped_room_id.clone()),
+            price: Self::detailed_price(total_price, base_price, currency_code.clone()),
+            cancellation_policy,
+            meal_plan: None,
+        };
+
+        Ok(DomainBlockRoomResponse {
+            block_id,
+            is_price_changed: (requested_total - total_price).abs() > 0.01,
+            is_cancellation_policy_changed: false,
+            blocked_rooms: vec![blocked_room],
+            total_price: Self::detailed_price(total_price, base_price, currency_code),
+            provider_data: Some(provider_data),
+            provider: Some(ProviderNames::Amadeus.to_string()),
+        })
+    }
+
     fn room_name(offer: &AmadeusOffer) -> String {
         offer
             .room
@@ -307,6 +383,80 @@ impl AmadeusMapper {
 
     fn parse_amount(raw_amount: &str) -> f64 {
         raw_amount.parse::<f64>().unwrap_or_default()
+    }
+
+    fn selected_offer_id(request: &DomainBlockRoomRequest) -> Result<&str, ProviderError> {
+        if !request.selected_room.offer_id.trim().is_empty() {
+            return Ok(request.selected_room.offer_id.as_str());
+        }
+
+        if !request.selected_room.rate_key.trim().is_empty() {
+            return Ok(request.selected_room.rate_key.as_str());
+        }
+
+        Err(ProviderError::new(
+            ProviderNames::Amadeus,
+            ProviderErrorKind::InvalidRequest,
+            ProviderSteps::HotelBlockRoom,
+            "Amadeus block room requires an offer_id or rate_key on the selected room",
+        ))
+    }
+
+    fn requested_total_price(request: &DomainBlockRoomRequest) -> f64 {
+        let nights = request.hotel_info_criteria.search_criteria.no_of_nights.max(1) as f64;
+        request
+            .selected_rooms
+            .iter()
+            .map(|room| room.price_per_night * room.quantity as f64 * nights)
+            .sum()
+    }
+
+    fn detailed_price(total_price: f64, base_price: f64, currency_code: String) -> DomainDetailedPrice {
+        let tax_amount = (total_price - base_price).max(0.0);
+
+        DomainDetailedPrice {
+            published_price: total_price,
+            published_price_rounded_off: total_price.round(),
+            offered_price: total_price,
+            offered_price_rounded_off: total_price.round(),
+            suggested_selling_price: total_price,
+            suggested_selling_price_rounded_off: total_price.round(),
+            room_price: total_price,
+            tax: tax_amount,
+            extra_guest_charge: 0.0,
+            child_charge: 0.0,
+            other_charges: 0.0,
+            currency_code,
+        }
+    }
+
+    fn cancellation_policy_summary(offer: &AmadeusOffer) -> Option<String> {
+        offer
+            .policies
+            .as_ref()
+            .and_then(|policies| policies.cancellations.as_ref())
+            .and_then(|cancellations| cancellations.first())
+            .and_then(|policy| {
+                policy
+                    .description
+                    .as_ref()
+                    .map(|description| description.text.trim().to_string())
+                    .filter(|description| !description.is_empty())
+                    .or_else(|| policy.deadline.clone())
+                    .or_else(|| policy.amount.clone())
+            })
+    }
+
+    fn encode_block_id(snapshot: &AmadeusBlockRoomSnapshot) -> Result<String, ProviderError> {
+        let payload = serde_json::to_vec(snapshot).map_err(|error| {
+            ProviderError::parse_error(
+                ProviderNames::Amadeus,
+                ProviderSteps::HotelBlockRoom,
+                format!("Failed to encode Amadeus block-room payload: {error}"),
+            )
+        })?;
+        let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(payload);
+        Ok(format!("{AMADEUS_BLOCK_ID_PREFIX}{encoded}"))
     }
 }
 

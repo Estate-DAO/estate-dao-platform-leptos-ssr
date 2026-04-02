@@ -4,7 +4,9 @@ use std::time::{Duration, Instant};
 
 use crate::amadeus::models::auth::AmadeusAuthResponse;
 use crate::amadeus::models::hotel_details::AmadeusHotelDetailsResponse;
-use crate::amadeus::models::search::{AmadeusHotelListResponse, AmadeusHotelOffersResponse};
+use crate::amadeus::models::search::{
+    AmadeusHotelListResponse, AmadeusHotelOfferResponse, AmadeusHotelOffersResponse,
+};
 use crate::domain::DomainHotelSearchCriteria;
 use crate::ports::{ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps};
 
@@ -32,6 +34,7 @@ struct CachedToken {
 #[derive(Debug, Default)]
 struct MockState {
     token_fetch_count: AtomicUsize,
+    offer_lookup_response: Mutex<Option<AmadeusHotelOfferResponse>>,
 }
 
 impl Default for AmadeusClient {
@@ -72,6 +75,17 @@ impl AmadeusClient {
 
     pub fn is_mock(&self) -> bool {
         self.mock_state.is_some()
+    }
+
+    pub fn with_mock_offer_lookup_response(self, response: AmadeusHotelOfferResponse) -> Self {
+        if let Some(mock_state) = &self.mock_state {
+            let mut slot = mock_state
+                .offer_lookup_response
+                .lock()
+                .expect("mock offer lookup lock poisoned");
+            *slot = Some(response);
+        }
+        self
     }
 
     pub fn api_base_url(&self) -> &str {
@@ -193,6 +207,72 @@ impl AmadeusClient {
                     ProviderNames::Amadeus,
                     ProviderSteps::HotelSearch,
                     format!("Failed to parse Amadeus hotel offers response: {error}"),
+                )
+            })
+    }
+
+    pub async fn get_hotel_offer_by_id(
+        &self,
+        hotel_offer_id: &str,
+    ) -> Result<AmadeusHotelOfferResponse, ProviderError> {
+        if self.is_mock() {
+            let mock_state = self
+                .mock_state
+                .as_ref()
+                .expect("mock state should exist for mock clients");
+            let response = mock_state
+                .offer_lookup_response
+                .lock()
+                .expect("mock offer lookup lock poisoned")
+                .clone();
+
+            return response.ok_or_else(|| {
+                ProviderError::not_found(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelBlockRoom,
+                    format!("Mock Amadeus offer lookup not configured for {hotel_offer_id}"),
+                )
+            });
+        }
+
+        let access_token = self.access_token().await?;
+        let url = format!(
+            "{}/v3/shopping/hotel-offers/{}",
+            self.api_base_url.trim_end_matches('/'),
+            hotel_offer_id
+        );
+
+        let response = self
+            .http
+            .get(url)
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|error| {
+                ProviderError::network(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelBlockRoom,
+                    format!("Amadeus hotel offer lookup failed: {error}"),
+                )
+            })?;
+
+        let status = response.status();
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Err(ProviderError::not_found(
+                ProviderNames::Amadeus,
+                ProviderSteps::HotelBlockRoom,
+                format!("Amadeus hotel offer {hotel_offer_id} was not found"),
+            ));
+        }
+
+        response
+            .json::<AmadeusHotelOfferResponse>()
+            .await
+            .map_err(|error| {
+                ProviderError::parse_error(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelBlockRoom,
+                    format!("Failed to parse Amadeus hotel offer response: {error}"),
                 )
             })
     }
