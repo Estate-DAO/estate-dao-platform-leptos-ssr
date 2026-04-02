@@ -70,7 +70,9 @@ pub struct AmadeusOffer {
     pub id: String,
     pub check_in_date: String,
     pub check_out_date: String,
+    pub room: Option<AmadeusOfferRoom>,
     pub price: AmadeusOfferPrice,
+    pub policies: Option<AmadeusOfferPolicies>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -78,4 +80,38 @@ pub struct AmadeusOfferPrice {
     pub currency: String,
     pub total: String,
     pub base: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AmadeusOfferRoom {
+    pub description: Option<AmadeusRoomDescription>,
+    pub type_estimated: Option<AmadeusRoomTypeEstimated>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct AmadeusRoomDescription {
+    pub text: String,
+    pub lang: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AmadeusRoomTypeEstimated {
+    pub category: Option<String>,
+    pub beds: Option<u32>,
+    pub bed_type: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct AmadeusOfferPolicies {
+    pub cancellations: Option<Vec<AmadeusCancellationPolicy>>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AmadeusCancellationPolicy {
+    pub amount: Option<String>,
+    pub deadline: Option<String>,
+    pub description: Option<AmadeusRoomDescription>,
 }

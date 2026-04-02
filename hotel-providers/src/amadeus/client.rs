@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::amadeus::models::auth::AmadeusAuthResponse;
+use crate::amadeus::models::hotel_details::AmadeusHotelDetailsResponse;
 use crate::amadeus::models::search::{AmadeusHotelListResponse, AmadeusHotelOffersResponse};
 use crate::domain::DomainHotelSearchCriteria;
 use crate::ports::{ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps};
@@ -192,6 +193,47 @@ impl AmadeusClient {
                     ProviderNames::Amadeus,
                     ProviderSteps::HotelSearch,
                     format!("Failed to parse Amadeus hotel offers response: {error}"),
+                )
+            })
+    }
+
+    pub async fn get_hotels_by_ids(
+        &self,
+        hotel_ids: &[String],
+    ) -> Result<AmadeusHotelDetailsResponse, ProviderError> {
+        if self.is_mock() {
+            return Ok(AmadeusHotelDetailsResponse::default());
+        }
+
+        let access_token = self.access_token().await?;
+        let url = format!(
+            "{}/v1/reference-data/locations/hotels/by-hotels",
+            self.api_base_url.trim_end_matches('/')
+        );
+
+        let response = self
+            .http
+            .get(url)
+            .bearer_auth(access_token)
+            .query(&[("hotelIds", hotel_ids.join(","))])
+            .send()
+            .await
+            .map_err(|error| {
+                ProviderError::network(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelDetails,
+                    format!("Amadeus hotel details request failed: {error}"),
+                )
+            })?;
+
+        response
+            .json::<AmadeusHotelDetailsResponse>()
+            .await
+            .map_err(|error| {
+                ProviderError::parse_error(
+                    ProviderNames::Amadeus,
+                    ProviderSteps::HotelDetails,
+                    format!("Failed to parse Amadeus hotel details response: {error}"),
                 )
             })
     }

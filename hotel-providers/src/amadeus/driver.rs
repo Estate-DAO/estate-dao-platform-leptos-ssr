@@ -82,24 +82,39 @@ impl HotelProviderPort for AmadeusDriver {
 
     async fn get_hotel_static_details(
         &self,
-        _hotel_id: &str,
+        hotel_id: &str,
     ) -> Result<DomainHotelStaticDetails, ProviderError> {
-        Err(ProviderError::other(
-            self.name(),
-            ProviderSteps::HotelDetails,
-            "Amadeus hotel details are not implemented yet",
-        ))
+        let response = self
+            .client
+            .get_hotels_by_ids(&[hotel_id.to_string()])
+            .await?;
+
+        AmadeusMapper::map_hotel_details_to_domain(response).ok_or_else(|| {
+            ProviderError::not_found(
+                self.name(),
+                ProviderSteps::HotelDetails,
+                "Amadeus hotel not found",
+            )
+        })
     }
 
     async fn get_hotel_rates(
         &self,
-        _criteria: DomainHotelInfoCriteria,
+        criteria: DomainHotelInfoCriteria,
     ) -> Result<DomainGroupedRoomRates, ProviderError> {
-        Err(ProviderError::other(
-            self.name(),
-            ProviderSteps::HotelRate,
-            "Amadeus hotel rates are not implemented yet",
-        ))
+        if criteria.hotel_ids.is_empty() {
+            return Ok(DomainGroupedRoomRates {
+                room_groups: Vec::new(),
+                provider: Some(self.name().to_string()),
+            });
+        }
+
+        let offers = self
+            .client
+            .get_hotel_offers(&criteria.hotel_ids, &criteria.search_criteria)
+            .await?;
+
+        Ok(AmadeusMapper::map_offers_to_grouped_rates(offers))
     }
 
     async fn get_min_rates(
