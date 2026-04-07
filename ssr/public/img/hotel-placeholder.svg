@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" role="img" aria-labelledby="title desc">
+  <title id="title">Hotel image unavailable</title>
+  <desc id="desc">A neutral placeholder illustration for hotels without photos.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+  </defs>
+  <rect width="300" height="200" fill="url(#bg)" rx="20" />
+  <rect x="30" y="36" width="240" height="128" rx="16" fill="#f8fafc" opacity="0.85" />
+  <rect x="54" y="56" width="74" height="74" rx="12" fill="#dbeafe" />
+  <path d="M67 115l18-22 17 18 11-13 22 17H67z" fill="#60a5fa" />
+  <circle cx="109" cy="80" r="10" fill="#93c5fd" />
+  <rect x="146" y="62" width="88" height="12" rx="6" fill="#94a3b8" />
+  <rect x="146" y="84" width="72" height="10" rx="5" fill="#cbd5e1" />
+  <rect x="146" y="104" width="60" height="10" rx="5" fill="#cbd5e1" />
+  <rect x="54" y="146" width="180" height="8" rx="4" fill="#cbd5e1" />
+</svg>
