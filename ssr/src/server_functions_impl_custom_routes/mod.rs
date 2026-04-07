@@ -33,6 +33,7 @@ use estate_fe::{
     utils::{
         app_reference::BookingId, booking_backend_conversions::BookingBackendConversions,
         booking_id::PaymentIdentifiers, currency::resolve_currency_code,
+        provider_keys::normalize_hotel_provider_key,
     },
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -141,6 +142,24 @@ pub fn get_currency_aware_provider_registry(
     estate_fe::init::get_currency_aware_provider_registry(Some(&resolved_currency))
 }
 
+pub fn select_hotel_provider(
+    registry: &std::sync::Arc<hotel_providers::ProviderRegistry>,
+    requested_provider: Option<&str>,
+) -> std::sync::Arc<dyn hotel_providers::HotelProviderPort> {
+    if let Some(provider_key) = requested_provider.and_then(normalize_hotel_provider_key) {
+        if let Some(provider) = registry.hotel_provider_by_key(provider_key) {
+            return provider;
+        }
+
+        tracing::warn!(
+            requested_provider = provider_key,
+            "Requested hotel provider was not registered; falling back to default provider"
+        );
+    }
+
+    registry.hotel_provider()
+}
+
 // Helper function to call block room API using HotelService
 // This properly delegates provider selection to the service layer
 pub async fn call_block_room_api(
@@ -150,8 +169,14 @@ pub async fn call_block_room_api(
 ) -> Result<DomainBlockRoomResponse, ProviderError> {
     // Use provider registry (currency enabled)
     let provider = match headers {
-        Some(h) => get_currency_aware_provider_registry(h).hotel_provider(),
-        None => estate_fe::init::get_provider_registry().hotel_provider(),
+        Some(h) => {
+            let registry = get_currency_aware_provider_registry(h);
+            select_hotel_provider(&registry, request.hotel_info_criteria.provider.as_deref())
+        }
+        None => {
+            let registry = estate_fe::init::get_provider_registry();
+            select_hotel_provider(&registry, request.hotel_info_criteria.provider.as_deref())
+        }
     };
     let hotel_service = HotelService::new(provider);
 
@@ -320,4 +345,51 @@ pub fn api_routes() -> Router<AppState> {
     //     "/my_bookings_api",
     //     post(my_bookings_api_server_fn_route).options(handle_options),
     // )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_hotel_provider;
+    use hotel_providers::{
+        adapters::mock::{MockHotelProvider, MockPlaceProvider},
+        ProviderRegistry,
+    };
+    use hotel_types::ports::ProviderKeys;
+    use std::sync::Arc;
+
+    fn test_registry() -> Arc<ProviderRegistry> {
+        Arc::new(
+            ProviderRegistry::builder()
+                .with_hotel_provider(
+                    MockHotelProvider::new()
+                        .with_key(ProviderKeys::LiteApi)
+                        .with_name("LiteAPI"),
+                )
+                .with_hotel_provider(
+                    MockHotelProvider::new()
+                        .with_key(ProviderKeys::Amadeus)
+                        .with_name("Amadeus"),
+                )
+                .with_place_provider(MockPlaceProvider::new())
+                .build(),
+        )
+    }
+
+    #[test]
+    fn select_hotel_provider_uses_requested_registry_provider() {
+        let registry = test_registry();
+
+        let provider = select_hotel_provider(&registry, Some("amadeus"));
+
+        assert_eq!(provider.key(), ProviderKeys::Amadeus);
+    }
+
+    #[test]
+    fn select_hotel_provider_falls_back_to_default_for_unknown_provider() {
+        let registry = test_registry();
+
+        let provider = select_hotel_provider(&registry, Some("does-not-exist"));
+
+        assert_eq!(provider.key(), ProviderKeys::Composite);
+    }
 }

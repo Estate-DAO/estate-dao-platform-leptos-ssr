@@ -2,7 +2,9 @@ use crate::booking::client::{BookingApiClient, BookingClient, BookingMockClient}
 use crate::booking::mapper::BookingMapper;
 use crate::booking::models::AccommodationsDetailsInput;
 use crate::domain::*;
-use crate::ports::{HotelProviderPort, ProviderError, ProviderKeys, ProviderNames, UISearchFilters};
+use crate::ports::{
+    HotelProviderPort, ProviderError, ProviderKeys, ProviderNames, UISearchFilters,
+};
 use async_trait::async_trait;
 use std::collections::HashMap;
 

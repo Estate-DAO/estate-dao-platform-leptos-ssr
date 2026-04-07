@@ -2,6 +2,7 @@ use crate::{
     api::client_side_api::Place,
     component::{ChildrenAgesSignalExt, GuestSelection, SelectedDateRange},
     log,
+    utils::provider_keys::normalize_owned_hotel_provider_key,
     utils::query_params::{
         build_query_string, individual_params, update_url_with_params, QueryParamsSync,
     },
@@ -17,6 +18,7 @@ use std::collections::HashMap;
 pub struct HotelDetailsParams {
     // Basic search parameters
     pub hotel_code: Option<String>,
+    pub provider: Option<String>,
     pub checkin: Option<String>,
     pub checkout: Option<String>,
     pub adults: Option<u32>,
@@ -31,6 +33,7 @@ impl Default for HotelDetailsParams {
     fn default() -> Self {
         Self {
             hotel_code: None,
+            provider: None,
             checkin: None,
             checkout: None,
             adults: Some(2),
@@ -81,6 +84,10 @@ impl HotelDetailsParams {
 
         Some(Self {
             hotel_code: Some(hotel_code),
+            provider: hotel_info_ctx
+                .provider
+                .get_untracked()
+                .or_else(|| search_ctx.provider.get_untracked()),
             checkin,
             checkout,
             adults,
@@ -153,6 +160,7 @@ impl HotelDetailsParams {
         }
 
         // Parse dates with defaults if missing (next week + 1 night)
+        let provider = normalize_owned_hotel_provider_key(params.get("provider").cloned());
         let checkin = params.get("checkin").cloned().or_else(|| {
             let date = Local::now().date_naive() + Duration::days(7);
             Some(date.format("%Y-%m-%d").to_string())
@@ -184,6 +192,7 @@ impl HotelDetailsParams {
 
         Some(Self {
             hotel_code,
+            provider,
             checkin,
             checkout,
             adults,
@@ -202,6 +211,9 @@ impl HotelDetailsParams {
         // Hotel code
         if let Some(ref code) = self.hotel_code {
             params.insert("hotelCode".to_string(), code.clone());
+        }
+        if let Some(ref provider) = self.provider {
+            params.insert("provider".to_string(), provider.clone());
         }
 
         // Dates
@@ -251,6 +263,8 @@ impl QueryParamsSync<HotelDetailsParams> for HotelDetailsParams {
             if let Some(code) = &self.hotel_code {
                 hotel_info_ctx.hotel_code.set(code.clone());
             }
+            hotel_info_ctx.provider.set(self.provider.clone());
+            UISearchCtx::set_provider(self.provider.clone());
 
             // Set date range
             if let (Some(checkin), Some(checkout)) = (&self.checkin, &self.checkout) {
@@ -294,5 +308,34 @@ impl QueryParamsSync<HotelDetailsParams> for HotelDetailsParams {
                 log!("[HotelDetailsParams] placeId found in URL: {}. Place details will be fetched asynchronously.", place_id);
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::HotelDetailsParams;
+
+    #[test]
+    fn hotel_details_params_round_trip_provider_key() {
+        let params = HotelDetailsParams {
+            hotel_code: Some("HTL123".to_string()),
+            provider: Some("amadeus".to_string()),
+            checkin: Some("2026-04-10".to_string()),
+            checkout: Some("2026-04-12".to_string()),
+            adults: Some(2),
+            children: Some(1),
+            rooms: Some(1),
+            children_ages: vec![8],
+            place_id: Some("place_123".to_string()),
+        };
+
+        let query_params = params.to_query_params();
+        assert_eq!(query_params.get("provider"), Some(&"amadeus".to_string()));
+
+        let parsed = HotelDetailsParams::from_query_params(&query_params)
+            .expect("hotel details params should parse");
+
+        assert_eq!(parsed.provider.as_deref(), Some("amadeus"));
+        assert_eq!(parsed.hotel_code.as_deref(), Some("HTL123"));
     }
 }

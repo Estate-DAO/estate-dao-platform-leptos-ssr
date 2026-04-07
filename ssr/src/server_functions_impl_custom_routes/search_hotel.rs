@@ -14,6 +14,7 @@ use serde_json::json;
 
 use super::{
     filter_hotels_with_valid_pricing, get_currency_aware_provider_registry, parse_json_request,
+    select_hotel_provider,
 };
 
 #[axum::debug_handler]
@@ -26,7 +27,8 @@ pub async fn search_hotel_api_server_fn_route(
     let request: DomainHotelSearchCriteria = parse_json_request(&body)?;
     // tracing::error!("Hotel search request: {:?}", request);
     // <!-- Create the hotel service with Provider Registry from global client -->
-    let provider = get_currency_aware_provider_registry(&headers).hotel_provider();
+    let registry = get_currency_aware_provider_registry(&headers);
+    let provider = select_hotel_provider(&registry, request.provider.as_deref());
     let hotel_service = HotelService::new(provider);
 
     // <!-- Perform the hotel search -->

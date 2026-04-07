@@ -1,18 +1,13 @@
 use axum::{
-    extract::{Query, State},
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use estate_fe::application_services::HotelService;
+use estate_fe::domain::DomainHotelCodeId;
 use estate_fe::view_state_layer::AppState;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GetHotelDetailsQuery {
-    pub hotel_id: String,
-}
 
 use axum::http::HeaderMap;
 
@@ -21,7 +16,7 @@ use axum::http::HeaderMap;
 pub async fn get_hotel_details_api_server_fn_route(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(request): Json<GetHotelDetailsQuery>,
+    Json(request): Json<DomainHotelCodeId>,
 ) -> Result<Response, Response> {
     // Validate hotel_id is provided
     if request.hotel_id.trim().is_empty() {
@@ -32,7 +27,8 @@ pub async fn get_hotel_details_api_server_fn_route(
     }
 
     // Create the hotel service with provider registry (currency enabled)
-    let provider = super::get_currency_aware_provider_registry(&headers).hotel_provider();
+    let registry = super::get_currency_aware_provider_registry(&headers);
+    let provider = super::select_hotel_provider(&registry, request.provider.as_deref());
     let hotel_service = HotelService::new(provider);
 
     // Get hotel details without rates

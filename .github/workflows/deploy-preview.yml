@@ -195,6 +195,8 @@ jobs:
           flyctl secrets set EMAIL_TOKEN_EXPIRY="$EMAIL_TOKEN_EXPIRY" --app "$APP_NAME" --stage || echo "Warning: Failed to set EMAIL_TOKEN_EXPIRY"
           flyctl secrets set LITEAPI_KEY="$LITEAPI_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set LITEAPI_KEY"
           flyctl secrets set LITEAPI_PREBOOK_BASE_URL="$LITEAPI_PREBOOK_BASE_URL" --app "$APP_NAME" --stage || echo "Warning: Failed to set LITEAPI_PREBOOK_BASE_URL"
+          flyctl secrets set AMADEUS_API_KEY="$AMADEUS_API_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set AMADEUS_API_KEY"
+          flyctl secrets set AMADEUS_API_SECRET="$AMADEUS_API_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set AMADEUS_API_SECRET"
           flyctl secrets set NOWPAYMENTS_IPN_SECRET="$NOWPAYMENTS_IPN_SECRET" --app "$APP_NAME" --stage || echo "Warning: Failed to set NOWPAYMENTS_IPN_SECRET"
           flyctl secrets set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" --app "$APP_NAME" --stage || echo "Warning: Failed to set STRIPE_SECRET_KEY"
           flyctl secrets set YRAL_AUTH_CLIENT_ID="$YRAL_AUTH_CLIENT_ID" --app "$APP_NAME" --stage || echo "Warning: Failed to set YRAL_AUTH_CLIENT_ID"
@@ -225,6 +227,8 @@ jobs:
           EMAIL_TOKEN_EXPIRY: ${{ secrets.EMAIL_TOKEN_EXPIRY }}
           LITEAPI_KEY: ${{ secrets.LITEAPI_KEY_STAGING_TEST }}
           LITEAPI_PREBOOK_BASE_URL: ${{ secrets.LITEAPI_PREBOOK_BASE_URL }}
+          AMADEUS_API_KEY: ${{ secrets.AMADEUS_API_KEY }}
+          AMADEUS_API_SECRET: ${{ secrets.AMADEUS_API_SECRET }}
           NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
           YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}

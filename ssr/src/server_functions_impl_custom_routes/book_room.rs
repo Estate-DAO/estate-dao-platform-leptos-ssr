@@ -1,13 +1,16 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse};
-use estate_fe::view_state_layer::AppState;
-use estate_fe::{
-    application_services::HotelService, domain::DomainBookRoomRequest, init::get_provider_registry,
+use axum::{
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
 };
+use estate_fe::view_state_layer::AppState;
+use estate_fe::{application_services::HotelService, domain::DomainBookRoomRequest};
 use serde_json::json;
 
 #[axum::debug_handler]
 pub async fn book_room_api_server_fn_route(
     State(_state): State<AppState>,
+    headers: HeaderMap,
     body: String,
 ) -> Result<axum::response::Response, StatusCode> {
     estate_fe::log!(
@@ -31,7 +34,8 @@ pub async fn book_room_api_server_fn_route(
     };
 
     // Create hotel service with provider registry (fallback enabled)
-    let provider = get_provider_registry().hotel_provider();
+    let registry = super::get_currency_aware_provider_registry(&headers);
+    let provider = super::select_hotel_provider(&registry, book_request.provider.as_deref());
     let hotel_service = HotelService::new(provider);
 
     estate_fe::log!(

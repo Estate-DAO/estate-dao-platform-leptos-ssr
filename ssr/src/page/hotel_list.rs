@@ -20,6 +20,8 @@ use crate::page::{HotelDetailsParams, HotelListNavbar, HotelListParams, InputGro
 use crate::utils::currency::{
     currency_symbol_for_code, resolve_currency_code, CURRENCY_CHANGE_EVENT,
 };
+use crate::utils::hotel_images::resolve_hotel_card_image;
+use crate::utils::provider_keys::normalize_owned_hotel_provider_key;
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::{InputGroupState, OpenDialogComponent};
 use crate::view_state_layer::ui_hotel_details::HotelDetailsUIState;
@@ -1364,11 +1366,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 let mut price = hotel_result.price.clone().map(|p| p.room_price);
                                                                 let is_disabled = price.unwrap_or(0.0) <= 0.0;
                                                                 if is_disabled { price = None; }
-                                                                let img = if hotel_result.hotel_picture.is_empty() {
-                                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                                } else {
-                                                                    hotel_result.hotel_picture.clone()
-                                                                };
+                                                                let img = resolve_hotel_card_image(&hotel_result.hotel_picture);
                                                                 let res = hotel_result.clone();
                                                                 let hotel_address = hotel_result.hotel_address.clone();
                                                                 let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
@@ -1510,11 +1508,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                                             let mut price = hotel_result.price.clone().map(|p| p.room_price);
                                                                             let is_disabled = price.unwrap_or(0.0) <= 0.0;
                                                                             if is_disabled { price = None; }
-                                                                            let img = if hotel_result.hotel_picture.is_empty() {
-                                                                                "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                                            } else {
-                                                                                hotel_result.hotel_picture.clone()
-                                                                            };
+                                                                            let img = resolve_hotel_card_image(&hotel_result.hotel_picture);
                                                                             let res = hotel_result.clone();
                                                                             let hotel_address = hotel_result.hotel_address.clone();
                                                                             let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
@@ -1574,11 +1568,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                 if is_disabled {
                                                     price = None; // Hide price if invalid
                                                 }
-                                                let img = if hotel_result.hotel_picture.is_empty() {
-                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                } else {
-                                                    hotel_result.hotel_picture.clone()
-                                                };
+                                                let img = resolve_hotel_card_image(&hotel_result.hotel_picture);
                                                 let res = hotel_result.clone();
                                                 let hotel_address = hotel_result.hotel_address.clone();
                                                 let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
@@ -1944,11 +1934,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                             let mut price = hotel_result.price.clone().map(|p| p.room_price);
                                                             let is_disabled = price.unwrap_or(0.0) <= 0.0;
                                                             if is_disabled { price = None; }
-                                                            let img = if hotel_result.hotel_picture.is_empty() {
-                                                                "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                            } else {
-                                                                hotel_result.hotel_picture.clone()
-                                                            };
+                                                            let img = resolve_hotel_card_image(&hotel_result.hotel_picture);
                                                             let res = hotel_result.clone();
                                                             let hotel_address = hotel_result.hotel_address.clone();
                                                             let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
@@ -2023,11 +2009,7 @@ pub fn HotelListPage() -> impl IntoView {
                                                              let mut price = hotel_result.price.clone().map(|p| p.room_price);
                                                              let is_disabled = price.unwrap_or(0.0) <= 0.0;
                                                              if is_disabled { price = None; }
-                                                             let img = if hotel_result.hotel_picture.is_empty() {
-                                                                 "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                             } else {
-                                                                 hotel_result.hotel_picture.clone()
-                                                             };
+                                                             let img = resolve_hotel_card_image(&hotel_result.hotel_picture);
                                                              let res = hotel_result.clone();
                                                              let hotel_address = hotel_result.hotel_address.clone();
                                                              let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
@@ -2110,6 +2092,7 @@ pub fn HotelCard(
 
     let search_list_page: SearchListResults = expect_context();
     let hotel_view_info_ctx: HotelInfoCtx = expect_context();
+    let search_ctx: UISearchCtx = expect_context();
 
     let navigate = use_navigate();
 
@@ -2133,6 +2116,14 @@ pub fn HotelCard(
             hotel_view_info_ctx
                 .hotel_code
                 .set(hotel_code_cloned.clone());
+            let provider = search_ctx.provider.get_untracked().or_else(|| {
+                search_list_page
+                    .search_result
+                    .get_untracked()
+                    .and_then(|results| normalize_owned_hotel_provider_key(results.provider))
+            });
+            hotel_view_info_ctx.provider.set(provider.clone());
+            search_ctx.provider.set(provider);
             HotelDetailsUIState::reset();
             log!("Hotel code set: {}", hotel_code_cloned);
 
@@ -2280,6 +2271,14 @@ pub fn HotelCardTile(
             hotel_view_info_ctx
                 .hotel_code
                 .set(hotel_code_cloned.clone());
+            let provider = search_ctx.provider.get_untracked().or_else(|| {
+                search_list_page
+                    .search_result
+                    .get_untracked()
+                    .and_then(|results| normalize_owned_hotel_provider_key(results.provider))
+            });
+            hotel_view_info_ctx.provider.set(provider.clone());
+            search_ctx.provider.set(provider);
             HotelDetailsUIState::reset();
             log!("Hotel code set: {}", hotel_code_cloned);
 

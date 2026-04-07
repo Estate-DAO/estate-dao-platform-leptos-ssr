@@ -13,6 +13,7 @@ use crate::{
     component::{Destination, GuestSelection, SelectedDateRange},
     domain::{DomainHotelListAfterSearch, DomainPaginationMeta, DomainPaginationParams},
     utils::app_reference::generate_app_reference,
+    utils::provider_keys::normalize_owned_hotel_provider_key,
 };
 // use leptos::logging::log;
 use crate::log;
@@ -28,6 +29,7 @@ use super::{view_state::HotelInfoCtx, GlobalStateForLeptos};
 pub struct UISearchCtx {
     pub place: RwSignal<Option<Place>>,
     pub place_details: RwSignal<Option<PlaceData>>,
+    pub provider: RwSignal<Option<String>>,
     pub destination: RwSignal<Option<Destination>>,
     pub date_range: RwSignal<SelectedDateRange>,
     pub guests: GuestSelection,
@@ -40,6 +42,7 @@ impl Default for UISearchCtx {
         Self {
             place: RwSignal::new(None),
             place_details: RwSignal::new(None),
+            provider: RwSignal::new(None),
             destination: RwSignal::new(None),
             date_range: RwSignal::new(SelectedDateRange::default()),
             guests: GuestSelection::default(),
@@ -68,6 +71,11 @@ impl UISearchCtx {
             return;
         }
         this.place_details.set(place_details);
+    }
+
+    pub fn set_provider(provider: Option<String>) {
+        let this: Self = expect_context();
+        this.provider.set(provider);
     }
 
     pub fn set_date_range(date_range: SelectedDateRange) {
@@ -135,6 +143,7 @@ impl UISearchCtx {
             "\n\ndestination: {:?}\n\n",
             this.destination.get_untracked()
         );
+        log::info!("provider: {:?}", this.provider.get_untracked());
     }
 
     pub fn get_backend_compatible_date_range_untracked() -> backend::SelectedDateRange {
@@ -167,6 +176,11 @@ impl SearchListResults {
         let search_result_signal = Self::from_leptos_context().search_result;
 
         if let Some(new_response) = hotel_search_response {
+            let provider_key = normalize_owned_hotel_provider_key(new_response.provider.clone());
+            if provider_key.is_some() {
+                UISearchCtx::set_provider(provider_key);
+            }
+
             log!(
                 "[SET_RESULTS] Received {} hotels from API",
                 new_response.hotel_results.len()

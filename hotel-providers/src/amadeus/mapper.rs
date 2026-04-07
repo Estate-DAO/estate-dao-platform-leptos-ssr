@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use base64::Engine;
 use crate::amadeus::models::booking::AmadeusBlockRoomSnapshot;
 use crate::amadeus::models::hotel_details::AmadeusHotelDetailsResponse;
 use crate::amadeus::models::search::{
@@ -10,12 +9,15 @@ use crate::amadeus::models::search::{
 use crate::domain::{
     DomainBlockRoomRequest, DomainBlockRoomResponse, DomainBlockedRoom, DomainDetailedPrice,
     DomainGroupedRoomRates, DomainHotelAfterSearch, DomainHotelListAfterSearch,
-    DomainHotelStaticDetails, DomainLocation, DomainPaginationParams, DomainPrice, DomainStaticRoom,
+    DomainHotelStaticDetails, DomainLocation, DomainPaginationParams, DomainPrice,
+    DomainStaticRoom,
 };
 use crate::ports::{ProviderError, ProviderErrorKind, ProviderNames, ProviderSteps};
+use base64::Engine;
 use hotel_types::{DomainRoomGroup, DomainRoomVariant, GroupedTaxItem};
 
 const AMADEUS_BLOCK_ID_PREFIX: &str = "amadeus-block:";
+const AMADEUS_PLACEHOLDER_IMAGE_PATH: &str = "/img/hotel-placeholder.svg";
 
 #[derive(Clone, Debug, Default)]
 pub struct AmadeusMapper;
@@ -24,8 +26,13 @@ impl AmadeusMapper {
     pub fn map_search_to_domain(
         hotel_list: AmadeusHotelListResponse,
         offers: AmadeusHotelOffersResponse,
-        _pagination_params: &Option<DomainPaginationParams>,
+        pagination_params: &Option<DomainPaginationParams>,
     ) -> DomainHotelListAfterSearch {
+        let total_results = hotel_list
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.count)
+            .or(Some(hotel_list.data.len() as i32));
         let hotels_by_id = hotel_list
             .data
             .into_iter()
@@ -54,12 +61,14 @@ impl AmadeusMapper {
                         (
                             offer_bundle.hotel.name.clone(),
                             None,
-                            offer_bundle.hotel.latitude.zip(offer_bundle.hotel.longitude).map(
-                                |(latitude, longitude)| DomainLocation {
+                            offer_bundle
+                                .hotel
+                                .latitude
+                                .zip(offer_bundle.hotel.longitude)
+                                .map(|(latitude, longitude)| DomainLocation {
                                     latitude,
                                     longitude,
-                                },
-                            ),
+                                }),
                             None,
                         )
                     };
@@ -70,7 +79,7 @@ impl AmadeusMapper {
                     hotel_category: "Hotel".to_string(),
                     star_rating: 0,
                     price: Some(cheapest),
-                    hotel_picture: String::new(),
+                    hotel_picture: AMADEUS_PLACEHOLDER_IMAGE_PATH.to_string(),
                     amenities: Vec::new(),
                     property_type: None,
                     result_token: offer_bundle.hotel.hotel_id,
@@ -83,8 +92,35 @@ impl AmadeusMapper {
 
         DomainHotelListAfterSearch {
             hotel_results,
-            pagination: None,
+            pagination: Some(Self::build_pagination_meta(
+                total_results,
+                pagination_params,
+            )),
             provider: Some(ProviderNames::Amadeus.to_string()),
+        }
+    }
+
+    fn build_pagination_meta(
+        total_results: Option<i32>,
+        pagination_params: &Option<DomainPaginationParams>,
+    ) -> hotel_types::DomainPaginationMeta {
+        let page = pagination_params
+            .as_ref()
+            .and_then(|params| params.page)
+            .unwrap_or(1)
+            .max(1);
+        let page_size = pagination_params
+            .as_ref()
+            .and_then(|params| params.page_size)
+            .unwrap_or(25)
+            .max(1);
+
+        hotel_types::DomainPaginationMeta {
+            page,
+            page_size,
+            total_results,
+            has_next_page: false,
+            has_previous_page: page > 1,
         }
     }
 
@@ -92,10 +128,15 @@ impl AmadeusMapper {
         offers
             .iter()
             .filter_map(|offer| {
-                offer.price.total.parse::<f64>().ok().map(|amount| DomainPrice {
-                    room_price: amount,
-                    currency_code: offer.price.currency.clone(),
-                })
+                offer
+                    .price
+                    .total
+                    .parse::<f64>()
+                    .ok()
+                    .map(|amount| DomainPrice {
+                        room_price: amount,
+                        currency_code: offer.price.currency.clone(),
+                    })
             })
             .min_by(|left, right| left.room_price.total_cmp(&right.room_price))
     }
@@ -150,7 +191,7 @@ impl AmadeusMapper {
             description: String::new(),
             hotel_facilities: Vec::new(),
             address: Self::format_address(hotel.address.as_ref()).unwrap_or_default(),
-            images: Vec::new(),
+            images: vec![AMADEUS_PLACEHOLDER_IMAGE_PATH.to_string()],
             amenities: Vec::new(),
             rooms: Vec::<DomainStaticRoom>::new(),
             location: hotel.geo_code.map(|geo| DomainLocation {
@@ -163,7 +204,9 @@ impl AmadeusMapper {
         })
     }
 
-    pub fn map_offers_to_grouped_rates(offers_response: AmadeusHotelOffersResponse) -> DomainGroupedRoomRates {
+    pub fn map_offers_to_grouped_rates(
+        offers_response: AmadeusHotelOffersResponse,
+    ) -> DomainGroupedRoomRates {
         let mut groups = HashMap::<String, DomainRoomGroup>::new();
 
         for hotel_offer in offers_response.data {
@@ -251,9 +294,10 @@ impl AmadeusMapper {
 
         let mut room_groups = groups.into_values().collect::<Vec<_>>();
         for group in &mut room_groups {
-            group
-                .room_types
-                .sort_by(|left, right| left.total_price_for_all_rooms.total_cmp(&right.total_price_for_all_rooms));
+            group.room_types.sort_by(|left, right| {
+                left.total_price_for_all_rooms
+                    .total_cmp(&right.total_price_for_all_rooms)
+            });
         }
         room_groups.sort_by(|left, right| left.min_price.total_cmp(&right.min_price));
 
@@ -403,7 +447,11 @@ impl AmadeusMapper {
     }
 
     fn requested_total_price(request: &DomainBlockRoomRequest) -> f64 {
-        let nights = request.hotel_info_criteria.search_criteria.no_of_nights.max(1) as f64;
+        let nights = request
+            .hotel_info_criteria
+            .search_criteria
+            .no_of_nights
+            .max(1) as f64;
         request
             .selected_rooms
             .iter()
@@ -411,7 +459,11 @@ impl AmadeusMapper {
             .sum()
     }
 
-    fn detailed_price(total_price: f64, base_price: f64, currency_code: String) -> DomainDetailedPrice {
+    fn detailed_price(
+        total_price: f64,
+        base_price: f64,
+        currency_code: String,
+    ) -> DomainDetailedPrice {
         let tax_amount = (total_price - base_price).max(0.0);
 
         DomainDetailedPrice {
@@ -467,10 +519,10 @@ mod tests {
         AmadeusHotelDetailsEntry, AmadeusHotelDetailsResponse,
     };
     use crate::amadeus::models::search::{
-        AmadeusAddress, AmadeusGeoCode, AmadeusHotelListEntry, AmadeusHotelListResponse,
-        AmadeusHotelOffer, AmadeusHotelOffersResponse, AmadeusOffer, AmadeusOfferHotel,
-        AmadeusOfferPolicies, AmadeusOfferPrice, AmadeusOfferRoom, AmadeusRoomDescription,
-        AmadeusRoomTypeEstimated,
+        AmadeusAddress, AmadeusGeoCode, AmadeusHotelListEntry, AmadeusHotelListMeta,
+        AmadeusHotelListResponse, AmadeusHotelOffer, AmadeusHotelOffersResponse, AmadeusOffer,
+        AmadeusOfferHotel, AmadeusOfferPolicies, AmadeusOfferPrice, AmadeusOfferRoom,
+        AmadeusRoomDescription, AmadeusRoomTypeEstimated,
     };
 
     #[test]
@@ -492,6 +544,7 @@ mod tests {
                 chain_code: Some("AC".to_string()),
                 iata_code: Some("PAR".to_string()),
             }],
+            meta: Some(AmadeusHotelListMeta { count: Some(1) }),
         };
 
         let offers = AmadeusHotelOffersResponse {
@@ -533,15 +586,30 @@ mod tests {
             }],
         };
 
-        let result = AmadeusMapper::map_search_to_domain(hotel_list, offers, &None);
+        let result = AmadeusMapper::map_search_to_domain(
+            hotel_list,
+            offers,
+            &Some(DomainPaginationParams {
+                page: Some(1),
+                page_size: Some(25),
+            }),
+        );
 
         assert_eq!(result.provider.as_deref(), Some("Amadeus"));
         assert_eq!(result.hotel_results.len(), 1);
+        assert!(result.pagination.is_some());
+        let pagination = result.pagination.unwrap();
+        assert_eq!(pagination.page, 1);
+        assert_eq!(pagination.page_size, 25);
+        assert_eq!(pagination.total_results, Some(1));
+        assert!(!pagination.has_next_page);
+        assert!(!pagination.has_previous_page);
 
         let hotel = &result.hotel_results[0];
         assert_eq!(hotel.hotel_code, "ACPARH29");
         assert_eq!(hotel.hotel_name, "Acropolis Hotel Paris Boulogne");
         assert_eq!(hotel.result_token, "ACPARH29");
+        assert_eq!(hotel.hotel_picture, "/img/hotel-placeholder.svg");
         assert_eq!(hotel.price.as_ref().unwrap().room_price, 175.5);
         assert_eq!(hotel.price.as_ref().unwrap().currency_code, "EUR");
         assert_eq!(hotel.location.as_ref().unwrap().latitude, 48.83593);
@@ -573,6 +641,10 @@ mod tests {
         assert_eq!(result.hotel_code, "HLPAR266");
         assert_eq!(result.hotel_name, "Hilton Paris Opera");
         assert_eq!(result.address, "108 Rue Saint-Lazare, Paris, FR");
+        assert_eq!(
+            result.images,
+            vec!["/img/hotel-placeholder.svg".to_string()]
+        );
         assert_eq!(result.provider.as_deref(), Some("Amadeus"));
         assert_eq!(result.location.as_ref().unwrap().latitude, 48.8757);
     }

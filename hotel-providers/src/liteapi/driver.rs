@@ -67,6 +67,7 @@ impl HotelProviderPort for LiteApiDriver {
             token: "".to_string(), // Unused for LiteAPI search
             hotel_ids,
             search_criteria: criteria.clone(),
+            provider: criteria.provider.clone(),
         };
 
         let rates_req = LiteApiMapper::map_domain_info_to_liteapi_rates(

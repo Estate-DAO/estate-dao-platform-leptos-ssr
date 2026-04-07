@@ -55,6 +55,7 @@ impl From<UISearchCtx> for DomainHotelSearchCriteria {
             longitude,
             place_id,
             pagination,
+            provider: ctx.provider.get_untracked(),
             // ..Default::default()
         };
 

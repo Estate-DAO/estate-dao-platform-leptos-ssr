@@ -240,6 +240,9 @@ pub struct DomainHotelSearchCriteria {
     /// Optional longitude for coordinate-based searches (e.g., "Search this area" on map)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub longitude: Option<f64>,
+    /// Stable provider key bound to this hotel flow when present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -352,11 +355,15 @@ pub struct DomainHotelInfoCriteria {
     pub token: String,
     pub hotel_ids: Vec<String>,
     pub search_criteria: DomainHotelSearchCriteria,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DomainHotelCodeId {
     pub hotel_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -602,6 +609,7 @@ impl Default for DomainHotelSearchCriteria {
             pagination: None,
             latitude: None,
             longitude: None,
+            provider: None,
         }
     }
 }

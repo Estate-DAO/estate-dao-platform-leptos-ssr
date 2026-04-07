@@ -7,6 +7,7 @@ use crate::{
     application_services::filter_types::{UISearchFilters, UISortOptions},
     component::{ChildrenAgesSignalExt, Destination, GuestSelection, SelectedDateRange},
     log,
+    utils::provider_keys::normalize_owned_hotel_provider_key,
     utils::query_params::{
         build_query_string, individual_params, update_url_with_params, update_url_with_state,
         FilterMap, QueryParamsSync, SortDirection,
@@ -169,6 +170,7 @@ pub struct HotelListParams {
     pub place: Option<Place>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub provider: Option<String>,
 
     // Place name to search (when placeId is not available in URL)
     #[serde(skip)]
@@ -192,6 +194,7 @@ impl Default for HotelListParams {
             per_page: Some(500),
             latitude: None,
             longitude: None,
+            provider: None,
             place_name_to_search: None,
         }
     }
@@ -201,6 +204,7 @@ impl HotelListParams {
     /// Create from current search context state
     pub fn from_search_context(search_ctx: &UISearchCtx) -> Self {
         let place_details = search_ctx.place_details.get_untracked();
+        let search_results: SearchListResults = expect_context();
 
         let place = search_ctx.place.get_untracked();
 
@@ -272,6 +276,13 @@ impl HotelListParams {
             None
         };
 
+        let provider = search_ctx.provider.get_untracked().or_else(|| {
+            search_results
+                .search_result
+                .get_untracked()
+                .and_then(|results| normalize_owned_hotel_provider_key(results.provider))
+        });
+
         Self {
             place_details,
             place,
@@ -287,6 +298,7 @@ impl HotelListParams {
             per_page,
             latitude,
             longitude,
+            provider,
             place_name_to_search: None,
         }
     }
@@ -513,6 +525,7 @@ impl HotelListParams {
         // Coordinates (optional)
         let latitude = params.get("lat").and_then(|s| s.parse().ok());
         let longitude = params.get("lng").and_then(|s| s.parse().ok());
+        let provider = normalize_owned_hotel_provider_key(params.get("provider").cloned());
 
         // Sort options
         let sort = if let Some(sort_str) = params.get("sort") {
@@ -543,6 +556,7 @@ impl HotelListParams {
             per_page,
             latitude,
             longitude,
+            provider,
             place_name_to_search,
         })
     }
@@ -635,6 +649,9 @@ impl HotelListParams {
         }
 
         // NOTE: Removed lat/lng/placeAddress - these can be derived from placeId via API
+        if let Some(ref provider) = self.provider {
+            params.insert("provider".to_string(), provider.clone());
+        }
 
         params
     }
@@ -655,6 +672,8 @@ impl HotelListParams {
 impl QueryParamsSync<HotelListParams> for HotelListParams {
     fn sync_to_app_state(&self) {
         let search_ctx: UISearchCtx = expect_context();
+
+        UISearchCtx::set_provider(self.provider.clone());
 
         // Set destination if available
         if let Some(place) = &self.place {
@@ -969,6 +988,7 @@ mod tests {
                 display_name: "NYC".to_string(),
                 formatted_address: "New York, NY".to_string(),
             }),
+            provider: Some("amadeus".to_string()),
             checkin: Some("2025-01-15".to_string()),
             checkout: Some("2025-01-20".to_string()),
             adults: Some(2),
@@ -979,6 +999,36 @@ mod tests {
         assert!(url.starts_with("/hotel-list?"));
         assert!(url.contains("placeId=ChIJOwg"));
         assert!(url.contains("checkin=2025-01-15"));
+        assert!(url.contains("provider=amadeus"));
+    }
+
+    #[test]
+    fn hotel_list_params_round_trip_provider_key() {
+        let params = HotelListParams {
+            place: Some(Place {
+                place_id: "ChIJOwg".to_string(),
+                display_name: "New York".to_string(),
+                formatted_address: "New York, NY, USA".to_string(),
+            }),
+            provider: Some("amadeus".to_string()),
+            checkin: Some("2026-04-10".to_string()),
+            checkout: Some("2026-04-12".to_string()),
+            adults: Some(2),
+            rooms: Some(1),
+            ..Default::default()
+        };
+
+        let query_params = params.to_query_params();
+        assert_eq!(query_params.get("provider"), Some(&"amadeus".to_string()));
+
+        let parsed = HotelListParams::from_query_params(&query_params)
+            .expect("hotel list params should parse");
+
+        assert_eq!(parsed.provider.as_deref(), Some("amadeus"));
+        assert_eq!(
+            parsed.place.as_ref().map(|place| place.place_id.as_str()),
+            Some("ChIJOwg")
+        );
     }
 
     #[test]

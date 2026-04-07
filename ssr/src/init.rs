@@ -185,7 +185,9 @@ pub fn initialize_amadeus_driver() {
         .unwrap_or(api_key.is_empty() || api_secret.is_empty());
 
     if api_key.is_empty() || api_secret.is_empty() {
-        tracing::warn!("AMADEUS_API_KEY or AMADEUS_API_SECRET environment variable is empty or not set!");
+        tracing::warn!(
+            "AMADEUS_API_KEY or AMADEUS_API_SECRET environment variable is empty or not set!"
+        );
     }
 
     let driver = if use_mock {
@@ -483,7 +485,8 @@ mod tests {
 
     #[test]
     fn init_can_build_registry_with_amadeus_primary() {
-        let liteapi_driver = LiteApiDriver::new(LiteApiClient::new("test-key".to_string(), None), false);
+        let liteapi_driver =
+            LiteApiDriver::new(LiteApiClient::new("test-key".to_string(), None), false);
         let booking_driver = BookingDriver::new_mock("USD".to_string());
         let amadeus_driver = AmadeusDriver::new_mock();
 

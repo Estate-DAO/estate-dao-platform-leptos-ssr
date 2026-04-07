@@ -3,6 +3,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AmadeusHotelListResponse {
     pub data: Vec<AmadeusHotelListEntry>,
+    pub meta: Option<AmadeusHotelListMeta>,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct AmadeusHotelListMeta {
+    pub count: Option<i32>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

@@ -57,7 +57,10 @@ impl HotelProviderPort for AmadeusDriver {
             )
         })?;
 
-        let hotel_list = self.client.get_hotels_by_geocode(latitude, longitude).await?;
+        let hotel_list = self
+            .client
+            .get_hotels_by_geocode(latitude, longitude)
+            .await?;
         if hotel_list.data.is_empty() {
             return Ok(DomainHotelListAfterSearch {
                 hotel_results: Vec::new(),
@@ -178,10 +181,9 @@ mod tests {
     };
     use crate::domain::{
         DomainAdultDetail, DomainBlockRoomRequest, DomainBookRoomRequest, DomainBookingContext,
-        DomainBookingGuest, DomainBookingHolder, DomainHotelInfoCriteria,
-        DomainOriginalSearchInfo, DomainPaymentInfo, DomainPaymentMethod, DomainRoomData,
-        DomainRoomGuest, DomainRoomOccupancyForBooking, DomainSelectedRoomWithQuantity,
-        DomainUserDetails,
+        DomainBookingGuest, DomainBookingHolder, DomainHotelInfoCriteria, DomainOriginalSearchInfo,
+        DomainPaymentInfo, DomainPaymentMethod, DomainRoomData, DomainRoomGuest,
+        DomainRoomOccupancyForBooking, DomainSelectedRoomWithQuantity, DomainUserDetails,
     };
     use crate::ports::{HotelProviderPort, ProviderErrorKind, ProviderSteps};
 
@@ -201,6 +203,7 @@ mod tests {
             pagination: None,
             latitude: Some(48.8757),
             longitude: Some(2.32553),
+            provider: None,
         }
     }
 
@@ -256,6 +259,7 @@ mod tests {
                 token: "search-token".to_string(),
                 hotel_ids: vec!["HLPAR266".to_string()],
                 search_criteria: sample_search_criteria(),
+                provider: Some("amadeus".to_string()),
             },
             user_details: DomainUserDetails {
                 children: Vec::new(),

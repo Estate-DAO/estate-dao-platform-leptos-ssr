@@ -84,6 +84,7 @@ impl BookingConversions {
         let rooms_count = guests.rooms.get_untracked();
         let effective_adult_count = std::cmp::max(total_adults as u32, rooms_count);
         let children_count = guests.children.get_untracked();
+        let provider = hotel_info_ctx.provider.get_untracked();
 
         let room_guests = vec![DomainRoomGuest {
             no_of_adults: effective_adult_count,
@@ -120,6 +121,7 @@ impl BookingConversions {
             pagination: None, // No pagination for booking conversions
             latitude: None,
             longitude: None,
+            provider: provider.clone(),
         };
 
         let hotel_code = hotel_info_ctx.hotel_code.get_untracked();
@@ -127,6 +129,7 @@ impl BookingConversions {
             token: hotel_code.clone(), // Use hotel_code as token for LiteAPI (not block_room_id)
             hotel_ids: vec![hotel_code],
             search_criteria,
+            provider: provider.clone(),
         };
 
         // Get room selection data
@@ -169,6 +172,7 @@ impl BookingConversions {
         let block_room_state =
             crate::view_state_layer::ui_block_room::BlockRoomUIState::from_leptos_context();
         let ui_search_ctx: UISearchCtx = expect_context();
+        let hotel_info_ctx: HotelInfoCtx = expect_context();
 
         let adults = block_room_state.adults.get_untracked();
 
@@ -348,7 +352,7 @@ impl BookingConversions {
 
         Ok(DomainBookRoomRequest {
             block_id,
-            provider: None,
+            provider: hotel_info_ctx.provider.get_untracked(),
             holder,
             guests,
             payment,

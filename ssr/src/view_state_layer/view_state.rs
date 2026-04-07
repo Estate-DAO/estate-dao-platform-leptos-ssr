@@ -1,6 +1,7 @@
 use crate::{
     // api::provab::{HotelRoomResponse, HotelSearchRequest, HotelSearchResponse},
     component::{GuestSelection, SelectedDateRange},
+    utils::provider_keys::normalize_owned_hotel_provider_key,
     // state::search_state::HotelInfoResults,
 };
 // use leptos::logging::log;
@@ -12,6 +13,7 @@ use std::collections::{HashMap, HashSet};
 #[derive(Debug, Default, Clone)]
 pub struct HotelInfoCtx {
     pub hotel_code: RwSignal<String>,
+    pub provider: RwSignal<Option<String>>,
     pub selected_hotel_name: RwSignal<String>,
     pub selected_hotel_image: RwSignal<String>,
     pub selected_hotel_location: RwSignal<String>,
@@ -21,6 +23,7 @@ impl HotelInfoCtx {
     pub fn display(&self) -> String {
         let json_repr = serde_json::json!({
             "hotel_code": self.hotel_code.get_untracked(),
+            "provider": self.provider.get_untracked(),
             "selected_hotel_name": self.selected_hotel_name.get_untracked(),
             "selected_hotel_image": self.selected_hotel_image.get_untracked(),
             "selected_hotel_location": self.selected_hotel_location.get_untracked(),
@@ -38,9 +41,20 @@ impl HotelInfoCtx {
         this.selected_hotel_location.set(location);
     }
 
+    pub fn set_provider(provider: Option<String>) {
+        let this: Self = expect_context();
+        this.provider
+            .set(normalize_owned_hotel_provider_key(provider));
+    }
+
     pub fn get_hotel_code_untracked() -> String {
         let this: Self = expect_context();
         this.hotel_code.get_untracked()
+    }
+
+    pub fn get_provider_untracked() -> Option<String> {
+        let this: Self = expect_context();
+        this.provider.get_untracked()
     }
 }
 

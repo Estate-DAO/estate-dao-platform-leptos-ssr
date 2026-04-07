@@ -2,6 +2,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use serde::de::DeserializeOwned;
+use serde::Deserialize;
+
 use crate::amadeus::models::auth::AmadeusAuthResponse;
 use crate::amadeus::models::hotel_details::AmadeusHotelDetailsResponse;
 use crate::amadeus::models::search::{
@@ -29,6 +32,23 @@ pub struct AmadeusClient {
 struct CachedToken {
     access_token: String,
     expires_at: Instant,
+}
+
+#[derive(Debug, Deserialize)]
+struct AmadeusErrorEnvelope {
+    errors: Vec<AmadeusErrorItem>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AmadeusErrorItem {
+    title: Option<String>,
+    detail: Option<String>,
+    source: Option<AmadeusErrorSource>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AmadeusErrorSource {
+    parameter: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -143,16 +163,7 @@ impl AmadeusClient {
                 )
             })?;
 
-        response
-            .json::<AmadeusHotelListResponse>()
-            .await
-            .map_err(|error| {
-                ProviderError::parse_error(
-                    ProviderNames::Amadeus,
-                    ProviderSteps::HotelSearch,
-                    format!("Failed to parse Amadeus hotel list response: {error}"),
-                )
-            })
+        Self::parse_json_response(response, ProviderSteps::HotelSearch, "hotel list").await
     }
 
     pub async fn get_hotel_offers(
@@ -199,16 +210,7 @@ impl AmadeusClient {
                 )
             })?;
 
-        response
-            .json::<AmadeusHotelOffersResponse>()
-            .await
-            .map_err(|error| {
-                ProviderError::parse_error(
-                    ProviderNames::Amadeus,
-                    ProviderSteps::HotelSearch,
-                    format!("Failed to parse Amadeus hotel offers response: {error}"),
-                )
-            })
+        Self::parse_json_response(response, ProviderSteps::HotelSearch, "hotel offers").await
     }
 
     pub async fn get_hotel_offer_by_id(
@@ -306,16 +308,7 @@ impl AmadeusClient {
                 )
             })?;
 
-        response
-            .json::<AmadeusHotelDetailsResponse>()
-            .await
-            .map_err(|error| {
-                ProviderError::parse_error(
-                    ProviderNames::Amadeus,
-                    ProviderSteps::HotelDetails,
-                    format!("Failed to parse Amadeus hotel details response: {error}"),
-                )
-            })
+        Self::parse_json_response(response, ProviderSteps::HotelDetails, "hotel details").await
     }
 
     fn cached_access_token(&self) -> Option<String> {
@@ -395,6 +388,108 @@ impl AmadeusClient {
         })
     }
 
+    async fn parse_json_response<T>(
+        response: reqwest::Response,
+        step: ProviderSteps,
+        context: &'static str,
+    ) -> Result<T, ProviderError>
+    where
+        T: DeserializeOwned,
+    {
+        let status = response.status();
+
+        if !status.is_success() {
+            let body = response.text().await.ok();
+            return Err(Self::map_http_error(status, step, context, body.as_deref()));
+        }
+
+        response.json::<T>().await.map_err(|error| {
+            ProviderError::parse_error(
+                ProviderNames::Amadeus,
+                step,
+                format!("Failed to parse Amadeus {context} response: {error}"),
+            )
+        })
+    }
+
+    fn map_http_error(
+        status: reqwest::StatusCode,
+        step: ProviderSteps,
+        context: &'static str,
+        body: Option<&str>,
+    ) -> ProviderError {
+        let status_message = Self::format_error_body(body);
+        let message = if status_message.is_empty() {
+            format!("Amadeus {context} request failed with status {status}")
+        } else {
+            format!("Amadeus {context} request failed with status {status}: {status_message}")
+        };
+
+        match status {
+            reqwest::StatusCode::BAD_REQUEST => ProviderError::new(
+                ProviderNames::Amadeus,
+                ProviderErrorKind::InvalidRequest,
+                step,
+                message,
+            ),
+            reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
+                ProviderError::new(
+                    ProviderNames::Amadeus,
+                    ProviderErrorKind::Auth,
+                    step,
+                    message,
+                )
+            }
+            reqwest::StatusCode::NOT_FOUND => {
+                ProviderError::not_found(ProviderNames::Amadeus, step, message)
+            }
+            reqwest::StatusCode::TOO_MANY_REQUESTS => ProviderError::new(
+                ProviderNames::Amadeus,
+                ProviderErrorKind::RateLimited,
+                step,
+                message,
+            ),
+            _ if status.is_server_error() => {
+                ProviderError::service_unavailable(ProviderNames::Amadeus, step, message)
+            }
+            _ => ProviderError::other(ProviderNames::Amadeus, step, message),
+        }
+    }
+
+    fn format_error_body(body: Option<&str>) -> String {
+        let Some(body) = body.map(str::trim).filter(|body| !body.is_empty()) else {
+            return String::new();
+        };
+
+        if let Ok(envelope) = serde_json::from_str::<AmadeusErrorEnvelope>(body) {
+            if let Some(first) = envelope.errors.into_iter().next() {
+                let mut parts = Vec::new();
+
+                if let Some(title) = first.title.filter(|title| !title.trim().is_empty()) {
+                    parts.push(title);
+                }
+
+                if let Some(detail) = first.detail.filter(|detail| !detail.trim().is_empty()) {
+                    parts.push(detail);
+                }
+
+                if let Some(parameter) = first
+                    .source
+                    .and_then(|source| source.parameter)
+                    .filter(|parameter| !parameter.trim().is_empty())
+                {
+                    parts.push(format!("parameter: {parameter}"));
+                }
+
+                if !parts.is_empty() {
+                    return parts.join(" | ");
+                }
+            }
+        }
+
+        body.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
     fn format_date(date: (u32, u32, u32)) -> String {
         format!("{:04}-{:02}-{:02}", date.0, date.1, date.2)
     }
@@ -403,6 +498,106 @@ impl AmadeusClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::thread::JoinHandle;
+
+    use crate::ports::{ProviderErrorKind, ProviderSteps};
+
+    struct TestHttpResponse {
+        method: &'static str,
+        path: &'static str,
+        status: u16,
+        body: &'static str,
+    }
+
+    fn spawn_test_server(responses: Vec<TestHttpResponse>) -> (String, JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind test server");
+        let addr = listener.local_addr().expect("test server addr");
+
+        let handle = std::thread::spawn(move || {
+            for response in responses {
+                let (mut stream, _) = listener.accept().expect("accept test request");
+                stream
+                    .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+                    .expect("set read timeout");
+
+                let request = read_http_request(&mut stream);
+                let request_line = request.lines().next().expect("request line");
+                assert!(
+                    request_line.starts_with(&format!("{} {} ", response.method, response.path)),
+                    "unexpected request line: {request_line}"
+                );
+
+                write_http_response(&mut stream, response.status, response.body);
+            }
+        });
+
+        (format!("http://{}", addr), handle)
+    }
+
+    fn read_http_request(stream: &mut TcpStream) -> String {
+        let mut buffer = Vec::new();
+        let mut chunk = [0_u8; 1024];
+        let mut header_end = None;
+        let mut content_length = 0usize;
+
+        loop {
+            let bytes_read = stream.read(&mut chunk).expect("read request bytes");
+            if bytes_read == 0 {
+                break;
+            }
+            buffer.extend_from_slice(&chunk[..bytes_read]);
+
+            if header_end.is_none() {
+                if let Some(idx) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
+                    header_end = Some(idx + 4);
+                    let headers = String::from_utf8_lossy(&buffer[..idx + 4]);
+                    content_length = headers
+                        .lines()
+                        .find_map(|line| {
+                            let lower = line.to_ascii_lowercase();
+                            lower
+                                .strip_prefix("content-length:")
+                                .and_then(|value| value.trim().parse::<usize>().ok())
+                        })
+                        .unwrap_or(0);
+                }
+            }
+
+            if let Some(end) = header_end {
+                if buffer.len() >= end + content_length {
+                    break;
+                }
+            }
+        }
+
+        String::from_utf8(buffer).expect("request utf8")
+    }
+
+    fn write_http_response(stream: &mut TcpStream, status: u16, body: &str) {
+        let reason = match status {
+            200 => "OK",
+            400 => "Bad Request",
+            401 => "Unauthorized",
+            403 => "Forbidden",
+            404 => "Not Found",
+            429 => "Too Many Requests",
+            500 => "Internal Server Error",
+            503 => "Service Unavailable",
+            _ => "Test Response",
+        };
+
+        let response = format!(
+            "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write test response");
+        stream.flush().expect("flush test response");
+    }
 
     #[tokio::test]
     async fn client_reuses_unexpired_access_token() {
@@ -412,5 +607,78 @@ mod tests {
         let second = client.access_token().await.unwrap();
 
         assert_eq!(first, second);
+    }
+
+    #[tokio::test]
+    async fn geocode_400_maps_to_invalid_request_error() {
+        let (base_url, handle) = spawn_test_server(vec![
+            TestHttpResponse {
+                method: "POST",
+                path: "/v1/security/oauth2/token",
+                status: 200,
+                body: r#"{"type":"amadeusOAuth2Token","username":"test","application_name":"app","client_id":"id","token_type":"Bearer","access_token":"token","expires_in":1799,"state":"approved","scope":""}"#,
+            },
+            TestHttpResponse {
+                method: "GET",
+                path: "/v1/reference-data/locations/hotels/by-geocode?latitude=25.2048493&longitude=55.2707828",
+                status: 400,
+                body: r#"{"errors":[{"status":400,"code":477,"title":"INVALID FORMAT","detail":"invalid query parameter format","source":{"parameter":"longitude"}}]}"#,
+            },
+        ]);
+
+        let client = AmadeusClient::new(
+            "client-id".to_string(),
+            "client-secret".to_string(),
+            Some(base_url.clone()),
+            Some(base_url),
+        );
+
+        let error = client
+            .get_hotels_by_geocode(25.2048493, 55.2707828)
+            .await
+            .expect_err("400 should map to provider error");
+
+        handle.join().expect("join test server");
+
+        assert_eq!(error.kind(), &ProviderErrorKind::InvalidRequest);
+        assert_eq!(error.step(), &ProviderSteps::HotelSearch);
+        assert!(error.message().contains("INVALID FORMAT"));
+        assert!(error.message().contains("longitude"));
+    }
+
+    #[tokio::test]
+    async fn hotel_details_404_maps_to_not_found_error() {
+        let (base_url, handle) = spawn_test_server(vec![
+            TestHttpResponse {
+                method: "POST",
+                path: "/v1/security/oauth2/token",
+                status: 200,
+                body: r#"{"type":"amadeusOAuth2Token","username":"test","application_name":"app","client_id":"id","token_type":"Bearer","access_token":"token","expires_in":1799,"state":"approved","scope":""}"#,
+            },
+            TestHttpResponse {
+                method: "GET",
+                path: "/v1/reference-data/locations/hotels/by-hotels?hotelIds=HIDXB891",
+                status: 404,
+                body: r#"{"errors":[{"status":404,"code":1797,"title":"NOT FOUND","detail":"requested property was not found"}]}"#,
+            },
+        ]);
+
+        let client = AmadeusClient::new(
+            "client-id".to_string(),
+            "client-secret".to_string(),
+            Some(base_url.clone()),
+            Some(base_url),
+        );
+
+        let error = client
+            .get_hotels_by_ids(&["HIDXB891".to_string()])
+            .await
+            .expect_err("404 should map to provider error");
+
+        handle.join().expect("join test server");
+
+        assert_eq!(error.kind(), &ProviderErrorKind::NotFound);
+        assert_eq!(error.step(), &ProviderSteps::HotelDetails);
+        assert!(error.message().contains("NOT FOUND"));
     }
 }

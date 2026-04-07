@@ -19,6 +19,7 @@ use crate::page::{
 use crate::utils::currency::{
     currency_symbol_for_code, resolve_currency_code, CURRENCY_CHANGE_EVENT,
 };
+use crate::utils::provider_keys::normalize_owned_hotel_provider_key;
 use crate::utils::query_params::QueryParamsSync;
 use crate::view_state_layer::input_group_state::InputGroupState;
 use crate::view_state_layer::ui_block_room::{BlockRoomUIState, RoomSelectionSummary};
@@ -478,8 +479,13 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
     // Following the pattern from block_room_v1.rs prebook_resource
     // Enhanced to work with query params for shareable URLs
     let static_details_resource = create_resource(
-        move || hotel_info_ctx.hotel_code.get(),
-        |hotel_code| async move {
+        move || {
+            (
+                hotel_info_ctx.hotel_code.get(),
+                hotel_info_ctx.provider.get(),
+            )
+        },
+        |(hotel_code, provider)| async move {
             if hotel_code.is_empty() {
                 return None;
             }
@@ -487,10 +493,14 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
             match client
                 .get_hotel_static_details(DomainHotelCodeId {
                     hotel_id: hotel_code,
+                    provider,
                 })
                 .await
             {
                 Ok(details) => {
+                    let provider = normalize_owned_hotel_provider_key(details.provider.clone());
+                    HotelInfoCtx::set_provider(provider.clone());
+                    UISearchCtx::set_provider(provider);
                     HotelDetailsUIState::set_static_details(Some(details.clone()));
                     Some(details)
                 }
@@ -506,6 +516,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
         move || {
             (
                 hotel_info_ctx.hotel_code.get(),
+                hotel_info_ctx.provider.get(),
                 ui_search_ctx.date_range.get(),
                 ui_search_ctx.guests.adults.get(),
                 ui_search_ctx.guests.children.get(),
@@ -514,7 +525,16 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 selected_currency_code.get(),
             )
         },
-        move |(hotel_code, date_range, adults, children, rooms, children_ages, _currency_code)| async move {
+        move |(
+            hotel_code,
+            provider,
+            date_range,
+            adults,
+            children,
+            rooms,
+            children_ages,
+            _currency_code,
+        )| async move {
             if hotel_code.is_empty() || date_range.start == (0, 0, 0) || date_range.end == (0, 0, 0)
             {
                 return None;
@@ -553,6 +573,7 @@ pub fn HotelDetailsV1Page() -> impl IntoView {
                 token: hotel_code.clone(),
                 hotel_ids: vec![hotel_code],
                 search_criteria,
+                provider,
             };
             let mut retries_left = crate::api::consts::API_RETRY_COUNT;
             loop {

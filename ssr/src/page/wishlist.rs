@@ -9,6 +9,7 @@ use crate::domain::{DomainHotelCodeId, DomainHotelDetails};
 use crate::log;
 use crate::page::HotelCardTile;
 use crate::utils::currency::resolve_currency_code;
+use crate::utils::hotel_images::resolve_hotel_card_image;
 
 #[component]
 pub fn WishlistPage() -> impl IntoView {
@@ -79,6 +80,7 @@ pub fn WishlistComponent() -> impl IntoView {
                     match api_client
                         .get_hotel_static_details(DomainHotelCodeId {
                             hotel_id: hotel_code.clone(),
+                            provider: None,
                         })
                         .await
                     {
@@ -169,11 +171,11 @@ pub fn WishlistComponent() -> impl IntoView {
                                         >
                                             <HotelCardTile
                                                 img={
-                                                    if hotel.images.is_empty() {
-                                                        "https://via.placeholder.com/300x200?text=No+Image".to_string()
-                                                    } else {
-                                                        hotel.images[0].clone()
-                                                    }
+                                                    hotel
+                                                        .images
+                                                        .first()
+                                                        .map(|image| resolve_hotel_card_image(image))
+                                                        .unwrap_or_else(|| resolve_hotel_card_image(""))
                                                 }
                                                 guest_score=None
                                                 rating=hotel.star_rating as u8
