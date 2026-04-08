@@ -2384,7 +2384,7 @@ pub fn HotelCardTile(
                             >
                                 {hotel_name.clone()}
                             </h3>
-                            <button 
+                            <button
                                 class="text-[12px] text-blue-600 hover:text-blue-800 hover:underline mt-0.5 leading-snug overflow-hidden whitespace-nowrap text-ellipsis cursor-pointer transition-colors text-left block w-full"
                                 on:click={
                                     let on_explore_area = on_explore_area.clone();
@@ -2454,7 +2454,7 @@ pub fn HotelCardTile(
                                 </div>
 
                                 <div class="flex flex-col items-end gap-2.5">
-                                    <button 
+                                    <button
                                         class="inline-block bg-gray-100 text-gray-700 px-3 py-1.5 rounded font-medium hover:bg-gray-200 transition-colors text-xs text-center"
                                         on:click={
                                             let on_explore_area = on_explore_area.clone();
@@ -2511,7 +2511,7 @@ pub fn HotelCardTile(
                         <div class="min-w-0 flex-1">
                             // Smaller text and tighter spacing
                             <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
-                            <button 
+                            <button
                                 class="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis cursor-pointer transition-colors text-left"
                                 on:click={
                                     let on_explore_area = on_explore_area.clone();
@@ -2607,7 +2607,7 @@ pub fn HotelCardTile(
                                 })}
 
                                 <div class="mt-1.5 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
-                                    <button 
+                                    <button
                                         class="inline-block bg-gray-100 text-gray-700 px-3 py-1.5 rounded font-medium hover:bg-gray-200 transition-colors text-xs w-full sm:w-auto text-center"
                                         on:click={
                                             let on_explore_area = on_explore_area.clone();
