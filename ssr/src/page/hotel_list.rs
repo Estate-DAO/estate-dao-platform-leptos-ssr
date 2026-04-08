@@ -2302,6 +2302,25 @@ pub fn HotelCardTile(
         }
     };
 
+    let on_explore_area = {
+        let hotel_address = hotel_address.clone();
+        let query_map = leptos_router::use_query_map();
+        move || {
+            if let Some(address) = &hotel_address {
+                use crate::utils::query_params::update_url_with_params;
+                let params = query_map.get_untracked();
+                let mut new_params: std::collections::HashMap<String, String> = params
+                    .0
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect();
+                new_params.remove("placeId");
+                new_params.insert("placeName".to_string(), address.clone());
+                update_url_with_params("/hotel-list", &new_params);
+            }
+        }
+    };
+
     // Card layout classes based on compact mode
     let card_layout_class = if compact {
         // Compact mode: always vertical, smaller dimensions
@@ -2359,11 +2378,27 @@ pub fn HotelCardTile(
 
                 <div class="p-3.5 space-y-3">
                     <div class="flex items-start justify-between gap-3">
-                        <h3
-                            class="min-w-0 flex-1 text-sm font-medium text-slate-800 leading-tight overflow-hidden whitespace-nowrap text-ellipsis"
-                        >
-                            {hotel_name.clone()}
-                        </h3>
+                        <div class="min-w-0 flex-1 flex flex-col overflow-hidden">
+                            <h3
+                                class="text-sm font-medium text-slate-800 leading-tight overflow-hidden whitespace-nowrap text-ellipsis"
+                            >
+                                {hotel_name.clone()}
+                            </h3>
+                            <button 
+                                class="text-[12px] text-blue-600 hover:text-blue-800 hover:underline mt-0.5 leading-snug overflow-hidden whitespace-nowrap text-ellipsis cursor-pointer transition-colors text-left block w-full"
+                                on:click={
+                                    let on_explore_area = on_explore_area.clone();
+                                    move |ev| {
+                                        ev.prevent_default();
+                                        ev.stop_propagation();
+                                        on_explore_area();
+                                    }
+                                }
+                                title="Explore more in this area"
+                            >
+                                {hotel_address.clone().unwrap_or_default()}
+                            </button>
+                        </div>
 
                         {if rating > 0 {
                             view! {
@@ -2418,9 +2453,34 @@ pub fn HotelCardTile(
                                     }}
                                 </div>
 
-                                <button class="text-[16px] font-semibold leading-none text-slate-800 underline decoration-2 underline-offset-2">
-                                    "View details"
-                                </button>
+                                <div class="flex flex-col items-end gap-2.5">
+                                    <button 
+                                        class="inline-block bg-gray-100 text-gray-700 px-3 py-1.5 rounded font-medium hover:bg-gray-200 transition-colors text-xs text-center"
+                                        on:click={
+                                            let on_explore_area = on_explore_area.clone();
+                                            move |ev| {
+                                                ev.prevent_default();
+                                                ev.stop_propagation();
+                                                on_explore_area();
+                                            }
+                                        }
+                                    >
+                                        {
+                                            let name = hotel_name.clone();
+                                            let display_name = if name.is_empty() {
+                                                "this hotel".to_string()
+                                            } else if name.chars().count() > 25 {
+                                                format!("{}...", name.chars().take(25).collect::<String>())
+                                            } else {
+                                                name
+                                            };
+                                            format!("Explore more around {}", display_name)
+                                        }
+                                    </button>
+                                    <button class="text-[16px] font-semibold leading-none text-slate-800 underline decoration-2 underline-offset-2">
+                                        "View details"
+                                    </button>
+                                </div>
                             </>
                         </Show>
                     </div>
@@ -2451,7 +2511,20 @@ pub fn HotelCardTile(
                         <div class="min-w-0 flex-1">
                             // Smaller text and tighter spacing
                             <h3 class="text-base font-semibold leading-tight overflow-hidden whitespace-normal break-words" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{hotel_name.clone()}</h3>
-                            <p class="text-xs text-gray-600 mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis">{hotel_address.clone().unwrap_or_default()}</p>
+                            <button 
+                                class="text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1 leading-snug overflow-hidden whitespace-nowrap text-ellipsis cursor-pointer transition-colors text-left"
+                                on:click={
+                                    let on_explore_area = on_explore_area.clone();
+                                    move |ev| {
+                                        ev.prevent_default();
+                                        ev.stop_propagation();
+                                        on_explore_area();
+                                    }
+                                }
+                                title="Explore more in this area"
+                            >
+                                {hotel_address.clone().unwrap_or_default()}
+                            </button>
 
                             // Distance from center if available
                             {distance_from_center_km.map(|distance| {
@@ -2533,9 +2606,34 @@ pub fn HotelCardTile(
                                     <p class="text-xs font-semibold text-green-600 mt-0.5">{format!("{d}% OFF")}</p>
                                 })}
 
-                                <button class="mt-1.5 inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
-                                    "See Availability"
-                                </button>
+                                <div class="mt-1.5 flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
+                                    <button 
+                                        class="inline-block bg-gray-100 text-gray-700 px-3 py-1.5 rounded font-medium hover:bg-gray-200 transition-colors text-xs w-full sm:w-auto text-center"
+                                        on:click={
+                                            let on_explore_area = on_explore_area.clone();
+                                            move |ev| {
+                                                ev.prevent_default();
+                                                ev.stop_propagation();
+                                                on_explore_area();
+                                            }
+                                        }
+                                    >
+                                        {
+                                            let name = hotel_name.clone();
+                                            let display_name = if name.is_empty() {
+                                                "this hotel".to_string()
+                                            } else if name.chars().count() > 25 {
+                                                format!("{}...", name.chars().take(25).collect::<String>())
+                                            } else {
+                                                name
+                                            };
+                                            format!("Explore more around {display_name}")
+                                        }
+                                    </button>
+                                    <button class="inline-block bg-blue-600 text-white px-3 py-1.5 rounded font-medium hover:bg-blue-700 text-xs w-full sm:w-auto">
+                                        "See Availability"
+                                    </button>
+                                </div>
                             </div>
                         </Show>
                     </div>
