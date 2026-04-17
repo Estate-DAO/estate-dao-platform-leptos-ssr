@@ -1,6 +1,9 @@
 name: Deploy to bare-metal staging (estatedao)
 
 on:
+  push:
+    branches:
+      - feat/bare-metal-migration
   workflow_dispatch:
     inputs:
       branch:
@@ -42,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Download build
         uses: actions/download-artifact@v4
