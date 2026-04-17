@@ -1,4 +1,4 @@
-name: Deploy to bare-metal staging (estatedao.prakash.yral.com)
+name: Deploy to bare-metal staging (estatedao)
 
 on:
   workflow_dispatch:

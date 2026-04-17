@@ -1,4 +1,4 @@
-name: Deploy to bare-metal prod (nofeebooking.prakash.yral.com)
+name: Deploy to bare-metal prod (nofeebooking)
 
 on:
   workflow_dispatch:
