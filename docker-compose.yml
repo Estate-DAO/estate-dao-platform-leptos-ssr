@@ -1,0 +1,18 @@
+services:
+  app:
+    image: ghcr.io/${GH_REPO_NAME}:${IMAGE_TAG:-latest}
+    container_name: estate_app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - "3002:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      update_config:
+        order: start-first
+        failure_action: rollback
