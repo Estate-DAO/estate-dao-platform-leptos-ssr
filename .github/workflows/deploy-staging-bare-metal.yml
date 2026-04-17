@@ -97,7 +97,6 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
           YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}
           YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
-          YRAL_AUTH_REDIRECT_URL: ${{ secrets.YRAL_AUTH_REDIRECT_URL_STAGING }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
@@ -148,7 +147,7 @@ jobs:
                export STRIPE_SECRET_KEY='${STRIPE_SECRET_KEY}'; \
                export YRAL_AUTH_CLIENT_ID='${YRAL_AUTH_CLIENT_ID}'; \
                export YRAL_AUTH_CLIENT_SECRET='${YRAL_AUTH_CLIENT_SECRET}'; \
-               export YRAL_AUTH_REDIRECT_URL='${YRAL_AUTH_REDIRECT_URL}'; \
+               export YRAL_AUTH_REDIRECT_URL='${APP_URL%/}/auth/callback'; \
                export GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'; \
                export GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'; \
                export GA4_API_SECRET='${GA4_API_SECRET}'; \
