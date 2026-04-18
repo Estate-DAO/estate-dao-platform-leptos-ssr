@@ -104,6 +104,7 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -155,6 +156,7 @@ jobs:
                export GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'; \
                export GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'; \
                export GA4_API_SECRET='${GA4_API_SECRET}'; \
+               export SENTRY_DSN='${SENTRY_DSN}'; \
                cd ${APP_DIR} && \
                echo '${GITHUB_TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin && \
                docker compose pull && \

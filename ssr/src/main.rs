@@ -322,6 +322,13 @@ cfg_if! {
             telemetry_axum::init_telemetry(&config_telemetry)
                 .map_err(|e| anyhow::Error::new(e))?;
 
+        #[cfg(feature = "ssr")]
+        let _sentry_guard = std::env::var("SENTRY_DSN").ok().map(|dsn| {
+            sentry::init((dsn, sentry::ClientOptions {
+                release: sentry::release_name!(),
+                ..Default::default()
+            }))
+        });
 
             estate_fe::utils::debug_local_env();
 
