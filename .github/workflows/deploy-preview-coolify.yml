@@ -134,21 +134,6 @@ jobs:
             echo "app_uuid=${APP_UUID}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Configure Registry Credentials
-        env:
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          APP_UUID="${{ steps.coolify_app.outputs.app_uuid }}"
-
-          curl -s -X PATCH \
-            "https://coolify.yral.com/api/v1/applications/${APP_UUID}" \
-            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"username\": \"${{ github.actor }}\", \"password\": \"${GHCR_TOKEN}\"}"
-
-          echo "Registry credentials configured"
-
       - name: Push Environment Variables
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
