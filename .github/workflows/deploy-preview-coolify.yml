@@ -101,6 +101,11 @@ jobs:
 
           if [ -n "$EXISTING" ]; then
             echo "Reusing existing Coolify app: $EXISTING"
+            curl -s -X PATCH \
+              "https://coolify.yral.com/api/v1/applications/${EXISTING}" \
+              -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"custom_docker_run_options\": \"\", \"pre_deployment_command\": \"\", \"post_deployment_command\": \"\"}"
             echo "app_uuid=${EXISTING}" >> $GITHUB_OUTPUT
           else
             echo "Creating new Coolify app: $APP_NAME"
@@ -119,7 +124,10 @@ jobs:
                 \"docker_registry_image_tag\": \"${IMAGE_TAG}\",
                 \"domains\": \"https://${PREVIEW_DOMAIN}\",
                 \"ports_exposes\": \"3000\",
-                \"is_static\": false
+                \"is_static\": false,
+                \"custom_docker_run_options\": \"\",
+                \"pre_deployment_command\": \"\",
+                \"post_deployment_command\": \"\"
               }")
 
             echo "Create response: $RESPONSE"
