@@ -197,7 +197,7 @@ jobs:
             --arg google_redirect_url "${PREVIEW_URL%/}/auth/google/callback" \
             '{
               "data": [
-                {"key": "PROVAB_HEADERS", "value": $provab_headers, "is_literal": true},
+                {"key": "PROVAB_HEADERS", "value": $provab_headers, "is_multiline": true},
                 {"key": "NOW_PAYMENTS_USDC_ETHEREUM_API_KEY", "value": $now_payments_usdc_ethereum_api_key, "is_literal": true},
                 {"key": "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY", "value": $estate_dao_sns, "is_multiline": true},
                 {"key": "BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE", "value": $basic_auth_password, "is_literal": true},
