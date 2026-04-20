@@ -285,7 +285,7 @@ jobs:
               curl -s \
                 "https://coolify.yral.com/api/v1/deployments/${DEPLOY_UUID}" \
                 -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-                | jq -r '.logs // .description // .'
+                | jq -r '.logs[]? | "\(.timestamp) [\(.type)] \(.output)"'
               exit 1
             fi
 
