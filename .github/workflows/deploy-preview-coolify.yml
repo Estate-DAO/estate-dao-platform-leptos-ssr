@@ -292,7 +292,8 @@ jobs:
               echo "Deployment failed — fetching logs:"
               curl -s \
                 "https://coolify.yral.com/api/v1/deployments/${DEPLOY_UUID}" \
-                -H "Authorization: Bearer ${COOLIFY_TOKEN}"
+                -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+                | jq -r '.logs | fromjson | .[] | select(.hidden == false) | "\(.timestamp) [\(.type)] \(.output)"'
               exit 1
             fi
 
