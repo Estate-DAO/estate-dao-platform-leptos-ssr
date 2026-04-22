@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/${GH_REPO_NAME}:${IMAGE_TAG:-latest}
+    image: ${GH_REPO_NAME}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       PROVAB_HEADERS: ${PROVAB_HEADERS}
