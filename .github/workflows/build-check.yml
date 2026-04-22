@@ -11,7 +11,7 @@ on:
         description: "Base URL of the app (e.g. staging or PR preview)"
         required: false
         type: string
-        default: "https://estatefe.fly.dev/"
+        default: "https://estatedao.prakash.yral.com/"
 
 env:
   ACTIONS_STEP_DEBUG: true
@@ -110,6 +110,9 @@ jobs:
       #       exit 1
       #     fi
       
+      - name: Decompress GeoIP database for Docker image
+        run: gzip -dk ip_db.mmdb.gz
+
       - run: touch .empty
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
@@ -123,4 +126,4 @@ jobs:
             target/release/hash.txt
             city.json
             city.parquet
-            ip_db.mmdb.gz
+            ip_db.mmdb

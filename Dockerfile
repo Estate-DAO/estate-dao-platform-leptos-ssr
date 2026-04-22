@@ -1,16 +1,11 @@
+FROM debian:bookworm-slim AS runner
 
-
-# FROM debian:bullseye-slim as runner
-# FROM scratch
-
-FROM ubuntu:24.04 as runner
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    curl \
-    dnsutils \
-    && rm -rf /var/lib/apt/lists/*
 
 COPY target/release/estate-fe .
 RUN chmod +x ./estate-fe
@@ -18,8 +13,8 @@ COPY target/release/hash.txt .
 COPY target/site ./site
 COPY city.json ./city.json
 COPY city.parquet ./city.parquet
-COPY ip_db.mmdb.gz ./ip_db.mmdb.gz
-RUN gzip -df ./ip_db.mmdb.gz
+# ip_db.mmdb is pre-decompressed by CI before docker build
+COPY ip_db.mmdb ./ip_db.mmdb
 
 ENV LEPTOS_ENV="production"
 ENV RUST_LOG="debug,hyper=info,tower=info"
@@ -30,49 +25,3 @@ ENV LEPTOS_HASH_FILES="true"
 EXPOSE 3000
 
 CMD ["./estate-fe"]
-
-# # Get started with a build env with Rust nightly
-# FROM rustlang/rust:nightly-bullseye-slim as builder
-
-# # Install cargo-binstall, which makes it easier to install other
-# # cargo extensions like cargo-leptos
-# RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-# RUN tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-# RUN cp cargo-binstall /usr/local/cargo/bin
-
-# # Install cargo-leptos
-# RUN cargo binstall cargo-leptos -y
-
-# # Add the WASM target
-# RUN rustup target add wasm32-unknown-unknown
-
-# # Make an /app dir, which everything will eventually live in
-# RUN mkdir -p /app
-# WORKDIR /app
-# COPY . .
-
-# # Build the app
-# RUN cargo leptos build --release -vv
-
-# FROM debian:bullseye-slim as runner
-
-# # -------------- NB: update binary name to match app name in Cargo.toml ------------------
-# # Copy the server binary to the /app directory
-# COPY --from=builder /app/target/release/fly-io-ssr-test-deploy /app/
-
-# # /target/site contains our JS/WASM/CSS, etc.
-# COPY --from=builder /app/target/site /app/site
-
-# # Copy Cargo.toml if it’s needed at runtime
-# COPY --from=builder /app/Cargo.toml /app/
-# WORKDIR /app
-
-# # Set any required env variables
-# ENV RUST_LOG="info"
-# ENV LEPTOS_SITE_ADDR="0.0.0.0:8080"
-# ENV LEPTOS_SITE_ROOT="site"
-# EXPOSE 8080
-
-# # -------------- NB: update binary name to match app name in Cargo.toml ------------------
-# # Run the server
-# CMD ["/app/fly-io-ssr-test-deploy"]

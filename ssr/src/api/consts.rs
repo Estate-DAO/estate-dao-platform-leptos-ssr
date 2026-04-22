@@ -268,7 +268,7 @@ pub fn get_price_amount_based_on_env(price: u32) -> u32 {
 pub struct EnvVarConfig {
     #[serde(default = "provab_base_url_default")]
     pub provab_base_url: String,
-    provab_headers: HashMap<String, String>,
+    // provab_headers: HashMap<String, String>,
     pub liteapi_key: String,
     pub liteapi_prebook_base_url: String,
     pub booking_api_token: String,
@@ -309,9 +309,9 @@ impl EnvVarConfig {
 
     pub fn try_from_env() -> Self {
         // log_other_consts();
-        let provab_headers = env_or_panic("PROVAB_HEADERS");
+        // let provab_headers = env_or_panic("PROVAB_HEADERS");
 
-        let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
+        // let pv_hashmap: HashMap<String, String> = parse_provab_headers(&provab_headers);
 
         // Get PROVAB_BASE_URL from environment or use the default
         let provab_base_url = match std::env::var("PROVAB_BASE_URL") {
@@ -334,7 +334,7 @@ impl EnvVarConfig {
             booking_use_mock == "1" || booking_use_mock.eq_ignore_ascii_case("true");
 
         let value = Self {
-            provab_headers: pv_hashmap,
+            // provab_headers: pv_hashmap,
             provab_base_url,
             liteapi_key: env_or_panic("LITEAPI_KEY"),
             liteapi_prebook_base_url: env_or_panic("LITEAPI_PREBOOK_BASE_URL"),
@@ -379,7 +379,7 @@ impl EnvVarConfig {
     }
 
     pub fn get_headers(&self) -> HeaderMap {
-        transform_headers(&self.provab_headers)
+        transform_headers(&HashMap::default())
     }
 
     /// Create a test configuration with default values for testing
@@ -392,8 +392,8 @@ impl EnvVarConfig {
         provab_headers.insert("Authorization".to_string(), "Bearer test-token".to_string());
 
         Self {
-            provab_base_url: "https://test-api.example.com".to_string(),
-            provab_headers,
+            // provab_base_url: "https://test-api.example.com".to_string(),
+            // provab_headers,
             liteapi_key: "test-liteapi-key".to_string(),
             liteapi_prebook_base_url: "https://test-liteapi.example.com".to_string(),
             booking_api_token: "test-booking-token".to_string(),

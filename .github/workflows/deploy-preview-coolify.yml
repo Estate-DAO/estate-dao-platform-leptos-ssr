@@ -1,0 +1,336 @@
+name: Deploy Preview (Coolify)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  contents: read
+  packages: write
+  deployments: write
+  pull-requests: write
+
+jobs:
+  build_check:
+    if: ${{ github.event.action != 'closed' }}
+    uses: ./.github/workflows/build-check.yml
+    with:
+      publish-artifact: true
+      app-url: https://pr-${{ github.event.number }}-estate.preview.yral.com/
+    secrets: inherit
+
+  preview:
+    if: ${{ github.event.pull_request.state == 'open' }}
+    needs: build_check
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pr-${{ github.event.number }}-estate-coolify
+      cancel-in-progress: true
+    environment:
+      name: pr-${{ github.event.number }}
+      url: ${{ steps.meta.outputs.preview_url }}
+    steps:
+      - name: Compute Preview Metadata
+        id: meta
+        run: |
+          PR_NUMBER=${{ github.event.number }}
+          APP_NAME="pr-${PR_NUMBER}-estate"
+          IMAGE="ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/estate-dao-platform-leptos-ssr"
+          IMAGE_TAG="pr-${PR_NUMBER}-estate"
+          PREVIEW_DOMAIN="pr-${PR_NUMBER}-estate.preview.yral.com"
+          PREVIEW_URL="https://${PREVIEW_DOMAIN}"
+
+          echo "pr_number=${PR_NUMBER}"           >> $GITHUB_OUTPUT
+          echo "app_name=${APP_NAME}"             >> $GITHUB_OUTPUT
+          echo "image=${IMAGE}"                   >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}"           >> $GITHUB_OUTPUT
+          echo "preview_domain=${PREVIEW_DOMAIN}" >> $GITHUB_OUTPUT
+          echo "preview_url=${PREVIEW_URL}"       >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-debian
+
+      - name: Fix binary permissions
+        run: chmod +x target/release/estate-fe
+
+      - name: Remove .dockerignore
+        run: rm -f .dockerignore
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.image_tag }}
+          cache-from: type=registry,ref=${{ steps.meta.outputs.image }}:cache-${{ steps.meta.outputs.image_tag }}
+          cache-to: type=registry,ref=${{ steps.meta.outputs.image }}:cache-${{ steps.meta.outputs.image_tag }},mode=max
+
+      - name: Create or Get Coolify Application
+        id: coolify_app
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_PROJECT_UUID: ${{ secrets.COOLIFY_PROJECT_UUID }}
+          COOLIFY_SERVER_UUID: ${{ secrets.COOLIFY_SERVER_UUID }}
+          COOLIFY_ENV_UUID: ${{ secrets.COOLIFY_ENV_UUID }}
+        run: |
+          APP_NAME="${{ steps.meta.outputs.app_name }}"
+          IMAGE="${{ steps.meta.outputs.image }}"
+          IMAGE_TAG="${{ steps.meta.outputs.image_tag }}"
+          PREVIEW_DOMAIN="${{ steps.meta.outputs.preview_domain }}"
+
+          EXISTING=$(curl -s \
+            "https://coolify.yral.com/api/v1/applications" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            | jq -r --arg name "$APP_NAME" '.[] | select(.name == $name) | .uuid // empty')
+
+          if [ -n "$EXISTING" ]; then
+            echo "Reusing existing Coolify app: $EXISTING"
+            curl -s -X PATCH \
+              "https://coolify.yral.com/api/v1/applications/${EXISTING}" \
+              -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"custom_docker_run_options\": \"\", \"pre_deployment_command\": \"\", \"post_deployment_command\": \"\"}"
+            echo "app_uuid=${EXISTING}" >> $GITHUB_OUTPUT
+          else
+            echo "Creating new Coolify app: $APP_NAME"
+
+            RESPONSE=$(curl -s -X POST \
+              "https://coolify.yral.com/api/v1/applications/dockerimage" \
+              -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"name\": \"${APP_NAME}\",
+                \"project_uuid\": \"${COOLIFY_PROJECT_UUID}\",
+                \"server_uuid\": \"${COOLIFY_SERVER_UUID}\",
+                \"environment_name\": \"preview\",
+                \"environment_uuid\": \"${COOLIFY_ENV_UUID}\",
+                \"docker_registry_image_name\": \"${IMAGE}\",
+                \"docker_registry_image_tag\": \"${IMAGE_TAG}\",
+                \"domains\": \"https://${PREVIEW_DOMAIN}\",
+                \"ports_exposes\": \"3000\",
+                \"is_static\": false,
+                \"custom_docker_run_options\": \"\",
+                \"pre_deployment_command\": \"\",
+                \"post_deployment_command\": \"\"
+              }")
+
+            echo "Create response: $RESPONSE"
+
+            APP_UUID=$(echo "$RESPONSE" | jq -r '.uuid // empty')
+            if [ -z "$APP_UUID" ]; then
+              echo "Failed to create Coolify application"
+              echo "$RESPONSE"
+              exit 1
+            fi
+
+            echo "app_uuid=${APP_UUID}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push Environment Variables
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{ secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY }}
+          ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{ secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY }}
+          BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE: ${{ secrets.BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE }}
+          BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE: ${{ secrets.BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE }}
+          COOKIE_KEY: ${{ secrets.COOKIE_KEY }}
+          EMAIL_ACCESS_TOKEN: ${{ secrets.EMAIL_ACCESS_TOKEN }}
+          EMAIL_CLIENT_ID: ${{ secrets.EMAIL_CLIENT_ID }}
+          EMAIL_CLIENT_SECRET: ${{ secrets.EMAIL_CLIENT_SECRET }}
+          EMAIL_REFRESH_TOKEN: ${{ secrets.EMAIL_REFRESH_TOKEN }}
+          EMAIL_TOKEN_EXPIRY: ${{ secrets.EMAIL_TOKEN_EXPIRY }}
+          LITEAPI_KEY: ${{ secrets.LITEAPI_KEY_STAGING_TEST }}
+          LITEAPI_PREBOOK_BASE_URL: ${{ secrets.LITEAPI_PREBOOK_BASE_URL }}
+          NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
+          YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}
+          YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          APP_UUID="${{ steps.coolify_app.outputs.app_uuid }}"
+          PREVIEW_URL="${{ steps.meta.outputs.preview_url }}"
+
+          ENV_JSON=$(jq -n \
+            --arg now_payments_usdc_ethereum_api_key "$NOW_PAYMENTS_USDC_ETHEREUM_API_KEY" \
+            --arg estate_dao_sns "$ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY" \
+            --arg basic_auth_password "$BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE" \
+            --arg basic_auth_username "$BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE" \
+            --arg cookie_key "$COOKIE_KEY" \
+            --arg email_access_token "$EMAIL_ACCESS_TOKEN" \
+            --arg email_client_id "$EMAIL_CLIENT_ID" \
+            --arg email_client_secret "$EMAIL_CLIENT_SECRET" \
+            --arg email_refresh_token "$EMAIL_REFRESH_TOKEN" \
+            --arg email_token_expiry "$EMAIL_TOKEN_EXPIRY" \
+            --arg liteapi_key "$LITEAPI_KEY" \
+            --arg liteapi_prebook_base_url "$LITEAPI_PREBOOK_BASE_URL" \
+            --arg nowpayments_ipn_secret "$NOWPAYMENTS_IPN_SECRET" \
+            --arg stripe_secret_key "$STRIPE_SECRET_KEY" \
+            --arg yral_auth_client_id "$YRAL_AUTH_CLIENT_ID" \
+            --arg yral_auth_client_secret "$YRAL_AUTH_CLIENT_SECRET" \
+            --arg google_client_id "$GOOGLE_CLIENT_ID" \
+            --arg google_client_secret "$GOOGLE_CLIENT_SECRET" \
+            --arg ga4_api_secret "$GA4_API_SECRET" \
+            --arg sentry_dsn "$SENTRY_DSN" \
+            --arg app_url "${PREVIEW_URL}" \
+            --arg yral_auth_redirect_url "${PREVIEW_URL%/}/auth/callback" \
+            --arg google_redirect_url "${PREVIEW_URL%/}/auth/google/callback" \
+            '{
+              "data": [
+                {"key": "NOW_PAYMENTS_USDC_ETHEREUM_API_KEY", "value": $now_payments_usdc_ethereum_api_key, "is_literal": true},
+                {"key": "ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY", "value": $estate_dao_sns, "is_multiline": true},
+                {"key": "BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE", "value": $basic_auth_password, "is_literal": true},
+                {"key": "BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE", "value": $basic_auth_username, "is_literal": true},
+                {"key": "COOKIE_KEY", "value": $cookie_key, "is_literal": true},
+                {"key": "EMAIL_ACCESS_TOKEN", "value": $email_access_token, "is_literal": true},
+                {"key": "EMAIL_CLIENT_ID", "value": $email_client_id, "is_literal": true},
+                {"key": "EMAIL_CLIENT_SECRET", "value": $email_client_secret, "is_literal": true},
+                {"key": "EMAIL_REFRESH_TOKEN", "value": $email_refresh_token, "is_literal": true},
+                {"key": "EMAIL_TOKEN_EXPIRY", "value": $email_token_expiry, "is_literal": true},
+                {"key": "LITEAPI_KEY", "value": $liteapi_key, "is_literal": true},
+                {"key": "LITEAPI_PREBOOK_BASE_URL", "value": $liteapi_prebook_base_url, "is_literal": true},
+                {"key": "NOWPAYMENTS_IPN_SECRET", "value": $nowpayments_ipn_secret, "is_literal": true},
+                {"key": "STRIPE_SECRET_KEY", "value": $stripe_secret_key, "is_literal": true},
+                {"key": "YRAL_AUTH_CLIENT_ID", "value": $yral_auth_client_id, "is_literal": true},
+                {"key": "YRAL_AUTH_CLIENT_SECRET", "value": $yral_auth_client_secret, "is_literal": true},
+                {"key": "GOOGLE_CLIENT_ID", "value": $google_client_id, "is_literal": true},
+                {"key": "GOOGLE_CLIENT_SECRET", "value": $google_client_secret, "is_literal": true},
+                {"key": "GA4_API_SECRET", "value": $ga4_api_secret, "is_literal": true},
+                {"key": "SENTRY_DSN", "value": $sentry_dsn, "is_literal": true},
+                {"key": "APP_URL", "value": $app_url, "is_literal": true},
+                {"key": "YRAL_AUTH_REDIRECT_URL", "value": $yral_auth_redirect_url, "is_literal": true},
+                {"key": "GOOGLE_REDIRECT_URL", "value": $google_redirect_url, "is_literal": true}
+              ]
+            }')
+
+          HTTP_STATUS=$(curl -s -o /tmp/curl_response.txt -w "%{http_code}" -X PATCH \
+            "https://coolify.yral.com/api/v1/applications/${APP_UUID}/envs/bulk" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "${ENV_JSON}")
+
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "Failed to push env vars (HTTP $HTTP_STATUS)"
+            cat /tmp/curl_response.txt
+            exit 1
+          fi
+
+          echo "Env vars pushed successfully"
+
+      - name: Update Image Tag and Deploy
+        id: deploy
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          APP_UUID="${{ steps.coolify_app.outputs.app_uuid }}"
+          IMAGE_TAG="${{ steps.meta.outputs.image_tag }}"
+
+          curl -s -X PATCH \
+            "https://coolify.yral.com/api/v1/applications/${APP_UUID}" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"docker_registry_image_tag\": \"${IMAGE_TAG}\"}"
+
+          RESPONSE=$(curl -s -X POST \
+            "https://coolify.yral.com/api/v1/applications/${APP_UUID}/start" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"uuid\": \"${APP_UUID}\", \"force\": true}")
+
+          echo "Deploy response: $RESPONSE"
+
+          DEPLOY_UUID=$(echo "$RESPONSE" | jq -r '.deployment_uuid // empty')
+          if [ -z "$DEPLOY_UUID" ]; then
+            echo "Failed to trigger deployment"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          echo "deploy_uuid=${DEPLOY_UUID}" >> $GITHUB_OUTPUT
+
+      - name: Wait for Deployment
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          DEPLOY_UUID="${{ steps.deploy.outputs.deploy_uuid }}"
+          MAX_WAIT=120
+          WAITED=0
+
+          while [ $WAITED -lt $MAX_WAIT ]; do
+            STATUS=$(curl -s \
+              "https://coolify.yral.com/api/v1/deployments/${DEPLOY_UUID}" \
+              -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              | jq -r '.status // empty')
+
+            echo "Status: ${STATUS} (${WAITED}s elapsed)"
+
+            if [ "$STATUS" = "finished" ]; then
+              echo "Deployment succeeded"
+              exit 0
+            elif [ "$STATUS" = "failed" ] || [ "$STATUS" = "error" ]; then
+              echo "Deployment failed — fetching logs:"
+              curl -s \
+                "https://coolify.yral.com/api/v1/deployments/${DEPLOY_UUID}" \
+                -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+                -o /tmp/deploy_response.json
+              jq -r '.logs | fromjson | .[] | select(.hidden == false) | "\(.timestamp) [\(.type)] \(.output)"' /tmp/deploy_response.json || cat /tmp/deploy_response.json
+              exit 1
+            fi
+
+            sleep 10
+            WAITED=$((WAITED + 10))
+          done
+
+          echo "Timed out waiting for deployment"
+          exit 1
+
+  destroy-preview:
+    if: ${{ github.event.action == 'closed' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute app name
+        id: meta
+        run: |
+          echo "app_name=pr-${{ github.event.number }}-estate" >> $GITHUB_OUTPUT
+
+      - name: Find and Delete Coolify Application
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          APP_NAME="${{ steps.meta.outputs.app_name }}"
+
+          APP_UUID=$(curl -s \
+            "https://coolify.yral.com/api/v1/applications" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            | jq -r --arg name "$APP_NAME" '.[] | select(.name == $name) | .uuid // empty')
+
+          if [ -z "$APP_UUID" ]; then
+            echo "No app found for $APP_NAME — skipping"
+            exit 0
+          fi
+
+          echo "Deleting Coolify app $APP_NAME ($APP_UUID)"
+
+          curl -s -X DELETE \
+            "https://coolify.yral.com/api/v1/applications/${APP_UUID}" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}"
+
+          echo "Deleted"

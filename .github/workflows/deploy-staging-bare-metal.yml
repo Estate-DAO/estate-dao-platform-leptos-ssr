@@ -1,0 +1,164 @@
+name: Deploy to bare-metal staging (estatedao)
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'main'
+        type: string
+
+concurrency:
+  group: staging-bare-metal-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  APP_DIR: /home/deploy/estate-dao-platform-leptos-ssr
+  IMAGE_TAG: staging-${{ github.sha }}
+  SERVER_1_IP: 94.130.13.115
+  SERVER_2_IP: 88.99.151.102
+  SERVER_3_IP: 138.201.129.173
+  APP_URL: https://estatedao.prakash.yral.com/
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-check.yml
+    with:
+      publish-artifact: true
+      app-url: "https://estatedao.prakash.yral.com/"
+    secrets: inherit
+
+  deploy:
+    name: Deploy to staging servers
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-debian
+
+      - run: chmod +x target/release/estate-fe
+
+      - name: Remove .dockerignore
+        run: rm -f .dockerignore
+
+      - name: Set lowercase image base
+        run: echo "IMAGE_BASE=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/estate-dao-platform-leptos-ssr" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}:staging-${{ github.sha }}
+            ${{ env.IMAGE_BASE }}:staging-latest
+
+      - name: Deploy HA Cluster
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROVAB_HEADERS: ${{ secrets.PROVAB_STAGING_ENVIRONMENT_REQUEST_HEADER_CONTENTS }}
+          NOW_PAYMENTS_USDC_ETHEREUM_API_KEY: ${{ secrets.NOW_PAYMENTS_USDC_ETHEREUM_API_KEY }}
+          ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY: ${{ secrets.ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY }}
+          BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE: ${{ secrets.BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE }}
+          BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE: ${{ secrets.BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE }}
+          COOKIE_KEY: ${{ secrets.COOKIE_KEY }}
+          EMAIL_ACCESS_TOKEN: ${{ secrets.EMAIL_ACCESS_TOKEN }}
+          EMAIL_CLIENT_ID: ${{ secrets.EMAIL_CLIENT_ID }}
+          EMAIL_CLIENT_SECRET: ${{ secrets.EMAIL_CLIENT_SECRET }}
+          EMAIL_REFRESH_TOKEN: ${{ secrets.EMAIL_REFRESH_TOKEN }}
+          EMAIL_TOKEN_EXPIRY: ${{ secrets.EMAIL_TOKEN_EXPIRY }}
+          LITEAPI_KEY: ${{ secrets.LITEAPI_KEY_STAGING_TEST }}
+          LITEAPI_PREBOOK_BASE_URL: ${{ secrets.LITEAPI_PREBOOK_BASE_URL }}
+          NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_STAGING_TEST }}
+          YRAL_AUTH_CLIENT_ID: ${{ secrets.YRAL_AUTH_CLIENT_ID }}
+          YRAL_AUTH_CLIENT_SECRET: ${{ secrets.YRAL_AUTH_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          declare -A SERVERS
+          SERVERS=(
+            ["server_1"]="${SERVER_1_IP}"
+            ["server_2"]="${SERVER_2_IP}"
+            ["server_3"]="${SERVER_3_IP}"
+          )
+
+          for NODE_NAME in "${!SERVERS[@]}"; do
+            NODE_IP="${SERVERS[$NODE_NAME]}"
+            if [[ -z "${NODE_IP}" ]]; then
+              echo "Skipping ${NODE_NAME} (No IP provided)"
+              continue
+            fi
+
+            echo "--> Deploying to ${NODE_NAME} at ${NODE_IP}"
+            ssh-keyscan -H "${NODE_IP}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+            ssh "deploy@${NODE_IP}" "mkdir -p ${APP_DIR}"
+            scp docker-compose.yml "deploy@${NODE_IP}:${APP_DIR}/"
+
+            ssh "deploy@${NODE_IP}" \
+              "export IMAGE_REF='${IMAGE_BASE}:${IMAGE_TAG}'; \
+               export GH_REPO_NAME='${IMAGE_BASE}'; \
+               export IMAGE_TAG='${IMAGE_TAG}'; \
+               export APP_URL='${APP_URL}'; \
+               export PROVAB_HEADERS='${PROVAB_HEADERS}'; \
+               export NOW_PAYMENTS_USDC_ETHEREUM_API_KEY='${NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}'; \
+               export ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY='${ESTATE_DAO_SNS_PROPOSAL_SUBMISSION_IDENTITY_PRIVATE_KEY}'; \
+               export BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE='${BASIC_AUTH_PASSWORD_FOR_LEPTOS_ROUTE}'; \
+               export BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE='${BASIC_AUTH_USERNAME_FOR_LEPTOS_ROUTE}'; \
+               export COOKIE_KEY='${COOKIE_KEY}'; \
+               export EMAIL_ACCESS_TOKEN='${EMAIL_ACCESS_TOKEN}'; \
+               export EMAIL_CLIENT_ID='${EMAIL_CLIENT_ID}'; \
+               export EMAIL_CLIENT_SECRET='${EMAIL_CLIENT_SECRET}'; \
+               export EMAIL_REFRESH_TOKEN='${EMAIL_REFRESH_TOKEN}'; \
+               export EMAIL_TOKEN_EXPIRY='${EMAIL_TOKEN_EXPIRY}'; \
+               export LITEAPI_KEY='${LITEAPI_KEY}'; \
+               export LITEAPI_PREBOOK_BASE_URL='${LITEAPI_PREBOOK_BASE_URL}'; \
+               export NOWPAYMENTS_IPN_SECRET='${NOWPAYMENTS_IPN_SECRET}'; \
+               export STRIPE_SECRET_KEY='${STRIPE_SECRET_KEY}'; \
+               export YRAL_AUTH_CLIENT_ID='${YRAL_AUTH_CLIENT_ID}'; \
+               export YRAL_AUTH_CLIENT_SECRET='${YRAL_AUTH_CLIENT_SECRET}'; \
+               export YRAL_AUTH_REDIRECT_URL='${APP_URL%/}/auth/callback'; \
+               export GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'; \
+               export GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'; \
+               export GA4_API_SECRET='${GA4_API_SECRET}'; \
+               export SENTRY_DSN='${SENTRY_DSN}'; \
+               cd ${APP_DIR} && \
+               echo '${GITHUB_TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin && \
+               docker compose pull && \
+               docker compose up -d --remove-orphans"
+          done
