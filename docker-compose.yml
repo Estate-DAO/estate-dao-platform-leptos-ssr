@@ -1,7 +1,6 @@
 services:
   app:
     image: ghcr.io/${GH_REPO_NAME}:${IMAGE_TAG:-latest}
-    container_name: estate_app
     restart: unless-stopped
     environment:
       PROVAB_HEADERS: ${PROVAB_HEADERS}
@@ -32,7 +31,7 @@ services:
       LEPTOS_SITE_ROOT: site
       LEPTOS_HASH_FILES: "true"
     ports:
-      - "3002:3000"
+      - "${HOST_PORT:-3002}:3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 10s

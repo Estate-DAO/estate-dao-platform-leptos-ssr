@@ -1,6 +1,9 @@
 name: Deploy to bare-metal prod (nofeebooking)
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       branch:
@@ -18,18 +21,20 @@ permissions:
   packages: write
 
 env:
-  APP_DIR: /home/deploy/estate-dao-platform-leptos-ssr
+  APP_DIR: /home/deploy/estate-dao-platform-leptos-ssr-prod
   IMAGE_TAG: ${{ github.sha }}
+  HOST_PORT: 3003
   SERVER_1_IP: 94.130.13.115
   SERVER_2_IP: 88.99.151.102
   SERVER_3_IP: 138.201.129.173
-  APP_URL: https://nofeebooking.prakash.yral.com/
+  APP_URL: https://nofeebooking.com/
 
 jobs:
   build:
     uses: ./.github/workflows/build-check-prod.yml
     with:
       publish-artifact: true
+      app-url: "https://nofeebooking.com/"
     secrets: inherit
 
   deploy:
@@ -39,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Download build
         uses: actions/download-artifact@v4
@@ -100,6 +105,7 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -129,6 +135,7 @@ jobs:
               "export IMAGE_REF='${IMAGE_BASE}:${IMAGE_TAG}'; \
                export GH_REPO_NAME='${IMAGE_BASE}'; \
                export IMAGE_TAG='${IMAGE_TAG}'; \
+               export HOST_PORT='${HOST_PORT}'; \
                export APP_URL='${APP_URL}'; \
                export PROVAB_HEADERS='${PROVAB_HEADERS}'; \
                export NOW_PAYMENTS_USDC_ETHEREUM_API_KEY='${NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}'; \
@@ -151,6 +158,7 @@ jobs:
                export GOOGLE_CLIENT_ID='${GOOGLE_CLIENT_ID}'; \
                export GOOGLE_CLIENT_SECRET='${GOOGLE_CLIENT_SECRET}'; \
                export GA4_API_SECRET='${GA4_API_SECRET}'; \
+               export SENTRY_DSN='${SENTRY_DSN}'; \
                cd ${APP_DIR} && \
                echo '${GITHUB_TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin && \
                docker compose pull && \
