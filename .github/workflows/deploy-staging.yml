@@ -1,9 +1,6 @@
-name: Deploy to Fly staging
+name: Legacy Fly staging deploy
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - staging
 
 jobs:
   build_check:

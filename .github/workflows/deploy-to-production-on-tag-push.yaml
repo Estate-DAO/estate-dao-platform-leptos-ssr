@@ -1,8 +1,5 @@
-name: Deploy to Fly prod on tag push
+name: Legacy Fly prod deploy
 on:  
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       branch:
