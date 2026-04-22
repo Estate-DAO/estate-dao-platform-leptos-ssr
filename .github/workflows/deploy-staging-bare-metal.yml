@@ -3,7 +3,7 @@ name: Deploy to bare-metal staging (estatedao)
 on:
   push:
     branches:
-      - feat/bare-metal-migration
+      - staging
   workflow_dispatch:
     inputs:
       branch:
