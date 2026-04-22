@@ -23,6 +23,7 @@ permissions:
 env:
   APP_DIR: /home/deploy/estate-dao-platform-leptos-ssr
   IMAGE_TAG: staging-${{ github.sha }}
+  HOST_PORT: 3002
   SERVER_1_IP: 94.130.13.115
   SERVER_2_IP: 88.99.151.102
   SERVER_3_IP: 138.201.129.173
@@ -134,6 +135,7 @@ jobs:
               "export IMAGE_REF='${IMAGE_BASE}:${IMAGE_TAG}'; \
                export GH_REPO_NAME='${IMAGE_BASE}'; \
                export IMAGE_TAG='${IMAGE_TAG}'; \
+               export HOST_PORT='${HOST_PORT}'; \
                export APP_URL='${APP_URL}'; \
                export PROVAB_HEADERS='${PROVAB_HEADERS}'; \
                export NOW_PAYMENTS_USDC_ETHEREUM_API_KEY='${NOW_PAYMENTS_USDC_ETHEREUM_API_KEY}'; \
