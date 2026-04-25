@@ -1146,7 +1146,10 @@ pub fn HotelListPage() -> impl IntoView {
                                 "mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-2 lg:gap-0"
                             }
                         }>
-                            <div class="text-gray-700">
+                            <div class="text-gray-700 flex items-center">
+                                <Show when=move || hotel_search_resource.loading().get()>
+                                    <span class="inline-block mr-2 animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full"></span>
+                                </Show>
                                 {move || {
                                     let search_ctx = search_ctx3.clone();
                                     let pagination_state: UIPaginationState = expect_context();
@@ -1771,7 +1774,10 @@ pub fn HotelListPage() -> impl IntoView {
 
                     // Results count and sort by component for mobile
                     <div class="mb-4 flex flex-col gap-2">
-                        <div class="text-gray-700 text-md">
+                        <div class="text-gray-700 text-md flex items-center">
+                            <Show when=move || hotel_search_resource.loading().get()>
+                                <span class="inline-block mr-2 animate-spin w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full"></span>
+                            </Show>
                             {move || {
                                 let search_ctx = search_ctx4.clone();
                                 let pagination_state: UIPaginationState = expect_context();
@@ -2370,7 +2376,7 @@ pub fn HotelCardTile(
                     on_navigate();
                 }
                 class=format!(
-                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm",
+                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm cursor-pointer",
                     class
                 )
             >
@@ -2477,7 +2483,7 @@ pub fn HotelCardTile(
                                             format!("Explore more around {}", display_name)
                                         }
                                     </button>
-                                    <button class="text-[16px] font-semibold leading-none text-slate-800 underline decoration-2 underline-offset-2">
+                                    <button class="text-[16px] font-semibold leading-none text-slate-800 underline decoration-2 underline-offset-2 cursor-pointer">
                                         "View details"
                                     </button>
                                 </div>
@@ -2496,7 +2502,7 @@ pub fn HotelCardTile(
                     ev.stop_propagation();
                     on_navigate();
                 }
-                class=format!("{} {}", card_layout_class, class)>
+                class=format!("{} {} cursor-pointer", card_layout_class, class)>
                 // IMAGE: smaller dimensions for more compact design
                 <div clone:hotel_code class=image_layout_class>
                     <img class=image_class src=img alt=hotel_name.clone() />
