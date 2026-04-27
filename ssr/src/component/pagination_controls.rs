@@ -1,30 +1,37 @@
 use crate::view_state_layer::ui_search_state::UIPaginationState;
 use leptos::*;
+use leptos_use::use_intersection_observer;
 
 #[component]
 pub fn PaginationControls() -> impl IntoView {
-    let handle_next_page = move |_| {
-        UIPaginationState::go_to_next_page();
-    };
+    let observer_target = create_node_ref::<html::Div>();
+
+    use_intersection_observer(observer_target, move |entries, _| {
+        if let Some(entry) = entries.first() {
+            if entry.is_intersecting() && !UIPaginationState::is_next_button_disabled() {
+                UIPaginationState::go_to_next_page();
+            }
+        }
+    });
 
     view! {
-        <Show
-            when=move || !UIPaginationState::is_next_button_disabled()
-            fallback=move || view! { <></> }
-        >
-            <div class="flex items-center justify-center space-x-4 py-3">
-                <button
-                    on:click=handle_next_page
-                    class="flex items-center px-4 py-2 bg-white-600 rounded-lg font-medium
-                           transition-colors duration-200"
-                >
-                    "Load More"
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
-            </div>
-        </Show>
+        <div class="flex flex-col items-center justify-center space-y-4 py-6">
+            <Show
+                when=move || !UIPaginationState::is_next_button_disabled()
+                fallback=move || view! {
+                    <div class="text-gray-500 text-sm font-medium py-4">
+                        "That's all the properties we have for now ✨"
+                    </div>
+                }
+            >
+                <div class="flex flex-col items-center">
+                    <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <span class="text-sm text-gray-500">"Loading more properties..."</span>
+                    // Invisible target for intersection observer
+                    <div node_ref=observer_target class="h-10 w-full pointer-events-none absolute -bottom-40"></div>
+                </div>
+            </Show>
+        </div>
     }
 }
 
