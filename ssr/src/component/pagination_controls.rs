@@ -11,9 +11,7 @@ use leptos_use::{use_intersection_observer_with_options, UseIntersectionObserver
 ///
 /// When `use_button=true` (map view), falls back to a manual "Load More" button.
 #[component]
-pub fn PaginationControls(
-    #[prop(optional, default = false)] use_button: bool,
-) -> impl IntoView {
+pub fn PaginationControls(#[prop(optional, default = false)] use_button: bool) -> impl IntoView {
     let pagination_state: UIPaginationState = expect_context();
 
     // Guard: true while a page fetch has been triggered but new meta hasn't arrived yet.
