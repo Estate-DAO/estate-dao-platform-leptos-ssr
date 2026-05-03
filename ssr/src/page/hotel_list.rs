@@ -1402,9 +1402,9 @@ pub fn HotelListPage() -> impl IntoView {
                                                                 }
                                                             }).collect_view()
                                                         }
-                                                        // Load More button inside the scrollable list
+                                                        // Load More button in map view (button mode — avoids rootMargin quirks in nested scroll)
                                                         <div class="pt-2 pb-2">
-                                                            <PaginationControls />
+                                                            <PaginationControls use_button=true />
                                                         </div>
                                                     </div>
                                                     // Right side: Map with floating card
