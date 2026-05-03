@@ -2375,7 +2375,7 @@ pub fn HotelCardTile(
                     on_navigate();
                 }
                 class=format!(
-                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm",
+                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm cursor-pointer",
                     class
                 )
             >
@@ -2501,7 +2501,7 @@ pub fn HotelCardTile(
                     ev.stop_propagation();
                     on_navigate();
                 }
-                class=format!("{} {}", card_layout_class, class)>
+                class=format!("{} {} cursor-pointer", card_layout_class, class)>
                 // IMAGE: smaller dimensions for more compact design
                 <div clone:hotel_code class=image_layout_class>
                     <img class=image_class src=img alt=hotel_name.clone() />
