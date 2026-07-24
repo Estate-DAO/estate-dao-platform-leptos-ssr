@@ -255,11 +255,6 @@ pub fn DateTimeRangePickerCustom(
     let (initial_date, set_initial_date) = create_signal((2024_u32, 1_u32));
     let calendar_ref = create_node_ref::<leptos::html::Div>();
 
-    let next_month_date = Signal::derive(move || {
-        let (current_year, current_month) = initial_date.get();
-        next_date(current_year, current_month)
-    });
-
     let date_range_display = create_memo(move |_prev| {
         let range = selected_range.get();
         range.display_string()
@@ -474,7 +469,7 @@ pub fn DateTimeRangePickerCustom(
                     on:click=|e| e.stop_propagation()
                 >
                     <div class="bg-white rounded-lg shadow-lg border border-gray-200 w-[600px]">
-                        {date_picker_inner_content(initial_date, next_month_date, selected_range, calendar_ref)}
+                        {date_picker_inner_content(initial_date, selected_range, calendar_ref)}
                     </div>
                 </div>
             </Show>
@@ -524,22 +519,42 @@ fn date_picker_mobile_calendar_content(
 
 fn date_picker_inner_content(
     initial_date: ReadSignal<(u32, u32)>,
-    next_month_date: Signal<(u32, u32)>,
     selected_range: RwSignal<SelectedDateRange>,
     calendar_ref: NodeRef<html::Div>,
 ) -> impl IntoView {
+    // <!-- Build 12 months (this month -> next year) once, captured from the current month. -->
+    // <!-- Static list + native scroll: no reliance on scroll events to advance months, -->
+    // <!-- which previously capped the desktop picker at the current + next month only. -->
+    let (start_year, start_month) = initial_date.get_untracked();
+    let mut months: Vec<(u32, u32)> = Vec::with_capacity(12);
+    let mut year = start_year;
+    let mut month = start_month;
+    for _ in 0..12 {
+        months.push((year, month));
+        month += 1;
+        if month > 12 {
+            month = 1;
+            year += 1;
+        }
+    }
+
     view! {
         <div
             _ref=calendar_ref
-            class="flex flex-col md:flex-row gap-8 p-4 overflow-y-auto"
+            class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 overflow-y-auto"
             style="max-height: 70vh; -webkit-overflow-scrolling: touch;"
         >
-            <div class="flex-1">
-                <DateCells year_month=initial_date.into() selected_range=selected_range />
-            </div>
-            <div class="flex-1">
-                <DateCells year_month=next_month_date.into() selected_range=selected_range />
-            </div>
+            {months
+                .into_iter()
+                .map(|ym| view! {
+                    <div class="flex-1">
+                        <DateCells
+                            year_month=Signal::derive(move || ym)
+                            selected_range=selected_range
+                        />
+                    </div>
+                })
+                .collect::<Vec<_>>()}
         </div>
 
         <div class="bg-white px-4 py-3 flex justify-center border-t">
