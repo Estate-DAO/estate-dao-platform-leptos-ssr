@@ -1,0 +1,15 @@
+{
+	"servers": {
+		"io.github.ChromeDevTools/chrome-devtools-mcp": {
+			"command": "/Users/prk-jr/.nvm/versions/node/v24.12.0/bin/node",
+			"args": [
+				"/Users/prk-jr/.nvm/versions/node/v24.12.0/bin/npx",
+				"-y",
+				"chrome-devtools-mcp@latest"
+			],
+			"env": {},
+			"type": "stdio"
+		}
+	},
+	"inputs": []
+}

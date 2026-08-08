@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use chrono::Datelike;
 use leptos::*;
-use leptos_router::{use_navigate, use_query_map};
+use leptos_router::{use_navigate, use_query_map, NavigateOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -165,7 +165,14 @@ where
             } else {
                 format!("{}?{}", current_path, query_string)
             };
-            navigate(&new_url, Default::default());
+            navigate(
+                &new_url,
+                NavigateOptions {
+                    scroll: false,
+                    replace: true,
+                    ..Default::default()
+                },
+            );
         }
     }
 }
@@ -206,7 +213,14 @@ pub fn update_url_with_params(path: &str, params: &HashMap<String, String>) {
         }
     }
 
-    navigate(&new_url, Default::default());
+    navigate(
+        &new_url,
+        NavigateOptions {
+            scroll: false,
+            replace: true,
+            ..Default::default()
+        },
+    );
 }
 
 /// Helper function to build query string from params

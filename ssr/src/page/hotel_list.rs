@@ -946,6 +946,33 @@ pub fn HotelListPage() -> impl IntoView {
         }
     });
 
+    // Stable memo of filtered+sorted hotels. <For> keys on hotel_code so new pages
+    // only append DOM nodes — existing nodes stay in place, no scroll position jump.
+    let sort_options_signal = search_ctx.sort_options;
+    let displayed_hotels = Memo::new(move |_| {
+        search_list_page
+            .search_result
+            .get()
+            .map(|r| {
+                let hotel_results = r.hotel_list();
+                let filters = filters_signal.get();
+                let sort_opts = sort_options_signal.get();
+                filters.apply_filters_and_sort(&hotel_results, &sort_opts)
+            })
+            .unwrap_or_default()
+    });
+
+    // Desktop right-panel scroll ref — scroll to top when sort order changes.
+    let desktop_scroll_ref: NodeRef<leptos::html::Div> = create_node_ref();
+    {
+        create_effect(move |_| {
+            let _ = sort_options_signal.get();
+            if let Some(el) = desktop_scroll_ref.get() {
+                el.set_scroll_top(0);
+            }
+        });
+    }
+
     view! {
         // Fixed header section at top
         // <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
@@ -1124,7 +1151,9 @@ pub fn HotelListPage() -> impl IntoView {
                 </aside>
 
                 // Right content area (desktop)
-                <div class=move || {
+                <div
+                    node_ref=desktop_scroll_ref
+                    class=move || {
                     if show_map.get() {
                         "flex-1 min-w-0 overflow-hidden"
                     } else {
@@ -1214,413 +1243,386 @@ pub fn HotelListPage() -> impl IntoView {
                             </div>
                         </div>
 
-                            <Show
-                                when=move || search_list_page.search_result.get().is_some()
-                                fallback=move || view! { <></> }
-                            >
-
-                                {move || {
-                                    let hotel_results = search_list_page
-                                        .search_result
-                                        .get()
-                                        .unwrap()
-                                        .hotel_list();
-                                    let filters = filters_signal.get();
-                                    let sort_options = search_ctx.sort_options.get();
-                                    let filtered_hotels = filters.apply_filters_and_sort(&hotel_results, &sort_options);
-                                    let min_rating_filter = filters.min_star_rating;
-                                    let min_price_filter = filters.min_price_per_night;
-                                    let max_price_filter = filters.max_price_per_night;
-
-                                    if hotel_results.is_empty() {
+                            // Empty state: no raw API results
+                            {move || {
+                                if let Some(r) = search_list_page.search_result.get() {
+                                    if r.hotel_list().is_empty() {
                                         let current_page = pagination_state.current_page.get();
-
                                         if current_page > 1 {
-                                            // Show "Go to first page" button when on page > 1 with no results
-                                            view! {
+                                            return view! {
                                                 <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
                                                     <p class="text-center mb-4 text-gray-600">
                                                         No hotels found on page {current_page}.
                                                     </p>
                                                     <button
                                                         class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                                                        on:click=move |_| {
-                                                            UIPaginationState::set_current_page(1);
-                                                        }
+                                                        on:click=move |_| { UIPaginationState::set_current_page(1); }
                                                     >
                                                         Go to First Page
                                                     </button>
                                                 </div>
-                                            }
+                                            }.into_view();
                                         } else {
-                                            // Show regular "No hotels found" message on page 1
-                                            view! {
+                                            return view! {
                                                 <div class="flex flex-col items-center justify-center mt-4 sm:mt-6 p-2 sm:p-4 col-span-full min-h-[200px]">
                                                     <p class="text-center">
                                                         No hotels found for your search criteria.
                                                     </p>
                                                 </div>
-                                            }
-                                        }
-                                            .into_view()
-                                    } else if filtered_hotels.is_empty() {
-                                        if min_rating_filter.is_some()
-                                            || min_price_filter.is_some()
-                                            || max_price_filter.is_some()
-                                        {
-                                            let filter_message = match (
-                                                min_rating_filter,
-                                                min_price_filter,
-                                                max_price_filter,
-                                            ) {
-                                                (Some(min_rating), Some(min_price), Some(max_price)) => format!(
-                                                    "No hotels match a {min_rating}+ star rating priced between {} and {} per night on this page.",
-                                                    format_price_range_value(min_price),
-                                                    format_price_range_value(max_price)
-                                                ),
-                                                (Some(min_rating), None, Some(max_price)) => format!(
-                                                    "No hotels match a {min_rating}+ star rating at or below {} per night on this page.",
-                                                    format_price_range_value(max_price)
-                                                ),
-                                                (Some(min_rating), Some(min_price), None) => format!(
-                                                    "No hotels match a {min_rating}+ star rating at or above {} per night on this page.",
-                                                    format_price_range_value(min_price)
-                                                ),
-                                                (Some(min_rating), None, None) => format!(
-                                                    "No hotels match the {min_rating}+ star filter on this page."
-                                                ),
-                                                (None, Some(min_price), Some(max_price)) => format!(
-                                                    "No hotels priced between {} and {} per night on this page.",
-                                                    format_price_range_value(min_price),
-                                                    format_price_range_value(max_price)
-                                                ),
-                                                (None, None, Some(max_price)) => format!(
-                                                    "No hotels priced at or below {} per night on this page.",
-                                                    format_price_range_value(max_price)
-                                                ),
-                                                (None, Some(min_price), None) => format!(
-                                                    "No hotels priced at or above {} per night on this page.",
-                                                    format_price_range_value(min_price)
-                                                ),
-                                                (None, None, None) => String::new(),
-                                            };
-
-                                            view! {
-                                                <div class="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
-                                                    <p class="text-sm text-slate-600">
-                                                        {filter_message}
-                                                    </p>
-                                                    <div class="flex flex-wrap items-center justify-center gap-2">
-                                                        <Show
-                                                            when=move || min_rating_filter.is_some()
-                                                            fallback=move || view! { <></> }
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                                                on:click=move |_| {
-                                                                    filters_signal.update(|filters| {
-                                                                        filters.min_star_rating = None;
-                                                                    });
-                                                                    leptos::Callable::call(&update_url_with_current_state, ());
-                                                                }
-                                                            >
-                                                                "Clear star filter"
-                                                            </button>
-                                                        </Show>
-                                                        <Show
-                                                            when=move || min_price_filter.is_some() || max_price_filter.is_some()
-                                                            fallback=move || view! { <></> }
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                                                                on:click=move |_| {
-                                                                    filters_signal.update(|filters| {
-                                                                        filters.min_price_per_night = None;
-                                                                        filters.max_price_per_night = None;
-                                                                    });
-                                                                    leptos::Callable::call(&update_url_with_current_state, ());
-                                                                }
-                                                            >
-                                                                "Clear price filter"
-                                                            </button>
-                                                        </Show>
-                                                    </div>
-                                                </div>
-                                            }
-                                                .into_view()
-                                        } else {
-                                            view! { <></> }.into_view()
-                                        }
-                                    } else {
-                                        if show_map.get() {
-                                            view! {
-                                                <div class="flex flex-row flex-1 min-h-0 gap-4 overflow-hidden">
-                                                    // Left side: Scrollable Hotel List
-                                                    <div class="w-1/2 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
-                                                        {
-                                                            filtered_hotels.iter().map(|hotel_result| {
-                                                                let mut price = hotel_result.price.clone().map(|p| p.room_price);
-                                                                let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                                                if is_disabled { price = None; }
-                                                                let img = if hotel_result.hotel_picture.is_empty() {
-                                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                                } else {
-                                                                    hotel_result.hotel_picture.clone()
-                                                                };
-                                                                let res = hotel_result.clone();
-                                                                let hotel_address = hotel_result.hotel_address.clone();
-                                                                let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-
-                                                                view! {
-                                                                    <div id=format!("hotel-card-{}", hotel_result.hotel_code) class="transition-all duration-300">
-                                                                        <HotelCardTile
-                                                                            img
-                                                                            guest_score=None
-                                                                            rating=hotel_result.star_rating
-                                                                            hotel_name=hotel_result.hotel_name.clone()
-                                                                            hotel_code=hotel_result.hotel_code.clone()
-                                                                            price=price
-                                                                            discount_percent=None
-                                                                            amenities=amenities.get()
-                                                                            property_type=hotel_result.property_type.clone()
-                                                                            class=format!(
-                                                                                    "w-full {} {}",
-                                                                                    if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
-                                                                                    if let Some(h) = highlighted_hotel.get() {
-                                                                                        if h == hotel_result.hotel_code { "ring-2 ring-blue-500 shadow-lg transform scale-[1.02]" } else { "" }
-                                                                                    } else { "" }
-                                                                                )
-                                                                            hotel_address
-                                                                            distance_from_center_km=hotel_result.distance_from_center_km
-                                                                            selected_currency_code=selected_currency_code
-                                                                            disabled=is_disabled
-                                                                            compact=false
-                                                                        />
-                                                                    </div>
-                                                                }
-                                                            }).collect_view()
-                                                        }
-                                                        // Load More button inside the scrollable list
-                                                        <div class="pt-2 pb-2">
-                                                            <PaginationControls />
-                                                        </div>
-                                                    </div>
-                                                    // Right side: Map with floating card
-                                                    <div class="flex-1 h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 relative">
-                                                        <HotelMap
-                                                            map_id="hotel-map-desktop".to_string()
-                                                            hotels=create_rw_signal(filtered_hotels.clone())
-                                                            highlighted_hotel=highlighted_hotel
-                                                            on_map_move=Callback::new(move |(lat, lng): (f64, f64)| {
-                                                                log!("[SEARCH_AREA] Map moved to: {}, {}", lat, lng);
-                                                                map_center.set(Some((lat, lng)));
-                                                                map_moved.set(true);
-                                                            })
-                                                        />
-
-                                                        // "Search this area" button - appears when map is panned
-                                                        <Show
-                                                            when=move || map_moved.get() && !is_searching_area.get()
-                                                            fallback=move || view! { <></> }
-                                                        >
-                                                            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
-                                                                <button
-                                                                    class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 font-medium text-sm text-gray-700"
-                                                                    on:click=move |_| {
-                                                                        if let Some((lat, lng)) = map_center.get() {
-                                                                            log!("[SEARCH_AREA] Searching at: {}, {}", lat, lng);
-                                                                            is_searching_area.set(true);
-                                                                            map_moved.set(false);
-
-                                                                            // Create a synthetic PlaceData with the new coordinates
-                                                                            let search_ctx: UISearchCtx = expect_context();
-
-                                                                            // Update place_details with new coordinates
-                                                                            let new_place_data = crate::api::client_side_api::PlaceData {
-                                                                                address_components: vec![],
-                                                                                location: crate::api::client_side_api::Location {
-                                                                                    latitude: lat,
-                                                                                    longitude: lng,
-                                                                                },
-                                                                                viewport: crate::api::client_side_api::Viewport::default(),
-                                                                            };
-
-                                                                            // Update the place with a descriptive name
-                                                                            let new_place = crate::api::client_side_api::Place {
-                                                                                place_id: format!("custom_{}_{}", lat, lng),
-                                                                                display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
-                                                                                formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
-                                                                            };
-
-                                                                            // Clear existing results and reset pagination
-                                                                            SearchListResults::reset();
-                                                                            UIPaginationState::reset_to_first_page();
-
-                                                                            // Update search context with new location
-                                                                            // Use batch() to prevent double API trigger
-                                                                            batch(move || {
-                                                                                search_ctx.place.set(Some(new_place));
-                                                                                search_ctx.place_details.set(Some(new_place_data));
-                                                                            });
-
-                                                                            // Reset searching state after a short delay
-                                                                            set_timeout(move || {
-                                                                                is_searching_area.set(false);
-                                                                            }, std::time::Duration::from_millis(500));
-                                                                        }
-                                                                    }
-                                                                >
-                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                                                    </svg>
-                                                                    "Search this area"
-                                                                </button>
-                                                            </div>
-                                                        </Show>
-
-                                                        // Loading indicator when searching
-                                                        <Show
-                                                            when=move || is_searching_area.get()
-                                                            fallback=move || view! { <></> }
-                                                        >
-                                                            <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
-                                                                <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200">
-                                                                    <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                    </svg>
-                                                                    <span class="text-sm text-gray-600">"Searching..."</span>
-                                                                </div>
-                                                            </div>
-                                                        </Show>
-
-                                                        // Floating selected hotel card on desktop map
-                                                        <Show
-                                                            when=move || highlighted_hotel.get().is_some()
-                                                            fallback=move || view! { <></> }
-                                                        >
-                                                            {
-                                                                let stored_hotels_desktop = store_value(filtered_hotels.clone());
-                                                                move || {
-                                                                    let hotels = stored_hotels_desktop.get_value();
-                                                                    if let Some(hotel_code) = highlighted_hotel.get() {
-                                                                        if let Some(hotel_result) = hotels.iter().find(|h| h.hotel_code == hotel_code) {
-                                                                            let mut price = hotel_result.price.clone().map(|p| p.room_price);
-                                                                            let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                                                            if is_disabled { price = None; }
-                                                                            let img = if hotel_result.hotel_picture.is_empty() {
-                                                                                "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                                            } else {
-                                                                                hotel_result.hotel_picture.clone()
-                                                                            };
-                                                                            let res = hotel_result.clone();
-                                                                            let hotel_address = hotel_result.hotel_address.clone();
-                                                                            let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-
-                                                                            view! {
-                                                                                <div class="absolute bottom-4 left-4 right-4 max-w-md bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[1000]">
-                                                                                    // Close button
-                                                                                    <button
-                                                                                        class="absolute top-2 right-2 z-10 p-1.5 bg-white/90 hover:bg-gray-100 rounded-full shadow-md border border-gray-200 transition-colors"
-                                                                                        on:click=move |e| {
-                                                                                            e.stop_propagation();
-                                                                                            highlighted_hotel.set(None);
-                                                                                        }
-                                                                                    >
-                                                                                        <Icon icon=icondata::BsX class="w-5 h-5 text-gray-600" />
-                                                                                    </button>
-                                                                                    <HotelCardTile
-                                                                                        img
-                                                                                        guest_score=None
-                                                                                        rating=hotel_result.star_rating
-                                                                                        hotel_name=hotel_result.hotel_name.clone()
-                                                                                        hotel_code=hotel_result.hotel_code.clone()
-                                                                                        price=price
-                                                                                        discount_percent=None
-                                                                                        amenities=amenities.get()
-                                                                                        property_type=hotel_result.property_type.clone()
-                                                                                        class="w-full".to_string()
-                                                                                        hotel_address
-                                                                                        distance_from_center_km=hotel_result.distance_from_center_km
-                                                                                        selected_currency_code=selected_currency_code
-                                                                                        disabled=is_disabled
-                                                                                        compact=true
-                                                                                    />
-                                                                                </div>
-                                                                            }.into_view()
-                                                                        } else {
-                                                                            view! { <></> }.into_view()
-                                                                        }
-                                                                    } else {
-                                                                        view! { <></> }.into_view()
-                                                                    }
-                                                                }
-                                                            }
-                                                        </Show>
-                                                    </div>
-                                                </div>
-                                            }.into_view()
-                                        } else {
-                                             filtered_hotels
-                                                .iter()
-                                                .map(|hotel_result| {
-                                                let mut price = hotel_result
-                                                    .price
-                                                    .clone()
-                                                    .map(|p| p.room_price);
-                                                let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                                if is_disabled {
-                                                    price = None; // Hide price if invalid
-                                                }
-                                                let img = if hotel_result.hotel_picture.is_empty() {
-                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                } else {
-                                                    hotel_result.hotel_picture.clone()
-                                                };
-                                                let res = hotel_result.clone();
-                                                let hotel_address = hotel_result.hotel_address.clone();
-                                                let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-                                                view! {
-                                                    <HotelCardTile
-                                                        img
-                                                        guest_score=None
-                                                        rating=hotel_result.star_rating
-                                                        hotel_name=hotel_result.hotel_name.clone()
-                                                        hotel_code=hotel_result.hotel_code.clone()
-                                                        price=price
-                                                        discount_percent=None
-                                                        amenities=amenities.get()
-                                                        property_type=hotel_result.property_type.clone()
-                                                        class=format!(
-                                                                "w-full mb-4 {} {}",
-                                                                if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
-                                                                ""
-                                                            )
-                                                        hotel_address
-                                                        distance_from_center_km=hotel_result.distance_from_center_km
-                                                        selected_currency_code=selected_currency_code
-                                                        disabled=is_disabled
-                                                    />
-                                                    // <HotelCard
-                                                    //     img
-                                                    //     rating=hotel_result.star_rating
-                                                    //     hotel_name=hotel_result.hotel_name.clone()
-                                                    //     price
-                                                    //     hotel_code=hotel_result.hotel_code.clone()
-                                                    //     class=format!(
-                                                    //             "w-full max-w-xs mx-auto px-2 sm:px-0 {} {}",
-                                                    //             if is_disabled { "grayscale" } else { "" },
-                                                    //             if is_disabled { "pointer-events-none opacity-50" } else { "" },
-                                                    //         )
-                                                    // />
-                                                }
-                                            })
-                                            .collect_view()
+                                            }.into_view();
                                         }
                                     }
+                                }
+                                view! { <></> }.into_view()
+                            }}
+
+                            // Filter-empty state
+                            {move || {
+                                let has_raw = search_list_page.search_result.get()
+                                    .map(|r| !r.hotel_list().is_empty())
+                                    .unwrap_or(false);
+                                if has_raw && displayed_hotels.get().is_empty() {
+                                    let filters = filters_signal.get();
+                                    let min_rating_filter = filters.min_star_rating;
+                                    let min_price_filter = filters.min_price_per_night;
+                                    let max_price_filter = filters.max_price_per_night;
+                                    if min_rating_filter.is_some() || min_price_filter.is_some() || max_price_filter.is_some() {
+                                        let filter_message = match (min_rating_filter, min_price_filter, max_price_filter) {
+                                            (Some(min_rating), Some(min_price), Some(max_price)) => format!(
+                                                "No hotels match a {min_rating}+ star rating priced between {} and {} per night on this page.",
+                                                format_price_range_value(min_price),
+                                                format_price_range_value(max_price)
+                                            ),
+                                            (Some(min_rating), None, Some(max_price)) => format!(
+                                                "No hotels match a {min_rating}+ star rating at or below {} per night on this page.",
+                                                format_price_range_value(max_price)
+                                            ),
+                                            (Some(min_rating), Some(min_price), None) => format!(
+                                                "No hotels match a {min_rating}+ star rating at or above {} per night on this page.",
+                                                format_price_range_value(min_price)
+                                            ),
+                                            (Some(min_rating), None, None) => format!(
+                                                "No hotels match the {min_rating}+ star filter on this page."
+                                            ),
+                                            (None, Some(min_price), Some(max_price)) => format!(
+                                                "No hotels priced between {} and {} per night on this page.",
+                                                format_price_range_value(min_price),
+                                                format_price_range_value(max_price)
+                                            ),
+                                            (None, None, Some(max_price)) => format!(
+                                                "No hotels priced at or below {} per night on this page.",
+                                                format_price_range_value(max_price)
+                                            ),
+                                            (None, Some(min_price), None) => format!(
+                                                "No hotels priced at or above {} per night on this page.",
+                                                format_price_range_value(min_price)
+                                            ),
+                                            (None, None, None) => String::new(),
+                                        };
+                                        return view! {
+                                            <div class="col-span-full flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-blue-300 bg-blue-50/60 px-4 py-6 text-center">
+                                                <p class="text-sm text-slate-600">
+                                                    {filter_message}
+                                                </p>
+                                                <div class="flex flex-wrap items-center justify-center gap-2">
+                                                    <Show
+                                                        when=move || min_rating_filter.is_some()
+                                                        fallback=move || view! { <></> }
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                            on:click=move |_| {
+                                                                filters_signal.update(|filters| {
+                                                                    filters.min_star_rating = None;
+                                                                });
+                                                                leptos::Callable::call(&update_url_with_current_state, ());
+                                                            }
+                                                        >
+                                                            "Clear star filter"
+                                                        </button>
+                                                    </Show>
+                                                    <Show
+                                                        when=move || min_price_filter.is_some() || max_price_filter.is_some()
+                                                        fallback=move || view! { <></> }
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="rounded-full border border-blue-500 px-4 py-2 text-sm font-medium text-blue-600 transition-colors duration-150 hover:bg-blue-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                                                            on:click=move |_| {
+                                                                filters_signal.update(|filters| {
+                                                                    filters.min_price_per_night = None;
+                                                                    filters.max_price_per_night = None;
+                                                                });
+                                                                leptos::Callable::call(&update_url_with_current_state, ());
+                                                            }
+                                                        >
+                                                            "Clear price filter"
+                                                        </button>
+                                                    </Show>
+                                                </div>
+                                            </div>
+                                        }.into_view();
+                                    }
+                                }
+                                view! { <></> }.into_view()
+                            }}
+
+                            // Map view — reactive closure acceptable, only shown when user toggles map
+                            <Show
+                                when=move || show_map.get() && !displayed_hotels.get().is_empty()
+                                fallback=move || view! { <></> }
+                            >
+                                {move || {
+                                    let filtered_hotels = displayed_hotels.get();
+                                    let stored_hotels_desktop = store_value(filtered_hotels.clone());
+                                    view! {
+                                        <div class="flex flex-row flex-1 min-h-0 gap-4 overflow-hidden">
+                                            // Left side: Scrollable Hotel List
+                                            <div class="w-1/2 h-full overflow-y-auto pr-2 custom-scrollbar space-y-3 pb-4">
+                                                {
+                                                    filtered_hotels.iter().map(|hotel_result| {
+                                                        let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                                        if is_disabled { price = None; }
+                                                        let img = if hotel_result.hotel_picture.is_empty() {
+                                                            "https://via.placeholder.com/300x200?text=No+Image".into()
+                                                        } else {
+                                                            hotel_result.hotel_picture.clone()
+                                                        };
+                                                        let res = hotel_result.clone();
+                                                        let hotel_address = hotel_result.hotel_address.clone();
+                                                        let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+
+                                                        view! {
+                                                            <div id=format!("hotel-card-{}", hotel_result.hotel_code) class="transition-all duration-300">
+                                                                <HotelCardTile
+                                                                    img
+                                                                    guest_score=None
+                                                                    rating=hotel_result.star_rating
+                                                                    hotel_name=hotel_result.hotel_name.clone()
+                                                                    hotel_code=hotel_result.hotel_code.clone()
+                                                                    price=price
+                                                                    discount_percent=None
+                                                                    amenities=amenities.get()
+                                                                    property_type=hotel_result.property_type.clone()
+                                                                    class=format!(
+                                                                        "w-full {} {}",
+                                                                        if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
+                                                                        if let Some(h) = highlighted_hotel.get() {
+                                                                            if h == hotel_result.hotel_code { "ring-2 ring-blue-500 shadow-lg transform scale-[1.02]" } else { "" }
+                                                                        } else { "" }
+                                                                    )
+                                                                    hotel_address
+                                                                    distance_from_center_km=hotel_result.distance_from_center_km
+                                                                    selected_currency_code=selected_currency_code
+                                                                    disabled=is_disabled
+                                                                    compact=false
+                                                                />
+                                                            </div>
+                                                        }
+                                                    }).collect_view()
+                                                }
+                                                // Load More button in map view
+                                                <div class="pt-2 pb-2">
+                                                    <PaginationControls use_button=true />
+                                                </div>
+                                            </div>
+                                            // Right side: Map with floating card
+                                            <div class="flex-1 h-full rounded-xl overflow-hidden shadow-lg border border-gray-200 relative">
+                                                <HotelMap
+                                                    map_id="hotel-map-desktop".to_string()
+                                                    hotels=create_rw_signal(filtered_hotels.clone())
+                                                    highlighted_hotel=highlighted_hotel
+                                                    on_map_move=Callback::new(move |(lat, lng): (f64, f64)| {
+                                                        log!("[SEARCH_AREA] Map moved to: {}, {}", lat, lng);
+                                                        map_center.set(Some((lat, lng)));
+                                                        map_moved.set(true);
+                                                    })
+                                                />
+
+                                                // "Search this area" button
+                                                <Show
+                                                    when=move || map_moved.get() && !is_searching_area.get()
+                                                    fallback=move || view! { <></> }
+                                                >
+                                                    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                                        <button
+                                                            class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 font-medium text-sm text-gray-700"
+                                                            on:click=move |_| {
+                                                                if let Some((lat, lng)) = map_center.get() {
+                                                                    log!("[SEARCH_AREA] Searching at: {}, {}", lat, lng);
+                                                                    is_searching_area.set(true);
+                                                                    map_moved.set(false);
+
+                                                                    let search_ctx: UISearchCtx = expect_context();
+
+                                                                    let new_place_data = crate::api::client_side_api::PlaceData {
+                                                                        address_components: vec![],
+                                                                        location: crate::api::client_side_api::Location {
+                                                                            latitude: lat,
+                                                                            longitude: lng,
+                                                                        },
+                                                                        viewport: crate::api::client_side_api::Viewport::default(),
+                                                                    };
+
+                                                                    let new_place = crate::api::client_side_api::Place {
+                                                                        place_id: format!("custom_{}_{}", lat, lng),
+                                                                        display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                                                        formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
+                                                                    };
+
+                                                                    SearchListResults::reset();
+                                                                    UIPaginationState::reset_to_first_page();
+
+                                                                    batch(move || {
+                                                                        search_ctx.place.set(Some(new_place));
+                                                                        search_ctx.place_details.set(Some(new_place_data));
+                                                                    });
+
+                                                                    set_timeout(move || {
+                                                                        is_searching_area.set(false);
+                                                                    }, std::time::Duration::from_millis(500));
+                                                                }
+                                                            }
+                                                        >
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                            </svg>
+                                                            "Search this area"
+                                                        </button>
+                                                    </div>
+                                                </Show>
+
+                                                // Loading indicator
+                                                <Show
+                                                    when=move || is_searching_area.get()
+                                                    fallback=move || view! { <></> }
+                                                >
+                                                    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                                        <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200">
+                                                            <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                            <span class="text-sm text-gray-600">"Searching..."</span>
+                                                        </div>
+                                                    </div>
+                                                </Show>
+
+                                                // Floating selected hotel card
+                                                <Show
+                                                    when=move || highlighted_hotel.get().is_some()
+                                                    fallback=move || view! { <></> }
+                                                >
+                                                    {
+                                                        move || {
+                                                            let hotels = stored_hotels_desktop.get_value();
+                                                            if let Some(hotel_code) = highlighted_hotel.get() {
+                                                                if let Some(hotel_result) = hotels.iter().find(|h| h.hotel_code == hotel_code) {
+                                                                    let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                                                    let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                                                    if is_disabled { price = None; }
+                                                                    let img = if hotel_result.hotel_picture.is_empty() {
+                                                                        "https://via.placeholder.com/300x200?text=No+Image".into()
+                                                                    } else {
+                                                                        hotel_result.hotel_picture.clone()
+                                                                    };
+                                                                    let res = hotel_result.clone();
+                                                                    let hotel_address = hotel_result.hotel_address.clone();
+                                                                    let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+
+                                                                    view! {
+                                                                        <div class="absolute bottom-4 left-4 right-4 max-w-md bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[1000]">
+                                                                            <button
+                                                                                class="absolute top-2 right-2 z-10 p-1.5 bg-white/90 hover:bg-gray-100 rounded-full shadow-md border border-gray-200 transition-colors"
+                                                                                on:click=move |e| {
+                                                                                    e.stop_propagation();
+                                                                                    highlighted_hotel.set(None);
+                                                                                }
+                                                                            >
+                                                                                <Icon icon=icondata::BsX class="w-5 h-5 text-gray-600" />
+                                                                            </button>
+                                                                            <HotelCardTile
+                                                                                img
+                                                                                guest_score=None
+                                                                                rating=hotel_result.star_rating
+                                                                                hotel_name=hotel_result.hotel_name.clone()
+                                                                                hotel_code=hotel_result.hotel_code.clone()
+                                                                                price=price
+                                                                                discount_percent=None
+                                                                                amenities=amenities.get()
+                                                                                property_type=hotel_result.property_type.clone()
+                                                                                class="w-full".to_string()
+                                                                                hotel_address
+                                                                                distance_from_center_km=hotel_result.distance_from_center_km
+                                                                                selected_currency_code=selected_currency_code
+                                                                                disabled=is_disabled
+                                                                                compact=true
+                                                                            />
+                                                                        </div>
+                                                                    }.into_view()
+                                                                } else {
+                                                                    view! { <></> }.into_view()
+                                                                }
+                                                            } else {
+                                                                view! { <></> }.into_view()
+                                                            }
+                                                        }
+                                                    }
+                                                </Show>
+                                            </div>
+                                        </div>
+                                    }
                                 }}
+                            </Show>
+
+                            // List view — stable <For> keyed by hotel_code prevents DOM recreation on page load
+                            <Show
+                                when=move || !show_map.get() && !displayed_hotels.get().is_empty()
+                                fallback=move || view! { <></> }
+                            >
+                                <For
+                                    each=move || displayed_hotels.get()
+                                    key=|hotel| hotel.hotel_code.clone()
+                                    let:hotel_result
+                                >
+                                    {
+                                        let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                        let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                        if is_disabled { price = None; }
+                                        let img = if hotel_result.hotel_picture.is_empty() {
+                                            "https://via.placeholder.com/300x200?text=No+Image".into()
+                                        } else {
+                                            hotel_result.hotel_picture.clone()
+                                        };
+                                        let res = hotel_result.clone();
+                                        let hotel_address = hotel_result.hotel_address.clone();
+                                        let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+                                        view! {
+                                            <HotelCardTile
+                                                img
+                                                guest_score=None
+                                                rating=hotel_result.star_rating
+                                                hotel_name=hotel_result.hotel_name.clone()
+                                                hotel_code=hotel_result.hotel_code.clone()
+                                                price=price
+                                                discount_percent=None
+                                                amenities=amenities.get()
+                                                property_type=hotel_result.property_type.clone()
+                                                class=format!(
+                                                    "w-full mb-4 {} {}",
+                                                    if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" },
+                                                    ""
+                                                )
+                                                hotel_address
+                                                distance_from_center_km=hotel_result.distance_from_center_km
+                                                selected_currency_code=selected_currency_code
+                                                disabled=is_disabled
+                                            />
+                                        }
+                                    }
+                                </For>
                             </Show>
 
                             // Pagination controls - only show when we have results
@@ -1830,264 +1832,267 @@ pub fn HotelListPage() -> impl IntoView {
                         </div>
                     </div>
 
-                    // Mobile hotel listings OR Map view
                     // Mobile hotel listings AND Map view
+                    // Map section — reactive closure updates hotels when data changes
                     {move || {
-                        if let Some(result) = search_list_page.search_result.get() {
-                            let hotel_results = result.hotel_list();
-                            let filters = filters_signal.get();
-                            let sort_options = search_ctx.sort_options.get();
-                            let filtered_hotels = filters.apply_filters_and_sort(&hotel_results, &sort_options);
+                        let has_results = search_list_page.search_result.get()
+                            .map(|r| !r.hotel_list().is_empty())
+                            .unwrap_or(false);
+                        if !has_results || !show_map.get() {
+                            return view! { <></> }.into_view();
+                        }
+                        let filtered_hotels = displayed_hotels.get();
+                        let filtered_hotels_map = filtered_hotels.clone();
+                        let stored_hotels = store_value(filtered_hotels);
+                        view! {
+                            <div class="relative w-full h-[60vh] bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200 transition-all duration-300">
+                                <HotelMap
+                                    map_id="hotel-map-mobile".to_string()
+                                    hotels=create_rw_signal(filtered_hotels_map.clone())
+                                    highlighted_hotel=highlighted_hotel
+                                    on_map_move=Callback::new(move |(lat, lng): (f64, f64)| {
+                                        log!("[SEARCH_AREA_MOBILE] Map moved to: {}, {}", lat, lng);
+                                        map_center.set(Some((lat, lng)));
+                                        map_moved.set(true);
+                                    })
+                                />
 
-                            // Clone for Map section
-                            let filtered_hotels_map = filtered_hotels.clone();
-                            let stored_hotels = store_value(filtered_hotels.clone());
+                                // "Search this area" button for mobile
+                                <Show
+                                    when=move || map_moved.get() && !is_searching_area.get()
+                                    fallback=move || view! { <></> }
+                                >
+                                    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                        <button
+                                            class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 font-medium text-sm text-gray-700"
+                                            on:click=move |_| {
+                                                if let Some((lat, lng)) = map_center.get() {
+                                                    log!("[SEARCH_AREA_MOBILE] Searching at: {}, {}", lat, lng);
+                                                    is_searching_area.set(true);
+                                                    map_moved.set(false);
 
-                            // Clone for List section
-                            let filtered_hotels_list = filtered_hotels.clone();
+                                                    let search_ctx: UISearchCtx = expect_context();
 
-                            view! {
-                                <div class="space-y-6">
-                                    // 1. Map Section (Conditionally Shown)
-                                    <Show when=move || show_map.get()>
-                                        <div class="relative w-full h-[60vh] bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200 transition-all duration-300">
-                                            <HotelMap
-                                                map_id="hotel-map-mobile".to_string()
-                                                hotels=create_rw_signal(filtered_hotels_map.clone())
-                                                highlighted_hotel=highlighted_hotel
-                                                on_map_move=Callback::new(move |(lat, lng): (f64, f64)| {
-                                                    log!("[SEARCH_AREA_MOBILE] Map moved to: {}, {}", lat, lng);
-                                                    map_center.set(Some((lat, lng)));
-                                                    map_moved.set(true);
-                                                })
-                                            />
+                                                    let new_place_data = crate::api::client_side_api::PlaceData {
+                                                        address_components: vec![],
+                                                        location: crate::api::client_side_api::Location {
+                                                            latitude: lat,
+                                                            longitude: lng,
+                                                        },
+                                                        viewport: crate::api::client_side_api::Viewport::default(),
+                                                    };
 
-                                            // "Search this area" button for mobile - appears when map is panned
-                                            <Show
-                                                when=move || map_moved.get() && !is_searching_area.get()
-                                                fallback=move || view! { <></> }
-                                            >
-                                                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
-                                                    <button
-                                                        class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200 font-medium text-sm text-gray-700"
-                                                        on:click=move |_| {
-                                                            if let Some((lat, lng)) = map_center.get() {
-                                                                log!("[SEARCH_AREA_MOBILE] Searching at: {}, {}", lat, lng);
-                                                                is_searching_area.set(true);
-                                                                map_moved.set(false);
+                                                    let new_place = crate::api::client_side_api::Place {
+                                                        place_id: format!("custom_{}_{}", lat, lng),
+                                                        display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
+                                                        formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
+                                                    };
 
-                                                                let search_ctx: UISearchCtx = expect_context();
+                                                    SearchListResults::reset();
+                                                    UIPaginationState::reset_to_first_page();
 
-                                                                let new_place_data = crate::api::client_side_api::PlaceData {
-                                                                    address_components: vec![],
-                                                                    location: crate::api::client_side_api::Location {
-                                                                        latitude: lat,
-                                                                        longitude: lng,
-                                                                    },
-                                                                    viewport: crate::api::client_side_api::Viewport::default(),
-                                                                };
+                                                    batch(move || {
+                                                        search_ctx.place.set(Some(new_place));
+                                                        search_ctx.place_details.set(Some(new_place_data));
+                                                    });
 
-                                                                let new_place = crate::api::client_side_api::Place {
-                                                                    place_id: format!("custom_{}_{}", lat, lng),
-                                                                    display_name: format!("Map Area ({:.6}, {:.6})", lat, lng),
-                                                                    formatted_address: format!("Lat: {:.6}, Lng: {:.6}", lat, lng),
-                                                                };
+                                                    set_timeout(move || {
+                                                        is_searching_area.set(false);
+                                                    }, std::time::Duration::from_millis(500));
+                                                }
+                                            }
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                            </svg>
+                                            "Search this area"
+                                        </button>
+                                    </div>
+                                </Show>
 
-                                                                SearchListResults::reset();
-                                                                UIPaginationState::reset_to_first_page();
-
-                                                                // Use batch() to prevent double API trigger
-                                                                batch(move || {
-                                                                    search_ctx.place.set(Some(new_place));
-                                                                    search_ctx.place_details.set(Some(new_place_data));
-                                                                });
-
-                                                                set_timeout(move || {
-                                                                    is_searching_area.set(false);
-                                                                }, std::time::Duration::from_millis(500));
-                                                            }
-                                                        }
-                                                    >
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                                        </svg>
-                                                        "Search this area"
-                                                    </button>
-                                                </div>
-                                            </Show>
-
-                                            // Loading indicator when searching (mobile)
-                                            <Show
-                                                when=move || is_searching_area.get()
-                                                fallback=move || view! { <></> }
-                                            >
-                                                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
-                                                    <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200">
-                                                        <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                        <span class="text-sm text-gray-600">"Searching..."</span>
-                                                    </div>
-                                                </div>
-                                            </Show>
-
-                                            // Floating selected hotel card
-                                            <Show
-                                                when=move || highlighted_hotel.get().is_some()
-                                                fallback=move || view! { <></> }
-                                            >
-                                                {move || {
-                                                    let hotels = stored_hotels.get_value();
-                                                    if let Some(hotel_code) = highlighted_hotel.get() {
-                                                        if let Some(hotel_result) = hotels.iter().find(|h| h.hotel_code == hotel_code) {
-                                                            let mut price = hotel_result.price.clone().map(|p| p.room_price);
-                                                            let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                                            if is_disabled { price = None; }
-                                                            let img = if hotel_result.hotel_picture.is_empty() {
-                                                                "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                            } else {
-                                                                hotel_result.hotel_picture.clone()
-                                                            };
-                                                            let res = hotel_result.clone();
-                                                            let hotel_address = hotel_result.hotel_address.clone();
-                                                            let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-
-                                                            view! {
-                                                                <div class="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-[1000]">
-                                                                    // Close button
-                                                                    <button
-                                                                        class="absolute top-2 right-2 z-10 p-1.5 bg-white/90 hover:bg-gray-100 rounded-full shadow-md border border-gray-200 transition-colors"
-                                                                        on:click=move |e| {
-                                                                            e.stop_propagation();
-                                                                            highlighted_hotel.set(None);
-                                                                        }
-                                                                    >
-                                                                        <Icon icon=icondata::BsX class="w-5 h-5 text-gray-600" />
-                                                                    </button>
-                                                                    <HotelCardTile
-                                                                        img
-                                                                        guest_score=None
-                                                                        rating=hotel_result.star_rating
-                                                                        hotel_name=hotel_result.hotel_name.clone()
-                                                                        hotel_code=hotel_result.hotel_code.clone()
-                                                                        price=price
-                                                                        discount_percent=None
-                                                                        amenities=amenities.get()
-                                                                        property_type=hotel_result.property_type.clone()
-                                                                        class="w-full".to_string()
-                                                                        hotel_address
-                                                                        distance_from_center_km=hotel_result.distance_from_center_km
-                                                                        selected_currency_code=selected_currency_code
-                                                                        disabled=is_disabled
-                                                                        compact=true
-                                                                    />
-                                                                </div>
-                                                            }.into_view()
-                                                        } else {
-                                                            view! { <></> }.into_view()
-                                                        }
-                                                    } else {
-                                                        view! { <></> }.into_view()
-                                                    }
-                                                }}
-                                            </Show>
+                                // Loading indicator when searching (mobile)
+                                <Show
+                                    when=move || is_searching_area.get()
+                                    fallback=move || view! { <></> }
+                                >
+                                    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500]">
+                                        <div class="flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-lg border border-gray-200">
+                                            <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span class="text-sm text-gray-600">"Searching..."</span>
                                         </div>
-                                    </Show>
+                                    </div>
+                                </Show>
 
-                                    // 2. Hotel List (Always Shown)
-                                    <div>
-                                        {
-                                            if hotel_results.is_empty() {
+                                // Floating selected hotel card
+                                <Show
+                                    when=move || highlighted_hotel.get().is_some()
+                                    fallback=move || view! { <></> }
+                                >
+                                    {move || {
+                                        let hotels = stored_hotels.get_value();
+                                        if let Some(hotel_code) = highlighted_hotel.get() {
+                                            if let Some(hotel_result) = hotels.iter().find(|h| h.hotel_code == hotel_code) {
+                                                let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                                let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                                if is_disabled { price = None; }
+                                                let img = if hotel_result.hotel_picture.is_empty() {
+                                                    "https://via.placeholder.com/300x200?text=No+Image".into()
+                                                } else {
+                                                    hotel_result.hotel_picture.clone()
+                                                };
+                                                let res = hotel_result.clone();
+                                                let hotel_address = hotel_result.hotel_address.clone();
+                                                let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+
                                                 view! {
-                                                    <div class="text-center py-8">
-                                                        <p class="text-gray-600">No hotels found</p>
-                                                    </div>
-                                                }.into_view()
-                                            } else if filtered_hotels_list.is_empty() {
-                                                view! {
-                                                    <div class="text-center py-8">
-                                                        <p class="text-gray-600">No hotels match your filters</p>
+                                                    <div class="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-[1000]">
                                                         <button
-                                                            class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                                            on:click=move |e| leptos::Callable::call(&clear_filters, e)
+                                                            class="absolute top-2 right-2 z-10 p-1.5 bg-white/90 hover:bg-gray-100 rounded-full shadow-md border border-gray-200 transition-colors"
+                                                            on:click=move |e| {
+                                                                e.stop_propagation();
+                                                                highlighted_hotel.set(None);
+                                                            }
                                                         >
-                                                            Clear Filters
+                                                            <Icon icon=icondata::BsX class="w-5 h-5 text-gray-600" />
                                                         </button>
+                                                        <HotelCardTile
+                                                            img
+                                                            guest_score=None
+                                                            rating=hotel_result.star_rating
+                                                            hotel_name=hotel_result.hotel_name.clone()
+                                                            hotel_code=hotel_result.hotel_code.clone()
+                                                            price=price
+                                                            discount_percent=None
+                                                            amenities=amenities.get()
+                                                            property_type=hotel_result.property_type.clone()
+                                                            class="w-full".to_string()
+                                                            hotel_address
+                                                            distance_from_center_km=hotel_result.distance_from_center_km
+                                                            selected_currency_code=selected_currency_code
+                                                            disabled=is_disabled
+                                                            compact=true
+                                                        />
                                                     </div>
                                                 }.into_view()
                                             } else {
-                                                view! {
-                                                    <div class="space-y-4">
-                                                        {filtered_hotels_list.into_iter().map(|hotel_result| {
-                                                             let mut price = hotel_result.price.clone().map(|p| p.room_price);
-                                                             let is_disabled = price.unwrap_or(0.0) <= 0.0;
-                                                             if is_disabled { price = None; }
-                                                             let img = if hotel_result.hotel_picture.is_empty() {
-                                                                 "https://via.placeholder.com/300x200?text=No+Image".into()
-                                                             } else {
-                                                                 hotel_result.hotel_picture.clone()
-                                                             };
-                                                             let res = hotel_result.clone();
-                                                             let hotel_address = hotel_result.hotel_address.clone();
-                                                             let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
-                                                             view! {
-                                                                 <HotelCardTile
-                                                                     img
-                                                                     guest_score=None
-                                                                     rating=hotel_result.star_rating
-                                                                     hotel_name=hotel_result.hotel_name.clone()
-                                                                     hotel_code=hotel_result.hotel_code.clone()
-                                                                     price=price
-                                                                     discount_percent=None
-                                                                     amenities=amenities.get()
-                                                                     property_type=hotel_result.property_type.clone()
-                                                                     class=format!(
-                                                                         "w-full {}",
-                                                                         if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
-                                                                     )
-                                                                     hotel_address
-                                                                     distance_from_center_km=hotel_result.distance_from_center_km
-                                                                     selected_currency_code=selected_currency_code
-                                                                     disabled=is_disabled
-                                                                     msite=true
-                                                                     // On mobile list, we can keep standard layout or use compact if desired.
-                                                                     // Default is standard horizontal card.
-                                                                 />
-                                                             }
-                                                        }).collect_view()}
-                                                    </div>
-                                                }.into_view()
+                                                view! { <></> }.into_view()
                                             }
+                                        } else {
+                                            view! { <></> }.into_view()
                                         }
-                                    </div>
+                                    }}
+                                </Show>
+                            </div>
+                        }.into_view()
+                    }}
 
-                                    // 3. Pagination (Always Shown)
-                                    <div class="pb-8">
-                                         <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
-                                            {move || {
-                                                let _ = hotel_search_resource.get();
-                                                view! {
-                                                    <Show
-                                                        when=move || {
-                                                            search_list_page.search_result.get()
-                                                                .map_or(false, |result| !result.hotel_list().is_empty())
-                                                        }
-                                                        fallback=move || view! { <></> }
-                                                    >
-                                                        <PaginationControls />
-                                                    </Show>
-                                                }
-                                            }}
-                                        </Suspense>
-                                    </div>
+                    // Empty/loading states (lightweight reactive closures)
+                    {move || {
+                        match search_list_page.search_result.get() {
+                            None => view! {
+                                <div class="h-[400px] flex items-center justify-center text-gray-500">"Loading properties..."</div>
+                            }.into_view(),
+                            Some(r) if r.hotel_list().is_empty() => view! {
+                                <div class="text-center py-8">
+                                    <p class="text-gray-600">No hotels found</p>
                                 </div>
-                            }.into_view()
-                        } else {
-                            // Loading state for initial load
-                             view! { <div class="h-[400px] flex items-center justify-center text-gray-500">"Loading properties..."</div> }.into_view()
+                            }.into_view(),
+                            _ => view! { <></> }.into_view(),
                         }
                     }}
+                    // Filter-empty state
+                    {move || {
+                        let has_raw = search_list_page.search_result.get()
+                            .map(|r| !r.hotel_list().is_empty())
+                            .unwrap_or(false);
+                        if has_raw && displayed_hotels.get().is_empty() {
+                            return view! {
+                                <div class="text-center py-8">
+                                    <p class="text-gray-600">No hotels match your filters</p>
+                                    <button
+                                        class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
+                                        on:click=move |e| leptos::Callable::call(&clear_filters, e)
+                                    >
+                                        Clear Filters
+                                    </button>
+                                </div>
+                            }.into_view();
+                        }
+                        view! { <></> }.into_view()
+                    }}
+
+                    // Stable card list — <For> keyed by hotel_code, no DOM recreation on new pages
+                    <Show
+                        when=move || search_list_page.search_result.get().map(|r| !r.hotel_list().is_empty()).unwrap_or(false) && !displayed_hotels.get().is_empty()
+                        fallback=move || view! { <></> }
+                    >
+                        <div class="space-y-4">
+                            <For
+                                each=move || displayed_hotels.get()
+                                key=|hotel| hotel.hotel_code.clone()
+                                let:hotel_result
+                            >
+                                {
+                                    let mut price = hotel_result.price.clone().map(|p| p.room_price);
+                                    let is_disabled = price.unwrap_or(0.0) <= 0.0;
+                                    if is_disabled { price = None; }
+                                    let img = if hotel_result.hotel_picture.is_empty() {
+                                        "https://via.placeholder.com/300x200?text=No+Image".into()
+                                    } else {
+                                        hotel_result.hotel_picture.clone()
+                                    };
+                                    let res = hotel_result.clone();
+                                    let hotel_address = hotel_result.hotel_address.clone();
+                                    let amenities = Memo::new(move |_| res.amenities.iter().filter(|f| !f.to_lowercase().contains("facility")).cloned().collect::<Vec<String>>());
+                                    view! {
+                                        <HotelCardTile
+                                            img
+                                            guest_score=None
+                                            rating=hotel_result.star_rating
+                                            hotel_name=hotel_result.hotel_name.clone()
+                                            hotel_code=hotel_result.hotel_code.clone()
+                                            price=price
+                                            discount_percent=None
+                                            amenities=amenities.get()
+                                            property_type=hotel_result.property_type.clone()
+                                            class=format!(
+                                                "w-full {}",
+                                                if is_disabled { "bg-gray-200 pointer-events-none" } else { "bg-white" }
+                                            )
+                                            hotel_address
+                                            distance_from_center_km=hotel_result.distance_from_center_km
+                                            selected_currency_code=selected_currency_code
+                                            disabled=is_disabled
+                                            msite=true
+                                        />
+                                    }
+                                }
+                            </For>
+                        </div>
+                    </Show>
+
+                    // Pagination
+                    <div class="pb-8">
+                        <Suspense fallback=move || view! { <div class="grid grid-cols-1">{fallback()}</div> }>
+                            {move || {
+                                let _ = hotel_search_resource.get();
+                                view! {
+                                    <Show
+                                        when=move || {
+                                            search_list_page.search_result.get()
+                                                .map_or(false, |result| !result.hotel_list().is_empty())
+                                        }
+                                        fallback=move || view! { <></> }
+                                    >
+                                        <PaginationControls />
+                                    </Show>
+                                }
+                            }}
+                        </Suspense>
+                    </div>
                 </div>
             </div>
         </section>
@@ -2370,7 +2375,7 @@ pub fn HotelCardTile(
                     on_navigate();
                 }
                 class=format!(
-                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm",
+                    "{} bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm cursor-pointer",
                     class
                 )
             >
@@ -2496,7 +2501,7 @@ pub fn HotelCardTile(
                     ev.stop_propagation();
                     on_navigate();
                 }
-                class=format!("{} {}", card_layout_class, class)>
+                class=format!("{} {} cursor-pointer", card_layout_class, class)>
                 // IMAGE: smaller dimensions for more compact design
                 <div clone:hotel_code class=image_layout_class>
                     <img class=image_class src=img alt=hotel_name.clone() />

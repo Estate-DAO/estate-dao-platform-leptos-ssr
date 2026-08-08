@@ -303,13 +303,13 @@ pub struct DomainLow {
     pub longitude: f64,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DomainPrice {
     pub room_price: f64,
     pub currency_code: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DomainHotelAfterSearch {
     pub hotel_code: String,
     pub hotel_name: String,

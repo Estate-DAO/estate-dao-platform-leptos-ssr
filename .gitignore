@@ -44,4 +44,5 @@ memories/
 
 # Ignore agent skills and workflows
 /.agents/
-docs/
+docs/.claude/settings.local.json
+.mcp.json
